@@ -1,0 +1,289 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  phoneNumber      String?  @map("phone_number") @db.VarChar(32)
+  email            String?  @map("email") @db.VarChar(255)
+  hasVerifiedPhone Boolean  @default(false) @map("has_verified_phone")
+  hasVerifiedEmail Boolean  @default(false) @map("has_verified_email")
+
+  authProvider String  @default("phone") @map("auth_provider") @db.VarChar(32)
+  providerId   String? @map("provider_id") @db.VarChar(255)
+  passwordHash String? @map("password_hash") @db.Text
+
+  firstName String   @map("first_name") @db.VarChar(64)
+  birthdate DateTime @db.Date
+  gender    String   @db.VarChar(16)
+  pronouns  String?  @db.VarChar(32)
+
+  isOnboarded Boolean @default(false) @map("is_onboarded")
+  isBanned    Boolean @default(false) @map("is_banned")
+  isDeleted   Boolean @default(false) @map("is_deleted")
+
+  // Relations
+  profile        UserProfile?
+  fitnessProfile UserFitnessProfile?
+  photos         UserPhoto[]
+  
+  sentLikes     Like[] @relation("SentLikes")
+  receivedLikes Like[] @relation("ReceivedLikes")
+  
+  sentPasses     Pass[] @relation("SentPasses")
+  receivedPasses Pass[] @relation("ReceivedPasses")
+
+  matchesA Match[] @relation("MatchUserA")
+  matchesB Match[] @relation("MatchUserB")
+
+  messages Message[]
+  
+  reportsFiled    Report[] @relation("Reporter")
+  reportsReceived Report[] @relation("ReportedUser")
+
+  subscriptions Subscription[]
+  purchases     Purchase[]
+  
+  fitnessActivities UserFitnessActivity[]
+
+  @@index([phoneNumber])
+  @@index([email])
+  @@map("users")
+}
+
+model UserProfile {
+  userId String @id @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bio      String? @db.Text
+  city     String? @db.VarChar(128)
+  country  String? @db.VarChar(64)
+  
+  latitude  Float?
+  longitude Float?
+
+  intentDating   Boolean @default(true) @map("intent_dating")
+  intentWorkout  Boolean @default(false) @map("intent_workout")
+  intentFriends  Boolean @default(false) @map("intent_friends")
+
+  showMeMen      Boolean @default(true) @map("show_me_men")
+  showMeWomen    Boolean @default(true) @map("show_me_women")
+  showMeOther    Boolean @default(true) @map("show_me_other")
+  minAge         Int     @default(21) @map("min_age") @db.SmallInt
+  maxAge         Int     @default(45) @map("max_age") @db.SmallInt
+  maxDistanceKm  Int     @default(50) @map("max_distance_km")
+
+  lastActiveAt    DateTime @default(now()) @map("last_active_at")
+  discoveryPaused Boolean  @default(false) @map("discovery_paused")
+
+  @@map("user_profile")
+}
+
+model UserFitnessProfile {
+  userId String @id @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  intensityLevel      String @default("moderate") @map("intensity_level") @db.VarChar(16)
+  weeklyFrequencyBand String @default("3-4") @map("weekly_frequency_band") @db.VarChar(16)
+  
+  primaryGoal   String? @map("primary_goal") @db.VarChar(32)
+  secondaryGoal String? @map("secondary_goal") @db.VarChar(32)
+
+  favoriteActivities String? @map("favorite_activities") @db.Text
+  trainingStyle      String? @map("training_style") @db.Text
+  prefersMorning     Boolean? @map("prefers_morning")
+  prefersEvening     Boolean? @map("prefers_evening")
+
+  @@map("user_fitness_profile")
+}
+
+model FitnessActivity {
+  id   Int    @id @default(autoincrement())
+  slug String @unique @db.VarChar(64)
+  name String @db.VarChar(64)
+
+  users UserFitnessActivity[]
+
+  @@map("fitness_activities")
+}
+
+model UserFitnessActivity {
+  userId     String @map("user_id") @db.Uuid
+  activityId Int    @map("activity_id")
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activity FitnessActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@id([userId, activityId])
+  @@map("user_fitness_activities")
+}
+
+model UserPhoto {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  storageKey String  @map("storage_key") @db.Text
+  isPrimary  Boolean @default(false) @map("is_primary")
+  sortOrder  Int     @default(0) @map("sort_order") @db.SmallInt
+  isHidden   Boolean @default(false) @map("is_hidden")
+
+  @@index([userId])
+  @@map("user_photos")
+}
+
+model Like {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  fromUserId String @map("from_user_id") @db.Uuid
+  toUserId   String @map("to_user_id") @db.Uuid
+
+  fromUser User @relation("SentLikes", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("ReceivedLikes", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  isSuperLike Boolean @default(false) @map("is_super_like")
+
+  @@unique([fromUserId, toUserId])
+  @@index([toUserId])
+  @@index([fromUserId])
+  @@map("likes")
+}
+
+model Pass {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  fromUserId String @map("from_user_id") @db.Uuid
+  toUserId   String @map("to_user_id") @db.Uuid
+
+  fromUser User @relation("SentPasses", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("ReceivedPasses", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
+  @@index([toUserId])
+  @@index([fromUserId])
+  @@map("passes")
+}
+
+model Match {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  userAId String @map("user_a_id") @db.Uuid
+  userBId String @map("user_b_id") @db.Uuid
+
+  userA User @relation("MatchUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB User @relation("MatchUserB", fields: [userBId], references: [id], onDelete: Cascade)
+
+  isDatingMatch  Boolean @default(true) @map("is_dating_match")
+  isWorkoutMatch Boolean @default(false) @map("is_workout_match")
+
+  isBlocked  Boolean @default(false) @map("is_blocked")
+  isArchived Boolean @default(false) @map("is_archived")
+
+  messages Message[]
+  reports  Report[]
+
+  // Index for finding matches for a user (requires OR query or separate indexes)
+  @@index([userAId])
+  @@index([userBId])
+  // Unique constraint to prevent duplicate matches
+  @@unique([userAId, userBId]) 
+  @@map("matches")
+}
+
+model Message {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  matchId  String @map("match_id") @db.Uuid
+  match    Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  
+  senderId String @map("sender_id") @db.Uuid
+  sender   User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  body     String? @db.Text
+  type     String  @default("text") @db.VarChar(16)
+  mediaKey String? @map("media_key") @db.Text
+
+  isRead Boolean   @default(false) @map("is_read")
+  readAt DateTime? @map("read_at")
+
+  @@index([matchId, createdAt])
+  @@index([senderId, createdAt])
+  @@map("messages")
+}
+
+model Report {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  reporterId     String @map("reporter_id") @db.Uuid
+  reporter       User   @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  
+  reportedUserId String @map("reported_user_id") @db.Uuid
+  reportedUser   User   @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
+
+  matchId String? @map("match_id") @db.Uuid
+  match   Match?  @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  category    String  @db.VarChar(32)
+  description String? @db.Text
+
+  handledBy String?   @map("handled_by") @db.Uuid
+  handledAt DateTime? @map("handled_at")
+  status    String    @default("open") @db.VarChar(16)
+
+  @@index([reportedUserId])
+  @@index([reporterId])
+  @@map("reports")
+}
+
+model Subscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  provider      String @db.VarChar(32)
+  providerSubId String @map("provider_sub_id") @db.VarChar(255)
+  planCode      String @map("plan_code") @db.VarChar(64)
+  status        String @db.VarChar(16)
+
+  currentPeriodStart DateTime @map("current_period_start")
+  currentPeriodEnd   DateTime @map("current_period_end")
+
+  @@index([userId])
+  @@index([provider, providerSubId])
+  @@map("subscriptions")
+}
+
+model Purchase {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  type        String @db.VarChar(32)
+  quantity    Int    @default(1)
+  amountCents Int    @map("amount_cents")
+  currency    String @default("USD") @db.VarChar(8)
+
+  provider     String @db.VarChar(32)
+  providerTxId String @map("provider_tx_id") @db.VarChar(255)
+
+  @@index([userId, createdAt])
+  @@map("purchases")
+}

@@ -1,0 +1,27 @@
+.DS_Store
+
+# env
+.env
+.env.*
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# builds
+build/
+dist/
+.next/
+
+# mobile
+*.apk
+*.aab
+*.ipa
+*.dSYM/
+
+# local tooling
+.vscode/
+.idea/

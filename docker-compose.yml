@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: brdg_postgres
+    environment:
+      POSTGRES_USER: brdg_user
+      POSTGRES_PASSWORD: brdg_password
+      POSTGRES_DB: brdg_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - brdg_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: brdg_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - brdg_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  brdg_network:
+    driver: bridge
