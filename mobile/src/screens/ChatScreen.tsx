@@ -1,197 +1,172 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import client from '../api/client';
+import { normalizeApiError } from '../api/errors';
+import type { ChatMessage } from '../api/types';
+import { connectMatchMessageStream } from '../services/matchRealtime';
+import AppState from '../components/ui/AppState';
+import AppBackButton from '../components/ui/AppBackButton';
+import { colors, radii, spacing, typography } from '../theme/tokens';
 
 export default function ChatScreen() {
-    const navigation = useNavigation();
-    const route = useRoute();
-    const { matchId, user } = route.params as any;
+  const navigation = useNavigation<any>();
+  const route = useRoute();
+  const { matchId, user } = route.params as { matchId: string; user: any };
 
-    const photoUrl =
-        user?.photoUrl ||
-        user?.photos?.find?.((p: any) => p.isPrimary)?.storageKey ||
-        user?.photos?.[0]?.storageKey;
-    const [message, setMessage] = useState('');
-    const [messages, setMessages] = useState<any[]>([]);
+  const photoUrl = user?.photoUrl || user?.photos?.find?.((p: any) => p.isPrimary)?.storageKey || user?.photos?.[0]?.storageKey;
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'fallback'>('fallback');
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    useEffect(() => {
-        fetchMessages();
-        // Poll for new messages every 5 seconds
-        const interval = setInterval(fetchMessages, 5000);
-        return () => clearInterval(interval);
-    }, [matchId]);
+  const fetchMessages = useCallback(async (silent = false) => {
+    if (silent) setRefreshing(true);
+    try {
+      const response = await client.get<ChatMessage[]>(`/matches/${matchId}/messages`);
+      setMessages(response.data || []);
+      setError(null);
+    } catch (err) {
+      setError(normalizeApiError(err).message);
+    } finally {
+      if (silent) setRefreshing(false);
+      else setLoading(false);
+    }
+  }, [matchId]);
 
-    const fetchMessages = async () => {
-        try {
-            const response = await client.get(`/matches/${matchId}/messages`);
-            setMessages(response.data);
-        } catch (error) {
-            console.error('Error fetching messages:', error);
-        }
+  useEffect(() => { setLoading(true); fetchMessages(); }, [fetchMessages]);
+
+  useEffect(() => {
+    const stopPolling = () => { if (pollTimerRef.current) { clearInterval(pollTimerRef.current); pollTimerRef.current = null; } };
+    const startPolling = () => { if (!pollTimerRef.current) pollTimerRef.current = setInterval(fetchMessages, 5000); };
+    let disconnect: () => void = () => {};
+
+    const setupRealtime = async () => {
+      disconnect = await connectMatchMessageStream(matchId, {
+        onStatus: (status) => {
+          setConnectionStatus(status);
+          if (status === 'connected') stopPolling(); else startPolling();
+        },
+        onMessage: (payload) => { if (payload?.type === 'message') fetchMessages(); },
+        onError: () => { setConnectionStatus('fallback'); startPolling(); },
+      });
     };
 
-    const sendMessage = async () => {
-        if (!message.trim()) return;
+    setupRealtime();
+    startPolling();
+    return () => { disconnect(); stopPolling(); };
+  }, [fetchMessages, matchId]);
 
-        const tempId = Date.now().toString();
-        const tempMessage = {
-            id: tempId,
-            text: message,
-            sender: 'me',
-            timestamp: new Date(),
-        };
+  const sendMessage = async () => {
+    if (!message.trim() || sending) return;
+    const tempId = Date.now().toString();
+    const text = message.trim();
+    const tempMessage: ChatMessage = { id: tempId, text, sender: 'me', timestamp: new Date() };
+    setMessages((prev) => [tempMessage, ...prev]);
+    setMessage('');
+    setSending(true);
 
-        // Optimistic update
-        setMessages(prev => [tempMessage, ...prev]);
-        setMessage('');
+    try {
+      await client.post(`/matches/${matchId}/messages`, { content: text });
+      await fetchMessages();
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setError('Could not send message. Try again.');
+    } finally {
+      setSending(false);
+    }
+  };
 
-        try {
-            await client.post(`/matches/${matchId}/messages`, { content: tempMessage.text });
-            fetchMessages(); // Refresh to get real ID and timestamp
-        } catch (error) {
-            console.error('Error sending message:', error);
-            // Remove optimistic message on failure
-            setMessages(prev => prev.filter(m => m.id !== tempId));
-        }
-    };
-
-    const renderItem = ({ item }: { item: any }) => {
-        const isMe = item.sender === 'me';
-        return (
-            <View style={[
-                styles.messageBubble,
-                isMe ? styles.myMessage : styles.theirMessage
-            ]}>
-                <Text style={styles.messageText}>{item.text}</Text>
-            </View>
-        );
-    };
-
+  const renderItem = ({ item }: { item: ChatMessage }) => {
+    const isMe = item.sender === 'me';
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Text style={styles.backText}>←</Text>
-                </TouchableOpacity>
-                <View style={styles.headerInfo}>
-                    {photoUrl && (
-                        <Image source={{ uri: photoUrl }} style={styles.avatar} />
-                    )}
-                    <Text style={styles.headerTitle}>{user?.firstName || 'Chat'}</Text>
-                </View>
-            </View>
-
-            <FlatList
-                data={messages}
-                renderItem={renderItem}
-                keyExtractor={item => item.id}
-                inverted
-                contentContainerStyle={styles.listContent}
-            />
-
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
-            >
-                <View style={styles.inputContainer}>
-                    <TextInput
-                        style={styles.input}
-                        value={message}
-                        onChangeText={setMessage}
-                        placeholder="Type a message..."
-                        placeholderTextColor="#666"
-                    />
-                    <TouchableOpacity onPress={sendMessage} style={styles.sendButton}>
-                        <Text style={styles.sendButtonText}>Send</Text>
-                    </TouchableOpacity>
-                </View>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
+      <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.theirMessage]}>
+        <Text style={[styles.messageText, isMe && styles.myMessageText]}>{item.text}</Text>
+      </View>
     );
+  };
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <AppBackButton onPress={() => navigation.goBack()} />
+        <View style={styles.headerInfo}>
+          {photoUrl ? <Image source={{ uri: photoUrl }} style={styles.avatar} /> : <View style={styles.avatar} />}
+          <Text style={styles.headerTitle}>{user?.firstName || 'Chat'}</Text>
+        </View>
+      </View>
+
+      {loading ? (
+        <AppState title="Loading messages" loading />
+      ) : error && messages.length === 0 ? (
+        <AppState title="Couldn’t load messages" description={error} actionLabel="Retry" onAction={fetchMessages} />
+      ) : (
+        <FlatList
+          data={messages}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          inverted
+          contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchMessages(true)} tintColor={colors.primary} />}
+        />
+      )}
+
+      {connectionStatus !== 'connected' ? (
+        <Text style={styles.statusBanner}>{connectionStatus === 'connecting' ? 'Connecting to live chat…' : 'Using auto-refresh mode.'}</Text>
+      ) : null}
+      {error && messages.length > 0 ? <Text style={styles.banner}>{error}</Text> : null}
+
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={10}>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            value={message}
+            onChangeText={setMessage}
+            placeholder="Send a message"
+            placeholderTextColor={colors.textMuted}
+            editable={!sending}
+          />
+          <TouchableOpacity onPress={sendMessage} style={[styles.sendButton, !message.trim() && styles.sendButtonDisabled]} disabled={sending || !message.trim()}>
+            <Text style={styles.sendButtonText}>{sending ? '...' : 'Send'}</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#000',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#333',
-    },
-    backButton: {
-        marginRight: 15,
-    },
-    backText: {
-        color: '#fff',
-        fontSize: 24,
-    },
-    headerInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    avatar: {
-        width: 30,
-        height: 30,
-        borderRadius: 15,
-        marginRight: 10,
-        backgroundColor: '#333',
-    },
-    headerTitle: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    listContent: {
-        padding: 15,
-    },
-    messageBubble: {
-        padding: 12,
-        borderRadius: 20,
-        marginBottom: 10,
-        maxWidth: '80%',
-    },
-    myMessage: {
-        backgroundColor: '#007AFF',
-        alignSelf: 'flex-end',
-        borderBottomRightRadius: 4,
-    },
-    theirMessage: {
-        backgroundColor: '#333',
-        alignSelf: 'flex-start',
-        borderBottomLeftRadius: 4,
-    },
-    messageText: {
-        color: '#fff',
-        fontSize: 16,
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        padding: 10,
-        borderTopWidth: 1,
-        borderTopColor: '#333',
-        alignItems: 'center',
-    },
-    input: {
-        flex: 1,
-        backgroundColor: '#1a1a1a',
-        borderRadius: 20,
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        color: '#fff',
-        marginRight: 10,
-    },
-    sendButton: {
-        padding: 10,
-    },
-    sendButtonText: {
-        color: '#007AFF',
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
+  container: { flex: 1, backgroundColor: colors.background },
+  banner: { color: colors.danger, textAlign: 'center', paddingVertical: spacing.xs },
+  statusBanner: { color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.xs, fontSize: typography.caption },
+  header: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: spacing.lg, paddingBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+  headerInfo: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs },
+  avatar: { width: 34, height: 34, borderRadius: 17, marginRight: spacing.sm, backgroundColor: colors.surfaceElevated },
+  headerTitle: { color: colors.textPrimary, fontSize: typography.h3, fontWeight: '800' },
+  listContent: { padding: spacing.lg },
+  messageBubble: { padding: spacing.md, borderRadius: radii.lg, marginBottom: spacing.sm, maxWidth: '82%', borderWidth: 1 },
+  myMessage: { backgroundColor: colors.primary, borderColor: '#B2A5FF', alignSelf: 'flex-end', borderBottomRightRadius: radii.sm },
+  theirMessage: { backgroundColor: colors.surfaceGlass, borderColor: colors.border, alignSelf: 'flex-start', borderBottomLeftRadius: radii.sm },
+  messageText: { color: colors.textPrimary, fontSize: typography.body },
+  myMessageText: { color: colors.black, fontWeight: '600' },
+  inputContainer: { flexDirection: 'row', padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, alignItems: 'center', gap: spacing.sm },
+  input: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    color: colors.textPrimary,
+    minHeight: 46,
+  },
+  sendButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md },
+  sendButtonDisabled: { opacity: 0.4 },
+  sendButtonText: { color: colors.accentSoft, fontWeight: '800', fontSize: typography.body },
 });

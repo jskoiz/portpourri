@@ -1,8 +1,8 @@
 const { Client } = require('pg');
+const { env } = require('./scripts/env');
 
-// Use DATABASE_URL if provided; default to local dev without embedded credentials.
 const client = new Client({
-  connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/brdg_db'
+  connectionString: env.databaseUrl,
 });
 client.connect()
   .then(() => {

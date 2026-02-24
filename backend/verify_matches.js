@@ -1,6 +1,7 @@
 const crypto = require('crypto');
+const { env } = require('./scripts/env');
 
-const BASE_URL = 'http://localhost:3001';
+const BASE_URL = env.apiBaseUrl;
 
 async function request(method, path, body, token) {
     const headers = { 'Content-Type': 'application/json' };

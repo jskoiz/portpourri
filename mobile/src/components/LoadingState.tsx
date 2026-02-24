@@ -1,16 +1,12 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import LottieView from 'lottie-react-native';
+import { colors } from '../theme/tokens';
 
 export default function LoadingState() {
     return (
         <View style={styles.container}>
-            <LottieView
-                source={require('../../assets/animations/loading.json')}
-                autoPlay
-                loop
-                style={styles.lottie}
-            />
+            <LottieView source={require('../../assets/animations/loading.json')} autoPlay loop style={styles.lottie} />
         </View>
     );
 }
@@ -20,7 +16,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#000',
+        backgroundColor: colors.background,
     },
     lottie: {
         width: 200,

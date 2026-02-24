@@ -1,111 +1,90 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { normalizeApiError } from '../api/errors';
+import AppButton from '../components/ui/AppButton';
+import AppInput from '../components/ui/AppInput';
+import AppCard from '../components/ui/AppCard';
+import { colors, spacing, typography } from '../theme/tokens';
 
 export default function LoginScreen({ navigation }: any) {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const login = useAuthStore((state) => state.login);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const login = useAuthStore((state) => state.login);
 
-    const handleLogin = async () => {
-        try {
-            await login({ email, password });
-        } catch (error) {
-            Alert.alert('Login Failed', 'Invalid credentials');
-        }
-    };
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Missing details', 'Enter both your email and password to continue.');
+      return;
+    }
 
-    return (
-        <SafeAreaView style={styles.container}>
-            <Text style={styles.title}>BRDG</Text>
-            <Text style={styles.subtitle}>Where Active Meets Attractive</Text>
+    setSubmitting(true);
+    try {
+      await login({ email: email.trim().toLowerCase(), password });
+    } catch (error) {
+      Alert.alert('Couldn\'t log you in', normalizeApiError(error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-            <View style={styles.form}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter your email"
-                    placeholderTextColor="#666"
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                />
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <Text style={styles.title}>BRDG</Text>
+          <Text style={styles.subtitle}>Meet active people who match your pace.</Text>
 
-                <Text style={styles.label}>Password</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter your password"
-                    placeholderTextColor="#666"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                />
-
-                <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                    <Text style={styles.buttonText}>Log In</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-                    <Text style={styles.link}>Don't have an account? Sign up</Text>
-                </TouchableOpacity>
-            </View>
-        </SafeAreaView>
-    );
+          <AppCard style={styles.formCard}>
+            <AppInput
+              label="Email"
+              placeholder="you@example.com"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              editable={!submitting}
+            />
+            <AppInput
+              label="Password"
+              placeholder="Enter your password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              editable={!submitting}
+            />
+            <AppButton label="Log in" onPress={handleLogin} loading={submitting} style={styles.submitButton} />
+            <AppButton
+              label="New here? Create account"
+              variant="ghost"
+              onPress={() => navigation.navigate('Signup')}
+              disabled={submitting}
+            />
+          </AppCard>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#000',
-        padding: 20,
-        justifyContent: 'center',
-    },
-    title: {
-        fontSize: 48,
-        fontWeight: 'bold',
-        color: '#fff',
-        textAlign: 'center',
-        marginBottom: 10,
-    },
-    subtitle: {
-        fontSize: 18,
-        color: '#ccc',
-        textAlign: 'center',
-        marginBottom: 40,
-    },
-    form: {
-        width: '100%',
-    },
-    label: {
-        color: '#fff',
-        marginBottom: 5,
-        marginLeft: 5,
-    },
-    input: {
-        backgroundColor: '#1a1a1a',
-        color: '#fff',
-        padding: 15,
-        borderRadius: 10,
-        marginBottom: 20,
-        fontSize: 16,
-    },
-    button: {
-        backgroundColor: '#fff',
-        padding: 15,
-        borderRadius: 25,
-        alignItems: 'center',
-        marginTop: 10,
-        marginBottom: 20,
-    },
-    buttonText: {
-        color: '#000',
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    link: {
-        color: '#ccc',
-        textAlign: 'center',
-        marginTop: 10,
-    },
+  container: { flex: 1, backgroundColor: colors.background },
+  content: { flexGrow: 1, justifyContent: 'center', padding: spacing.xl },
+  title: {
+    fontSize: typography.display,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    fontSize: typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.xxxl,
+  },
+  formCard: { width: '100%' },
+  submitButton: { marginTop: spacing.sm, marginBottom: spacing.sm },
 });

@@ -1,162 +1,47 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppInput from '../components/ui/AppInput';
+import AppCard from '../components/ui/AppCard';
+import AppButton from '../components/ui/AppButton';
+import { colors, spacing, typography } from '../theme/tokens';
 
 export default function CreateScreen() {
-    const [activity, setActivity] = useState('');
-    const [location, setLocation] = useState('');
-    const [time, setTime] = useState('');
-    const [description, setDescription] = useState('');
+  const [activity, setActivity] = useState('');
+  const [location, setLocation] = useState('');
+  const [time, setTime] = useState('');
+  const [description, setDescription] = useState('');
 
-    const handleCreate = () => {
-        // Demo-only: this screen is UI polish, not a real backend-backed feature yet.
-        // Keep it non-blocking and avoid noisy alerts during demos.
-    };
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.kicker}>Host mode</Text>
+        <Text style={styles.title}>Create</Text>
+        <Text style={styles.subtitle}>Styled placeholder flow ready for backend wiring.</Text>
 
-    return (
-        <SafeAreaView style={styles.container}>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <Text style={styles.title}>Create Invite</Text>
-                <Text style={styles.subtitle}>Find partners for your next workout</Text>
-                <View style={styles.callout}>
-                    <Text style={styles.calloutTitle}>Demo note</Text>
-                    <Text style={styles.calloutText}>
-                        This flow is UI-complete for the demo. Posting invites is next (backend + notifications).
-                    </Text>
-                </View>
-
-                <View style={styles.form}>
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Activity</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="e.g. Hiking, Lifting, Tennis"
-                            placeholderTextColor="#666"
-                            value={activity}
-                            onChangeText={setActivity}
-                        />
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Location</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="e.g. Runyon Canyon, Gold's Gym"
-                            placeholderTextColor="#666"
-                            value={location}
-                            onChangeText={setLocation}
-                        />
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Time</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="e.g. Tomorrow at 6pm"
-                            placeholderTextColor="#666"
-                            value={time}
-                            onChangeText={setTime}
-                        />
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Description (Optional)</Text>
-                        <TextInput
-                            style={[styles.input, styles.textArea]}
-                            placeholder="Any details? Pace, intensity, etc."
-                            placeholderTextColor="#666"
-                            value={description}
-                            onChangeText={setDescription}
-                            multiline
-                            numberOfLines={4}
-                        />
-                    </View>
-
-                    <TouchableOpacity style={[styles.button, styles.buttonDisabled]} onPress={handleCreate} disabled>
-                        <Text style={styles.buttonText}>Post Invite (Coming soon)</Text>
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
-        </SafeAreaView>
-    );
+        <AppCard>
+          <AppInput label="Activity" placeholder="Hiking, lifting, tennis" value={activity} onChangeText={setActivity} />
+          <AppInput label="Location" placeholder="Gym, park, neighborhood" value={location} onChangeText={setLocation} />
+          <AppInput label="Time" placeholder="Tomorrow at 6 PM" value={time} onChangeText={setTime} />
+          <AppInput label="Description" placeholder="Pace, level, and details" value={description} onChangeText={setDescription} multiline />
+          <AppButton label="Posting soon" onPress={() => {}} disabled />
+          <View style={styles.noteWrap}>
+            <Text style={styles.noteTitle}>Coming soon</Text>
+            <Text style={styles.note}>The visual treatment is final-ready; publishing behavior is intentionally unchanged.</Text>
+          </View>
+        </AppCard>
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#000',
-    },
-    scrollContent: {
-        padding: 20,
-    },
-    title: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#fff',
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#888',
-        marginTop: 4,
-        marginBottom: 30,
-    },
-    callout: {
-        backgroundColor: '#101010',
-        borderWidth: 1,
-        borderColor: '#333',
-        borderRadius: 12,
-        padding: 14,
-        marginTop: 16,
-        marginBottom: 6,
-    },
-    calloutTitle: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: '700',
-        marginBottom: 6,
-    },
-    calloutText: {
-        color: '#aaa',
-        fontSize: 14,
-        lineHeight: 20,
-    },
-    form: {
-        gap: 20,
-    },
-    inputGroup: {
-        gap: 8,
-    },
-    label: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    input: {
-        backgroundColor: '#1a1a1a',
-        borderRadius: 12,
-        padding: 16,
-        color: '#fff',
-        fontSize: 16,
-        borderWidth: 1,
-        borderColor: '#333',
-    },
-    textArea: {
-        height: 100,
-        textAlignVertical: 'top',
-    },
-    button: {
-        backgroundColor: '#ff4444',
-        padding: 18,
-        borderRadius: 12,
-        alignItems: 'center',
-        marginTop: 10,
-    },
-    buttonDisabled: {
-        opacity: 0.6,
-    },
-    buttonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
+  container: { flex: 1, backgroundColor: colors.background },
+  scrollContent: { padding: spacing.xl },
+  kicker: { color: colors.accentSoft, fontSize: typography.caption, textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: '700' },
+  title: { fontSize: typography.h1, color: colors.textPrimary, fontWeight: '800', marginTop: spacing.xs },
+  subtitle: { fontSize: typography.body, color: colors.textSecondary, marginTop: spacing.xs, marginBottom: spacing.xl },
+  noteWrap: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md },
+  noteTitle: { color: colors.textPrimary, fontWeight: '700', marginBottom: spacing.xs },
+  note: { fontSize: typography.bodySmall, color: colors.textMuted, lineHeight: 20 },
 });

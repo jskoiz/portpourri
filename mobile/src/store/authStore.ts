@@ -1,16 +1,32 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import client from '../api/client';
+import { authApi } from '../services/api';
+import { STORAGE_KEYS } from '../constants/storage';
+import { normalizeApiError } from '../api/errors';
+import type { User } from '../api/types';
+
+interface LoginPayload {
+    email: string;
+    password: string;
+}
+
+interface SignupPayload {
+    email: string;
+    password: string;
+    firstName: string;
+    birthdate: string;
+    gender: string;
+}
 
 interface AuthState {
     token: string | null;
-    user: any | null;
+    user: User | null;
     isLoading: boolean;
-    login: (data: any) => Promise<void>;
-    signup: (data: any) => Promise<void>;
+    login: (data: LoginPayload) => Promise<void>;
+    signup: (data: SignupPayload) => Promise<void>;
     logout: () => Promise<void>;
     loadToken: () => Promise<void>;
-    setUser: (user: any) => void;
+    setUser: (user: User | null) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -21,40 +37,46 @@ export const useAuthStore = create<AuthState>((set) => ({
     setUser: (user) => set({ user }),
 
     login: async (data) => {
-        const response = await client.post('/auth/login', data);
-        const { access_token, user } = response.data;
-        await AsyncStorage.setItem('access_token', access_token);
-        set({ token: access_token, user });
+        try {
+            const response = await authApi.login(data);
+            const { access_token, user } = response.data;
+            await AsyncStorage.setItem(STORAGE_KEYS.accessToken, access_token);
+            set({ token: access_token, user });
+        } catch (error) {
+            throw normalizeApiError(error);
+        }
     },
 
     signup: async (data) => {
-        const response = await client.post('/auth/signup', data);
-        const { access_token, user } = response.data;
-        await AsyncStorage.setItem('access_token', access_token);
-        set({ token: access_token, user });
+        try {
+            const response = await authApi.signup(data);
+            const { access_token, user } = response.data;
+            await AsyncStorage.setItem(STORAGE_KEYS.accessToken, access_token);
+            set({ token: access_token, user });
+        } catch (error) {
+            throw normalizeApiError(error);
+        }
     },
 
     logout: async () => {
-        await AsyncStorage.removeItem('access_token');
+        await AsyncStorage.removeItem(STORAGE_KEYS.accessToken);
         set({ token: null, user: null });
     },
 
     loadToken: async () => {
-        const token = await AsyncStorage.getItem('access_token');
-        if (token) {
-            try {
-                // Set token in header manually for this request since interceptor might be async/race condition
-                const response = await client.get('/auth/me', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                set({ token, user: response.data, isLoading: false });
-            } catch (error) {
-                console.error('Failed to load user profile', error);
-                await AsyncStorage.removeItem('access_token');
-                set({ token: null, user: null, isLoading: false });
-            }
-        } else {
-            set({ token: null, isLoading: false });
+        set({ isLoading: true });
+        const token = await AsyncStorage.getItem(STORAGE_KEYS.accessToken);
+        if (!token) {
+            set({ token: null, user: null, isLoading: false });
+            return;
+        }
+
+        try {
+            const response = await authApi.me(token);
+            set({ token, user: response.data, isLoading: false });
+        } catch {
+            await AsyncStorage.removeItem(STORAGE_KEYS.accessToken);
+            set({ token: null, user: null, isLoading: false });
         }
     },
 }));

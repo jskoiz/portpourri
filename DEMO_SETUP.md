@@ -50,3 +50,8 @@ EXPO_PUBLIC_API_URL=http://localhost:3000 npm run ios
 ## Notes
 - Chat uses **polling** (every 5s) for demo simplicity.
 - The **Create** tab is UI-complete but intentionally disabled ("Coming soon") for a clean demo.
+- For a one-shot hardening smoke check (bootstrap + backend readiness + mobile prereqs), run from repo root:
+  ```sh
+  ./scripts/smoke-e2e.sh
+  ```
+- See `docs/DEV_LOOP.md` for daily runbook + troubleshooting.

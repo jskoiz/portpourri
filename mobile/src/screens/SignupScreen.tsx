@@ -1,148 +1,90 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { normalizeApiError } from '../api/errors';
+import AppButton from '../components/ui/AppButton';
+import AppInput from '../components/ui/AppInput';
+import AppCard from '../components/ui/AppCard';
+import AppBackButton from '../components/ui/AppBackButton';
+import { colors, spacing, typography } from '../theme/tokens';
 
 export default function SignupScreen({ navigation }: any) {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [firstName, setFirstName] = useState('');
-    const [birthdate, setBirthdate] = useState('1995-01-01'); // Simple placeholder for now
-    const [gender, setGender] = useState('male'); // Simple placeholder
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [birthdate, setBirthdate] = useState('1995-01-01');
+  const [gender, setGender] = useState('male');
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const signup = useAuthStore((state) => state.signup);
 
-    const signup = useAuthStore((state) => state.signup);
+  const validate = () => {
+    const nextErrors: Record<string, string> = {};
+    if (!firstName.trim()) nextErrors.firstName = 'First name is required.';
+    if (!email.trim()) nextErrors.email = 'Email is required.';
+    else if (!/^\S+@\S+\.\S+$/.test(email.trim())) nextErrors.email = 'Enter a valid email address.';
+    if (!password.trim()) nextErrors.password = 'Password is required.';
+    else if (password.trim().length < 8) nextErrors.password = 'Use at least 8 characters.';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(birthdate.trim())) nextErrors.birthdate = 'Use YYYY-MM-DD format.';
+    if (!gender.trim()) nextErrors.gender = 'Gender is required.';
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
 
-    const handleSignup = async () => {
-        try {
-            await signup({ email, password, firstName, birthdate, gender });
-            // Navigation will be handled by AppNavigator state change, 
-            // but we might want to force Onboarding if it's a new user.
-            // For now, let's assume the user is redirected to Home, and Home checks if onboarded.
-            // Or better, we can manually navigate if the stack allows.
-            // Since AppNavigator switches on `token`, it renders Home stack.
-            // We need a way to detect "new user" or "not onboarded".
-            // For MVP, let's just push Onboarding from Home or make Onboarding the default if not onboarded.
-        } catch (error) {
-            Alert.alert('Signup Failed', 'Could not create account');
-        }
-    };
+  const canSubmit = useMemo(() => !!email.trim() && !!password.trim() && !!firstName.trim(), [email, password, firstName]);
 
-    return (
-        <SafeAreaView style={styles.container}>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <Text style={styles.title}>Create Account</Text>
+  const handleSignup = async () => {
+    if (!validate()) return;
 
-                <View style={styles.form}>
-                    <Text style={styles.label}>First Name</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="First Name"
-                        placeholderTextColor="#666"
-                        value={firstName}
-                        onChangeText={setFirstName}
-                    />
+    setSubmitting(true);
+    try {
+      await signup({
+        email: email.trim().toLowerCase(),
+        password,
+        firstName: firstName.trim(),
+        birthdate,
+        gender,
+      });
+    } catch (error) {
+      Alert.alert('Couldn\'t create account', normalizeApiError(error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-                    <Text style={styles.label}>Email</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Email"
-                        placeholderTextColor="#666"
-                        value={email}
-                        onChangeText={setEmail}
-                        autoCapitalize="none"
-                    />
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <AppBackButton label="Back to login" onPress={() => navigation.goBack()} disabled={submitting} />
 
-                    <Text style={styles.label}>Password</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Password"
-                        placeholderTextColor="#666"
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry
-                    />
+        <Text style={styles.title}>Create your BRDG profile</Text>
+        <Text style={styles.subtitle}>A few details now, we\'ll tune your matches next.</Text>
 
-                    {/* Simplified inputs for MVP */}
-                    <Text style={styles.label}>Birthdate (YYYY-MM-DD)</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="1995-01-01"
-                        placeholderTextColor="#666"
-                        value={birthdate}
-                        onChangeText={setBirthdate}
-                    />
+        <AppCard>
+          <AppInput label="First name" placeholder="Alex" value={firstName} onChangeText={(v) => { setFirstName(v); if (errors.firstName) setErrors((p) => ({ ...p, firstName: '' })); }} editable={!submitting} error={errors.firstName} />
+          <AppInput label="Email" placeholder="you@example.com" value={email} onChangeText={(v) => { setEmail(v); if (errors.email) setErrors((p) => ({ ...p, email: '' })); }} autoCapitalize="none" keyboardType="email-address" editable={!submitting} error={errors.email} />
+          <AppInput label="Password" placeholder="At least 8 characters" value={password} onChangeText={(v) => { setPassword(v); if (errors.password) setErrors((p) => ({ ...p, password: '' })); }} secureTextEntry editable={!submitting} error={errors.password} />
+          <AppInput label="Birthdate (YYYY-MM-DD)" placeholder="1995-01-01" value={birthdate} onChangeText={(v) => { setBirthdate(v); if (errors.birthdate) setErrors((p) => ({ ...p, birthdate: '' })); }} editable={!submitting} error={errors.birthdate} />
+          <AppInput label="Gender" placeholder="male / female / other" value={gender} onChangeText={(v) => { setGender(v); if (errors.gender) setErrors((p) => ({ ...p, gender: '' })); }} editable={!submitting} error={errors.gender} />
 
-                    <Text style={styles.label}>Gender</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="male/female/other"
-                        placeholderTextColor="#666"
-                        value={gender}
-                        onChangeText={setGender}
-                    />
-
-                    <TouchableOpacity style={styles.button} onPress={handleSignup}>
-                        <Text style={styles.buttonText}>Sign Up</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={() => navigation.goBack()}>
-                        <Text style={styles.link}>Already have an account? Log in</Text>
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
-        </SafeAreaView>
-    );
+          <AppButton label="Continue" onPress={handleSignup} loading={submitting} disabled={!canSubmit || submitting} style={styles.submitButton} />
+          <AppButton label="Already have an account? Log in" variant="ghost" onPress={() => navigation.goBack()} disabled={submitting} />
+        </AppCard>
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#000',
-    },
-    scrollContent: {
-        padding: 20,
-        justifyContent: 'center',
-        minHeight: '100%',
-    },
-    title: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#fff',
-        textAlign: 'center',
-        marginBottom: 30,
-    },
-    form: {
-        width: '100%',
-    },
-    label: {
-        color: '#fff',
-        marginBottom: 5,
-        marginLeft: 5,
-    },
-    input: {
-        backgroundColor: '#1a1a1a',
-        color: '#fff',
-        padding: 15,
-        borderRadius: 10,
-        marginBottom: 20,
-        fontSize: 16,
-    },
-    button: {
-        backgroundColor: '#fff',
-        padding: 15,
-        borderRadius: 25,
-        alignItems: 'center',
-        marginTop: 10,
-        marginBottom: 20,
-    },
-    buttonText: {
-        color: '#000',
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    link: {
-        color: '#ccc',
-        textAlign: 'center',
-        marginTop: 10,
-    },
+  container: { flex: 1, backgroundColor: colors.background },
+  scrollContent: { padding: spacing.xl, paddingBottom: spacing.xxxxl, justifyContent: 'center', minHeight: '100%' },
+  title: {
+    fontSize: typography.h1,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  subtitle: { color: colors.textSecondary, fontSize: typography.body, marginBottom: spacing.xl },
+  submitButton: { marginTop: spacing.sm, marginBottom: spacing.sm },
 });

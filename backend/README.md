@@ -31,6 +31,26 @@
 $ npm install
 ```
 
+## Deterministic local bootstrap (backend)
+
+From `backend/`:
+
+```bash
+# 1) start local infra (postgres + redis), wait for DB, run migrations and seed
+npm run dev:bootstrap
+
+# 2) start backend
+npm run start:dev
+```
+
+Or do both in one command:
+
+```bash
+npm run dev:setup
+```
+
+If you don't already have `.env`, copy `.env.example` first.
+
 ## Compile and run the project
 
 ```bash

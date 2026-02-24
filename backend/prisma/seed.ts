@@ -1,15 +1,16 @@
 import { PrismaClient } from '@prisma/client';
+import { appConfig } from '../src/config/app.config';
 
 const prisma = new PrismaClient();
 
-// Used for seeding photo URLs so devices can load images.
-// Set e.g.: BASE_URL=http://localhost:3000 (simulator) or http://<your-mac-ip>:3000 (device)
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const BASE_URL = appConfig.seed.assetBaseUrl;
 
 async function main() {
     console.log('Start seeding ...');
 
     // Cleanup existing data
+    await prisma.eventRsvp.deleteMany();
+    await prisma.event.deleteMany();
     await prisma.message.deleteMany();
     await prisma.match.deleteMany();
     await prisma.like.deleteMany();
@@ -213,6 +214,8 @@ async function main() {
         },
     ];
 
+    const createdUsers: Array<{ id: string; firstName: string }> = [];
+
     for (const u of users) {
         const user = await prisma.user.create({
             data: {
@@ -250,7 +253,62 @@ async function main() {
                 }
             },
         });
+        createdUsers.push({ id: user.id, firstName: user.firstName });
         console.log(`Created user: ${u.firstName}`);
+    }
+
+    const events = [
+        {
+            title: 'Sunset Yoga Flow',
+            description: 'Golden hour rooftop flow with a chill post-session tea circle.',
+            location: 'Venice Rooftop Studio',
+            category: 'Yoga',
+            imageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1200&q=80',
+            startsAt: new Date(Date.now() + 1000 * 60 * 60 * 28),
+            endsAt: new Date(Date.now() + 1000 * 60 * 60 * 30),
+            hostId: createdUsers[1]?.id,
+        },
+        {
+            title: '5K Boardwalk Run Club',
+            description: 'Easy-to-moderate pace. First timers welcome. Coffee after the run.',
+            location: 'Santa Monica Boardwalk',
+            category: 'Running',
+            imageUrl: 'https://images.unsplash.com/photo-1552674605-469523170d9e?w=1200&q=80',
+            startsAt: new Date(Date.now() + 1000 * 60 * 60 * 44),
+            endsAt: new Date(Date.now() + 1000 * 60 * 60 * 46),
+            hostId: createdUsers[0]?.id,
+        },
+        {
+            title: 'Beginner Bouldering Night',
+            description: 'Technique-focused bouldering session with partner drills and spot coaching.',
+            location: 'Sender One Climbing LA',
+            category: 'Climbing',
+            imageUrl: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=1200&q=80',
+            startsAt: new Date(Date.now() + 1000 * 60 * 60 * 72),
+            endsAt: new Date(Date.now() + 1000 * 60 * 60 * 74),
+            hostId: createdUsers[3]?.id,
+        },
+    ];
+
+    const createdEvents = [] as Array<{ id: string; title: string }>;
+
+    for (const e of events) {
+        if (!e.hostId) continue;
+        const event = await prisma.event.create({ data: e });
+        createdEvents.push({ id: event.id, title: event.title });
+        console.log(`Created event: ${event.title}`);
+    }
+
+    if (createdEvents[0] && createdUsers[2]) {
+        await prisma.eventRsvp.create({
+            data: { eventId: createdEvents[0].id, userId: createdUsers[2].id },
+        });
+    }
+
+    if (createdEvents[1] && createdUsers[4]) {
+        await prisma.eventRsvp.create({
+            data: { eventId: createdEvents[1].id, userId: createdUsers[4].id },
+        });
     }
 
     console.log('Seeding finished.');

@@ -1,142 +1,503 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+
+export interface DiscoveryFilters {
+  distanceKm?: number;
+  minAge?: number;
+  maxAge?: number;
+  goals?: string[];
+  intensity?: string[];
+  availability?: ('morning' | 'evening')[];
+}
+
+interface UserWithRelations {
+  id: string;
+  firstName: string;
+  birthdate: Date;
+  profile: {
+    city: string | null;
+    bio: string | null;
+    latitude: number | null;
+    longitude: number | null;
+  } | null;
+  fitnessProfile: {
+    primaryGoal: string | null;
+    secondaryGoal: string | null;
+    intensityLevel: string;
+    prefersMorning: boolean | null;
+    prefersEvening: boolean | null;
+    favoriteActivities: string | null;
+  } | null;
+  photos: Array<{
+    id: string;
+    storageKey: string;
+    isPrimary: boolean;
+    sortOrder: number;
+  }>;
+}
 
 @Injectable()
 export class DiscoveryService {
-    constructor(private prisma: PrismaService) { }
+  private readonly logger = new Logger(DiscoveryService.name);
 
-    async getFeed(userId: string) {
-        // Get IDs of users already liked
-        const sentLikes = await this.prisma.like.findMany({
-            where: { fromUserId: userId },
-            select: { toUserId: true },
-        });
+  constructor(
+    private prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
-        // Get IDs of users already passed
-        const sentPasses = await this.prisma.pass.findMany({
-            where: { fromUserId: userId },
-            select: { toUserId: true },
-        });
+  async getFeed(userId: string, filters: DiscoveryFilters = {}) {
+    try {
+      const [sentLikes, sentPasses, me] = await Promise.all([
+        this.prisma.like.findMany({
+          where: { fromUserId: userId },
+          select: { toUserId: true },
+        }),
+        this.prisma.pass.findMany({
+          where: { fromUserId: userId },
+          select: { toUserId: true },
+        }),
+        this.prisma.user.findUnique({
+          where: { id: userId },
+          include: { profile: true, fitnessProfile: true },
+        }),
+      ]);
 
-        const excludedIds = [
-            ...sentLikes.map(l => l.toUserId),
-            ...sentPasses.map(p => p.toUserId),
-            userId
-        ];
+      const excludedIds = [
+        ...sentLikes.map((l) => l.toUserId),
+        ...sentPasses.map((p) => p.toUserId),
+        userId,
+      ];
 
-        // Fetch potential matches
-        const users = await this.prisma.user.findMany({
-            where: {
-                id: { notIn: excludedIds },
-                isDeleted: false,
-                isBanned: false,
-                isOnboarded: true,
-            },
-            include: {
-                fitnessProfile: true,
-                profile: true,
-                photos: {
-                    where: { isHidden: false },
-                    orderBy: { sortOrder: 'asc' }
-                },
-            },
-            take: 20,
-        });
+      const users = (await this.prisma.user.findMany({
+        where: {
+          id: { notIn: excludedIds },
+          isDeleted: false,
+          isBanned: false,
+          isOnboarded: true,
+        },
+        include: {
+          fitnessProfile: true,
+          profile: true,
+          photos: {
+            where: { isHidden: false },
+            orderBy: { sortOrder: 'asc' },
+          },
+        },
+        take: 100,
+      })) as unknown as UserWithRelations[];
 
-        return users.map(user => ({
+      const scored = users
+        .map((user) => {
+          const age = this.calculateAge(user.birthdate);
+          const distanceKm = this.calculateDistanceKm(
+            me?.profile?.latitude,
+            me?.profile?.longitude,
+            user.profile?.latitude,
+            user.profile?.longitude,
+          );
+
+          if (filters.minAge && age < filters.minAge) return null;
+          if (filters.maxAge && age > filters.maxAge) return null;
+          if (
+            filters.distanceKm &&
+            distanceKm !== null &&
+            distanceKm > filters.distanceKm
+          )
+            return null;
+
+          if (filters.goals?.length) {
+            const userGoals = [
+              user.fitnessProfile?.primaryGoal,
+              user.fitnessProfile?.secondaryGoal,
+            ]
+              .filter(Boolean)
+              .map((goal) => String(goal).toLowerCase());
+            const normalizedGoals = filters.goals.map((goal) =>
+              goal.toLowerCase(),
+            );
+            const goalHit = normalizedGoals.some((goal) =>
+              userGoals.includes(goal),
+            );
+            if (!goalHit) return null;
+          }
+
+          if (filters.intensity?.length) {
+            const hit = filters.intensity
+              .map((level) => level.toLowerCase())
+              .includes(
+                (user.fitnessProfile?.intensityLevel || '').toLowerCase(),
+              );
+            if (!hit) return null;
+          }
+
+          if (filters.availability?.length) {
+            const wantMorning = filters.availability.includes('morning');
+            const wantEvening = filters.availability.includes('evening');
+            const hasMorning = !!user.fitnessProfile?.prefersMorning;
+            const hasEvening = !!user.fitnessProfile?.prefersEvening;
+            if (
+              (wantMorning || wantEvening) &&
+              !((wantMorning && hasMorning) || (wantEvening && hasEvening))
+            ) {
+              return null;
+            }
+          }
+
+          const meForScore = me
+            ? {
+                fitnessProfile: me.fitnessProfile
+                  ? {
+                      intensityLevel: me.fitnessProfile.intensityLevel,
+                      primaryGoal: me.fitnessProfile.primaryGoal,
+                      secondaryGoal: me.fitnessProfile.secondaryGoal,
+                    }
+                  : null,
+              }
+            : null;
+          const score = this.computeRecommendationScore(
+            meForScore,
+            user,
+            age,
+            distanceKm,
+          );
+          return {
             ...user,
-            age: this.calculateAge(user.birthdate),
-        }));
+            age,
+            distanceKm,
+            recommendationScore: score,
+          };
+        })
+        .filter(Boolean)
+        .sort(
+          (a, b) =>
+            (b?.recommendationScore || 0) - (a?.recommendationScore || 0),
+        )
+        .slice(0, 20);
+
+      return scored;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(
+        `Feed query failed for userId=${userId}: ${message}`,
+        stack,
+      );
+      throw error;
+    }
+  }
+
+  private computeRecommendationScore(
+    me: {
+      fitnessProfile?: {
+        intensityLevel?: string | null;
+        primaryGoal?: string | null;
+        secondaryGoal?: string | null;
+      } | null;
+    } | null,
+    candidate: UserWithRelations,
+    age: number,
+    distanceKm: number | null,
+  ): number {
+    let score = 0;
+
+    const candidateGoals = [
+      candidate.fitnessProfile?.primaryGoal,
+      candidate.fitnessProfile?.secondaryGoal,
+    ]
+      .filter(Boolean)
+      .map((g) => String(g).toLowerCase());
+    const myGoals = [
+      me?.fitnessProfile?.primaryGoal,
+      me?.fitnessProfile?.secondaryGoal,
+    ]
+      .filter(Boolean)
+      .map((g) => String(g).toLowerCase());
+
+    const sharedGoals = candidateGoals.filter((goal) =>
+      myGoals.includes(goal),
+    ).length;
+    score += sharedGoals * 28;
+
+    if (
+      me?.fitnessProfile?.intensityLevel &&
+      candidate.fitnessProfile?.intensityLevel &&
+      me.fitnessProfile.intensityLevel.toLowerCase() ===
+        candidate.fitnessProfile.intensityLevel.toLowerCase()
+    ) {
+      score += 20;
     }
 
-    private calculateAge(birthdate: Date): number {
-        const today = new Date();
-        let age = today.getFullYear() - birthdate.getFullYear();
-        const m = today.getMonth() - birthdate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthdate.getDate())) {
-            age--;
-        }
-        return age;
+    if (distanceKm !== null) {
+      if (distanceKm <= 5) score += 25;
+      else if (distanceKm <= 15) score += 18;
+      else if (distanceKm <= 30) score += 10;
+      else if (distanceKm <= 50) score += 4;
+    } else {
+      score += 3;
     }
 
-    async likeUser(userId: string, targetUserId: string) {
-        // Check if already liked
-        const existingLike = await this.prisma.like.findUnique({
-            where: {
-                fromUserId_toUserId: {
-                    fromUserId: userId,
-                    toUserId: targetUserId,
-                },
+    // Soft age preference around the center of common 24-35 bracket for active users.
+    const ageDelta = Math.abs(age - 29);
+    score += Math.max(0, 12 - ageDelta);
+
+    if (candidate.fitnessProfile?.prefersMorning) score += 5;
+    if (candidate.fitnessProfile?.prefersEvening) score += 5;
+
+    if (candidate.photos?.length) score += 4;
+    if (candidate.profile?.bio) score += 3;
+
+    return score;
+  }
+
+  private calculateAge(birthdate: Date): number {
+    const today = new Date();
+    let age = today.getFullYear() - birthdate.getFullYear();
+    const m = today.getMonth() - birthdate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthdate.getDate())) {
+      age--;
+    }
+    return age;
+  }
+
+  private calculateDistanceKm(
+    fromLat?: number | null,
+    fromLon?: number | null,
+    toLat?: number | null,
+    toLon?: number | null,
+  ): number | null {
+    if (
+      [fromLat, fromLon, toLat, toLon].some(
+        (value) => value === null || value === undefined,
+      )
+    )
+      return null;
+
+    const toRad = (value: number) => (value * Math.PI) / 180;
+    const dLat = toRad((toLat as number) - (fromLat as number));
+    const dLon = toRad((toLon as number) - (fromLon as number));
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(fromLat as number)) *
+        Math.cos(toRad(toLat as number)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return 6371 * c;
+  }
+
+  async likeUser(userId: string, targetUserId: string) {
+    try {
+      const existingLike = await this.prisma.like.findUnique({
+        where: {
+          fromUserId_toUserId: {
+            fromUserId: userId,
+            toUserId: targetUserId,
+          },
+        },
+      });
+
+      if (existingLike) return { status: 'already_liked' };
+
+      await this.prisma.pass.deleteMany({
+        where: { fromUserId: userId, toUserId: targetUserId },
+      });
+
+      await this.prisma.like.create({
+        data: {
+          fromUserId: userId,
+          toUserId: targetUserId,
+        },
+      });
+
+      this.notifications.create(targetUserId, {
+        type: 'like_received',
+        title: 'New like',
+        body: 'Someone liked your profile.',
+        data: { fromUserId: userId },
+      });
+
+      const mutualLike = await this.prisma.like.findUnique({
+        where: {
+          fromUserId_toUserId: {
+            fromUserId: targetUserId,
+            toUserId: userId,
+          },
+        },
+      });
+
+      if (mutualLike) {
+        const [userAId, userBId] = [userId, targetUserId].sort();
+
+        const match = await this.prisma.match.upsert({
+          where: {
+            userAId_userBId: {
+              userAId,
+              userBId,
             },
+          },
+          create: {
+            userAId,
+            userBId,
+            isDatingMatch: true,
+          },
+          update: {
+            updatedAt: new Date(),
+            isBlocked: false,
+            isArchived: false,
+          },
         });
 
-        if (existingLike) return { status: 'already_liked' };
-
-        // Create Like
-        await this.prisma.like.create({
-            data: {
-                fromUserId: userId,
-                toUserId: targetUserId,
-            },
+        this.notifications.create(userId, {
+          type: 'match_created',
+          title: "It's a match!",
+          body: 'You can start chatting now.',
+          data: { matchId: match.id, withUserId: targetUserId },
+        });
+        this.notifications.create(targetUserId, {
+          type: 'match_created',
+          title: "It's a match!",
+          body: 'You can start chatting now.',
+          data: { matchId: match.id, withUserId: userId },
         });
 
-        // Check for mutual like
-        const mutualLike = await this.prisma.like.findUnique({
-            where: {
-                fromUserId_toUserId: {
-                    fromUserId: targetUserId,
-                    toUserId: userId,
-                },
-            },
-        });
+        return { status: 'match', match };
+      }
 
-        if (mutualLike) {
-            // Create Match (ensure consistent ordering for @@unique([userAId, userBId]))
-            const [userAId, userBId] = [userId, targetUserId].sort();
+      return { status: 'liked' };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(
+        `Like action failed for userId=${userId}, targetUserId=${targetUserId}: ${message}`,
+        stack,
+      );
+      throw error;
+    }
+  }
 
-            const match = await this.prisma.match.upsert({
-                where: {
-                    userAId_userBId: {
-                        userAId,
-                        userBId,
-                    },
-                },
-                create: {
-                    userAId,
-                    userBId,
-                    isDatingMatch: true, // TODO: check intents
-                },
-                update: {
-                    updatedAt: new Date(),
-                },
-            });
+  async passUser(userId: string, targetUserId: string) {
+    try {
+      const existingPass = await this.prisma.pass.findUnique({
+        where: {
+          fromUserId_toUserId: {
+            fromUserId: userId,
+            toUserId: targetUserId,
+          },
+        },
+      });
 
-            return { status: 'match', match };
-        }
+      if (existingPass) return { status: 'already_passed' };
 
-        return { status: 'liked' };
+      await this.prisma.like.deleteMany({
+        where: { fromUserId: userId, toUserId: targetUserId },
+      });
+
+      await this.prisma.pass.create({
+        data: {
+          fromUserId: userId,
+          toUserId: targetUserId,
+        },
+      });
+
+      return { status: 'passed' };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(
+        `Pass action failed for userId=${userId}, targetUserId=${targetUserId}: ${message}`,
+        stack,
+      );
+      throw error;
+    }
+  }
+
+  async undoLastSwipe(userId: string) {
+    const [lastLike, lastPass] = await Promise.all([
+      this.prisma.like.findFirst({
+        where: { fromUserId: userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.pass.findFirst({
+        where: { fromUserId: userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    if (!lastLike && !lastPass) return { status: 'nothing_to_undo' };
+
+    const undoLike =
+      !!lastLike && (!lastPass || lastLike.createdAt >= lastPass.createdAt);
+
+    if (undoLike && lastLike) {
+      await this.prisma.like.delete({ where: { id: lastLike.id } });
+      return {
+        status: 'undone',
+        action: 'like',
+        targetUserId: lastLike.toUserId,
+      };
     }
 
-    async passUser(userId: string, targetUserId: string) {
-        // Check if already passed
-        const existingPass = await this.prisma.pass.findUnique({
-            where: {
-                fromUserId_toUserId: {
-                    fromUserId: userId,
-                    toUserId: targetUserId,
-                },
-            },
-        });
-
-        if (existingPass) return { status: 'already_passed' };
-
-        await this.prisma.pass.create({
-            data: {
-                fromUserId: userId,
-                toUserId: targetUserId,
-            },
-        });
-
-        return { status: 'passed' };
+    if (lastPass) {
+      await this.prisma.pass.delete({ where: { id: lastPass.id } });
+      return {
+        status: 'undone',
+        action: 'pass',
+        targetUserId: lastPass.toUserId,
+      };
     }
+
+    return { status: 'nothing_to_undo' };
+  }
+
+  async getProfileCompleteness(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        profile: true,
+        fitnessProfile: true,
+        photos: { where: { isHidden: false } },
+      },
+    });
+
+    if (!user) return { score: 0, prompts: ['Complete your profile setup.'] };
+
+    const checks = [
+      { ok: !!user.firstName, prompt: 'Add your first name.' },
+      { ok: !!user.birthdate, prompt: 'Add your birthday.' },
+      {
+        ok: !!user.profile?.bio && user.profile.bio.length >= 20,
+        prompt: 'Write a bio (20+ chars) so people know your vibe.',
+      },
+      {
+        ok: !!user.profile?.city,
+        prompt: 'Add your city for better nearby matches.',
+      },
+      {
+        ok: user.photos.length >= 2,
+        prompt: 'Upload at least 2 profile photos.',
+      },
+      {
+        ok: !!user.fitnessProfile?.primaryGoal,
+        prompt: 'Set a primary fitness goal.',
+      },
+      {
+        ok: !!user.fitnessProfile?.intensityLevel,
+        prompt: 'Choose your training intensity.',
+      },
+      {
+        ok: !!(
+          user.fitnessProfile?.prefersMorning ||
+          user.fitnessProfile?.prefersEvening
+        ),
+        prompt: 'Set your availability (morning/evening).',
+      },
+    ];
+
+    const earned = checks.filter((c) => c.ok).length;
+    const score = Math.round((earned / checks.length) * 100);
+    const prompts = checks.filter((c) => !c.ok).map((c) => c.prompt);
+
+    return { score, prompts };
+  }
 }

@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, Modal, StyleSheet, Text } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Modal, StyleSheet, Text, Animated } from 'react-native';
 import LottieView from 'lottie-react-native';
-import { MotiView } from 'moti';
 
 interface MatchAnimationProps {
     visible: boolean;
@@ -9,17 +8,37 @@ interface MatchAnimationProps {
 }
 
 export default function MatchAnimation({ visible, onFinish }: MatchAnimationProps) {
+    const opacity = useRef(new Animated.Value(0)).current;
+    const scale = useRef(new Animated.Value(0.5)).current;
+
+    useEffect(() => {
+        if (!visible) {
+            opacity.setValue(0);
+            scale.setValue(0.5);
+            return;
+        }
+
+        Animated.parallel([
+            Animated.timing(opacity, {
+                toValue: 1,
+                duration: 220,
+                useNativeDriver: true,
+            }),
+            Animated.spring(scale, {
+                toValue: 1,
+                tension: 70,
+                friction: 8,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, [visible, opacity, scale]);
+
     if (!visible) return null;
 
     return (
         <Modal transparent visible={visible} animationType="fade">
             <View style={styles.container}>
-                <MotiView
-                    from={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ type: 'spring' }}
-                    style={styles.content}
-                >
+                <Animated.View style={[styles.content, { opacity, transform: [{ scale }] }]}>
                     <LottieView
                         source={require('../../assets/animations/match.json')}
                         autoPlay
@@ -28,7 +47,7 @@ export default function MatchAnimation({ visible, onFinish }: MatchAnimationProp
                         style={styles.lottie}
                     />
                     <Text style={styles.text}>It's a Match!</Text>
-                </MotiView>
+                </Animated.View>
             </View>
         </Modal>
     );
