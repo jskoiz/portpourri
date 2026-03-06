@@ -467,13 +467,17 @@ h3 {
 }
 
 .steps article {
-  display: grid;
-  gap: 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
 }
 
 .steps span {
+  flex: 0 0 auto;
   color: var(--clay);
+  font-size: 1.1rem;
   font-weight: 800;
+  line-height: 1;
 }
 
 .steps p {
