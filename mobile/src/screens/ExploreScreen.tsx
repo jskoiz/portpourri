@@ -12,6 +12,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { radii, spacing, typography } from '../theme/tokens';
+import AppIcon from '../components/ui/AppIcon';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_PADDING = spacing.xxl;
@@ -27,73 +28,172 @@ const ACCENT = '#34D399';
 const TEXT_PRIMARY = '#F0F6FC';
 const TEXT_SECONDARY = 'rgba(240,246,252,0.65)';
 const TEXT_MUTED = 'rgba(240,246,252,0.38)';
+type AppIconName = React.ComponentProps<typeof AppIcon>['name'];
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
-const MOCK_EVENTS = [
+function formatUpcomingLabel(dayOffset: number, hour: number, minute = 0) {
+  const startsAt = new Date();
+  startsAt.setDate(startsAt.getDate() + dayOffset);
+  startsAt.setHours(hour, minute, 0, 0);
+
+  const dateLabel = startsAt.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+  const timeLabel = startsAt.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+  return `${dateLabel} · ${timeLabel}`;
+}
+
+const MOCK_EVENTS: Array<{
+  id: string;
+  title: string;
+  date: string;
+  attendees: number;
+  category: string;
+  icon: AppIconName;
+  gradientColors: readonly [string, string];
+}> = [
   {
     id: '1',
-    title: 'Sunrise Yoga at Griffith',
-    date: 'Sat Feb 28 · 7:00 AM',
-    attendees: 14,
-    category: 'Yoga',
-    emoji: '🧘',
-    gradientColors: ['#7C6AF7', '#4B3EBF'] as const,
+    title: 'Ala Moana Sunrise Run Club',
+    date: formatUpcomingLabel(1, 6),
+    attendees: 18,
+    category: 'Running',
+    icon: 'navigation',
+    gradientColors: ['#34D399', '#059669'] as const,
   },
   {
     id: '2',
-    title: 'Venice Beach HIIT Bootcamp',
-    date: 'Sun Mar 1 · 8:00 AM',
-    attendees: 22,
-    category: 'Workout',
-    emoji: '🏋️',
-    gradientColors: ['#F59E0B', '#D97706'] as const,
+    title: 'Golden Hour Rooftop Flow',
+    date: formatUpcomingLabel(1, 18),
+    attendees: 11,
+    category: 'Yoga',
+    icon: 'sun',
+    gradientColors: ['#7C6AF7', '#4B3EBF'] as const,
   },
   {
     id: '3',
-    title: 'Runyon Canyon Trail Run',
-    date: 'Sat Feb 28 · 6:30 AM',
+    title: 'Diamond Head Power Hike',
+    date: formatUpcomingLabel(2, 17),
+    attendees: 13,
+    category: 'Hiking',
+    icon: 'map',
+    gradientColors: ['#F59E0B', '#D97706'] as const,
+  },
+  {
+    id: '4',
+    title: 'Kailua Paddle + Breakfast',
+    date: formatUpcomingLabel(3, 8),
     attendees: 9,
-    category: 'Trail',
-    emoji: '🥾',
-    gradientColors: ['#34D399', '#059669'] as const,
+    category: 'Paddling',
+    icon: 'anchor',
+    gradientColors: ['#7AA8B8', '#4D6C78'] as const,
+  },
+  {
+    id: '5',
+    title: 'Kaimuki Boxing Circuit Night',
+    date: formatUpcomingLabel(3, 19),
+    attendees: 8,
+    category: 'Boxing',
+    icon: 'target',
+    gradientColors: ['#F87171', '#C2410C'] as const,
+  },
+  {
+    id: '6',
+    title: 'Beach Volleyball Sunset Social',
+    date: formatUpcomingLabel(5, 17),
+    attendees: 16,
+    category: 'Volleyball',
+    icon: 'circle',
+    gradientColors: ['#7C6AF7', '#F59E0B'] as const,
+  },
+  {
+    id: '7',
+    title: 'North Shore Surf Carpool',
+    date: formatUpcomingLabel(10, 6),
+    attendees: 7,
+    category: 'Surfing',
+    icon: 'wind',
+    gradientColors: ['#8AA9B2', '#56727A'] as const,
+  },
+  {
+    id: '8',
+    title: 'Manoa Reset Walk',
+    date: formatUpcomingLabel(11, 17, 30),
+    attendees: 10,
+    category: 'Wellness',
+    icon: 'heart',
+    gradientColors: ['#34D399', '#047857'] as const,
   },
 ];
 
-const ACTIVITY_SPOTS = [
-  { id: '1', name: 'Runyon Canyon', type: 'Trail', emoji: '🥾', distance: '1.2 mi', color: ACCENT },
-  { id: '2', name: 'Venice Beach', type: 'Beach Workout', emoji: '🏖️', distance: '0.8 mi', color: '#F59E0B' },
-  { id: '3', name: "Gold's Gym", type: 'Gym', emoji: '🏋️', distance: '0.5 mi', color: PRIMARY },
-  { id: '4', name: 'Griffith Park', type: 'Trail Run', emoji: '🏃', distance: '2.1 mi', color: '#F87171' },
+const ACTIVITY_SPOTS: Array<{
+  id: string;
+  name: string;
+  type: string;
+  icon: AppIconName;
+  distance: string;
+  color: string;
+}> = [
+  { id: '1', name: 'Magic Island', type: 'Run + Swim', icon: 'navigation', distance: '0.9 mi', color: ACCENT },
+  { id: '2', name: 'Kapiolani Park', type: 'Beach Games', icon: 'circle', distance: '1.4 mi', color: '#F59E0B' },
+  { id: '3', name: 'Koko Head District Park', type: 'Stairs', icon: 'map', distance: '6.1 mi', color: '#F87171' },
+  { id: '4', name: 'Ala Moana Beach Park', type: 'Open Water', icon: 'droplet', distance: '1.1 mi', color: PRIMARY },
+  { id: '5', name: 'Kailua Beach', type: 'Paddle', icon: 'anchor', distance: '10.5 mi', color: '#7AA8B8' },
+  { id: '6', name: 'Makapuu Trail', type: 'Sunrise Hike', icon: 'sunrise', distance: '9.8 mi', color: '#34D399' },
 ];
 
 const COMMUNITY_POSTS = [
   {
     id: '1',
-    user: 'Emma, 27',
-    activity: '🧘 Morning Yoga',
-    text: 'Looking for a yoga partner at Equinox tomorrow 7am',
+    user: 'Leilani, 28',
+    activity: 'Rooftop Flow',
+    text: 'Have room for 2 more at a mellow Kakaako sunset yoga session tomorrow.',
     spots: 2,
-    initial: 'E',
+    initial: 'L',
     color: PRIMARY,
   },
   {
     id: '2',
-    user: 'Jake, 31',
-    activity: '🏊 Lap Swimming',
-    text: 'Swim session at the Y this Saturday — come join!',
+    user: 'Kai, 31',
+    activity: 'Sunrise Run',
+    text: '4-mile social pace at Ala Moana, coffee after if anyone wants to keep hanging.',
     spots: 4,
-    initial: 'J',
+    initial: 'K',
     color: ACCENT,
   },
   {
     id: '3',
-    user: 'Mia, 25',
-    activity: '🥾 Hike',
-    text: 'Easy trail hike this Sunday, beginner friendly',
-    spots: 6,
+    user: 'Malia, 32',
+    activity: 'Ocean Swim',
+    text: 'Queen’s Beach buoy loop on Saturday. Comfortable swimmers welcome.',
+    spots: 3,
     initial: 'M',
+    color: '#7AA8B8',
+  },
+  {
+    id: '4',
+    user: 'Devon, 35',
+    activity: 'Climb Night',
+    text: 'Putting together a beginner-friendly climbing crew next week if you want in.',
+    spots: 5,
+    initial: 'D',
     color: '#F59E0B',
+  },
+  {
+    id: '5',
+    user: 'Tessa, 29',
+    activity: 'Beach Games',
+    text: 'Anyone down for casual doubles at Kapiolani around golden hour?',
+    spots: 6,
+    initial: 'T',
+    color: '#F87171',
   },
 ];
 
@@ -113,7 +213,9 @@ function EventCard({ event, onInvite }: { event: typeof MOCK_EVENTS[0]; onInvite
         style={styles.eventBanner}
       >
         <View style={styles.eventBannerContent}>
-          <Text style={styles.eventEmoji}>{event.emoji}</Text>
+          <View style={styles.eventIconWrap}>
+            <AppIcon name={event.icon} size={22} color="#FFFFFF" />
+          </View>
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryBadgeText}>{event.category.toUpperCase()}</Text>
           </View>
@@ -124,9 +226,15 @@ function EventCard({ event, onInvite }: { event: typeof MOCK_EVENTS[0]; onInvite
       <View style={styles.eventBody}>
         <Text style={styles.eventTitle}>{event.title}</Text>
         <View style={styles.eventMetaRow}>
-          <Text style={styles.eventMeta}>📅 {event.date}</Text>
+          <View style={styles.eventMetaInline}>
+            <AppIcon name="calendar" size={13} color={TEXT_SECONDARY} />
+            <Text style={styles.eventMeta}>{event.date}</Text>
+          </View>
           <View style={styles.attendeesBadge}>
-            <Text style={styles.attendeesBadgeText}>👥 {event.attendees}</Text>
+            <View style={styles.attendeesBadgeInner}>
+              <AppIcon name="users" size={12} color={TEXT_MUTED} />
+              <Text style={styles.attendeesBadgeText}>{event.attendees}</Text>
+            </View>
           </View>
         </View>
 
@@ -146,7 +254,7 @@ function EventCard({ event, onInvite }: { event: typeof MOCK_EVENTS[0]; onInvite
             onPress={onInvite}
             activeOpacity={0.8}
           >
-            <Text style={styles.inviteBtnText}>Invite 💌</Text>
+            <Text style={styles.inviteBtnText}>Share</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -158,7 +266,7 @@ function SpotCard({ spot }: { spot: typeof ACTIVITY_SPOTS[0] }) {
   return (
     <View style={[styles.spotCard, { borderColor: spot.color + '30' }]}>
       <View style={[styles.spotIconWrap, { backgroundColor: spot.color + '18' }]}>
-        <Text style={styles.spotEmoji}>{spot.emoji}</Text>
+        <AppIcon name={spot.icon} size={18} color={spot.color} />
       </View>
       <Text style={styles.spotName} numberOfLines={1}>{spot.name}</Text>
       <Text style={styles.spotType}>{spot.type}</Text>
@@ -181,8 +289,8 @@ function CommunityCard({ post, onInvite }: { post: typeof COMMUNITY_POSTS[0]; on
           <View style={styles.communityMeta}>
             <Text style={styles.communityUser}>{post.user}</Text>
             <View style={[styles.activityPill, { backgroundColor: post.color + '18', borderColor: post.color + '40' }]}>
-              <Text style={[styles.activityPillText, { color: post.color }]}>{post.activity}</Text>
-            </View>
+            <Text style={[styles.activityPillText, { color: post.color }]}>{post.activity}</Text>
+          </View>
           </View>
           <View style={styles.spotsBadge}>
             <Text style={styles.spotsBadgeText}>{post.spots} open</Text>
@@ -200,7 +308,7 @@ function CommunityCard({ post, onInvite }: { post: typeof COMMUNITY_POSTS[0]; on
             onPress={onInvite}
             activeOpacity={0.8}
           >
-            <Text style={styles.inviteSmallText}>Invite 💌</Text>
+            <Text style={styles.inviteSmallText}>Share</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -215,7 +323,7 @@ export default function ExploreScreen({ navigation }: any) {
 
   const handleInvite = async () => {
     try {
-      await Share.share({ message: 'Join me on BRDG! Let\'s move together 💪' });
+      await Share.share({ message: "Join me on BRDG. Let's move together." });
     } catch {
       navigation.navigate('Matches');
     }
@@ -441,8 +549,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end',
   },
-  eventEmoji: {
-    fontSize: 48,
+  eventIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.24)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   categoryBadge: {
     backgroundColor: 'rgba(255,255,255,0.18)',
@@ -474,6 +589,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
+  eventMetaInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   eventMeta: {
     fontSize: typography.caption,
     color: TEXT_SECONDARY,
@@ -491,6 +611,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: TEXT_MUTED,
+  },
+  attendeesBadgeInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   eventActions: {
     flexDirection: 'row',
@@ -544,9 +669,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.sm,
-  },
-  spotEmoji: {
-    fontSize: 22,
   },
   spotName: {
     fontSize: typography.bodySmall,
