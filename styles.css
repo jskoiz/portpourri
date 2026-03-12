@@ -253,8 +253,8 @@ p {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
-  margin-top: 34px;
-  grid-column: 1;
+  margin-top: 8px;
+  grid-column: 1 / -1;
 }
 
 .reveal {
@@ -746,6 +746,7 @@ p {
   .hero-signals {
     order: 3;
     margin-top: 4px;
+    grid-column: auto;
   }
 
   .device-frame {
