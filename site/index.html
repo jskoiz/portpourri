@@ -325,7 +325,6 @@
         incomingPhoto.alt = "BRDG profile preview";
         outgoingPhoto.alt = "";
 
-        card.classList.add("is-transitioning");
         overlay.classList.add("is-transitioning");
         planCard.classList.add("is-transitioning");
 
@@ -343,7 +342,6 @@
           });
           overlay.classList.remove("is-transitioning");
           planCard.classList.remove("is-transitioning");
-          card.classList.remove("is-transitioning");
           isAnimating = false;
         }, 900);
       }
