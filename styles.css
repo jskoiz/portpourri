@@ -420,6 +420,7 @@ p {
 .profile-overlay p {
   color: #dae5f6;
   line-height: 1.6;
+  min-height: 3.2em;
 }
 
 .chip-row {
@@ -472,6 +473,10 @@ p {
   letter-spacing: 0.12em;
 }
 
+.stack-card strong {
+  min-height: 2.4em;
+}
+
 .profile-dots {
   display: flex;
   justify-content: center;
@@ -502,6 +507,11 @@ p {
 .mini-panel {
   padding: 16px;
   border-radius: 18px;
+  min-height: 146px;
+}
+
+.mini-panel strong {
+  min-height: 3.3em;
 }
 
 .mini-panel-accent {
