@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -9,6 +13,11 @@ jest.mock('bcrypt', () => ({
   hash: jest.fn(),
   compare: jest.fn(),
 }));
+
+const mockedHash = bcrypt.hash as jest.MockedFunction<typeof bcrypt.hash>;
+const mockedCompare = bcrypt.compare as jest.MockedFunction<
+  typeof bcrypt.compare
+>;
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -81,7 +90,7 @@ describe('AuthService', () => {
       isOnboarded: false,
     });
     jwtServiceMock.sign.mockReturnValue('signed-token');
-    jest.mocked(bcrypt.hash).mockResolvedValue('hashed-password' as never);
+    mockedHash.mockResolvedValue('hashed-password');
 
     const result = await service.signup({
       email: ' Jordan@Example.com ',
@@ -92,7 +101,13 @@ describe('AuthService', () => {
     });
 
     expect(prismaMock.user.findFirst).toHaveBeenCalledWith({
-      where: { email: 'jordan@example.com' },
+      where: {
+        email: {
+          equals: 'jordan@example.com',
+          mode: 'insensitive',
+        },
+        authProvider: 'email',
+      },
     });
     expect(prismaMock.user.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -113,7 +128,7 @@ describe('AuthService', () => {
   it('rejects signup when the normalized email already exists', async () => {
     prismaMock.user.findFirst.mockResolvedValue({
       id: 'user-1',
-      email: 'jordan@example.com',
+      email: 'Jordan@Example.com',
     });
 
     await expect(
@@ -126,6 +141,21 @@ describe('AuthService', () => {
       }),
     ).rejects.toBeInstanceOf(ConflictException);
 
+    expect(prismaMock.user.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects signup when the normalized email is blank', async () => {
+    await expect(
+      service.signup({
+        email: '   ',
+        password: 'password123',
+        firstName: 'Jordan',
+        birthdate: '1995-02-03',
+        gender: 'non-binary',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
     expect(prismaMock.user.create).not.toHaveBeenCalled();
   });
 
@@ -167,7 +197,7 @@ describe('AuthService', () => {
       isOnboarded: true,
     });
     jwtServiceMock.sign.mockReturnValue('signed-token');
-    jest.mocked(bcrypt.compare).mockResolvedValue(true as never);
+    mockedCompare.mockResolvedValue(true);
 
     const result = await service.login({
       email: ' Jordan@Example.com ',
@@ -175,7 +205,13 @@ describe('AuthService', () => {
     });
 
     expect(prismaMock.user.findFirst).toHaveBeenCalledWith({
-      where: { email: 'jordan@example.com' },
+      where: {
+        email: {
+          equals: 'jordan@example.com',
+          mode: 'insensitive',
+        },
+        authProvider: 'email',
+      },
     });
     expect(bcrypt.compare).toHaveBeenCalledWith('password123', 'stored-hash');
     expect(result).toEqual({
@@ -186,5 +222,32 @@ describe('AuthService', () => {
         isOnboarded: true,
       },
     });
+  });
+
+  it('matches legacy mixed-case emails during login lookup', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'user-1',
+      email: 'Jordan@Example.com',
+      passwordHash: 'stored-hash',
+      isOnboarded: true,
+    });
+    jwtServiceMock.sign.mockReturnValue('signed-token');
+    mockedCompare.mockResolvedValue(true);
+
+    const result = await service.login({
+      email: 'jordan@example.com',
+      password: 'password123',
+    });
+
+    expect(prismaMock.user.findFirst).toHaveBeenCalledWith({
+      where: {
+        email: {
+          equals: 'jordan@example.com',
+          mode: 'insensitive',
+        },
+        authProvider: 'email',
+      },
+    });
+    expect(result.user.email).toBe('Jordan@Example.com');
   });
 });

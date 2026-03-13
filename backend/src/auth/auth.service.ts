@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -42,13 +43,27 @@ export class AuthService {
     return email?.trim().toLowerCase() ?? '';
   }
 
+  private buildEmailLookup(email: string) {
+    return {
+      email: {
+        equals: email,
+        mode: 'insensitive' as const,
+      },
+      authProvider: 'email',
+    };
+  }
+
   async signup(data: SignupDto): Promise<AuthResult> {
     const normalizedEmail = this.normalizeEmail(data.email);
     const { password, firstName, birthdate, gender } = data;
 
     try {
+      if (!normalizedEmail) {
+        throw new BadRequestException('Email is required');
+      }
+
       const existing = await this.prisma.user.findFirst({
-        where: { email: normalizedEmail },
+        where: this.buildEmailLookup(normalizedEmail),
       });
       if (existing) {
         this.logger.warn(`Signup conflict for email=${normalizedEmail}`);
@@ -101,7 +116,7 @@ export class AuthService {
 
       if (!hasTrustedIdentity && userEmail && password) {
         const foundUser = await this.prisma.user.findFirst({
-          where: { email: userEmail },
+          where: this.buildEmailLookup(userEmail),
         });
         if (!foundUser || !foundUser.passwordHash) {
           this.logger.warn(`Login rejected for email=${userEmail}`);
