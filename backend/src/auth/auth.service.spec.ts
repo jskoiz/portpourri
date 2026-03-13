@@ -1,8 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
+
+jest.mock('bcrypt', () => ({
+  hash: jest.fn(),
+  compare: jest.fn(),
+}));
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -67,6 +73,62 @@ describe('AuthService', () => {
     });
   });
 
+  it('normalizes signup email before checking for conflicts and creating the user', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.user.create.mockResolvedValue({
+      id: 'user-1',
+      email: 'jordan@example.com',
+      isOnboarded: false,
+    });
+    jwtServiceMock.sign.mockReturnValue('signed-token');
+    jest.mocked(bcrypt.hash).mockResolvedValue('hashed-password' as never);
+
+    const result = await service.signup({
+      email: ' Jordan@Example.com ',
+      password: 'password123',
+      firstName: 'Jordan',
+      birthdate: '1995-02-03',
+      gender: 'non-binary',
+    });
+
+    expect(prismaMock.user.findFirst).toHaveBeenCalledWith({
+      where: { email: 'jordan@example.com' },
+    });
+    expect(prismaMock.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        email: 'jordan@example.com',
+        passwordHash: 'hashed-password',
+      }),
+    });
+    expect(result).toEqual({
+      access_token: 'signed-token',
+      user: {
+        id: 'user-1',
+        email: 'jordan@example.com',
+        isOnboarded: false,
+      },
+    });
+  });
+
+  it('rejects signup when the normalized email already exists', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'user-1',
+      email: 'jordan@example.com',
+    });
+
+    await expect(
+      service.signup({
+        email: ' Jordan@Example.com ',
+        password: 'password123',
+        firstName: 'Jordan',
+        birthdate: '1995-02-03',
+        gender: 'non-binary',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(prismaMock.user.create).not.toHaveBeenCalled();
+  });
+
   it('deletes the current user account when it exists', async () => {
     prismaMock.user.findUnique.mockResolvedValue({
       id: 'user-1',
@@ -95,5 +157,34 @@ describe('AuthService', () => {
     );
     expect(jwtServiceMock.sign).not.toHaveBeenCalled();
     expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('normalizes login email before looking up credentials', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'user-1',
+      email: 'jordan@example.com',
+      passwordHash: 'stored-hash',
+      isOnboarded: true,
+    });
+    jwtServiceMock.sign.mockReturnValue('signed-token');
+    jest.mocked(bcrypt.compare).mockResolvedValue(true as never);
+
+    const result = await service.login({
+      email: ' Jordan@Example.com ',
+      password: 'password123',
+    });
+
+    expect(prismaMock.user.findFirst).toHaveBeenCalledWith({
+      where: { email: 'jordan@example.com' },
+    });
+    expect(bcrypt.compare).toHaveBeenCalledWith('password123', 'stored-hash');
+    expect(result).toEqual({
+      access_token: 'signed-token',
+      user: {
+        id: 'user-1',
+        email: 'jordan@example.com',
+        isOnboarded: true,
+      },
+    });
   });
 });

@@ -38,15 +38,20 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
+  private normalizeEmail(email?: string | null) {
+    return email?.trim().toLowerCase() ?? '';
+  }
+
   async signup(data: SignupDto): Promise<AuthResult> {
-    const { email, password, firstName, birthdate, gender } = data;
+    const normalizedEmail = this.normalizeEmail(data.email);
+    const { password, firstName, birthdate, gender } = data;
 
     try {
       const existing = await this.prisma.user.findFirst({
-        where: { email },
+        where: { email: normalizedEmail },
       });
       if (existing) {
-        this.logger.warn(`Signup conflict for email=${email}`);
+        this.logger.warn(`Signup conflict for email=${normalizedEmail}`);
         throw new ConflictException('User already exists');
       }
 
@@ -54,7 +59,7 @@ export class AuthService {
 
       const user = await this.prisma.user.create({
         data: {
-          email,
+          email: normalizedEmail,
           passwordHash: hashedPassword,
           firstName,
           birthdate: new Date(birthdate),
@@ -71,14 +76,17 @@ export class AuthService {
 
       const message = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`Signup failed for email=${email}: ${message}`, stack);
+      this.logger.error(
+        `Signup failed for email=${normalizedEmail}: ${message}`,
+        stack,
+      );
       throw error;
     }
   }
 
   async login(user: LoginDto): Promise<AuthResult> {
     let userId = user.id?.trim() ?? '';
-    let userEmail = user.email?.trim() ?? '';
+    let userEmail = this.normalizeEmail(user.email);
     const password = user.password ?? '';
     let isOnboarded = user.isOnboarded ?? false;
 
