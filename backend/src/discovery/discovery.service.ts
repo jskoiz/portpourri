@@ -99,8 +99,7 @@ export class DiscoveryService {
           if (filters.maxAge && age > filters.maxAge) return null;
           if (
             filters.distanceKm &&
-            distanceKm !== null &&
-            distanceKm > filters.distanceKm
+            (distanceKm === null || distanceKm > filters.distanceKm)
           )
             return null;
 

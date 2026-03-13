@@ -211,6 +211,50 @@ describe('DiscoveryService', () => {
     );
   });
 
+  it('excludes candidates with unknown coordinates when distance filtering is enabled', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'me',
+      profile: {
+        latitude: 21.3069,
+        longitude: -157.8583,
+      },
+      fitnessProfile: {
+        intensityLevel: 'moderate',
+        primaryGoal: 'strength',
+        secondaryGoal: 'mobility',
+      },
+    });
+    prismaMock.user.findMany.mockResolvedValue([
+      makeCandidate({
+        id: 'nearby-match',
+        profile: {
+          city: 'Honolulu',
+          bio: 'Close by',
+          latitude: 21.307,
+          longitude: -157.8584,
+        },
+      }),
+      makeCandidate({
+        id: 'unknown-location',
+        profile: {
+          city: 'Honolulu',
+          bio: 'No coordinates yet',
+          latitude: null,
+          longitude: null,
+        },
+      }),
+    ]);
+
+    const result = await service.getFeed('me', { distanceKm: 10 });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        id: 'nearby-match',
+      }),
+    );
+  });
+
   it('derives mutual match classification from shared intents', async () => {
     prismaMock.like.findUnique
       .mockResolvedValueOnce(null)
