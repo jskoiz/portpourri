@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  UseGuards,
-  Request,
-  Param,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Request, Param, Query } from '@nestjs/common';
 import { DiscoveryService, type DiscoveryFilters } from './discovery.service';
 import { AuthGuard } from '@nestjs/passport';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
@@ -18,14 +10,6 @@ type DiscoveryFeedQuery = {
   goals?: string | string[];
   intensity?: string | string[];
   availability?: string | string[];
-};
-
-const firstQueryValue = (value?: string | string[]): string | undefined => {
-  if (Array.isArray(value)) {
-    return value.find((entry) => entry.trim());
-  }
-
-  return value?.trim() ? value : undefined;
 };
 
 const parseNumber = (value?: string | string[]): number | undefined => {
@@ -105,5 +89,15 @@ export class DiscoveryController {
     @Param('id') id: string,
   ) {
     return this.discoveryService.passUser(req.user.id, id);
+  }
+
+  @Post('undo')
+  async undoLastSwipe(@Request() req: AuthenticatedRequest) {
+    return this.discoveryService.undoLastSwipe(req.user.id);
+  }
+
+  @Get('profile-completeness')
+  async getProfileCompleteness(@Request() req: AuthenticatedRequest) {
+    return this.discoveryService.getProfileCompleteness(req.user.id);
   }
 }

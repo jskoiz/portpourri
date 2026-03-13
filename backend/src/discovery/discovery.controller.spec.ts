@@ -10,6 +10,8 @@ describe('DiscoveryController', () => {
     getFeed: jest.fn(),
     likeUser: jest.fn(),
     passUser: jest.fn(),
+    undoLastSwipe: jest.fn(),
+    getProfileCompleteness: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -98,6 +100,42 @@ describe('DiscoveryController', () => {
     expect(discoveryServiceMock.likeUser).toHaveBeenCalledWith(
       'user-1',
       'user-2',
+    );
+  });
+
+  it('delegates undo swipe action to discovery service', async () => {
+    const req = {
+      user: { id: 'user-1', email: 'u@example.com' },
+    } as AuthenticatedRequest;
+    discoveryServiceMock.undoLastSwipe.mockResolvedValue({
+      status: 'undone',
+      action: 'pass',
+      targetUserId: 'user-2',
+    });
+
+    await expect(controller.undoLastSwipe(req)).resolves.toEqual({
+      status: 'undone',
+      action: 'pass',
+      targetUserId: 'user-2',
+    });
+    expect(discoveryServiceMock.undoLastSwipe).toHaveBeenCalledWith('user-1');
+  });
+
+  it('delegates profile completeness lookup to discovery service', async () => {
+    const req = {
+      user: { id: 'user-1', email: 'u@example.com' },
+    } as AuthenticatedRequest;
+    discoveryServiceMock.getProfileCompleteness.mockResolvedValue({
+      score: 75,
+      prompts: ['Upload at least 2 profile photos.'],
+    });
+
+    await expect(controller.getProfileCompleteness(req)).resolves.toEqual({
+      score: 75,
+      prompts: ['Upload at least 2 profile photos.'],
+    });
+    expect(discoveryServiceMock.getProfileCompleteness).toHaveBeenCalledWith(
+      'user-1',
     );
   });
 });
