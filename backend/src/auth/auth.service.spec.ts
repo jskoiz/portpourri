@@ -57,15 +57,39 @@ describe('AuthService', () => {
     expect(service).toBeDefined();
   });
 
-  it('returns access token and user shape when login receives a user object', async () => {
+  it('returns access token and user shape when login receives valid credentials', async () => {
     jwtServiceMock.sign.mockReturnValue('signed-token');
-
-    const result = await service.login({
+    prismaMock.user.findFirst.mockResolvedValue({
       id: 'user-1',
       email: 'test@example.com',
+      passwordHash: 'hashed-password',
       isOnboarded: true,
     });
+    mockedCompare.mockImplementation(async () => true);
 
+    const result = await service.login({
+      email: 'test@example.com',
+      password: 'pw',
+    });
+
+    expect(prismaMock.user.findFirst).toHaveBeenCalledWith({
+      where: {
+        email: {
+          equals: 'test@example.com',
+          mode: 'insensitive',
+        },
+        authProvider: 'email',
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      select: {
+        id: true,
+        email: true,
+        isOnboarded: true,
+        passwordHash: true,
+      },
+    });
     expect(jwtServiceMock.sign).toHaveBeenCalledWith({
       email: 'test@example.com',
       sub: 'user-1',
@@ -157,6 +181,37 @@ describe('AuthService', () => {
     expect(prismaMock.user.create).not.toHaveBeenCalled();
   });
 
+  it('returns a signed auth result for newly created signup users', async () => {
+    jwtServiceMock.sign.mockReturnValue('signed-token');
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.user.create.mockResolvedValue({
+      id: 'new-user',
+      email: 'new@example.com',
+      isOnboarded: false,
+    });
+
+    const result = await service.signup({
+      email: 'new@example.com',
+      password: 'pw',
+      firstName: 'New',
+      birthdate: '1996-02-03',
+      gender: 'woman',
+    });
+
+    expect(jwtServiceMock.sign).toHaveBeenCalledWith({
+      email: 'new@example.com',
+      sub: 'new-user',
+    });
+    expect(result).toEqual({
+      access_token: 'signed-token',
+      user: {
+        id: 'new-user',
+        email: 'new@example.com',
+        isOnboarded: false,
+      },
+    });
+  });
+
   it('deletes the current user account when it exists', async () => {
     prismaMock.user.findUnique.mockResolvedValue({
       id: 'user-1',
@@ -179,7 +234,7 @@ describe('AuthService', () => {
     expect(prismaMock.user.delete).not.toHaveBeenCalled();
   });
 
-  it('rejects login when both credentials and trusted identity are missing', async () => {
+  it('rejects login when credentials are incomplete', async () => {
     await expect(service.login({ email: '   ' })).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
@@ -209,6 +264,15 @@ describe('AuthService', () => {
           mode: 'insensitive',
         },
         authProvider: 'email',
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      select: {
+        id: true,
+        email: true,
+        isOnboarded: true,
+        passwordHash: true,
       },
     });
     expect(bcrypt.compare).toHaveBeenCalledWith('password123', 'stored-hash');
@@ -244,6 +308,15 @@ describe('AuthService', () => {
           mode: 'insensitive',
         },
         authProvider: 'email',
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      select: {
+        id: true,
+        email: true,
+        isOnboarded: true,
+        passwordHash: true,
       },
     });
     expect(result.user.email).toBe('Jordan@Example.com');

@@ -18,17 +18,24 @@ export interface SignupDto {
 }
 
 export interface LoginDto {
-  id?: string;
   email?: string | null;
   password?: string;
-  passwordHash?: string | null;
-  isOnboarded?: boolean;
 }
 
 export interface AuthResult {
   access_token: string;
   user: { id: string; email: string; isOnboarded: boolean };
 }
+
+type AuthenticatedUser = {
+  id: string;
+  email: string | null;
+  isOnboarded: boolean;
+};
+
+type EmailAuthUser = AuthenticatedUser & {
+  passwordHash: string | null;
+};
 
 @Injectable()
 export class AuthService {
@@ -51,6 +58,21 @@ export class AuthService {
       },
       authProvider: 'email',
     };
+  }
+
+  private async findEmailAuthUser(email: string): Promise<EmailAuthUser | null> {
+    return this.prisma.user.findFirst({
+      where: this.buildEmailLookup(email),
+      orderBy: {
+        createdAt: 'asc',
+      },
+      select: {
+        id: true,
+        email: true,
+        isOnboarded: true,
+        passwordHash: true,
+      },
+    });
   }
 
   async signup(data: SignupDto): Promise<AuthResult> {
@@ -83,7 +105,7 @@ export class AuthService {
         },
       });
 
-      return this.login(user);
+      return this.issueAuthToken(user);
     } catch (error) {
       if (error instanceof ConflictException) {
         throw error;
@@ -100,48 +122,31 @@ export class AuthService {
   }
 
   async login(user: LoginDto): Promise<AuthResult> {
-    let userId = user.id?.trim() ?? '';
     let userEmail = this.normalizeEmail(user.email);
     const password = user.password ?? '';
-    let isOnboarded = user.isOnboarded ?? false;
 
     try {
       const hasCredentials = Boolean(userEmail && password);
-      const hasTrustedIdentity = Boolean(userId && userEmail);
 
-      if (!hasCredentials && !hasTrustedIdentity) {
+      if (!hasCredentials) {
         this.logger.warn('Login rejected due to incomplete credentials');
         throw new UnauthorizedException('Invalid credentials');
       }
 
-      if (!hasTrustedIdentity && userEmail && password) {
-        const foundUser = await this.prisma.user.findFirst({
-          where: this.buildEmailLookup(userEmail),
-        });
-        if (!foundUser || !foundUser.passwordHash) {
-          this.logger.warn(`Login rejected for email=${userEmail}`);
-          throw new UnauthorizedException('Invalid credentials');
-        }
-
-        const isMatch = await bcrypt.compare(password, foundUser.passwordHash);
-        if (!isMatch) {
-          this.logger.warn(`Login rejected for email=${userEmail}`);
-          throw new UnauthorizedException('Invalid credentials');
-        }
-        userId = foundUser.id;
-        userEmail = foundUser.email ?? '';
-        isOnboarded = foundUser.isOnboarded;
+      const foundUser = await this.findEmailAuthUser(userEmail);
+      if (!foundUser || !foundUser.passwordHash) {
+        this.logger.warn(`Login rejected for email=${userEmail}`);
+        throw new UnauthorizedException('Invalid credentials');
       }
 
-      const payload = { email: userEmail, sub: userId };
-      return {
-        access_token: this.jwtService.sign(payload),
-        user: {
-          id: userId,
-          email: userEmail,
-          isOnboarded: isOnboarded,
-        },
-      };
+      const isMatch = await bcrypt.compare(password, foundUser.passwordHash);
+      if (!isMatch) {
+        this.logger.warn(`Login rejected for email=${userEmail}`);
+        throw new UnauthorizedException('Invalid credentials');
+      }
+
+      userEmail = foundUser.email ?? '';
+      return this.issueAuthToken(foundUser);
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;
@@ -156,6 +161,20 @@ export class AuthService {
       );
       throw error;
     }
+  }
+
+  private issueAuthToken(user: AuthenticatedUser): AuthResult {
+    const userEmail = user.email?.trim() ?? '';
+    const payload = { email: userEmail, sub: user.id };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        email: userEmail,
+        isOnboarded: user.isOnboarded,
+      },
+    };
   }
 
   async getCurrentUser(userId: string) {
