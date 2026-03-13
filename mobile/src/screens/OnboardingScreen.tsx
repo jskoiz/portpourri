@@ -52,10 +52,10 @@ const ACTIVITIES = [
 ];
 
 const FREQUENCY_OPTIONS = [
-  { key: '1-2', label: '1–2x', subtitle: 'Casual mover', intensity: 'light' },
+  { key: '1-2', label: '1–2x', subtitle: 'Casual mover', intensity: 'low' },
   { key: '3-4', label: '3–4x', subtitle: 'Regular athlete', intensity: 'moderate' },
-  { key: '5-6', label: '5–6x', subtitle: 'Dedicated', intensity: 'intense' },
-  { key: '7+', label: 'Daily', subtitle: 'All-in', intensity: 'athlete' },
+  { key: '5-6', label: '5–6x', subtitle: 'Dedicated', intensity: 'high' },
+  { key: '7+', label: 'Daily', subtitle: 'All-in', intensity: 'high' },
 ];
 
 const ENVIRONMENTS = [
