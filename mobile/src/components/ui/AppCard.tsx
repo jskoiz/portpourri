@@ -77,7 +77,7 @@ export default function AppCard({ children, style, variant = 'default', accent, 
       {accent ? (
         <View style={[styles.accentStrip, { backgroundColor: accent }]} />
       ) : null}
-      <View style={accent ? styles.accentContent : undefined}>
+      <View style={styles.accentContent}>
         {children}
       </View>
     </View>
