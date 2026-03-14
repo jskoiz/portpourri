@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface PendingVerification {
@@ -11,6 +11,7 @@ interface PendingVerification {
 
 @Injectable()
 export class VerificationService {
+  private readonly logger = new Logger(VerificationService.name);
   private pending = new Map<string, PendingVerification>();
 
   constructor(private readonly prisma: PrismaService) {}
@@ -47,34 +48,53 @@ export class VerificationService {
       return { verified: false };
     }
 
-    if (channel === 'email') {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { hasVerifiedEmail: true },
-      });
-    } else {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { hasVerifiedPhone: true },
-      });
+    // Delete before awaiting to prevent a concurrent request with the same
+    // code from also passing the guard and double-verifying.
+    this.pending.delete(key);
+
+    try {
+      if (channel === 'email') {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { hasVerifiedEmail: true },
+        });
+      } else {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { hasVerifiedPhone: true },
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `confirm failed for userId=${userId}, channel=${channel}: ${message}`,
+      );
+      throw error;
     }
 
-    this.pending.delete(key);
     return { verified: true };
   }
 
   async status(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        hasVerifiedEmail: true,
-        hasVerifiedPhone: true,
-        email: true,
-        phoneNumber: true,
-      },
-    });
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          hasVerifiedEmail: true,
+          hasVerifiedPhone: true,
+          email: true,
+          phoneNumber: true,
+        },
+      });
 
-    return user;
+      return user;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `status failed for userId=${userId}: ${message}`,
+      );
+      throw error;
+    }
   }
 
   private maskTarget(channel: 'email' | 'phone', target: string) {

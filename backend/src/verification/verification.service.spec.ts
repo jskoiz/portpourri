@@ -102,6 +102,32 @@ describe('VerificationService', () => {
       const again = await service.confirm('user-1', 'email', devCode);
       expect(again).toEqual({ verified: false });
     });
+
+    it('prevents double-verification when two requests race with the same code', async () => {
+      const { devCode } = service.start('user-1', 'email', 'alice@example.com');
+
+      // Simulate two concurrent confirm calls – both start before either resolves.
+      let resolveFirst!: () => void;
+      userUpdate
+        .mockImplementationOnce(
+          () => new Promise<void>((res) => { resolveFirst = res; }),
+        )
+        .mockResolvedValueOnce({});
+
+      const first = service.confirm('user-1', 'email', devCode);
+      const second = service.confirm('user-1', 'email', devCode);
+
+      // Let the first DB call finish.
+      resolveFirst();
+
+      const [r1, r2] = await Promise.all([first, second]);
+
+      // Only one of the two concurrent calls should succeed.
+      const successes = [r1, r2].filter((r) => r.verified === true).length;
+      expect(successes).toBe(1);
+      // The DB should only have been called once.
+      expect(userUpdate).toHaveBeenCalledTimes(1);
+    });
   });
 
   // ── status ───────────────────────────────────────────────────────────────────
