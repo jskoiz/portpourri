@@ -22,6 +22,8 @@ export interface UserPhoto {
   id?: string;
   storageKey?: string;
   isPrimary?: boolean;
+  isHidden?: boolean;
+  sortOrder?: number;
 }
 
 export interface User {
@@ -48,6 +50,7 @@ export interface AuthResponse {
 
 export interface Match {
   id: string;
+  createdAt: string | Date;
   user: User;
   lastMessage?: string;
 }
@@ -60,7 +63,7 @@ export interface ChatMessage {
 }
 
 export interface LikeResponse {
-  status: "match" | "liked";
+  status: "match" | "liked" | "already_liked";
   match?: {
     id: string;
   };
@@ -105,6 +108,25 @@ export interface CreateEventPayload {
 export interface EventRsvpResponse {
   status: "joined";
   attendeesCount: number;
+}
+
+export type NotificationType =
+  | 'like_received'
+  | 'match_created'
+  | 'message_received'
+  | 'event_rsvp'
+  | 'event_reminder'
+  | 'system';
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+  readAt: string | Date | null;
+  createdAt: string | Date;
 }
 
 export interface ApiErrorPayload {

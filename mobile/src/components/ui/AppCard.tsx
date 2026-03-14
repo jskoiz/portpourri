@@ -25,22 +25,22 @@ export default function AppCard({ children, style, variant = 'default', accent, 
   const getShadow = (): ViewStyle => {
     if (variant === 'elevated') return {
       shadowColor: '#000',
-      shadowOpacity: 0.35,
-      shadowRadius: 20,
-      shadowOffset: { width: 0, height: 8 },
-      elevation: 8,
+      shadowOpacity: 0.18,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 6,
     };
     if (variant === 'glass') return {
       shadowColor: '#000',
-      shadowOpacity: 0.25,
-      shadowRadius: 14,
+      shadowOpacity: 0.12,
+      shadowRadius: 12,
       shadowOffset: { width: 0, height: 4 },
-      elevation: 5,
+      elevation: 4,
     };
     return {
       shadowColor: '#000',
-      shadowOpacity: 0.15,
-      shadowRadius: 10,
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
       shadowOffset: { width: 0, height: 3 },
       elevation: 3,
     };
@@ -86,7 +86,7 @@ export default function AppCard({ children, style, variant = 'default', accent, 
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 20,
+    borderRadius: 22,
     padding: spacing.lg,
     overflow: 'hidden',
     flexDirection: 'row',

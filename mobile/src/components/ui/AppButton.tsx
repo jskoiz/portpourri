@@ -1,9 +1,10 @@
 import React, { useRef } from 'react';
-import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
+import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme/useTheme';
 import { radii, spacing, typography } from '../../theme/tokens';
 
-type Variant = 'primary' | 'secondary' | 'accent' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'accent' | 'energy' | 'ghost' | 'danger';
 
 interface AppButtonProps {
   label: string;
@@ -33,30 +34,40 @@ export default function AppButton({ label, onPress, disabled, loading, variant =
         return {
           backgroundColor: theme.primary,
           borderColor: theme.primary,
-          shadowColor: theme.primary,
-          shadowOpacity: 0.45,
-          shadowRadius: 16,
-          shadowOffset: { width: 0, height: 6 },
-          elevation: 8,
+          shadowColor: '#000000',
+          shadowOpacity: 0.24,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 10 },
+          elevation: 6,
         };
       case 'secondary':
         return {
-          backgroundColor: 'transparent',
-          borderColor: theme.primary,
+          backgroundColor: theme.surfaceElevated,
+          borderColor: theme.borderSoft,
         };
       case 'accent':
         return {
           backgroundColor: theme.accent,
           borderColor: theme.accent,
-          shadowColor: theme.accent,
-          shadowOpacity: 0.35,
+          shadowColor: '#000000',
+          shadowOpacity: 0.18,
           shadowRadius: 12,
-          shadowOffset: { width: 0, height: 4 },
-          elevation: 6,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 5,
+        };
+      case 'energy':
+        return {
+          backgroundColor: theme.energy,
+          borderColor: theme.energy,
+          shadowColor: '#000000',
+          shadowOpacity: 0.18,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 5,
         };
       case 'ghost':
         return {
-          backgroundColor: 'transparent',
+          backgroundColor: 'rgba(255,255,255,0.03)',
           borderColor: theme.border,
         };
       case 'danger':
@@ -76,11 +87,25 @@ export default function AppButton({ label, onPress, disabled, loading, variant =
     switch (variant) {
       case 'primary': return theme.white;
       case 'secondary': return theme.primary;
-      case 'accent': return '#0D1117'; // dark text on mint green
-      case 'ghost': return theme.textSecondary;
+      case 'accent': return '#0D1117';
+      case 'energy': return theme.textInverse;
+      case 'ghost': return theme.textPrimary;
       case 'danger': return theme.white;
     }
   };
+
+  const gradientColors = (() => {
+    switch (variant) {
+      case 'primary':
+        return ['#9B8BFF', '#8A79FA', theme.primaryPressed] as const;
+      case 'accent':
+        return ['#61E8BF', '#47DBAA', '#23B887'] as const;
+      case 'energy':
+        return ['#F6BC4A', '#F0AA22', '#D68B02'] as const;
+      default:
+        return null;
+    }
+  })();
 
   return (
     <Pressable
@@ -95,17 +120,35 @@ export default function AppButton({ label, onPress, disabled, loading, variant =
         style={[
           styles.base,
           getContainerStyle(),
-          style,
           { transform: [{ scale }] },
+          style,
         ]}
       >
-        {loading ? (
-          <ActivityIndicator
-            color={variant === 'primary' || variant === 'danger' || variant === 'accent' ? theme.white : theme.primary}
-            size="small"
-          />
+        {gradientColors ? (
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientFill}
+          >
+            <View style={styles.innerHighlight} />
+            {loading ? (
+              <ActivityIndicator color={theme.white} size="small" />
+            ) : (
+              <Text style={[styles.label, { color: getLabelColor() }]}>{label}</Text>
+            )}
+          </LinearGradient>
         ) : (
-          <Text style={[styles.label, { color: getLabelColor() }]}>{label}</Text>
+          <>
+            {loading ? (
+              <ActivityIndicator
+                color={variant === 'danger' ? theme.white : theme.primary}
+                size="small"
+              />
+            ) : (
+              <Text style={[styles.label, { color: getLabelColor() }]}>{label}</Text>
+            )}
+          </>
         )}
       </Animated.View>
     </Pressable>
@@ -114,16 +157,33 @@ export default function AppButton({ label, onPress, disabled, loading, variant =
 
 const styles = StyleSheet.create({
   base: {
-    height: 56,
-    borderRadius: 16,
+    minHeight: 56,
+    borderRadius: 20,
     paddingHorizontal: spacing.xxl,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  gradientFill: {
+    width: '100%',
+    minHeight: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xxl,
+  },
+  innerHighlight: {
+    position: 'absolute',
+    top: 1,
+    left: 1,
+    right: 1,
+    height: '52%',
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.10)',
   },
   label: {
-    fontSize: typography.body,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    fontSize: typography.bodySmall,
+    fontWeight: '800',
+    letterSpacing: 0.25,
   },
 });

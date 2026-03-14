@@ -5,16 +5,16 @@ import {
   Pressable,
   Modal,
   StyleSheet,
-  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
 import { useIntentStore, type SessionIntent } from '../store/intentStore';
+import AppIcon from './ui/AppIcon';
 
 interface IntentOption {
   key: SessionIntent;
-  icon: string;
+  icon: React.ComponentProps<typeof AppIcon>['name'];
   title: string;
   subtitle: string;
 }
@@ -22,21 +22,21 @@ interface IntentOption {
 const INTENT_OPTIONS: IntentOption[] = [
   {
     key: 'dating',
-    icon: '❤️',
+    icon: 'heart',
     title: 'Dating',
     subtitle: 'Meet someone special through shared movement',
   },
   {
     key: 'workout',
-    icon: '💪',
-    title: 'Workout Partner',
+    icon: 'activity',
+    title: 'Training Partner',
     subtitle: 'Find your perfect training companion',
   },
   {
     key: 'both',
-    icon: '🔀',
-    title: 'Both',
-    subtitle: 'Open to love and lifting — why choose?',
+    icon: 'shuffle',
+    title: 'Open to both',
+    subtitle: 'Keep it open to chemistry and momentum.',
   },
 ];
 
@@ -101,7 +101,13 @@ export default function IntentSelector({ visible, onClose }: IntentSelectorProps
                   },
                 ]}
               >
-                <Text style={styles.optionIcon}>{option.icon}</Text>
+                <View style={[styles.optionIconWrap, { backgroundColor: selected ? theme.primarySubtle : theme.surfaceElevated }]}>
+                  <AppIcon
+                    name={option.icon}
+                    size={18}
+                    color={selected ? theme.primary : theme.textSecondary}
+                  />
+                </View>
                 <View style={styles.optionText}>
                   <Text
                     style={[
@@ -117,7 +123,7 @@ export default function IntentSelector({ visible, onClose }: IntentSelectorProps
                 </View>
                 {selected && (
                   <View style={[styles.checkmark, { backgroundColor: theme.primary }]}>
-                    <Text style={{ color: theme.white, fontSize: 12, fontWeight: '800' }}>✓</Text>
+                    <AppIcon name="check" size={12} color={theme.textInverse} />
                   </View>
                 )}
               </Pressable>
@@ -130,9 +136,9 @@ export default function IntentSelector({ visible, onClose }: IntentSelectorProps
 }
 
 export function intentLabel(intent: SessionIntent): string {
-  if (intent === 'dating') return '❤️ Dating';
-  if (intent === 'workout') return '💪 Workout';
-  return '🔀 Both';
+  if (intent === 'dating') return 'Dating';
+  if (intent === 'workout') return 'Training';
+  return 'Open to both';
 }
 
 const styles = StyleSheet.create({
@@ -183,8 +189,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     gap: spacing.lg,
   },
-  optionIcon: {
-    fontSize: 32,
+  optionIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   optionText: {
     flex: 1,

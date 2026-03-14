@@ -42,11 +42,11 @@ export default function AppInput({ label, style, multiline, error, onFocus, onBl
           {
             backgroundColor: theme.surfaceElevated,
             borderColor,
-            shadowColor: focused ? theme.primary : 'transparent',
-            shadowOpacity: focused ? 0.20 : 0,
-            shadowRadius: focused ? 8 : 0,
-            shadowOffset: { width: 0, height: 2 },
-            elevation: focused ? 3 : 0,
+            shadowColor: focused ? theme.primary : '#000000',
+            shadowOpacity: focused ? 0.14 : 0.05,
+            shadowRadius: focused ? 18 : 8,
+            shadowOffset: { width: 0, height: focused ? 6 : 2 },
+            elevation: focused ? 4 : 2,
           },
         ]}
       >
@@ -78,20 +78,20 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: spacing.sm,
     marginLeft: 2,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.0,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.7,
     textTransform: 'uppercase',
   },
   inputWrapper: {
-    borderRadius: radii.lg,
-    borderWidth: 1.5,
+    borderRadius: 20,
+    borderWidth: 1,
   },
   input: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md + 2,
+    paddingVertical: spacing.md + 5,
     fontSize: typography.body,
-    minHeight: 52,
+    minHeight: 58,
   },
   multiline: {
     minHeight: 110,

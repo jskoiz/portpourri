@@ -1,18 +1,24 @@
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Swiper from 'react-native-deck-swiper';
 import { radii, shadows, spacing, typography } from '../theme/tokens';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-const CARD_HEIGHT = Math.floor(SCREEN_HEIGHT * 0.65);
+const CARD_HEIGHT = Math.floor(SCREEN_HEIGHT * 0.68);
 
-// Dark theme constants (SwipeDeck is always dark)
 const DARK = {
   background: '#0D1117',
-  surface: '#1C2330',
+  surface: '#161B22',
+  surfaceElevated: '#1C2330',
+  border: 'rgba(255,255,255,0.08)',
+  borderStrong: 'rgba(255,255,255,0.14)',
   accent: '#34D399',
   danger: '#F87171',
   primary: '#7C6AF7',
+  textPrimary: '#F0F6FF',
+  textSecondary: 'rgba(240,246,255,0.72)',
+  textMuted: 'rgba(240,246,255,0.48)',
 };
 
 interface CardProps {
@@ -23,77 +29,107 @@ interface CardProps {
 const profileChips = (user: any) => {
   const chips: string[] = [];
   if (user.profile?.city) chips.push(user.profile.city);
-  if (user.fitnessProfile?.primaryGoal) chips.push(user.fitnessProfile.primaryGoal);
+  if (user.fitnessProfile?.primaryGoal) chips.push(user.fitnessProfile.primaryGoal.replace('_', ' '));
   if (user.fitnessProfile?.intensityLevel) chips.push(user.fitnessProfile.intensityLevel);
   return chips.slice(0, 3);
 };
 
 const getIntentLabel = (intent?: string) => {
-  if (intent === 'dating') return '❤️ Dating';
-  if (intent === 'workout') return '💪 Workout';
-  return '🔀 Both';
+  if (intent === 'dating') return 'Dating';
+  if (intent === 'workout') return 'Training';
+  return 'Open to both';
+};
+
+const getPresenceLabel = (user: any) => {
+  if (user?.profile?.city) return 'Available tonight';
+  return 'Nearby now';
+};
+
+const getTempoLabel = (user: any) => {
+  const frequency = user?.fitnessProfile?.weeklyFrequencyBand;
+  const intensity = user?.fitnessProfile?.intensityLevel;
+
+  if (frequency && intensity) return `${frequency}x week / ${intensity}`;
+  if (frequency) return `${frequency}x week`;
+  if (intensity) return intensity;
+  return 'Intent-aware match';
 };
 
 const Card = ({ user, onPress }: CardProps) => {
   const primaryPhoto = user.photos?.find((p: any) => p.isPrimary)?.storageKey || user.photoUrl;
   const chips = profileChips(user);
   const intentLabel = getIntentLabel(user.profile?.intent);
+  const presenceLabel = getPresenceLabel(user);
+  const tempoLabel = getTempoLabel(user);
+  const activityLabel = user.fitnessProfile?.favoriteActivities?.split(',')[0]?.trim() || 'Movement';
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.96}
-      onPress={onPress}
-      style={[styles.card, shadows.card]}
-    >
+    <TouchableOpacity activeOpacity={0.98} onPress={onPress} style={[styles.card, shadows.card]}>
       <View style={styles.imageContainer}>
         {primaryPhoto ? (
           <Image source={{ uri: primaryPhoto }} style={styles.image} resizeMode="cover" />
         ) : (
-          <View style={styles.placeholderImage}>
+          <LinearGradient
+            colors={['#1E293B', '#111827']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.placeholderImage}
+          >
             <Text style={styles.initials}>{user.firstName?.[0] || '?'}</Text>
-          </View>
+          </LinearGradient>
         )}
 
-        {/* Top badges row */}
-        <View style={styles.topBadges}>
-          {/* Active now — accent green */}
-          <View style={styles.activeBadge}>
-            <Text style={styles.activeBadgeText}>● Active now</Text>
-          </View>
+        <View style={styles.cardFrame} pointerEvents="none" />
+        <LinearGradient
+          colors={['rgba(9,12,20,0.04)', 'rgba(9,12,20,0.18)', 'rgba(9,12,20,0.92)']}
+          locations={[0, 0.42, 1]}
+          style={styles.imageGradient}
+          pointerEvents="none"
+        />
 
-          {/* Intent badge — top right */}
-          <View style={styles.intentBadge}>
-            <Text style={styles.intentBadgeText}>{intentLabel}</Text>
+        <View style={styles.topChrome}>
+          <View style={styles.cardHandle} />
+          <View style={styles.badgeRow}>
+            <View style={styles.intentBadge}>
+              <Text style={styles.intentBadgeText}>{intentLabel}</Text>
+            </View>
+            <View style={styles.presenceBadge}>
+              <Text style={styles.presenceBadgeText}>{presenceLabel}</Text>
+            </View>
           </View>
         </View>
 
-        {/* Gradient overlay — layered rgba */}
-        <View style={styles.gradientOverlay} pointerEvents="none">
-          <View style={styles.gradientTop} />
-          <View style={styles.gradientMid} />
-          <View style={styles.gradientBottom} />
-        </View>
-
-        {/* Card info overlay */}
-        <View style={styles.overlay}>
+        <View style={styles.bottomShell}>
+          <Text style={styles.eyebrow}>{activityLabel.toUpperCase()} / CURATED MATCH</Text>
           <Text style={styles.name}>
-            {user.firstName || 'Someone'}{user.age ? `, ${user.age}` : ''}
+            {user.firstName || 'Someone'}
+            {user.age ? `, ${user.age}` : ''}
+          </Text>
+          <Text style={styles.metaLine}>
+            {user.profile?.city || 'Nearby'}
+            {user.distanceKm ? ` · ${Math.round(user.distanceKm)} km away` : ''}
           </Text>
           <Text style={styles.bio} numberOfLines={2}>
-            {user.profile?.bio || 'Looking for a compatible training partner.'}
+            {user.profile?.bio || 'Aligned on rhythm, intent, and the kind of plans that actually happen.'}
           </Text>
+
+          <View style={styles.infoPanel}>
+            <Text style={styles.infoPanelLabel}>PACE</Text>
+            <Text style={styles.infoPanelValue}>{tempoLabel}</Text>
+          </View>
+
           <View style={styles.chipRow}>
-            {chips.length > 0
-              ? chips.map((chip) => (
-                  <View key={chip} style={styles.chip}>
-                    <Text style={styles.chipText}>{chip}</Text>
-                  </View>
-                ))
-              : (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>Nearby</Text>
+            {chips.length > 0 ? (
+              chips.map((chip) => (
+                <View key={chip} style={styles.chip}>
+                  <Text style={styles.chipText}>{chip}</Text>
                 </View>
-              )}
+              ))
+            ) : (
+              <View style={styles.chip}>
+                <Text style={styles.chipText}>Nearby</Text>
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -115,7 +151,7 @@ export default function SwipeDeck({ data, onSwipeLeft, onSwipeRight, onPress }: 
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyTitle}>No new profiles tonight</Text>
-        <Text style={styles.emptyText}>You've seen everyone nearby. Check back soon for fresh faces.</Text>
+        <Text style={styles.emptyText}>You have seen everyone nearby. Check back later for fresh momentum.</Text>
       </View>
     );
   }
@@ -129,11 +165,11 @@ export default function SwipeDeck({ data, onSwipeLeft, onSwipeRight, onPress }: 
         onSwipedLeft={(index) => onSwipeLeft(data[index])}
         onSwipedRight={(index) => onSwipeRight(data[index])}
         cardIndex={0}
-        backgroundColor={DARK.background}
+        backgroundColor="transparent"
         stackSize={3}
-        stackSeparation={14}
+        stackSeparation={18}
         cardVerticalMargin={8}
-        cardHorizontalMargin={16}
+        cardHorizontalMargin={20}
         containerStyle={styles.swiperContainer}
         animateOverlayLabelsOpacity
         animateCardOpacity
@@ -164,22 +200,25 @@ export default function SwipeDeck({ data, onSwipeLeft, onSwipeRight, onPress }: 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK.background,
+    backgroundColor: 'transparent',
   },
   swiperContainer: {
     flex: 1,
-    backgroundColor: DARK.background,
+    backgroundColor: 'transparent',
     paddingBottom: spacing.xxxl,
   },
   card: {
-    borderRadius: 24,
+    borderRadius: 30,
     backgroundColor: DARK.surface,
     overflow: 'hidden',
     height: CARD_HEIGHT,
     width: '100%',
+    borderWidth: 1,
+    borderColor: DARK.border,
   },
   imageContainer: {
     flex: 1,
+    backgroundColor: DARK.surface,
   },
   image: {
     width: '100%',
@@ -188,125 +227,173 @@ const styles = StyleSheet.create({
   placeholderImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: DARK.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
   initials: {
-    fontSize: 86,
-    color: '#F0F6FF',
-    fontWeight: '700',
+    fontSize: 84,
+    color: DARK.textPrimary,
+    fontWeight: '800',
   },
-  topBadges: {
+  cardFrame: {
     position: 'absolute',
-    top: spacing.lg,
-    left: spacing.lg,
-    right: spacing.lg,
+    top: 14,
+    left: 14,
+    right: 14,
+    bottom: 14,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: DARK.borderStrong,
+  },
+  imageGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  topChrome: {
+    position: 'absolute',
+    top: spacing.xl,
+    left: spacing.xl,
+    right: spacing.xl,
+  },
+  cardHandle: {
+    alignSelf: 'center',
+    width: 132,
+    height: 18,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(30,39,58,0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    marginBottom: spacing.lg,
+  },
+  badgeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  activeBadge: {
-    backgroundColor: DARK.accent,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  activeBadgeText: {
-    color: '#0D1117',
-    fontSize: typography.caption,
-    fontWeight: '800',
-    letterSpacing: 0.2,
-  },
   intentBadge: {
-    backgroundColor: 'rgba(28,35,48,0.85)',
+    backgroundColor: 'rgba(13,17,23,0.64)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: 6,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
   },
   intentBadgeText: {
-    color: '#F0F6FF',
+    color: DARK.textPrimary,
+    fontSize: typography.caption,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  presenceBadge: {
+    backgroundColor: 'rgba(13,17,23,0.48)',
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  presenceBadgeText: {
+    color: DARK.textSecondary,
     fontSize: typography.caption,
     fontWeight: '700',
   },
-  // Layered gradient simulation
-  gradientOverlay: {
+  bottomShell: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: '55%',
+    paddingHorizontal: spacing.xxl,
+    paddingBottom: spacing.xxxl,
+    paddingTop: spacing.xxxxl,
   },
-  gradientTop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.0)',
-  },
-  gradientMid: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.30)',
-  },
-  gradientBottom: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-  },
-  overlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: spacing.xl,
-    paddingBottom: spacing.xxl,
+  eyebrow: {
+    fontSize: 10,
+    color: DARK.textMuted,
+    fontWeight: '800',
+    letterSpacing: 3,
+    marginBottom: spacing.sm,
   },
   name: {
-    fontSize: 36,
+    fontSize: 40,
     fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-    lineHeight: 42,
+    color: DARK.textPrimary,
+    letterSpacing: -1.2,
+    lineHeight: 44,
+  },
+  metaLine: {
+    fontSize: typography.bodySmall,
+    color: DARK.textSecondary,
+    fontWeight: '600',
+    marginTop: spacing.xs,
   },
   bio: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.85)',
-    lineHeight: 22,
-    marginTop: spacing.xs,
+    fontSize: typography.body,
+    color: 'rgba(255,255,255,0.88)',
+    lineHeight: 24,
+    marginTop: spacing.md,
+    maxWidth: '90%',
+  },
+  infoPanel: {
+    marginTop: spacing.lg,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(18,24,36,0.56)',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  infoPanelLabel: {
+    color: DARK.textMuted,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.8,
+    marginBottom: spacing.xs,
+  },
+  infoPanelValue: {
+    color: DARK.textPrimary,
+    fontSize: typography.body,
+    fontWeight: '700',
+    textTransform: 'capitalize',
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
   },
   chip: {
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: 'rgba(255,255,255,0.09)',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 1,
+    paddingVertical: 6,
   },
   chipText: {
-    color: '#FFFFFF',
+    color: DARK.textPrimary,
     fontSize: typography.caption,
     fontWeight: '700',
+    textTransform: 'capitalize',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xxxl,
-    backgroundColor: DARK.background,
+    backgroundColor: 'transparent',
   },
   emptyTitle: {
-    color: '#F0F6FF',
+    color: DARK.textPrimary,
     fontSize: typography.h2,
     fontWeight: '800',
     textAlign: 'center',
     letterSpacing: -0.3,
   },
   emptyText: {
-    color: '#94A3B8',
+    color: DARK.textSecondary,
     textAlign: 'center',
     marginTop: spacing.sm,
     lineHeight: 22,
@@ -315,35 +402,37 @@ const styles = StyleSheet.create({
   overlayReject: {
     borderColor: DARK.danger,
     color: DARK.danger,
-    borderWidth: 2.5,
-    fontSize: 30,
+    borderWidth: 2,
+    fontSize: 26,
     fontWeight: '900',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.md,
+    backgroundColor: 'rgba(13,17,23,0.70)',
   },
   overlayLike: {
     borderColor: DARK.accent,
     color: DARK.accent,
-    borderWidth: 2.5,
-    fontSize: 30,
+    borderWidth: 2,
+    fontSize: 26,
     fontWeight: '900',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.md,
+    backgroundColor: 'rgba(13,17,23,0.70)',
   },
   overlayWrapperLeft: {
     flexDirection: 'column',
     alignItems: 'flex-end',
     justifyContent: 'flex-start',
-    marginTop: 42,
-    marginLeft: -30,
+    marginTop: 48,
+    marginLeft: -12,
   },
   overlayWrapperRight: {
     flexDirection: 'column',
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
-    marginTop: 42,
-    marginLeft: 30,
+    marginTop: 48,
+    marginLeft: 12,
   },
 });

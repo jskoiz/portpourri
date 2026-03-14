@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import AppButton from './AppButton';
+import AppIcon from './AppIcon';
 import { useTheme } from '../../theme/useTheme';
 import { spacing, typography } from '../../theme/tokens';
 
@@ -13,15 +14,15 @@ interface AppStateProps {
   onAction?: () => void;
 }
 
-const ICONS: Record<string, string> = {
-  loading: '⚡',
-  error: '⚠️',
-  empty: '🎯',
+const ICONS: Record<string, React.ComponentProps<typeof AppIcon>['name']> = {
+  loading: 'loader',
+  error: 'alert-circle',
+  empty: 'compass',
 };
 
 export default function AppState({ title, description, loading, isError, actionLabel, onAction }: AppStateProps) {
   const theme = useTheme();
-  const icon = isError ? ICONS.error : loading ? null : ICONS.empty;
+  const icon = isError ? ICONS.error : ICONS.empty;
 
   return (
     <View style={styles.container}>
@@ -30,7 +31,7 @@ export default function AppState({ title, description, loading, isError, actionL
           <ActivityIndicator size="large" color={theme.primary} style={styles.loader} />
         ) : (
           <View style={[styles.iconCircle, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-            <Text style={styles.emoji}>{icon}</Text>
+            <AppIcon name={icon} size={24} color={isError ? theme.danger : theme.primary} />
           </View>
         )}
         <Text style={[styles.title, { color: theme.textPrimary }]}>{title}</Text>
@@ -65,10 +66,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 5,
   },
   iconCircle: {
     width: 64,
@@ -81,9 +82,6 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginBottom: spacing.lg,
-  },
-  emoji: {
-    fontSize: 28,
   },
   title: {
     fontSize: typography.h3,

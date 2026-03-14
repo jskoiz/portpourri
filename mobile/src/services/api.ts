@@ -1,13 +1,16 @@
 import client from "../api/client";
 import type {
+  AppNotification,
   AuthResponse,
   CreateEventPayload,
   EventDetail,
   EventRsvpResponse,
   EventSummary,
   LikeResponse,
+  Match,
   ProfileCompletenessResponse,
   UndoSwipeResponse,
+  User,
 } from "../api/types";
 import { logApiFailure } from "../api/observability";
 
@@ -57,7 +60,7 @@ export const authApi = {
 export const profileApi = {
   getProfile: async () => {
     try {
-      return await client.get("/profile");
+      return await client.get<User>("/profile");
     } catch (error) {
       logApiFailure("profile", "getProfile", error);
       throw error;
@@ -68,6 +71,8 @@ export const profileApi = {
     weeklyFrequencyBand: string;
     primaryGoal: string;
     favoriteActivities: string;
+    prefersMorning?: boolean;
+    prefersEvening?: boolean;
   }) => {
     try {
       return await client.put("/profile/fitness", payload);
@@ -142,16 +147,16 @@ export const discoveryApi = {
 };
 
 export const matchesApi = {
-  list: () => client.get("/matches"),
+  list: () => client.get<Match[]>("/matches"),
   getMessages: (matchId: string) => client.get(`/matches/${matchId}/messages`),
   sendMessage: (matchId: string, content: string) =>
     client.post(`/matches/${matchId}/messages`, { content }),
 };
 
 export const notificationsApi = {
-  list: () => client.get("/notifications"),
-  markRead: (id: string) => client.patch(`/notifications/${id}/read`),
-  markAllRead: () => client.post("/notifications/mark-all-read"),
+  list: () => client.get<AppNotification[]>("/notifications"),
+  markRead: (id: string) => client.patch<AppNotification | null>(`/notifications/${id}/read`),
+  markAllRead: () => client.post<{ updated: number }>("/notifications/mark-all-read"),
 };
 
 export const eventsApi = {
