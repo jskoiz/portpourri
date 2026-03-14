@@ -17,6 +17,7 @@ import { normalizeApiError } from '../api/errors';
 import type { EventSummary } from '../api/types';
 import { eventsApi } from '../services/api';
 import AppBackdrop from '../components/ui/AppBackdrop';
+import AppButton from '../components/ui/AppButton';
 import { radii, spacing, typography } from '../theme/tokens';
 import AppIcon from '../components/ui/AppIcon';
 import AppState from '../components/ui/AppState';
@@ -37,6 +38,11 @@ const TEXT_SECONDARY = 'rgba(240,246,252,0.65)';
 const TEXT_MUTED = 'rgba(240,246,252,0.38)';
 type AppIconName = React.ComponentProps<typeof AppIcon>['name'];
 
+const CATEGORIES = ['All', 'Events', 'Trails', 'Gyms', 'Spots', 'Community'] as const;
+
+type ExploreCategory = typeof CATEGORIES[number];
+type SpotTag = 'Trails' | 'Gyms';
+
 const ACTIVITY_SPOTS: Array<{
   id: string;
   name: string;
@@ -44,13 +50,17 @@ const ACTIVITY_SPOTS: Array<{
   icon: AppIconName;
   distance: string;
   color: string;
+  tags: SpotTag[];
 }> = [
-  { id: '1', name: 'Magic Island', type: 'Run + Swim', icon: 'navigation', distance: '0.9 mi', color: ACCENT },
-  { id: '2', name: 'Kapiolani Park', type: 'Beach Games', icon: 'circle', distance: '1.4 mi', color: '#F59E0B' },
-  { id: '3', name: 'Koko Head District Park', type: 'Stairs', icon: 'map', distance: '6.1 mi', color: '#F87171' },
-  { id: '4', name: 'Ala Moana Beach Park', type: 'Open Water', icon: 'droplet', distance: '1.1 mi', color: PRIMARY },
-  { id: '5', name: 'Kailua Beach', type: 'Paddle', icon: 'anchor', distance: '10.5 mi', color: '#7AA8B8' },
-  { id: '6', name: 'Makapuu Trail', type: 'Sunrise Hike', icon: 'sunrise', distance: '9.8 mi', color: '#34D399' },
+  { id: '1', name: 'Magic Island', type: 'Run + Swim', icon: 'navigation', distance: '0.9 mi', color: ACCENT, tags: ['Trails'] },
+  { id: '2', name: 'Kapiolani Park', type: 'Beach Games', icon: 'circle', distance: '1.4 mi', color: '#F59E0B', tags: ['Trails'] },
+  { id: '3', name: 'Koko Head District Park', type: 'Stairs', icon: 'map', distance: '6.1 mi', color: '#F87171', tags: ['Trails'] },
+  { id: '4', name: 'Ala Moana Beach Park', type: 'Open Water', icon: 'droplet', distance: '1.1 mi', color: PRIMARY, tags: ['Trails'] },
+  { id: '5', name: 'Kailua Beach', type: 'Paddle', icon: 'anchor', distance: '10.5 mi', color: '#7AA8B8', tags: ['Trails'] },
+  { id: '6', name: 'Makapuu Trail', type: 'Sunrise Hike', icon: 'sunrise', distance: '9.8 mi', color: '#34D399', tags: ['Trails'] },
+  { id: '7', name: 'Honolulu Strength Lab', type: 'Strength Training', icon: 'activity', distance: '2.2 mi', color: '#60A5FA', tags: ['Gyms'] },
+  { id: '8', name: 'Kaimuki Boxing Club', type: 'Boxing + Conditioning', icon: 'target', distance: '3.9 mi', color: '#F97316', tags: ['Gyms'] },
+  { id: '9', name: 'Kakaako Yoga Loft', type: 'Mobility + Flow', icon: 'sun', distance: '1.8 mi', color: '#A78BFA', tags: ['Gyms'] },
 ];
 
 const COMMUNITY_POSTS = [
@@ -101,7 +111,119 @@ const COMMUNITY_POSTS = [
   },
 ];
 
-const CATEGORIES = ['All', 'Events', 'Trails', 'Gyms', 'Spots', 'Community'];
+const TRAIL_EVENT_KEYWORDS = [
+  'run',
+  'running',
+  'trail',
+  'hike',
+  'hiking',
+  'cycle',
+  'cycling',
+  'swim',
+  'swimming',
+  'surf',
+  'surfing',
+  'paddle',
+  'paddling',
+  'beach',
+  'ocean',
+  'park',
+  'endurance',
+];
+
+const GYM_EVENT_KEYWORDS = [
+  'boxing',
+  'strength',
+  'pilates',
+  'climb',
+  'climbing',
+  'dance',
+  'yoga',
+  'gym',
+  'studio',
+  'club',
+  'fitness',
+  'lab',
+];
+
+function getEventSearchText(event: EventSummary) {
+  return `${event.category ?? ''} ${event.title} ${event.location}`.toLowerCase();
+}
+
+function matchesEventKeyword(event: EventSummary, keywords: string[]) {
+  const haystack = getEventSearchText(event);
+  return keywords.some((keyword) => haystack.includes(keyword));
+}
+
+function matchesEventCategory(event: EventSummary, activeCategory: ExploreCategory) {
+  switch (activeCategory) {
+    case 'All':
+    case 'Events':
+      return true;
+    case 'Trails':
+      return matchesEventKeyword(event, TRAIL_EVENT_KEYWORDS);
+    case 'Gyms':
+      return matchesEventKeyword(event, GYM_EVENT_KEYWORDS);
+    case 'Spots':
+    case 'Community':
+      return false;
+    default:
+      return true;
+  }
+}
+
+function matchesSpotCategory(
+  spot: (typeof ACTIVITY_SPOTS)[number],
+  activeCategory: ExploreCategory,
+) {
+  switch (activeCategory) {
+    case 'All':
+    case 'Spots':
+      return true;
+    case 'Trails':
+      return spot.tags.includes('Trails');
+    case 'Gyms':
+      return spot.tags.includes('Gyms');
+    case 'Events':
+    case 'Community':
+      return false;
+    default:
+      return true;
+  }
+}
+
+function getEventSectionTitle(activeCategory: ExploreCategory) {
+  switch (activeCategory) {
+    case 'Trails':
+      return 'Trail Events';
+    case 'Gyms':
+      return 'Gym Events';
+    default:
+      return 'Near You';
+  }
+}
+
+function getEventEmptyDescription(activeCategory: ExploreCategory) {
+  switch (activeCategory) {
+    case 'Trails':
+      return 'No trail-oriented events are live right now. Try again after a refresh.';
+    case 'Gyms':
+      return 'No gym-based events are live right now. Try again after a refresh.';
+    default:
+      return 'Create the first plan nearby or check back after a refresh.';
+  }
+}
+
+function getSpotsSectionTitle(activeCategory: ExploreCategory) {
+  switch (activeCategory) {
+    case 'Trails':
+      return 'Trail Spots';
+    case 'Gyms':
+      return 'Training Spaces';
+    default:
+      return 'Activity Spots';
+  }
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -192,23 +314,18 @@ function EventCard({
         </View>
 
         <View style={styles.eventActions}>
-          <Pressable style={styles.joinBtn} onPress={onOpen}>
-            <LinearGradient
-              colors={[meta.gradientColors[0], meta.gradientColors[1]]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.joinBtnInner}
-            >
-              <Text style={styles.joinBtnText}>{event.joined ? 'View again' : 'View event'}</Text>
-            </LinearGradient>
-          </Pressable>
-          <TouchableOpacity
-            style={styles.inviteBtn}
+          <AppButton
+            label={event.joined ? 'View again' : 'View event'}
+            onPress={onOpen}
+            variant={event.joined ? 'secondary' : 'accent'}
+            style={styles.joinBtn}
+          />
+          <AppButton
+            label="Share"
             onPress={onInvite}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.inviteBtnText}>Share</Text>
-          </TouchableOpacity>
+            variant="ghost"
+            style={styles.inviteBtn}
+          />
         </View>
       </View>
     </Pressable>
@@ -269,7 +386,7 @@ function CommunityCard({ post, onInvite }: { post: typeof COMMUNITY_POSTS[0]; on
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function ExploreScreen({ navigation }: any) {
-  const [activeCategory, setActiveCategory] = useState('All');
+  const [activeCategory, setActiveCategory] = useState<ExploreCategory>('All');
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -304,11 +421,15 @@ export default function ExploreScreen({ navigation }: any) {
         : "Join me on BRDG. Let's move together.";
       await Share.share({ message });
     } catch {
-      navigation.navigate('Create');
+      // share sheet unavailable — silently ignore
     }
   };
 
-  const showEvents = activeCategory === 'All' || activeCategory === 'Events';
+  const filteredEvents = events.filter((event) => matchesEventCategory(event, activeCategory));
+  const filteredSpots = ACTIVITY_SPOTS.filter((spot) => matchesSpotCategory(spot, activeCategory));
+  const eventSectionTitle = getEventSectionTitle(activeCategory);
+  const spotsSectionTitle = getSpotsSectionTitle(activeCategory);
+  const showEvents = activeCategory === 'All' || activeCategory === 'Events' || activeCategory === 'Trails' || activeCategory === 'Gyms';
   const showSpots = activeCategory === 'All' || activeCategory === 'Trails' || activeCategory === 'Gyms' || activeCategory === 'Spots';
   const showCommunity = activeCategory === 'All' || activeCategory === 'Community';
 
@@ -369,7 +490,7 @@ export default function ExploreScreen({ navigation }: any) {
         {showEvents && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Near You</Text>
+              <Text style={styles.sectionTitle}>{eventSectionTitle}</Text>
               <TouchableOpacity onPress={() => openMyEvents(navigation)}>
                 <Text style={styles.seeAll}>My Events →</Text>
               </TouchableOpacity>
@@ -384,15 +505,15 @@ export default function ExploreScreen({ navigation }: any) {
                 onAction={fetchEvents}
                 isError
               />
-            ) : events.length === 0 ? (
+            ) : filteredEvents.length === 0 ? (
               <AppState
-                title="No live events yet"
-                description="Create the first plan nearby or check back after a refresh."
+                title="No matching events yet"
+                description={getEventEmptyDescription(activeCategory)}
                 actionLabel="Create event"
                 onAction={() => navigation.navigate('Create')}
               />
             ) : (
-              events.slice(0, 6).map((event) => (
+              filteredEvents.slice(0, 6).map((event) => (
                 <EventCard
                   key={event.id}
                   event={event}
@@ -407,17 +528,24 @@ export default function ExploreScreen({ navigation }: any) {
         {/* ── Activity Spots ── */}
         {showSpots && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Activity Spots</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.spotsRow}
-              style={{ marginTop: spacing.md }}
-            >
-              {ACTIVITY_SPOTS.slice(0, 5).map((spot) => (
-                <SpotCard key={spot.id} spot={spot} />
-              ))}
-            </ScrollView>
+            <Text style={styles.sectionTitle}>{spotsSectionTitle}</Text>
+            {filteredSpots.length === 0 ? (
+              <View style={styles.spotsEmptyState}>
+                <Text style={styles.spotsEmptyTitle}>No spots in this lane yet</Text>
+                <Text style={styles.spotsEmptyCopy}>Try another filter or come back after the next refresh.</Text>
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.spotsRow}
+                style={{ marginTop: spacing.md }}
+              >
+                {filteredSpots.map((spot) => (
+                  <SpotCard key={spot.id} spot={spot} />
+                ))}
+              </ScrollView>
+            )}
           </View>
         )}
 
@@ -635,38 +763,38 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   joinBtn: {
-    borderRadius: radii.pill,
-    overflow: 'hidden',
-  },
-  joinBtnInner: {
+    flex: 1,
+    minHeight: 42,
     paddingHorizontal: spacing.lg,
-    paddingVertical: 8,
-    borderRadius: radii.pill,
-  },
-  joinBtnText: {
-    fontSize: typography.bodySmall,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
   },
   inviteBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
-  inviteBtnText: {
-    fontSize: typography.bodySmall,
-    fontWeight: '600',
-    color: TEXT_MUTED,
+    minHeight: 42,
+    paddingHorizontal: spacing.lg,
   },
 
   // Spots - horizontal scroll cards
   spotsRow: {
     gap: spacing.md,
     paddingRight: CARD_PADDING,
+  },
+  spotsEmptyState: {
+    marginTop: spacing.md,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: spacing.md,
+  },
+  spotsEmptyTitle: {
+    fontSize: typography.bodySmall,
+    fontWeight: '800',
+    color: TEXT_PRIMARY,
+    marginBottom: 4,
+  },
+  spotsEmptyCopy: {
+    fontSize: typography.caption,
+    color: TEXT_MUTED,
+    lineHeight: 18,
   },
   spotCard: {
     width: SPOT_CARD_WIDTH,
