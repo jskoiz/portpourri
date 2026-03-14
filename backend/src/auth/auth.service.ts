@@ -123,6 +123,9 @@ export class AuthService {
         throw new BadRequestException('Password is required');
       }
 
+      const parsedBirthdate = this.parseBirthdate(birthdate);
+      const normalizedGender = this.normalizeGender(gender);
+
       const existing = await this.prisma.user.findFirst({
         where: this.buildEmailLookup(normalizedEmail),
       });
@@ -132,8 +135,6 @@ export class AuthService {
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
-      const parsedBirthdate = this.parseBirthdate(birthdate);
-      const normalizedGender = this.normalizeGender(gender);
 
       const user = await this.prisma.user.create({
         data: {
