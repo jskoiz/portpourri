@@ -1,0 +1,164 @@
+import { matchesApi, notificationsApi } from '../api';
+import client from '../../api/client';
+import * as observability from '../../api/observability';
+
+jest.mock('../../api/client', () => ({
+  get: jest.fn(),
+  post: jest.fn(),
+  patch: jest.fn(),
+}));
+
+jest.mock('../../api/observability', () => ({
+  logApiFailure: jest.fn(),
+}));
+
+const mockClient = client as jest.Mocked<typeof client>;
+const mockLogApiFailure = observability.logApiFailure as jest.Mock;
+
+const networkError = new Error('Network Error');
+
+describe('matchesApi', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('list', () => {
+    it('returns response on success', async () => {
+      const mockData = [{ id: 'match-1', createdAt: '2026-01-01', user: { id: 'user-1' } }];
+      mockClient.get.mockResolvedValueOnce({ data: mockData });
+
+      const result = await matchesApi.list();
+
+      expect(mockClient.get).toHaveBeenCalledWith('/matches');
+      expect(result.data).toEqual(mockData);
+      expect(mockLogApiFailure).not.toHaveBeenCalled();
+    });
+
+    it('logs failure and rethrows on error', async () => {
+      mockClient.get.mockRejectedValueOnce(networkError);
+
+      await expect(matchesApi.list()).rejects.toThrow('Network Error');
+      expect(mockLogApiFailure).toHaveBeenCalledWith('matches', 'list', networkError);
+    });
+  });
+
+  describe('getMessages', () => {
+    it('returns response on success', async () => {
+      const mockMessages = [{ id: 'msg-1', text: 'hello', sender: 'me' }];
+      mockClient.get.mockResolvedValueOnce({ data: mockMessages });
+
+      const result = await matchesApi.getMessages('match-1');
+
+      expect(mockClient.get).toHaveBeenCalledWith('/matches/match-1/messages');
+      expect(result.data).toEqual(mockMessages);
+      expect(mockLogApiFailure).not.toHaveBeenCalled();
+    });
+
+    it('logs failure with matchId context and rethrows on error', async () => {
+      mockClient.get.mockRejectedValueOnce(networkError);
+
+      await expect(matchesApi.getMessages('match-1')).rejects.toThrow('Network Error');
+      expect(mockLogApiFailure).toHaveBeenCalledWith(
+        'matches',
+        'getMessages',
+        networkError,
+        { matchId: 'match-1' },
+      );
+    });
+  });
+
+  describe('sendMessage', () => {
+    it('returns response on success', async () => {
+      mockClient.post.mockResolvedValueOnce({ data: {} });
+
+      await matchesApi.sendMessage('match-1', 'hello');
+
+      expect(mockClient.post).toHaveBeenCalledWith('/matches/match-1/messages', {
+        content: 'hello',
+      });
+      expect(mockLogApiFailure).not.toHaveBeenCalled();
+    });
+
+    it('logs failure with matchId context and rethrows on error', async () => {
+      mockClient.post.mockRejectedValueOnce(networkError);
+
+      await expect(matchesApi.sendMessage('match-1', 'hello')).rejects.toThrow('Network Error');
+      expect(mockLogApiFailure).toHaveBeenCalledWith(
+        'matches',
+        'sendMessage',
+        networkError,
+        { matchId: 'match-1' },
+      );
+    });
+  });
+});
+
+describe('notificationsApi', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('list', () => {
+    it('returns response on success', async () => {
+      const mockData = [{ id: 'notif-1', type: 'system', title: 'Hi', body: 'Hello', readAt: null, createdAt: '2026-01-01', userId: 'u1' }];
+      mockClient.get.mockResolvedValueOnce({ data: mockData });
+
+      const result = await notificationsApi.list();
+
+      expect(mockClient.get).toHaveBeenCalledWith('/notifications');
+      expect(result.data).toEqual(mockData);
+      expect(mockLogApiFailure).not.toHaveBeenCalled();
+    });
+
+    it('logs failure and rethrows on error', async () => {
+      mockClient.get.mockRejectedValueOnce(networkError);
+
+      await expect(notificationsApi.list()).rejects.toThrow('Network Error');
+      expect(mockLogApiFailure).toHaveBeenCalledWith('notifications', 'list', networkError);
+    });
+  });
+
+  describe('markRead', () => {
+    it('returns response on success', async () => {
+      const updatedNotif = { id: 'notif-1', type: 'system', title: 'Hi', body: 'Hello', readAt: '2026-01-01T00:00:00Z', createdAt: '2026-01-01', userId: 'u1' };
+      mockClient.patch.mockResolvedValueOnce({ data: updatedNotif });
+
+      const result = await notificationsApi.markRead('notif-1');
+
+      expect(mockClient.patch).toHaveBeenCalledWith('/notifications/notif-1/read');
+      expect(result.data).toEqual(updatedNotif);
+      expect(mockLogApiFailure).not.toHaveBeenCalled();
+    });
+
+    it('logs failure with id context and rethrows on error', async () => {
+      mockClient.patch.mockRejectedValueOnce(networkError);
+
+      await expect(notificationsApi.markRead('notif-1')).rejects.toThrow('Network Error');
+      expect(mockLogApiFailure).toHaveBeenCalledWith(
+        'notifications',
+        'markRead',
+        networkError,
+        { id: 'notif-1' },
+      );
+    });
+  });
+
+  describe('markAllRead', () => {
+    it('returns response on success', async () => {
+      mockClient.post.mockResolvedValueOnce({ data: { updated: 3 } });
+
+      const result = await notificationsApi.markAllRead();
+
+      expect(mockClient.post).toHaveBeenCalledWith('/notifications/mark-all-read');
+      expect(result.data).toEqual({ updated: 3 });
+      expect(mockLogApiFailure).not.toHaveBeenCalled();
+    });
+
+    it('logs failure and rethrows on error', async () => {
+      mockClient.post.mockRejectedValueOnce(networkError);
+
+      await expect(notificationsApi.markAllRead()).rejects.toThrow('Network Error');
+      expect(mockLogApiFailure).toHaveBeenCalledWith('notifications', 'markAllRead', networkError);
+    });
+  });
+});

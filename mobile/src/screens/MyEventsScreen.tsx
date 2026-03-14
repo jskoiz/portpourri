@@ -13,18 +13,27 @@ import { useFocusEffect } from '@react-navigation/native';
 import { eventsApi } from '../services/api';
 import { normalizeApiError } from '../api/errors';
 import type { EventSummary } from '../api/types';
+import { useAuthStore } from '../store/authStore';
 import AppBackButton from '../components/ui/AppBackButton';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import AppState from '../components/ui/AppState';
 import AppIcon from '../components/ui/AppIcon';
-import { useAuthStore } from '../store/authStore';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
 
 type TabKey = 'Joined' | 'Created';
 const TABS: TabKey[] = ['Joined', 'Created'];
 
-const EMPTY_STATES: Record<TabKey, { icon: React.ComponentProps<typeof AppIcon>['name']; title: string; body: string; cta: string; route: string }> = {
+const EMPTY_STATES: Record<
+  TabKey,
+  {
+    icon: React.ComponentProps<typeof AppIcon>['name'];
+    title: string;
+    body: string;
+    cta: string;
+    route: string;
+  }
+> = {
   Joined: {
     icon: 'calendar',
     title: 'No events joined yet',
@@ -76,7 +85,7 @@ function normalizeEvents(data: unknown): EventSummary[] {
 
 export default function MyEventsScreen({ navigation }: any) {
   const theme = useTheme();
-  const userId = useAuthStore((state) => state.user?.id);
+  const currentUserId = useAuthStore((state) => state.user?.id);
   const [activeTab, setActiveTab] = useState<TabKey>('Joined');
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,32 +107,43 @@ export default function MyEventsScreen({ navigation }: any) {
     }
   };
 
-  useFocusEffect(useCallback(() => { fetchEvents(); }, []));
+  useFocusEffect(
+    useCallback(() => {
+      fetchEvents();
+    }, []),
+  );
 
   const emptyMeta = EMPTY_STATES[activeTab];
-
-  const displayedEvents =
-    activeTab === 'Joined'
-      ? events.filter((event) => event.joined)
-      : events.filter((event) => userId != null && event.host.id === userId);
+  const createdEvents = currentUserId
+    ? events.filter((event) => event.host?.id === currentUserId)
+    : [];
+  const joinedEvents = events.filter(
+    (event) => event.joined && event.host?.id !== currentUserId,
+  );
+  const displayedEvents = activeTab === 'Joined' ? joinedEvents : createdEvents;
+  const tabCounts = {
+    Joined: joinedEvents.length,
+    Created: createdEvents.length,
+  } as const;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <AppBackdrop />
 
-      {/* Header */}
       <View style={styles.header}>
-        {navigation.canGoBack() && (
-          <AppBackButton onPress={() => navigation.goBack()} />
-        )}
+        {navigation.canGoBack() && <AppBackButton onPress={() => navigation.goBack()} />}
         <View style={styles.headerCopy}>
           <Text style={[styles.eyebrow, { color: theme.accent }]}>EVENTS</Text>
           <Text style={[styles.title, { color: theme.textPrimary }]}>My Events</Text>
         </View>
       </View>
 
-      {/* Tab Switcher */}
-      <View style={[styles.tabBar, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+      <View
+        style={[
+          styles.tabBar,
+          { backgroundColor: theme.surfaceElevated, borderColor: theme.border },
+        ]}
+      >
         {TABS.map((tab) => (
           <TouchableOpacity
             key={tab}
@@ -134,19 +154,41 @@ export default function MyEventsScreen({ navigation }: any) {
             onPress={() => setActiveTab(tab)}
             activeOpacity={0.8}
           >
-            <Text
-              style={[
-                styles.tabText,
-                { color: activeTab === tab ? theme.white : theme.textMuted },
-              ]}
-            >
-              {tab}
-            </Text>
+            <View style={styles.tabContent}>
+              <Text
+                style={[
+                  styles.tabText,
+                  { color: activeTab === tab ? theme.white : theme.textMuted },
+                ]}
+              >
+                {tab}
+              </Text>
+              <View
+                testID={`my-events-tab-${tab.toLowerCase()}-count`}
+                style={[
+                  styles.tabCount,
+                  {
+                    backgroundColor:
+                      activeTab === tab
+                        ? 'rgba(255,255,255,0.18)'
+                        : theme.primarySubtle,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tabCountText,
+                    { color: activeTab === tab ? theme.white : theme.primary },
+                  ]}
+                >
+                  {tabCounts[tab]}
+                </Text>
+              </View>
+            </View>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Content */}
       {loading ? (
         <AppState title="Loading your events" loading />
       ) : error ? (
@@ -159,17 +201,28 @@ export default function MyEventsScreen({ navigation }: any) {
         />
       ) : displayedEvents.length === 0 ? (
         <View style={styles.emptyState}>
-          <View style={[styles.emptyIconWrap, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <View
+            style={[
+              styles.emptyIconWrap,
+              { backgroundColor: theme.surfaceElevated, borderColor: theme.border },
+            ]}
+          >
             <AppIcon name={emptyMeta.icon} size={24} color={theme.primary} />
           </View>
-          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>{emptyMeta.title}</Text>
-          <Text style={[styles.emptyBody, { color: theme.textSecondary }]}>{emptyMeta.body}</Text>
+          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>
+            {emptyMeta.title}
+          </Text>
+          <Text style={[styles.emptyBody, { color: theme.textSecondary }]}>
+            {emptyMeta.body}
+          </Text>
           <TouchableOpacity
             style={[styles.emptyCta, { backgroundColor: theme.primary }]}
             onPress={() => navigation.navigate(emptyMeta.route)}
             activeOpacity={0.85}
           >
-            <Text style={[styles.emptyCtaText, { color: theme.white }]}>{emptyMeta.cta}</Text>
+            <Text style={[styles.emptyCtaText, { color: theme.white }]}>
+              {emptyMeta.cta}
+            </Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -200,22 +253,34 @@ export default function MyEventsScreen({ navigation }: any) {
                 navigation.navigate('EventDetail', { eventId: item.id });
               }}
             >
-              {/* Category bar */}
               {!!item.category && (
-                <View style={[styles.cardCategoryBar, { backgroundColor: theme.primary + '22' }]}>
-                  <Text style={[styles.cardCategory, { color: theme.primary }]}>{item.category}</Text>
+                <View
+                  style={[
+                    styles.cardCategoryBar,
+                    { backgroundColor: `${theme.primary}22` },
+                  ]}
+                >
+                  <Text style={[styles.cardCategory, { color: theme.primary }]}>
+                    {item.category}
+                  </Text>
                 </View>
               )}
               <View style={styles.cardBody}>
-                <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{item.title}</Text>
+                <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
+                  {item.title}
+                </Text>
                 <View style={styles.cardMetaRow}>
                   <AppIcon name="calendar" size={13} color={theme.textSecondary} />
-                  <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{formatDate(item.startsAt)}</Text>
+                  <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>
+                    {formatDate(item.startsAt)}
+                  </Text>
                 </View>
                 {!!item.location && (
                   <View style={styles.cardMetaRow}>
                     <AppIcon name="map-pin" size={13} color={theme.textMuted} />
-                    <Text style={[styles.cardMeta, { color: theme.textMuted }]}>{item.location}</Text>
+                    <Text style={[styles.cardMeta, { color: theme.textMuted }]}>
+                      {item.location}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -253,7 +318,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
 
-  // Tab bar
   tabBar: {
     flexDirection: 'row',
     marginHorizontal: spacing.xxl,
@@ -268,13 +332,29 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
   },
+  tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   tabActive: {},
   tabText: {
     fontSize: typography.bodySmall,
     fontWeight: '700',
   },
+  tabCount: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabCountText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
 
-  // Empty state
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -313,7 +393,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  // Event cards
   list: {
     paddingHorizontal: spacing.xxl,
     paddingBottom: spacing.xxxl || 48,

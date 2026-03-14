@@ -147,16 +147,57 @@ export const discoveryApi = {
 };
 
 export const matchesApi = {
-  list: () => client.get<Match[]>("/matches"),
-  getMessages: (matchId: string) => client.get(`/matches/${matchId}/messages`),
-  sendMessage: (matchId: string, content: string) =>
-    client.post(`/matches/${matchId}/messages`, { content }),
+  list: async () => {
+    try {
+      return await client.get<Match[]>("/matches");
+    } catch (error) {
+      logApiFailure("matches", "list", error);
+      throw error;
+    }
+  },
+  getMessages: async (matchId: string) => {
+    try {
+      return await client.get(`/matches/${matchId}/messages`);
+    } catch (error) {
+      logApiFailure("matches", "getMessages", error, { matchId });
+      throw error;
+    }
+  },
+  sendMessage: async (matchId: string, content: string) => {
+    try {
+      return await client.post(`/matches/${matchId}/messages`, { content });
+    } catch (error) {
+      logApiFailure("matches", "sendMessage", error, { matchId });
+      throw error;
+    }
+  },
 };
 
 export const notificationsApi = {
-  list: () => client.get<AppNotification[]>("/notifications"),
-  markRead: (id: string) => client.patch<AppNotification | null>(`/notifications/${id}/read`),
-  markAllRead: () => client.post<{ updated: number }>("/notifications/mark-all-read"),
+  list: async () => {
+    try {
+      return await client.get<AppNotification[]>("/notifications");
+    } catch (error) {
+      logApiFailure("notifications", "list", error);
+      throw error;
+    }
+  },
+  markRead: async (id: string) => {
+    try {
+      return await client.patch<AppNotification | null>(`/notifications/${id}/read`);
+    } catch (error) {
+      logApiFailure("notifications", "markRead", error, { id });
+      throw error;
+    }
+  },
+  markAllRead: async () => {
+    try {
+      return await client.post<{ updated: number }>("/notifications/mark-all-read");
+    } catch (error) {
+      logApiFailure("notifications", "markAllRead", error);
+      throw error;
+    }
+  },
 };
 
 export const eventsApi = {

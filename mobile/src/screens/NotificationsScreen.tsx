@@ -18,6 +18,7 @@ import AppIcon from '../components/ui/AppIcon';
 import AppState from '../components/ui/AppState';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
+import { useNotificationStore } from '../store/notificationStore';
 
 function getNotificationMeta(type: AppNotification['type']) {
   switch (type) {
@@ -110,6 +111,7 @@ function NotifRow({
 export default function NotificationsScreen() {
   const theme = useTheme();
   const navigation = useNavigation<any>();
+  const setUnreadCount = useNotificationStore((state) => state.setUnreadCount);
   const [notifs, setNotifs] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -122,7 +124,9 @@ export default function NotificationsScreen() {
 
     try {
       const response = await notificationsApi.list();
-      setNotifs(response.data || []);
+      const nextNotifications = response.data || [];
+      setNotifs(nextNotifications);
+      setUnreadCount(nextNotifications.filter((item) => !item.readAt).length);
     } catch (err) {
       setError(normalizeApiError(err).message);
     } finally {
@@ -143,9 +147,11 @@ export default function NotificationsScreen() {
       const updated = response.data;
       if (!updated) return;
 
-      setNotifs((current) =>
-        current.map((item) => (item.id === id ? updated : item)),
-      );
+      setNotifs((current) => {
+        const nextNotifications = current.map((item) => (item.id === id ? updated : item));
+        setUnreadCount(nextNotifications.filter((item) => !item.readAt).length);
+        return nextNotifications;
+      });
     } catch (err) {
       setError(normalizeApiError(err).message);
     }
@@ -155,12 +161,14 @@ export default function NotificationsScreen() {
     try {
       await notificationsApi.markAllRead();
       const now = new Date().toISOString();
-      setNotifs((current) =>
-        current.map((item) => ({
+      setNotifs((current) => {
+        const nextNotifications = current.map((item) => ({
           ...item,
           readAt: item.readAt ?? now,
-        })),
-      );
+        }));
+        setUnreadCount(0);
+        return nextNotifications;
+      });
     } catch (err) {
       setError(normalizeApiError(err).message);
     }

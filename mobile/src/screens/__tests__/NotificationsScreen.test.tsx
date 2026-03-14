@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import NotificationsScreen from '../NotificationsScreen';
+import { useNotificationStore } from '../../store/notificationStore';
 
 const mockGoBack = jest.fn();
 const mockList = jest.fn();
@@ -31,9 +32,17 @@ jest.mock('../../services/api', () => ({
   },
 }));
 
+jest.mock('../../components/ui/AppIcon', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  return () => <Text>icon</Text>;
+});
+
 describe('NotificationsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useNotificationStore.setState({ unreadCount: 0, isSyncing: false });
     mockList.mockResolvedValue({
       data: [
         {
@@ -69,6 +78,19 @@ describe('NotificationsScreen', () => {
 
     await waitFor(() => {
       expect(mockMarkRead).toHaveBeenCalledWith('notif-1');
+      expect(useNotificationStore.getState().unreadCount).toBe(0);
+    });
+  });
+
+  it('clears all notifications and resets the unread badge count', async () => {
+    render(<NotificationsScreen />);
+
+    const clearAll = await screen.findByText('Clear all');
+    fireEvent.press(clearAll);
+
+    await waitFor(() => {
+      expect(mockMarkAllRead).toHaveBeenCalled();
+      expect(useNotificationStore.getState().unreadCount).toBe(0);
     });
   });
 });

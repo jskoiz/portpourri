@@ -301,4 +301,61 @@ describe('MatchesService realtime', () => {
       },
     });
   });
+
+  it('handles concurrent mutual like race condition gracefully', async () => {
+    // Both users like each other simultaneously. match.create throws a unique
+    // constraint error (simulating the race), and the service should recover by
+    // fetching the already-created match instead of surfacing a 500.
+    jest
+      .mocked(prisma.like.findUnique)
+      .mockResolvedValueOnce(null as any) // existingLike check: no prior like
+      .mockResolvedValueOnce({ id: 'like-2' } as any); // mutual like exists
+    jest.mocked(prisma.like.create).mockResolvedValue({ id: 'like-1' } as any);
+    jest
+      .mocked(prisma.match.findUnique)
+      .mockResolvedValueOnce(null as any) // existingMatch check: no match yet
+      .mockResolvedValueOnce({ id: 'match-race' } as any); // recovery fetch after error
+    jest.mocked(prisma.userProfile.findMany).mockResolvedValue([
+      { userId: 'user-1', intentDating: true, intentWorkout: false },
+      { userId: 'user-2', intentDating: true, intentWorkout: false },
+    ] as any);
+    const constraintError = Object.assign(new Error('Unique constraint violation'), {
+      code: 'P2002',
+    });
+    jest.mocked(prisma.match.create).mockRejectedValue(constraintError);
+
+    const result = await service.likeUser('user-1', 'user-2');
+
+    expect(result).toEqual({ isMatch: true, matchId: 'match-race' });
+  });
+
+  it('rejects message reads for archived matches with a forbidden error', async () => {
+    jest.mocked(prisma.match.findUnique).mockResolvedValue({
+      id: 'match-1',
+      userAId: 'user-1',
+      userBId: 'user-2',
+      isBlocked: false,
+      isArchived: true,
+    } as any);
+
+    await expect(service.getMessages('match-1', 'user-1')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(jest.mocked(prisma.message.findMany)).not.toHaveBeenCalled();
+  });
+
+  it('rejects message sends for archived matches with a forbidden error', async () => {
+    jest.mocked(prisma.match.findUnique).mockResolvedValue({
+      id: 'match-1',
+      userAId: 'user-1',
+      userBId: 'user-2',
+      isBlocked: false,
+      isArchived: true,
+    } as any);
+
+    await expect(
+      service.sendMessage('match-1', 'user-1', 'hey'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(jest.mocked(prisma.message.create)).not.toHaveBeenCalled();
+  });
 });

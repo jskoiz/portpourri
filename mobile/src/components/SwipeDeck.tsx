@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'rea
 import { LinearGradient } from 'expo-linear-gradient';
 import Swiper from 'react-native-deck-swiper';
 import { radii, shadows, spacing, typography } from '../theme/tokens';
+import AppIcon from './ui/AppIcon';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const CARD_HEIGHT = Math.floor(SCREEN_HEIGHT * 0.68);
@@ -26,11 +27,24 @@ interface CardProps {
   onPress?: () => void;
 }
 
+const formatLabel = (value: string) =>
+  value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
 const profileChips = (user: any) => {
   const chips: string[] = [];
-  if (user.profile?.city) chips.push(user.profile.city);
-  if (user.fitnessProfile?.primaryGoal) chips.push(user.fitnessProfile.primaryGoal.replace(/_/g, ' '));
-  if (user.fitnessProfile?.intensityLevel) chips.push(user.fitnessProfile.intensityLevel);
+
+  const favoriteActivity = user.fitnessProfile?.favoriteActivities
+    ?.split(',')
+    .map((value: string) => value.trim())
+    .find(Boolean);
+
+  if (favoriteActivity) chips.push(formatLabel(favoriteActivity));
+  if (user.fitnessProfile?.primaryGoal) chips.push(formatLabel(user.fitnessProfile.primaryGoal));
+  if (user.fitnessProfile?.prefersMorning) chips.push('Mornings');
+  else if (user.fitnessProfile?.prefersEvening) chips.push('Evenings');
+  else if (user.fitnessProfile?.weeklyFrequencyBand) chips.push(`${user.fitnessProfile.weeklyFrequencyBand}x/week`);
   return chips.slice(0, 3);
 };
 
@@ -43,6 +57,13 @@ const getIntentLabel = (intent?: string) => {
 const getPresenceLabel = (user: any) => {
   if (user?.profile?.city) return 'Available tonight';
   return 'Nearby now';
+};
+
+const getAlignmentLabel = (score?: number) => {
+  if (typeof score !== 'number' || Number.isNaN(score)) return null;
+  const normalizedScore = score <= 1 ? score * 100 : score;
+  const percentage = Math.max(0, Math.min(100, Math.round(normalizedScore)));
+  return `${percentage}% aligned`;
 };
 
 const getTempoLabel = (user: any) => {
@@ -60,6 +81,7 @@ const Card = ({ user, onPress }: CardProps) => {
   const chips = profileChips(user);
   const intentLabel = getIntentLabel(user.profile?.intent);
   const presenceLabel = getPresenceLabel(user);
+  const alignmentLabel = getAlignmentLabel(user.recommendationScore);
   const tempoLabel = getTempoLabel(user);
   const activityLabel = user.fitnessProfile?.favoriteActivities?.split(',')[0]?.trim() || 'Movement';
 
@@ -93,10 +115,25 @@ const Card = ({ user, onPress }: CardProps) => {
             <View style={styles.intentBadge}>
               <Text style={styles.intentBadgeText}>{intentLabel}</Text>
             </View>
-            <View style={styles.presenceBadge}>
-              <Text style={styles.presenceBadgeText}>{presenceLabel}</Text>
+            <View style={alignmentLabel ? styles.matchBadge : styles.presenceBadge}>
+              {alignmentLabel ? (
+                <>
+                  <AppIcon name="star" size={12} color={DARK.background} />
+                  <Text style={styles.matchBadgeText}>{alignmentLabel}</Text>
+                </>
+              ) : (
+                <Text style={styles.presenceBadgeText}>{presenceLabel}</Text>
+              )}
             </View>
           </View>
+
+          {alignmentLabel ? (
+            <View style={styles.presenceRow}>
+              <View style={styles.presenceBadge}>
+                <Text style={styles.presenceBadgeText}>{presenceLabel}</Text>
+              </View>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.bottomShell}>
@@ -299,6 +336,27 @@ const styles = StyleSheet.create({
     color: DARK.textSecondary,
     fontSize: typography.caption,
     fontWeight: '700',
+  },
+  presenceRow: {
+    marginTop: spacing.sm,
+    alignItems: 'flex-end',
+  },
+  matchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F2E58E',
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  matchBadgeText: {
+    color: DARK.background,
+    fontSize: typography.caption,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   bottomShell: {
     position: 'absolute',

@@ -6,6 +6,22 @@ import { map, Observable } from 'rxjs';
 import { NotificationsService } from '../notifications/notifications.service';
 import { deriveMatchClassification } from './match-classification';
 
+function isUniqueConstraintError(error: unknown): boolean {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002'
+  ) {
+    return true;
+  }
+
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 'P2002'
+  );
+}
+
 @Injectable()
 export class MatchesService {
   constructor(
@@ -85,14 +101,13 @@ export class MatchesService {
         });
       } catch (e) {
         // Race condition: both users liked simultaneously; another request created the match first
-        if (
-          e instanceof Prisma.PrismaClientKnownRequestError &&
-          e.code === 'P2002'
-        ) {
+        if (isUniqueConstraintError(e)) {
           const existing = await this.prisma.match.findUnique({
             where: { userAId_userBId: { userAId, userBId } },
           });
-          return { isMatch: true, matchId: existing!.id };
+          if (existing) {
+            return { isMatch: true, matchId: existing.id };
+          }
         }
         throw e;
       }

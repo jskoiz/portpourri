@@ -1,5 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useFocusEffect } from '@react-navigation/native';
 import HomeScreen from '../screens/HomeScreen';
 import ExploreScreen from '../screens/ExploreScreen';
 import CreateScreen from '../screens/CreateScreen';
@@ -15,6 +16,7 @@ import {
 import { Text, View, Platform } from 'react-native';
 import { useTheme } from '../theme/useTheme';
 import AppIcon from '../components/ui/AppIcon';
+import { useNotificationStore } from '../store/notificationStore';
 
 const Tab = createBottomTabNavigator();
 
@@ -26,7 +28,15 @@ const TAB_ICONS: Record<string, React.ComponentProps<typeof AppIcon>['name']> = 
   You: 'user',
 };
 
-function TabIcon({ routeName, focused }: { routeName: string; focused: boolean }) {
+function TabIcon({
+  routeName,
+  focused,
+  unreadCount,
+}: {
+  routeName: string;
+  focused: boolean;
+  unreadCount: number;
+}) {
   const theme = useTheme();
   const icon = TAB_ICONS[routeName] ?? 'circle';
   return (
@@ -45,6 +55,32 @@ function TabIcon({ routeName, focused }: { routeName: string; focused: boolean }
         size={17}
         color={focused ? theme.primary : theme.textMuted}
       />
+      {routeName === 'Inbox' && unreadCount > 0 ? (
+        <View
+          style={{
+            position: 'absolute',
+            top: -1,
+            right: -3,
+            minWidth: 16,
+            height: 16,
+            paddingHorizontal: 4,
+            borderRadius: 8,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: theme.accent,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 9,
+              fontWeight: '800',
+              color: theme.textInverse,
+            }}
+          >
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -74,11 +110,19 @@ export default function MainTabNavigator({
   previewMode?: boolean;
 }) {
   const theme = useTheme();
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+  const syncUnreadCount = useNotificationStore((state) => state.syncUnreadCount);
   const DiscoverComponent = previewMode ? DiscoverPreviewScreen : HomeScreen;
   const ExploreComponent = previewMode ? ExplorePreviewScreen : ExploreScreen;
   const CreateComponent = previewMode ? CreatePreviewScreen : CreateScreen;
   const InboxComponent = previewMode ? InboxPreviewScreen : MatchesScreen;
   const YouComponent = previewMode ? ProfilePreviewScreen : ProfileScreen;
+
+  useFocusEffect(
+    React.useCallback(() => {
+      void syncUnreadCount();
+    }, [syncUnreadCount]),
+  );
 
   return (
     <Tab.Navigator
@@ -99,7 +143,9 @@ export default function MainTabNavigator({
         },
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.textMuted,
-        tabBarIcon: ({ focused }) => <TabIcon routeName={route.name} focused={focused} />,
+        tabBarIcon: ({ focused }) => (
+          <TabIcon routeName={route.name} focused={focused} unreadCount={unreadCount} />
+        ),
         tabBarLabel: ({ color, children, focused }) => (
           <TabLabel color={color} focused={focused}>
             {children as string}

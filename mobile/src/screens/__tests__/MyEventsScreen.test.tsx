@@ -25,6 +25,13 @@ jest.mock('../../services/api', () => ({
   },
 }));
 
+jest.mock('../../components/ui/AppIcon', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  return () => <Text>icon</Text>;
+});
+
 jest.mock('../../store/authStore', () => ({
   useAuthStore: (selector: (state: { user: { id: string } | null }) => unknown) =>
     selector({ user: { id: 'current-user-id' } }),
@@ -57,6 +64,8 @@ describe('MyEventsScreen', () => {
     render(<MyEventsScreen navigation={navigation} />);
 
     expect(await screen.findByText('Joined Sunrise Run')).toBeTruthy();
+    expect(screen.getByTestId('my-events-tab-joined-count')).toBeTruthy();
+    expect(screen.getByTestId('my-events-tab-created-count')).toBeTruthy();
 
     fireEvent.press(screen.getByText('Created'));
 
@@ -82,7 +91,7 @@ describe('MyEventsScreen', () => {
           location: 'Kailua Beach',
           startsAt: '2026-03-16T08:00:00.000Z',
           joined: true,
-          host: { id: 'current-user-id', firstName: 'Me' },
+          host: { id: 'current-user-id', firstName: 'Jordan' },
         },
       ],
     });
@@ -90,12 +99,13 @@ describe('MyEventsScreen', () => {
     render(<MyEventsScreen navigation={navigation} />);
 
     expect(await screen.findByText('Joined Sunrise Run')).toBeTruthy();
-
     fireEvent.press(screen.getByText('Created'));
 
     await waitFor(() => {
       expect(screen.getByText('My Beach Workout')).toBeTruthy();
       expect(screen.queryByText('Joined Sunrise Run')).toBeNull();
+      expect(screen.getByTestId('my-events-tab-joined-count')).toBeTruthy();
+      expect(screen.getByTestId('my-events-tab-created-count')).toBeTruthy();
     });
   });
 

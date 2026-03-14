@@ -74,8 +74,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       throw normalizeApiError(error);
     }
 
-    await AsyncStorage.removeItem(STORAGE_KEYS.accessToken);
-    get().clearSession();
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEYS.accessToken);
+    } finally {
+      get().clearSession();
+    }
   },
 
   loadToken: async () => {

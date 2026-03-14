@@ -25,6 +25,23 @@ jest.mock('../../services/api', () => ({
   },
 }));
 
+jest.mock('../../store/authStore', () => ({
+  useAuthStore: (selector: (state: { user: { id: string } | null }) => unknown) =>
+    selector({ user: { id: 'user-1' } }),
+}));
+
+jest.mock('../../store/notificationStore', () => ({
+  useNotificationStore: (selector: (state: { unreadCount: number }) => unknown) =>
+    selector({ unreadCount: 2 }),
+}));
+
+jest.mock('../../components/ui/AppNotificationButton', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  return () => <Text>Notifications</Text>;
+});
+
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
   const { View } = require('react-native');

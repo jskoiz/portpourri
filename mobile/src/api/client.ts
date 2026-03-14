@@ -14,9 +14,14 @@ const client = axios.create({
 
 client.interceptors.request.use(
     async (config) => {
-        const token = await AsyncStorage.getItem(STORAGE_KEYS.accessToken);
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        // Only inject the stored token when the caller has not already supplied an
+        // Authorization header.  This lets call-sites pass an explicit token (e.g.
+        // authApi.me) without having it silently overwritten by the interceptor.
+        if (!config.headers.Authorization) {
+            const token = await AsyncStorage.getItem(STORAGE_KEYS.accessToken);
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
         }
         return config;
     },

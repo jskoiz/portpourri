@@ -16,11 +16,14 @@ import { useFocusEffect } from '@react-navigation/native';
 import { normalizeApiError } from '../api/errors';
 import type { EventSummary } from '../api/types';
 import { eventsApi } from '../services/api';
+import { useAuthStore } from '../store/authStore';
+import { useNotificationStore } from '../store/notificationStore';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import AppButton from '../components/ui/AppButton';
 import { radii, spacing, typography } from '../theme/tokens';
 import AppIcon from '../components/ui/AppIcon';
 import AppState from '../components/ui/AppState';
+import AppNotificationButton from '../components/ui/AppNotificationButton';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_PADDING = spacing.xxl;
@@ -267,14 +270,19 @@ function openMyEvents(navigation: any) {
 
 function EventCard({
   event,
+  currentUserId,
   onOpen,
   onInvite,
 }: {
   event: EventSummary;
+  currentUserId?: string;
   onOpen: () => void;
   onInvite: () => void;
 }) {
   const meta = getEventMeta(event);
+  const isHostedByYou = event.host?.id === currentUserId;
+  const statusLabel = isHostedByYou ? 'Hosted by you' : event.joined ? 'Going' : null;
+
   return (
     <Pressable style={styles.eventCard} onPress={onOpen}>
       {/* Full-bleed gradient hero banner */}
@@ -289,9 +297,18 @@ function EventCard({
           <View style={styles.eventIconWrap}>
             <AppIcon name={meta.icon} size={22} color="#FFFFFF" />
           </View>
-          {!!event.category && (
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryBadgeText}>{event.category.toUpperCase()}</Text>
+          {(event.category || statusLabel) && (
+            <View style={styles.bannerBadgeRow}>
+              {!!event.category && (
+                <View style={styles.categoryBadge}>
+                  <Text style={styles.categoryBadgeText}>{event.category.toUpperCase()}</Text>
+                </View>
+              )}
+              {statusLabel ? (
+                <View style={[styles.categoryBadge, styles.stateBadge]}>
+                  <Text style={styles.categoryBadgeText}>{statusLabel.toUpperCase()}</Text>
+                </View>
+              ) : null}
             </View>
           )}
         </View>
@@ -386,6 +403,8 @@ function CommunityCard({ post, onInvite }: { post: typeof COMMUNITY_POSTS[0]; on
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function ExploreScreen({ navigation }: any) {
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
   const [activeCategory, setActiveCategory] = useState<ExploreCategory>('All');
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -452,9 +471,18 @@ export default function ExploreScreen({ navigation }: any) {
       >
 
         <View style={styles.hero}>
-          <Text style={styles.heroEyebrow}>CITY GUIDE / CURATED MOVEMENT</Text>
-          <Text style={styles.heroTitle}>What's{'\n'}happening.</Text>
-          <Text style={styles.heroSubtitle}>A cleaner browse with stronger editorial framing.</Text>
+          <View style={styles.heroHeaderRow}>
+            <View style={styles.heroCopy}>
+              <Text style={styles.heroEyebrow}>CITY GUIDE / CURATED MOVEMENT</Text>
+              <Text style={styles.heroTitle}>What's{'\n'}happening.</Text>
+              <Text style={styles.heroSubtitle}>A cleaner browse with stronger editorial framing.</Text>
+            </View>
+            <AppNotificationButton
+              unreadCount={unreadCount}
+              onPress={() => navigation.navigate('Notifications')}
+              style={styles.heroNotificationButton}
+            />
+          </View>
         </View>
 
         {/* ── Category Filter Row ── */}
@@ -517,6 +545,7 @@ export default function ExploreScreen({ navigation }: any) {
                 <EventCard
                   key={event.id}
                   event={event}
+                  currentUserId={currentUserId}
                   onOpen={() => navigation.navigate('EventDetail', { eventId: event.id })}
                   onInvite={() => handleInvite(event)}
                 />
@@ -597,6 +626,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: CARD_PADDING,
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
+  },
+  heroHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  heroCopy: {
+    flex: 1,
+  },
+  heroNotificationButton: {
+    marginTop: spacing.xs,
   },
   heroEyebrow: {
     fontSize: 10,
@@ -690,6 +730,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end',
   },
+  bannerBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   eventIconWrap: {
     width: 36,
     height: 36,
@@ -713,6 +758,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1,
     color: '#FFFFFF',
+  },
+  stateBadge: {
+    backgroundColor: 'rgba(11,18,25,0.28)',
   },
   eventBody: {
     padding: spacing.md + 2,

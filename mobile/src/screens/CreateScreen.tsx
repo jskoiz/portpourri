@@ -4,6 +4,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Share,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,9 +16,11 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { normalizeApiError } from '../api/errors';
+import type { EventSummary } from '../api/types';
 import { eventsApi } from '../services/api';
 import { radii, spacing, typography } from '../theme/tokens';
 import AppIcon from '../components/ui/AppIcon';
+import AppButton from '../components/ui/AppButton';
 
 const BASE = '#0D1117';
 const SURFACE = '#161B22';
@@ -173,6 +176,16 @@ function buildDescription({
   return parts.join(' ');
 }
 
+function formatCreatedEventMeta(event: EventSummary) {
+  return new Date(event.startsAt).toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export default function CreateScreen({ navigation }: any) {
   const scrollRef = useRef<ScrollView | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
@@ -185,6 +198,7 @@ export default function CreateScreen({ navigation }: any) {
   const [posting, setPosting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [lastCreatedTitle, setLastCreatedTitle] = useState<string | null>(null);
+  const [lastCreatedEvent, setLastCreatedEvent] = useState<EventSummary | null>(null);
 
   const activityObj = useMemo(
     () => ACTIVITY_TYPES.find((a) => a.label === selectedActivity),
@@ -207,6 +221,23 @@ export default function CreateScreen({ navigation }: any) {
     setSkillLevel(null);
     setSpots(2);
     setNote('');
+  };
+
+  const clearSuccessState = () => {
+    setLastCreatedTitle(null);
+    setLastCreatedEvent(null);
+  };
+
+  const shareCreatedEvent = async () => {
+    if (!lastCreatedEvent) return;
+
+    try {
+      await Share.share({
+        message: `Join me for ${lastCreatedEvent.title} on BRDG${lastCreatedEvent.location ? ` at ${lastCreatedEvent.location}` : ''}.`,
+      });
+    } catch {
+      // Ignore share sheet dismissals.
+    }
   };
 
   const handlePost = async () => {
@@ -232,6 +263,7 @@ export default function CreateScreen({ navigation }: any) {
     setPosting(true);
     setSubmitError(null);
     setLastCreatedTitle(null);
+    setLastCreatedEvent(null);
 
     const startsAt = buildStartDate(selectedWhen, selectedTime);
     const endsAt = new Date(startsAt.getTime() + 2 * 60 * 60 * 1000);
@@ -255,18 +287,11 @@ export default function CreateScreen({ navigation }: any) {
 
       const createdEvent = response.data;
       setLastCreatedTitle(createdEvent.title);
+      setLastCreatedEvent(createdEvent);
       resetForm();
-
-      Alert.alert('Activity posted', 'Your invite is live now.', [
-        {
-          text: 'View event',
-          onPress: () => navigation?.navigate('EventDetail', { eventId: createdEvent.id }),
-        },
-        {
-          text: 'Done',
-          style: 'default',
-        },
-      ]);
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      });
     } catch (error) {
       setSubmitError(normalizeApiError(error).message);
     } finally {
@@ -459,23 +484,57 @@ export default function CreateScreen({ navigation }: any) {
         ) : null}
 
         {lastCreatedTitle ? (
-          <View style={styles.feedbackWrap}>
-            <Text style={styles.feedbackSuccess}>Posted: {lastCreatedTitle}</Text>
+          <View style={styles.successCard}>
+            <View style={styles.successHeader}>
+              <View style={styles.successIconWrap}>
+                <AppIcon name="check" size={18} color={ACCENT} />
+              </View>
+              <View style={styles.successCopy}>
+                <Text style={styles.successEyebrow}>INVITE POSTED</Text>
+                <Text style={styles.successTitle}>{lastCreatedTitle}</Text>
+                {lastCreatedEvent ? (
+                  <Text style={styles.successMeta}>
+                    {formatCreatedEventMeta(lastCreatedEvent)}
+                    {lastCreatedEvent.location ? ` · ${lastCreatedEvent.location}` : ''}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+
+            <View style={styles.successActions}>
+              <AppButton
+                label="View event"
+                onPress={() => {
+                  if (!lastCreatedEvent) return;
+                  navigation?.navigate('EventDetail', { eventId: lastCreatedEvent.id });
+                }}
+                variant="accent"
+                style={styles.successActionButton}
+              />
+              <AppButton
+                label="Share"
+                onPress={shareCreatedEvent}
+                variant="ghost"
+                style={styles.successActionButton}
+              />
+            </View>
+
+            <Pressable
+              onPress={clearSuccessState}
+              style={({ pressed }) => [styles.successSecondaryAction, { opacity: pressed ? 0.82 : 1 }]}
+            >
+              <Text style={styles.successSecondaryActionText}>Create another</Text>
+            </Pressable>
           </View>
         ) : null}
 
-        <Pressable onPress={handlePost} disabled={!canPost} style={styles.postBtnWrap}>
-          <LinearGradient
-            colors={!canPost ? ['rgba(255,255,255,0.10)', 'rgba(255,255,255,0.05)'] : posting ? [ACCENT + '80', ACCENT + '40'] : [selectedColor, selectedColor + 'BB']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[styles.postBtn, (!canPost || posting) && styles.postBtnDisabled]}
-          >
-            <Text style={styles.postBtnText}>
-              {posting ? 'Posting...' : canPost ? `Post ${selectedActivity}` : 'Finish the plan to post'}
-            </Text>
-          </LinearGradient>
-        </Pressable>
+        <AppButton
+          label={posting ? 'Posting...' : canPost ? `Post ${selectedActivity}` : 'Finish the plan to post'}
+          onPress={handlePost}
+          disabled={!canPost || posting}
+          variant="accent"
+          style={styles.postBtnWrap}
+        />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -763,24 +822,68 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 20,
   },
+  successCard: {
+    marginHorizontal: spacing.xxl,
+    marginBottom: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(52,211,153,0.32)',
+    backgroundColor: SURFACE_ELEVATED,
+    gap: spacing.md,
+  },
+  successHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  successIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(52,211,153,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  successEyebrow: {
+    color: ACCENT,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.8,
+  },
+  successTitle: {
+    color: TEXT_PRIMARY,
+    fontSize: typography.h3,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  successMeta: {
+    color: TEXT_SECONDARY,
+    fontSize: typography.bodySmall,
+    lineHeight: 20,
+  },
+  successActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  successActionButton: {
+    flex: 1,
+  },
+  successSecondaryAction: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+  },
+  successSecondaryActionText: {
+    color: TEXT_MUTED,
+    fontSize: typography.bodySmall,
+    fontWeight: '700',
+  },
   postBtnWrap: {
     marginHorizontal: spacing.xxl,
     marginTop: spacing.md,
-    borderRadius: radii.pill,
-    overflow: 'hidden',
-  },
-  postBtn: {
-    paddingVertical: 18,
-    alignItems: 'center',
-    borderRadius: radii.pill,
-  },
-  postBtnDisabled: {
-    opacity: 0.78,
-  },
-  postBtnText: {
-    fontSize: typography.body,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
   },
 });

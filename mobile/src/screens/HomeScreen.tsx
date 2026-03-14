@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -22,10 +22,13 @@ import AppState from '../components/ui/AppState';
 import AppButton from '../components/ui/AppButton';
 import AppIcon from '../components/ui/AppIcon';
 import AppBackdrop from '../components/ui/AppBackdrop';
+import AppNotificationButton from '../components/ui/AppNotificationButton';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
+import { useNotificationStore } from '../store/notificationStore';
 
 type SessionIntent = 'dating' | 'workout' | 'both';
+type QuickFilterKey = 'all' | 'strength' | 'endurance' | 'mobility' | 'morning' | 'evening';
 
 const INTENT_OPTIONS: Array<{ value: SessionIntent; label: string; color: string }> = [
   { value: 'dating', label: 'Dating', color: '#F87171' },
@@ -37,24 +40,72 @@ const goalOptions = ['strength', 'weight_loss', 'endurance', 'mobility'];
 const intensityOptions = ['low', 'moderate', 'high'];
 const availabilityOptions: Array<'morning' | 'evening'> = ['morning', 'evening'];
 
+const QUICK_FILTERS: Array<{
+  id: QuickFilterKey;
+  label: string;
+  goals?: string[];
+  availability?: Array<'morning' | 'evening'>;
+}> = [
+  { id: 'all', label: 'All' },
+  { id: 'strength', label: 'Strength', goals: ['strength'] },
+  { id: 'endurance', label: 'Endurance', goals: ['endurance'] },
+  { id: 'mobility', label: 'Mobility', goals: ['mobility'] },
+  { id: 'morning', label: 'Morning', availability: ['morning'] },
+  { id: 'evening', label: 'Evening', availability: ['evening'] },
+];
+
 function getGreeting(name?: string) {
   const hour = new Date().getHours();
   const timeWord = hour < 12 ? 'Morning' : hour < 17 ? 'Afternoon' : 'Evening';
   return `${timeWord}${name ? `, ${name}` : ''}`;
 }
 
-const FILTER_CATEGORIES = [
-  { id: 'all', label: 'All' },
-  { id: 'strength', label: 'Strength' },
-  { id: 'running', label: 'Running' },
-  { id: 'yoga', label: 'Yoga' },
-  { id: 'hiking', label: 'Hiking' },
-  { id: 'cycling', label: 'Cycling' },
-];
+function mergeUnique<T extends string>(values: T[]) {
+  return Array.from(new Set(values));
+}
+
+function getUserIntent(user?: User | null): SessionIntent {
+  if (user?.profile?.intentDating && user?.profile?.intentWorkout) return 'both';
+  if (user?.profile?.intentDating) return 'dating';
+  if (user?.profile?.intentWorkout) return 'workout';
+  return 'both';
+}
+
+function buildDiscoveryFilters({
+  activeQuickFilter,
+  availability,
+  distanceKm,
+  goals,
+  intensity,
+  maxAge,
+  minAge,
+}: {
+  activeQuickFilter: QuickFilterKey;
+  availability: Array<'morning' | 'evening'>;
+  distanceKm: string;
+  goals: string[];
+  intensity: string[];
+  maxAge: string;
+  minAge: string;
+}): DiscoveryFiltersInput {
+  const quickFilter = QUICK_FILTERS.find((item) => item.id === activeQuickFilter);
+  const resolvedGoals = mergeUnique([...(goals || []), ...(quickFilter?.goals || [])]);
+  const resolvedAvailability = mergeUnique([...(availability || []), ...(quickFilter?.availability || [])]);
+
+  return {
+    distanceKm: Number(distanceKm) || undefined,
+    minAge: Number(minAge) || undefined,
+    maxAge: Number(maxAge) || undefined,
+    goals: resolvedGoals.length ? resolvedGoals : undefined,
+    intensity: intensity.length ? intensity : undefined,
+    availability: resolvedAvailability.length ? resolvedAvailability : undefined,
+  };
+}
 
 export default function HomeScreen({ navigation }: any) {
   const theme = useTheme();
   const user = useAuthStore((state) => state.user);
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
   const [feed, setFeed] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,8 +113,7 @@ export default function HomeScreen({ navigation }: any) {
   const [matchedProfile, setMatchedProfile] = useState<User | null>(null);
   const [matchData, setMatchData] = useState<{ id: string } | null>(null);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [sessionIntent, setSessionIntent] = useState<SessionIntent>('both');
+  const [activeQuickFilter, setActiveQuickFilter] = useState<QuickFilterKey>('all');
 
   const [distanceKm, setDistanceKm] = useState('50');
   const [minAge, setMinAge] = useState('21');
@@ -72,23 +122,25 @@ export default function HomeScreen({ navigation }: any) {
   const [intensity, setIntensity] = useState<string[]>([]);
   const [availability, setAvailability] = useState<Array<'morning' | 'evening'>>([]);
 
-  const currentFilters = useCallback(
-    (): DiscoveryFiltersInput => ({
-      distanceKm: Number(distanceKm) || undefined,
-      minAge: Number(minAge) || undefined,
-      maxAge: Number(maxAge) || undefined,
-      goals: goals.length ? goals : undefined,
-      intensity: intensity.length ? intensity : undefined,
-      availability: availability.length ? availability : undefined,
-    }),
-    [availability, distanceKm, goals, intensity, maxAge, minAge],
+  const currentFilters = useMemo(
+    () =>
+      buildDiscoveryFilters({
+        activeQuickFilter,
+        availability,
+        distanceKm,
+        goals,
+        intensity,
+        maxAge,
+        minAge,
+      }),
+    [activeQuickFilter, availability, distanceKm, goals, intensity, maxAge, minAge],
   );
 
-  const fetchFeed = useCallback(async () => {
+  const fetchFeed = useCallback(async (filters: DiscoveryFiltersInput = currentFilters) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await discoveryApi.feed(currentFilters());
+      const response = await discoveryApi.feed(filters);
       setFeed(response.data || []);
     } catch (err) {
       setError(normalizeApiError(err).message);
@@ -103,7 +155,7 @@ export default function HomeScreen({ navigation }: any) {
       return () => clearTimeout(timeout);
     }
     void fetchFeed();
-  }, [fetchFeed, navigation, user]);
+  }, [navigation, user]);
 
   const handleSwipeLeft = async (profile: User) => {
     try {
@@ -148,14 +200,30 @@ export default function HomeScreen({ navigation }: any) {
     setMatchData(null);
   };
 
-  const cycleIntent = () => {
-    const order: SessionIntent[] = ['both', 'dating', 'workout'];
-    const idx = order.indexOf(sessionIntent);
-    setSessionIntent(order[(idx + 1) % order.length]);
+  const handleQuickFilterPress = (filterId: QuickFilterKey) => {
+    const nextFilter = activeQuickFilter === filterId ? 'all' : filterId;
+    setActiveQuickFilter(nextFilter);
+    void fetchFeed(
+      buildDiscoveryFilters({
+        activeQuickFilter: nextFilter,
+        availability,
+        distanceKm,
+        goals,
+        intensity,
+        maxAge,
+        minAge,
+      }),
+    );
   };
 
-  const intentOption = INTENT_OPTIONS.find(o => o.value === sessionIntent) || INTENT_OPTIONS[2];
-  const activeFilterCount = goals.length + intensity.length + availability.length;
+  const intentOption = INTENT_OPTIONS.find((option) => option.value === getUserIntent(user)) || INTENT_OPTIONS[2];
+  const activeFilterCount =
+    (currentFilters.goals?.length || 0) +
+    (currentFilters.intensity?.length || 0) +
+    (currentFilters.availability?.length || 0) +
+    (distanceKm !== '50' ? 1 : 0) +
+    (minAge !== '21' ? 1 : 0) +
+    (maxAge !== '45' ? 1 : 0);
 
   if (loading) return <AppState title="Tuning your feed" description="Finding people who match your pace." loading />;
   if (error) return <AppState title="Couldn't load discovery" description={error} actionLabel="Try again" onAction={fetchFeed} isError />;
@@ -173,16 +241,22 @@ export default function HomeScreen({ navigation }: any) {
               <Text style={styles.greetingSub}>Fewer choices up front. Better matches in focus.</Text>
             </View>
 
-            <Pressable onPress={cycleIntent} style={styles.intentBadgeWrap}>
-              <LinearGradient
-                colors={[intentOption.color + '55', intentOption.color + '22']}
-                style={styles.intentBadge}
-              >
-                <Text style={[styles.intentBadgeText, { color: intentOption.color }]}>
-                  {intentOption.label}
-                </Text>
-              </LinearGradient>
-            </Pressable>
+            <View style={styles.headerActions}>
+              <AppNotificationButton
+                unreadCount={unreadCount}
+                onPress={() => navigation.navigate('Notifications')}
+              />
+              <View style={styles.intentBadgeWrap}>
+                <LinearGradient
+                  colors={[intentOption.color + '55', intentOption.color + '22']}
+                  style={styles.intentBadge}
+                >
+                  <Text style={[styles.intentBadgeText, { color: intentOption.color }]}>
+                    {intentOption.label}
+                  </Text>
+                </LinearGradient>
+              </View>
+            </View>
           </View>
 
           <View style={styles.heroMetricsRow}>
@@ -201,7 +275,7 @@ export default function HomeScreen({ navigation }: any) {
 
       <View style={styles.filterBar}>
         <View style={styles.filterBarHeader}>
-          <Text style={styles.filterBarLabel}>Curated around pace and intent</Text>
+          <Text style={styles.filterBarLabel}>Quick filters</Text>
           <Pressable onPress={() => setShowFiltersModal(true)} style={styles.refineTrigger}>
             <AppIcon
               name="sliders"
@@ -220,13 +294,13 @@ export default function HomeScreen({ navigation }: any) {
           contentContainerStyle={styles.filterPillsRow}
           style={styles.filterPillsScroll}
         >
-          {FILTER_CATEGORIES.map((cat) => (
+          {QUICK_FILTERS.map((cat) => (
             <Pressable
               key={cat.id}
-              onPress={() => setActiveFilter(cat.id)}
+              onPress={() => handleQuickFilterPress(cat.id)}
               style={[
                 styles.filterPill,
-                activeFilter === cat.id
+                activeQuickFilter === cat.id
                   ? styles.filterPillActive
                   : styles.filterPillInactive,
               ]}
@@ -234,7 +308,7 @@ export default function HomeScreen({ navigation }: any) {
               <Text
                 style={[
                   styles.filterPillText,
-                  { color: activeFilter === cat.id ? '#FFFFFF' : 'rgba(255,255,255,0.45)' },
+                  { color: activeQuickFilter === cat.id ? '#FFFFFF' : 'rgba(255,255,255,0.45)' },
                 ]}
               >
                 {cat.label}
@@ -342,7 +416,7 @@ export default function HomeScreen({ navigation }: any) {
               />
               <AppButton
                 label="Apply"
-                onPress={() => { fetchFeed(); setShowFiltersModal(false); }}
+                onPress={() => { void fetchFeed(); setShowFiltersModal(false); }}
                 variant="primary"
                 style={{ flex: 1 }}
               />
@@ -403,6 +477,10 @@ const styles = StyleSheet.create({
   },
   headerCopy: {
     flex: 1,
+  },
+  headerActions: {
+    alignItems: 'flex-end',
+    gap: spacing.sm,
   },
   greetingEyebrow: {
     fontSize: 10,

@@ -1,13 +1,22 @@
 import React from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import CreateScreen, { buildStartDate } from '../CreateScreen';
+
+const mockCreate = jest.fn();
 
 jest.mock('../../services/api', () => ({
   eventsApi: {
-    create: jest.fn(),
+    create: (...args: unknown[]) => mockCreate(...args),
   },
 }));
+
+jest.mock('../../components/ui/AppIcon', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  return () => <Text>icon</Text>;
+});
 
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
@@ -25,6 +34,17 @@ describe('CreateScreen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCreate.mockResolvedValue({
+      data: {
+        id: 'event-1',
+        title: 'Run at Magic Island',
+        location: 'Magic Island',
+        startsAt: '2026-03-15T16:00:00.000Z',
+        host: { id: 'user-1', firstName: 'Jordan' },
+        attendeesCount: 1,
+        joined: true,
+      },
+    });
   });
 
   it('uses keyboard-aware layout and dismissal props for the create form', () => {
@@ -47,6 +67,28 @@ describe('CreateScreen', () => {
     expect(scrollView.props.onScrollBeginDrag).toEqual(expect.any(Function));
     expect(noteInput.props.onFocus).toEqual(expect.any(Function));
     expect(noteInput.props.blurOnSubmit).toBe(true);
+  });
+
+  it('shows an inline success card after posting an activity', async () => {
+    render(<CreateScreen navigation={navigation} />);
+
+    fireEvent.press(screen.getByText('Run'));
+    fireEvent.press(screen.getByText('Tomorrow'));
+    fireEvent.press(screen.getByText('Evening'));
+    fireEvent.changeText(screen.getByPlaceholderText('Runyon Canyon, Venice Beach...'), 'Magic Island');
+    fireEvent.press(screen.getByText('Post Run'));
+
+    expect(await screen.findByText('INVITE POSTED')).toBeTruthy();
+    expect(screen.getByText('Run at Magic Island')).toBeTruthy();
+    expect(screen.getByText('View event')).toBeTruthy();
+    expect(screen.getByText('Share')).toBeTruthy();
+    expect(screen.getByText('Create another')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('View event'));
+
+    await waitFor(() => {
+      expect(navigation.navigate).toHaveBeenCalledWith('EventDetail', { eventId: 'event-1' });
+    });
   });
 });
 
