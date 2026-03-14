@@ -84,6 +84,10 @@ export class AuthService {
         throw new BadRequestException('Email is required');
       }
 
+      if (!password || !password.trim()) {
+        throw new BadRequestException('Password is required');
+      }
+
       const existing = await this.prisma.user.findFirst({
         where: this.buildEmailLookup(normalizedEmail),
       });
@@ -107,7 +111,10 @@ export class AuthService {
 
       return this.issueAuthToken(user);
     } catch (error) {
-      if (error instanceof ConflictException) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
 

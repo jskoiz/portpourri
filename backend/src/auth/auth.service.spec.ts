@@ -181,6 +181,36 @@ describe('AuthService', () => {
     expect(prismaMock.user.create).not.toHaveBeenCalled();
   });
 
+  it('rejects signup when the password is empty', async () => {
+    await expect(
+      service.signup({
+        email: 'test@example.com',
+        password: '',
+        firstName: 'Jordan',
+        birthdate: '1995-02-03',
+        gender: 'non-binary',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
+    expect(prismaMock.user.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects signup when the password is whitespace only', async () => {
+    await expect(
+      service.signup({
+        email: 'test@example.com',
+        password: '   ',
+        firstName: 'Jordan',
+        birthdate: '1995-02-03',
+        gender: 'non-binary',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
+    expect(prismaMock.user.create).not.toHaveBeenCalled();
+  });
+
   it('returns a signed auth result for newly created signup users', async () => {
     jwtServiceMock.sign.mockReturnValue('signed-token');
     prismaMock.user.findFirst.mockResolvedValue(null);
