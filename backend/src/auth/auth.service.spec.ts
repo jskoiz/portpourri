@@ -211,6 +211,63 @@ describe('AuthService', () => {
     expect(prismaMock.user.create).not.toHaveBeenCalled();
   });
 
+  it('rejects signup when the birthdate is not a real calendar date', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.signup({
+        email: 'jordan@example.com',
+        password: 'password123',
+        firstName: 'Jordan',
+        birthdate: '1995-02-31',
+        gender: 'non-binary',
+      }),
+    ).rejects.toThrow('Birthdate must be a real date');
+
+    expect(prismaMock.user.create).not.toHaveBeenCalled();
+  });
+
+  it('normalizes gender values before creating the user', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.user.create.mockResolvedValue({
+      id: 'user-1',
+      email: 'jordan@example.com',
+      isOnboarded: false,
+    });
+    jwtServiceMock.sign.mockReturnValue('signed-token');
+    mockedHash.mockImplementation(async () => 'hashed-password');
+
+    await service.signup({
+      email: 'jordan@example.com',
+      password: 'password123',
+      firstName: 'Jordan',
+      birthdate: '1995-02-03',
+      gender: ' Non-Binary ',
+    });
+
+    expect(prismaMock.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        gender: 'non-binary',
+      }),
+    });
+  });
+
+  it('rejects signup when gender is outside the allowed options', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.signup({
+        email: 'jordan@example.com',
+        password: 'password123',
+        firstName: 'Jordan',
+        birthdate: '1995-02-03',
+        gender: 'other',
+      }),
+    ).rejects.toThrow('Gender must be one of: woman, man, non-binary');
+
+    expect(prismaMock.user.create).not.toHaveBeenCalled();
+  });
+
   it('returns a signed auth result for newly created signup users', async () => {
     jwtServiceMock.sign.mockReturnValue('signed-token');
     prismaMock.user.findFirst.mockResolvedValue(null);

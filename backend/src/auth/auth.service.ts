@@ -37,6 +37,8 @@ type EmailAuthUser = AuthenticatedUser & {
   passwordHash: string | null;
 };
 
+const ALLOWED_GENDERS = ['woman', 'man', 'non-binary'] as const;
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -48,6 +50,39 @@ export class AuthService {
 
   private normalizeEmail(email?: string | null) {
     return email?.trim().toLowerCase() ?? '';
+  }
+
+  private parseBirthdate(birthdate: string) {
+    const trimmedBirthdate = birthdate.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmedBirthdate)) {
+      throw new BadRequestException('Birthdate must use YYYY-MM-DD format');
+    }
+
+    const parsedBirthdate = new Date(`${trimmedBirthdate}T00:00:00.000Z`);
+    if (Number.isNaN(parsedBirthdate.getTime())) {
+      throw new BadRequestException('Birthdate must be a real date');
+    }
+
+    if (parsedBirthdate.toISOString().slice(0, 10) !== trimmedBirthdate) {
+      throw new BadRequestException('Birthdate must be a real date');
+    }
+
+    return parsedBirthdate;
+  }
+
+  private normalizeGender(gender: string) {
+    const normalizedGender = gender.trim().toLowerCase();
+    if (
+      !ALLOWED_GENDERS.includes(
+        normalizedGender as (typeof ALLOWED_GENDERS)[number],
+      )
+    ) {
+      throw new BadRequestException(
+        'Gender must be one of: woman, man, non-binary',
+      );
+    }
+
+    return normalizedGender;
   }
 
   private buildEmailLookup(email: string) {
@@ -97,14 +132,16 @@ export class AuthService {
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
+      const parsedBirthdate = this.parseBirthdate(birthdate);
+      const normalizedGender = this.normalizeGender(gender);
 
       const user = await this.prisma.user.create({
         data: {
           email: normalizedEmail,
           passwordHash: hashedPassword,
           firstName,
-          birthdate: new Date(birthdate),
-          gender,
+          birthdate: parsedBirthdate,
+          gender: normalizedGender,
           authProvider: 'email',
         },
       });

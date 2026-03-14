@@ -40,11 +40,17 @@ describe('SignupScreen', () => {
 
     expect(await screen.findByText('One last thing.')).toBeTruthy();
 
-    fireEvent.changeText(screen.getByPlaceholderText('YYYY-MM-DD'), '01/01/1995');
-    fireEvent.changeText(screen.getByPlaceholderText('e.g. woman, man, non-binary'), 'non-binary');
+    fireEvent.press(screen.getByText('Month'));
+    fireEvent.press(screen.getByText('February'));
+    fireEvent.press(screen.getByText('Day'));
+    fireEvent.press(screen.getByText('31'));
+    fireEvent.press(screen.getByText('Year'));
+    fireEvent.press(screen.getByText('1995'));
+    fireEvent.press(screen.getByText('Choose a gender'));
+    fireEvent.press(screen.getByText('Non-binary'));
     fireEvent.press(screen.getByText('Create my account'));
 
-    expect(await screen.findByText('Use YYYY-MM-DD format.')).toBeTruthy();
+    expect(await screen.findByText('Choose a real birthdate.')).toBeTruthy();
     expect(mockSignup).not.toHaveBeenCalled();
   });
 
@@ -60,8 +66,14 @@ describe('SignupScreen', () => {
     fireEvent.changeText(screen.getByPlaceholderText('At least 8 characters'), 'password123');
     fireEvent.press(screen.getByText('Continue'));
 
-    fireEvent.changeText(screen.getByPlaceholderText('YYYY-MM-DD'), '1995-02-03');
-    fireEvent.changeText(screen.getByPlaceholderText('e.g. woman, man, non-binary'), 'non-binary');
+    fireEvent.press(screen.getByText('Month'));
+    fireEvent.press(screen.getByText('February'));
+    fireEvent.press(screen.getByText('Day'));
+    fireEvent.press(screen.getByText('3'));
+    fireEvent.press(screen.getByText('Year'));
+    fireEvent.press(screen.getByText('1995'));
+    fireEvent.press(screen.getByText('Choose a gender'));
+    fireEvent.press(screen.getByText('Non-binary'));
     fireEvent.press(screen.getByText('Create my account'));
 
     await waitFor(() => {
@@ -86,8 +98,14 @@ describe('SignupScreen', () => {
     fireEvent.changeText(screen.getByPlaceholderText('you@example.com'), 'jordan@example.com');
     fireEvent.changeText(screen.getByPlaceholderText('At least 8 characters'), 'password123');
     fireEvent.press(screen.getByText('Continue'));
-    fireEvent.changeText(screen.getByPlaceholderText('YYYY-MM-DD'), '1995-02-03');
-    fireEvent.changeText(screen.getByPlaceholderText('e.g. woman, man, non-binary'), 'non-binary');
+    fireEvent.press(screen.getByText('Month'));
+    fireEvent.press(screen.getByText('February'));
+    fireEvent.press(screen.getByText('Day'));
+    fireEvent.press(screen.getByText('3'));
+    fireEvent.press(screen.getByText('Year'));
+    fireEvent.press(screen.getByText('1995'));
+    fireEvent.press(screen.getByText('Choose a gender'));
+    fireEvent.press(screen.getByText('Non-binary'));
     fireEvent.press(screen.getByText('Create my account'));
 
     await waitFor(() => {

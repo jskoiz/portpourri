@@ -7,11 +7,50 @@ import AppButton from '../components/ui/AppButton';
 import AppInput from '../components/ui/AppInput';
 import AppBackButton from '../components/ui/AppBackButton';
 import AppBackdrop from '../components/ui/AppBackdrop';
+import AppSelect from '../components/ui/AppSelect';
+import { GENDER_OPTIONS } from '../constants/signup';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
 
 const STEPS = 3;
 const STEP_LABELS = ['Account', 'Profile', 'Done'];
+const MONTH_OPTIONS = [
+  { label: 'January', value: '01' },
+  { label: 'February', value: '02' },
+  { label: 'March', value: '03' },
+  { label: 'April', value: '04' },
+  { label: 'May', value: '05' },
+  { label: 'June', value: '06' },
+  { label: 'July', value: '07' },
+  { label: 'August', value: '08' },
+  { label: 'September', value: '09' },
+  { label: 'October', value: '10' },
+  { label: 'November', value: '11' },
+  { label: 'December', value: '12' },
+];
+const DAY_OPTIONS = Array.from({ length: 31 }, (_, index) => ({
+  label: `${index + 1}`,
+  value: `${index + 1}`.padStart(2, '0'),
+}));
+const YEAR_OPTIONS = Array.from({ length: 101 }, (_, index) => {
+  const year = `${new Date().getFullYear() - index}`;
+  return { label: year, value: year };
+});
+
+function buildBirthdate(year: string, month: string, day: string) {
+  if (!year || !month || !day) {
+    return '';
+  }
+
+  const birthdate = `${year}-${month}-${day}`;
+  const parsed = new Date(`${birthdate}T00:00:00.000Z`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+
+  return parsed.toISOString().slice(0, 10) === birthdate ? birthdate : '';
+}
 
 export default function SignupScreen({ navigation }: any) {
   const theme = useTheme();
@@ -19,11 +58,14 @@ export default function SignupScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
-  const [birthdate, setBirthdate] = useState('1995-01-01');
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthDay, setBirthDay] = useState('');
+  const [birthYear, setBirthYear] = useState('');
   const [gender, setGender] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const signup = useAuthStore((state) => state.signup);
+  const birthdate = buildBirthdate(birthYear, birthMonth, birthDay);
 
   const stepTitles = ["Let's start with you.", 'Secure your account.', 'One last thing.'];
   const stepSubtitles = [
@@ -42,8 +84,12 @@ export default function SignupScreen({ navigation }: any) {
       else if (password.trim().length < 8) next.password = 'Use at least 8 characters.';
     }
     if (step === 2) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(birthdate.trim())) next.birthdate = 'Use YYYY-MM-DD format.';
-      if (!gender.trim()) next.gender = 'How do you identify?';
+      if (!birthMonth || !birthDay || !birthYear) {
+        next.birthdate = 'Choose your birth month, day, and year.';
+      } else if (!birthdate) {
+        next.birthdate = 'Choose a real birthdate.';
+      }
+      if (!gender.trim()) next.gender = 'Choose one of the listed gender options.';
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -61,9 +107,11 @@ export default function SignupScreen({ navigation }: any) {
   const canProceed = useMemo(() => {
     if (step === 0) return !!firstName.trim();
     if (step === 1) return !!email.trim() && !!password.trim();
-    if (step === 2) return !!birthdate.trim() && !!gender.trim();
+    if (step === 2) {
+      return !!birthMonth && !!birthDay && !!birthYear && !!gender.trim();
+    }
     return false;
-  }, [step, firstName, email, password, birthdate, gender]);
+  }, [step, firstName, email, password, birthMonth, birthDay, birthYear, gender]);
 
   const handleSignup = async () => {
     setSubmitting(true);
@@ -176,21 +224,60 @@ export default function SignupScreen({ navigation }: any) {
             )}
             {step === 2 && (
               <>
-                <AppInput
-                  label="Birthday"
-                  placeholder="YYYY-MM-DD"
-                  value={birthdate}
-                  onChangeText={(v) => { setBirthdate(v); if (errors.birthdate) setErrors((p) => ({ ...p, birthdate: '' })); }}
-                  editable={!submitting}
-                  error={errors.birthdate}
-                  autoFocus
-                />
-                <AppInput
+                <Text style={[styles.selectGroupLabel, { color: theme.textMuted }]}>Birthday</Text>
+                <View style={styles.birthdateRow}>
+                  <AppSelect
+                    placeholder="Month"
+                    options={MONTH_OPTIONS}
+                    value={birthMonth}
+                    onSelect={(value) => {
+                      setBirthMonth(value);
+                      if (errors.birthdate) setErrors((p) => ({ ...p, birthdate: '' }));
+                    }}
+                    disabled={submitting}
+                    wrapperStyle={styles.birthdateMonthField}
+                    triggerStyle={styles.birthdateTrigger}
+                  />
+                  <AppSelect
+                    placeholder="Day"
+                    options={DAY_OPTIONS}
+                    value={birthDay}
+                    onSelect={(value) => {
+                      setBirthDay(value);
+                      if (errors.birthdate) setErrors((p) => ({ ...p, birthdate: '' }));
+                    }}
+                    disabled={submitting}
+                    wrapperStyle={styles.birthdateField}
+                    triggerStyle={styles.birthdateTrigger}
+                  />
+                  <AppSelect
+                    placeholder="Year"
+                    options={YEAR_OPTIONS}
+                    value={birthYear}
+                    onSelect={(value) => {
+                      setBirthYear(value);
+                      if (errors.birthdate) setErrors((p) => ({ ...p, birthdate: '' }));
+                    }}
+                    disabled={submitting}
+                    wrapperStyle={styles.birthdateField}
+                    triggerStyle={styles.birthdateTrigger}
+                  />
+                </View>
+                {errors.birthdate ? (
+                  <Text style={[styles.inlineErrorText, { color: theme.danger }]}>
+                    {errors.birthdate}
+                  </Text>
+                ) : null}
+                <AppSelect
                   label="I identify as"
-                  placeholder="e.g. woman, man, non-binary"
+                  placeholder="Choose a gender"
+                  options={[...GENDER_OPTIONS]}
                   value={gender}
-                  onChangeText={(v) => { setGender(v); if (errors.gender) setErrors((p) => ({ ...p, gender: '' })); }}
-                  editable={!submitting}
+                  onSelect={(value) => {
+                    setGender(value);
+                    if (errors.gender) setErrors((p) => ({ ...p, gender: '' }));
+                  }}
+                  disabled={submitting}
                   error={errors.gender}
                 />
               </>
@@ -300,6 +387,36 @@ const styles = StyleSheet.create({
   ctaButton: {
     marginTop: spacing.sm,
     width: '100%',
+  },
+  selectGroupLabel: {
+    marginBottom: spacing.sm,
+    marginLeft: 2,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  birthdateRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  birthdateMonthField: {
+    flex: 1.35,
+    marginBottom: 0,
+  },
+  birthdateField: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  birthdateTrigger: {
+    minHeight: 56,
+  },
+  inlineErrorText: {
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
+    marginLeft: 2,
+    fontSize: typography.caption,
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
