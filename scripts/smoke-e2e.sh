@@ -6,11 +6,15 @@ BACKEND_DIR="$ROOT_DIR/backend"
 MOBILE_DIR="$ROOT_DIR/mobile"
 
 if [[ -f "$BACKEND_DIR/.env" ]]; then
+  set -a
   # shellcheck disable=SC1091
   source "$BACKEND_DIR/.env"
+  set +a
 elif [[ -f "$BACKEND_DIR/.env.example" ]]; then
+  set -a
   # shellcheck disable=SC1091
   source "$BACKEND_DIR/.env.example"
+  set +a
 fi
 
 API_PORT="${API_PORT:-${PORT:-3010}}"
