@@ -40,18 +40,18 @@ const TEXT_MUTED = "rgba(240,246,252,0.35)";
 
 // ─── Activity Data ────────────────────────────────────────────────────────────
 const ACTIVITY_OPTIONS = [
-  { label: "🏃 Running", color: ACCENT },
-  { label: "🧘 Yoga", color: PRIMARY },
-  { label: "🏋️ Lifting", color: "#F87171" },
-  { label: "🥾 Hiking", color: ENERGY },
-  { label: "🏖️ Beach", color: "#60A5FA" },
-  { label: "🚴 Cycling", color: ACCENT },
-  { label: "🏄 Surfing", color: "#38BDF8" },
-  { label: "🧗 Climbing", color: "#FB923C" },
-  { label: "🥊 Boxing", color: "#F87171" },
-  { label: "🏊 Swimming", color: "#60A5FA" },
-  { label: "🎾 Tennis", color: ENERGY },
-  { label: "⛷️ Skiing", color: "#93C5FD" },
+  { label: "🏃 Running", value: "Running", color: ACCENT },
+  { label: "🧘 Yoga", value: "Yoga", color: PRIMARY },
+  { label: "🏋️ Lifting", value: "Lifting", color: "#F87171" },
+  { label: "🥾 Hiking", value: "Hiking", color: ENERGY },
+  { label: "🏖️ Beach", value: "Beach", color: "#60A5FA" },
+  { label: "🚴 Cycling", value: "Cycling", color: ACCENT },
+  { label: "🏄 Surfing", value: "Surfing", color: "#38BDF8" },
+  { label: "🧗 Climbing", value: "Climbing", color: "#FB923C" },
+  { label: "🥊 Boxing", value: "Boxing", color: "#F87171" },
+  { label: "🏊 Swimming", value: "Swimming", color: "#60A5FA" },
+  { label: "🎾 Tennis", value: "Tennis", color: ENERGY },
+  { label: "⛷️ Skiing", value: "Skiing", color: "#93C5FD" },
 ];
 
 const SCHEDULE_OPTIONS = [
@@ -62,6 +62,46 @@ const SCHEDULE_OPTIONS = [
   "Weekends",
 ];
 const ENVIRONMENT_OPTIONS = ["Outdoors", "Gym", "Home", "Studio", "Pool"];
+
+const ACTIVITY_LABEL_LOOKUP = new Map(
+  ACTIVITY_OPTIONS.flatMap(({ label, value }) => {
+    const normalized = label.replace(/^[^\p{L}\p{N}]+/u, "").trim();
+    return [
+      [value.toLowerCase(), value],
+      [label.toLowerCase(), value],
+      [normalized.toLowerCase(), value],
+    ];
+  }),
+);
+
+function normalizeActivityValue(activity: string) {
+  const normalized = activity.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  return ACTIVITY_LABEL_LOOKUP.get(normalized.toLowerCase()) ?? normalized;
+}
+
+function parseFavoriteActivities(favoriteActivities?: string | null) {
+  return (favoriteActivities ?? "")
+    .split(",")
+    .map((activity) => normalizeActivityValue(activity))
+    .filter((activity): activity is string => Boolean(activity));
+}
+
+function buildSchedulePreferences(profile?: User["fitnessProfile"]) {
+  const nextSchedule: string[] = [];
+
+  if (profile?.prefersMorning) {
+    nextSchedule.push("Morning");
+  }
+  if (profile?.prefersEvening) {
+    nextSchedule.push("Evening");
+  }
+
+  return nextSchedule;
+}
 
 // ─── Tag Cloud Pill ───────────────────────────────────────────────────────────
 function TagPill({
@@ -201,13 +241,8 @@ export default function ProfileScreen() {
   const [weeklyFrequencyBand, setWeeklyFrequencyBand] = useState("");
   const [primaryGoal, setPrimaryGoal] = useState("");
 
-  const [selectedActivities, setSelectedActivities] = useState<string[]>([
-    "🏃 Running",
-    "🧘 Yoga",
-  ]);
-  const [selectedSchedule, setSelectedSchedule] = useState<string[]>([
-    "Morning",
-  ]);
+  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+  const [selectedSchedule, setSelectedSchedule] = useState<string[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<string[]>([
     "Outdoors",
     "Gym",
@@ -229,6 +264,10 @@ export default function ProfileScreen() {
       setIntensityLevel(next.fitnessProfile?.intensityLevel || "");
       setWeeklyFrequencyBand(next.fitnessProfile?.weeklyFrequencyBand || "");
       setPrimaryGoal(next.fitnessProfile?.primaryGoal || "");
+      setSelectedActivities(
+        parseFavoriteActivities(next.fitnessProfile?.favoriteActivities),
+      );
+      setSelectedSchedule(buildSchedulePreferences(next.fitnessProfile));
     } catch (err) {
       setError(normalizeApiError(err).message);
     } finally {
@@ -245,6 +284,9 @@ export default function ProfileScreen() {
         intensityLevel,
         weeklyFrequencyBand,
         primaryGoal,
+        favoriteActivities: selectedActivities.join(", "),
+        prefersMorning: selectedSchedule.includes("Morning"),
+        prefersEvening: selectedSchedule.includes("Evening"),
       });
       setEditMode(false);
       await fetchProfile(true);
@@ -439,14 +481,13 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionEyebrow}>Movement Identity</Text>
           <View style={styles.tagCloud}>
-            {ACTIVITY_OPTIONS.map(({ label, color }) => (
+            {ACTIVITY_OPTIONS.map(({ label, value, color }) => (
               <TagPill
-                key={label}
+                key={value}
                 label={label}
-                selected={selectedActivities.includes(label)}
+                selected={selectedActivities.includes(value)}
                 onPress={() =>
-                  editMode &&
-                  toggle(selectedActivities, label, setSelectedActivities)
+                  editMode && toggle(selectedActivities, value, setSelectedActivities)
                 }
                 color={color}
                 interactive={editMode}
