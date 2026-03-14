@@ -4,9 +4,8 @@ import ChatScreen from '../ChatScreen';
 
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
-const mockGetMessages = jest.fn();
+const mockRefresh = jest.fn();
 const mockSendMessage = jest.fn();
-const mockConnectStream = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
@@ -22,23 +21,24 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 
-jest.mock('../../services/api', () => ({
-  matchesApi: {
-    getMessages: (...args: unknown[]) => mockGetMessages(...args),
-    sendMessage: (...args: unknown[]) => mockSendMessage(...args),
-  },
-}));
-
-jest.mock('../../services/matchRealtime', () => ({
-  connectMatchMessageStream: (...args: unknown[]) => mockConnectStream(...args),
+jest.mock('../../features/chat/hooks/useChatThread', () => ({
+  useChatThread: () => ({
+    connectionStatus: 'connected',
+    error: null,
+    loading: false,
+    messages: [],
+    refresh: mockRefresh,
+    refreshing: false,
+    sendMessage: mockSendMessage,
+    sending: false,
+  }),
 }));
 
 describe('ChatScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetMessages.mockResolvedValue({ data: [] });
-    mockSendMessage.mockResolvedValue({ data: {} });
-    mockConnectStream.mockResolvedValue(() => undefined);
+    mockRefresh.mockResolvedValue(undefined);
+    mockSendMessage.mockResolvedValue(undefined);
   });
 
   it('prefills the composer and sends via matchesApi', async () => {
@@ -48,10 +48,7 @@ describe('ChatScreen', () => {
     fireEvent(input, 'submitEditing');
 
     await waitFor(() => {
-      expect(mockSendMessage).toHaveBeenCalledWith(
-        'match-1',
-        'Coffee after the run?',
-      );
+      expect(mockSendMessage).toHaveBeenCalledWith('Coffee after the run?');
     });
   });
 });

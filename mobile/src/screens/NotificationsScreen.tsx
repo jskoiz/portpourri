@@ -11,14 +11,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { normalizeApiError } from '../api/errors';
 import type { AppNotification } from '../api/types';
-import { notificationsApi } from '../services/api';
 import AppBackButton from '../components/ui/AppBackButton';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import AppIcon from '../components/ui/AppIcon';
 import AppState from '../components/ui/AppState';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
-import { useNotificationStore } from '../store/notificationStore';
+import { useNotifications } from '../features/notifications/hooks/useNotifications';
+import type { RootStackScreenProps } from '../core/navigation/types';
 
 function getNotificationMeta(type: AppNotification['type']) {
   switch (type) {
@@ -110,67 +110,44 @@ function NotifRow({
 
 export default function NotificationsScreen() {
   const theme = useTheme();
-  const navigation = useNavigation<any>();
-  const setUnreadCount = useNotificationStore((state) => state.setUnreadCount);
-  const [notifs, setNotifs] = useState<AppNotification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchNotifications = useCallback(async (silent = false) => {
-    if (silent) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
-
-    try {
-      const response = await notificationsApi.list();
-      const nextNotifications = response.data || [];
-      setNotifs(nextNotifications);
-      setUnreadCount(nextNotifications.filter((item) => !item.readAt).length);
-    } catch (err) {
-      setError(normalizeApiError(err).message);
-    } finally {
-      if (silent) setRefreshing(false);
-      else setLoading(false);
-    }
-  }, []);
+  const navigation =
+    useNavigation<RootStackScreenProps<'Notifications'>['navigation']>();
+  const [actionError, setActionError] = useState<string | null>(null);
+  const {
+    error,
+    isLoading: loading,
+    isRefetching,
+    markAllRead,
+    markRead,
+    notifications: notifs,
+    refetch,
+    unreadCount,
+  } = useNotifications();
+  const errorMessage =
+    actionError ?? (error ? normalizeApiError(error).message : null);
 
   useFocusEffect(
     useCallback(() => {
-      fetchNotifications();
-    }, [fetchNotifications]),
+      setActionError(null);
+      void refetch();
+    }, [refetch]),
   );
 
-  const markRead = async (id: string) => {
+  const handleMarkRead = async (id: string) => {
     try {
-      const response = await notificationsApi.markRead(id);
-      const updated = response.data;
-      if (!updated) return;
-
-      setNotifs((current) => {
-        const nextNotifications = current.map((item) => (item.id === id ? updated : item));
-        setUnreadCount(nextNotifications.filter((item) => !item.readAt).length);
-        return nextNotifications;
-      });
+      setActionError(null);
+      await markRead(id);
     } catch (err) {
-      setError(normalizeApiError(err).message);
+      setActionError(normalizeApiError(err).message);
     }
   };
 
   const clearAll = async () => {
     try {
-      await notificationsApi.markAllRead();
-      const now = new Date().toISOString();
-      setNotifs((current) => {
-        const nextNotifications = current.map((item) => ({
-          ...item,
-          readAt: item.readAt ?? now,
-        }));
-        setUnreadCount(0);
-        return nextNotifications;
-      });
+      setActionError(null);
+      await markAllRead();
     } catch (err) {
-      setError(normalizeApiError(err).message);
+      setActionError(normalizeApiError(err).message);
     }
   };
 
@@ -180,7 +157,6 @@ export default function NotificationsScreen() {
   const earlierNotifs = notifs.filter(
     (n) => getNotificationGroup(n.createdAt) === 'Earlier',
   );
-  const unreadCount = notifs.filter((notif) => !notif.readAt).length;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -202,12 +178,14 @@ export default function NotificationsScreen() {
 
       {loading ? (
         <AppState title="Loading notifications" loading />
-      ) : error && notifs.length === 0 ? (
+      ) : errorMessage && notifs.length === 0 ? (
         <AppState
           title="Couldn't load notifications"
-          description={error}
+          description={errorMessage}
           actionLabel="Try again"
-          onAction={fetchNotifications}
+          onAction={() => {
+            void refetch();
+          }}
           isError
         />
       ) : notifs.length === 0 ? (
@@ -226,8 +204,10 @@ export default function NotificationsScreen() {
           contentContainerStyle={styles.scrollContent}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => fetchNotifications(true)}
+              refreshing={isRefetching && !loading}
+              onRefresh={() => {
+                void refetch();
+              }}
               tintColor={theme.primary}
             />
           }
@@ -236,7 +216,12 @@ export default function NotificationsScreen() {
             <View style={styles.group}>
               <Text style={[styles.groupLabel, { color: theme.textMuted }]}>Today</Text>
               {todayNotifs.map((n) => (
-                <NotifRow key={n.id} notif={n} theme={theme} onMarkRead={markRead} />
+                <NotifRow
+                  key={n.id}
+                  notif={n}
+                  theme={theme}
+                  onMarkRead={handleMarkRead}
+                />
               ))}
             </View>
           )}
@@ -244,7 +229,12 @@ export default function NotificationsScreen() {
             <View style={styles.group}>
               <Text style={[styles.groupLabel, { color: theme.textMuted }]}>Earlier</Text>
               {earlierNotifs.map((n) => (
-                <NotifRow key={n.id} notif={n} theme={theme} onMarkRead={markRead} />
+                <NotifRow
+                  key={n.id}
+                  notif={n}
+                  theme={theme}
+                  onMarkRead={handleMarkRead}
+                />
               ))}
             </View>
           )}

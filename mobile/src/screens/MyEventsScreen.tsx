@@ -1,6 +1,5 @@
 import React, { useCallback, useState } from 'react';
 import {
-  FlatList,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -10,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { eventsApi } from '../services/api';
+import { FlashList } from '@shopify/flash-list';
 import { normalizeApiError } from '../api/errors';
 import type { EventSummary } from '../api/types';
 import { useAuthStore } from '../store/authStore';
@@ -20,6 +19,11 @@ import AppState from '../components/ui/AppState';
 import AppIcon from '../components/ui/AppIcon';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
+import { useMyEvents } from '../features/events/hooks/useMyEvents';
+import type {
+  MainTabParamList,
+  RootStackScreenProps,
+} from '../core/navigation/types';
 
 type TabKey = 'Joined' | 'Created';
 const TABS: TabKey[] = ['Joined', 'Created'];
@@ -31,7 +35,7 @@ const EMPTY_STATES: Record<
     title: string;
     body: string;
     cta: string;
-    route: string;
+    route: keyof MainTabParamList;
   }
 > = {
   Joined: {
@@ -83,34 +87,21 @@ function normalizeEvents(data: unknown): EventSummary[] {
   );
 }
 
-export default function MyEventsScreen({ navigation }: any) {
+export default function MyEventsScreen({
+  navigation,
+}: RootStackScreenProps<'MyEvents'>) {
   const theme = useTheme();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const [activeTab, setActiveTab] = useState<TabKey>('Joined');
-  const [events, setEvents] = useState<EventSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchEvents = async (silent = false) => {
-    if (silent) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
-    try {
-      const response = await eventsApi.mine();
-      setEvents(normalizeEvents(response.data));
-    } catch (err) {
-      setError(normalizeApiError(err).message);
-    } finally {
-      if (silent) setRefreshing(false);
-      else setLoading(false);
-    }
-  };
+  const { error, events: rawEvents, isLoading: loading, isRefetching, refetch } =
+    useMyEvents();
+  const events = normalizeEvents(rawEvents);
+  const errorMessage = error ? normalizeApiError(error).message : null;
 
   useFocusEffect(
     useCallback(() => {
-      fetchEvents();
-    }, []),
+      void refetch();
+    }, [refetch]),
   );
 
   const emptyMeta = EMPTY_STATES[activeTab];
@@ -191,12 +182,14 @@ export default function MyEventsScreen({ navigation }: any) {
 
       {loading ? (
         <AppState title="Loading your events" loading />
-      ) : error ? (
+      ) : errorMessage ? (
         <AppState
           title="Couldn't load events"
-          description={error}
+          description={errorMessage}
           actionLabel="Try again"
-          onAction={fetchEvents}
+          onAction={() => {
+            void refetch();
+          }}
           isError
         />
       ) : displayedEvents.length === 0 ? (
@@ -217,7 +210,7 @@ export default function MyEventsScreen({ navigation }: any) {
           </Text>
           <TouchableOpacity
             style={[styles.emptyCta, { backgroundColor: theme.primary }]}
-            onPress={() => navigation.navigate(emptyMeta.route)}
+            onPress={() => navigation.navigate('Main', { screen: emptyMeta.route })}
             activeOpacity={0.85}
           >
             <Text style={[styles.emptyCtaText, { color: theme.white }]}>
@@ -226,15 +219,17 @@ export default function MyEventsScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           contentContainerStyle={styles.list}
           data={displayedEvents}
           keyExtractor={(item, index) => item.id || `event-${index}`}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => fetchEvents(true)}
+              refreshing={isRefetching && !loading}
+              onRefresh={() => {
+                void refetch();
+              }}
               tintColor={theme.primary}
             />
           }

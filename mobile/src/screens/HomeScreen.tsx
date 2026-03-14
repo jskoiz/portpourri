@@ -13,7 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../store/authStore';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { discoveryApi, type DiscoveryFiltersInput } from '../services/api';
+import { type DiscoveryFiltersInput } from '../services/api';
 import SwipeDeck from '../components/SwipeDeck';
 import MatchAnimation from '../components/MatchAnimation';
 import { normalizeApiError } from '../api/errors';
@@ -25,9 +25,10 @@ import AppBackdrop from '../components/ui/AppBackdrop';
 import AppNotificationButton from '../components/ui/AppNotificationButton';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
-import { useNotificationStore } from '../store/notificationStore';
-
-type SessionIntent = 'dating' | 'workout' | 'both';
+import { useUnreadNotificationCount } from '../features/notifications/hooks/useUnreadNotificationCount';
+import { useDiscoveryFeed } from '../features/discovery/hooks/useDiscoveryFeed';
+import type { MainTabScreenProps } from '../core/navigation/types';
+import type { SessionIntent } from '../types/sessionIntent';
 type QuickFilterKey = 'all' | 'strength' | 'endurance' | 'mobility' | 'morning' | 'evening';
 
 const INTENT_OPTIONS: Array<{ value: SessionIntent; label: string; color: string }> = [
@@ -102,13 +103,12 @@ function buildDiscoveryFilters({
   };
 }
 
-export default function HomeScreen({ navigation }: any) {
+export default function HomeScreen({
+  navigation,
+}: MainTabScreenProps<'Discover'>) {
   const theme = useTheme();
   const user = useAuthStore((state) => state.user);
-  const unreadCount = useNotificationStore((state) => state.unreadCount);
-  const [feed, setFeed] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { unreadCount } = useUnreadNotificationCount();
   const [showMatch, setShowMatch] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<User | null>(null);
   const [matchData, setMatchData] = useState<{ id: string } | null>(null);
@@ -136,30 +136,27 @@ export default function HomeScreen({ navigation }: any) {
     [activeQuickFilter, availability, distanceKm, goals, intensity, maxAge, minAge],
   );
 
-  const fetchFeed = useCallback(async (filters: DiscoveryFiltersInput = currentFilters) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await discoveryApi.feed(filters);
-      setFeed(response.data || []);
-    } catch (err) {
-      setError(normalizeApiError(err).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentFilters]);
+  const {
+    error,
+    feed,
+    isLoading: loading,
+    likeUser,
+    passUser,
+    refetch,
+    undoSwipe,
+  } = useDiscoveryFeed(currentFilters);
+  const errorMessage = error ? normalizeApiError(error).message : null;
 
   useEffect(() => {
     if (user && !user.isOnboarded) {
       const timeout = setTimeout(() => navigation.navigate('Onboarding'), 100);
       return () => clearTimeout(timeout);
     }
-    void fetchFeed();
   }, [navigation, user]);
 
   const handleSwipeLeft = async (profile: User) => {
     try {
-      await discoveryApi.pass(profile.id);
+      await passUser(profile.id);
     } catch {
       // Ignore transient swipe failures and keep the deck responsive.
     }
@@ -167,10 +164,10 @@ export default function HomeScreen({ navigation }: any) {
 
   const handleSwipeRight = async (profile: User) => {
     try {
-      const response = await discoveryApi.like(profile.id);
-      if (response.data.status === 'match' && response.data.match) {
+      const response = await likeUser(profile.id);
+      if (response.status === 'match' && response.match) {
         setMatchedProfile(profile);
-        setMatchData(response.data.match);
+        setMatchData(response.match);
         setShowMatch(true);
       }
     } catch {
@@ -180,8 +177,10 @@ export default function HomeScreen({ navigation }: any) {
 
   const handleUndo = async () => {
     try {
-      const response = await discoveryApi.undo();
-      if (response.data.status === 'undone') await fetchFeed();
+      const response = await undoSwipe();
+      if (response.status === 'undone') {
+        await refetch();
+      }
     } catch {
       // Undo is opportunistic; keep the current deck state if it fails.
     }
@@ -203,17 +202,6 @@ export default function HomeScreen({ navigation }: any) {
   const handleQuickFilterPress = (filterId: QuickFilterKey) => {
     const nextFilter = activeQuickFilter === filterId ? 'all' : filterId;
     setActiveQuickFilter(nextFilter);
-    void fetchFeed(
-      buildDiscoveryFilters({
-        activeQuickFilter: nextFilter,
-        availability,
-        distanceKm,
-        goals,
-        intensity,
-        maxAge,
-        minAge,
-      }),
-    );
   };
 
   const intentOption = INTENT_OPTIONS.find((option) => option.value === getUserIntent(user)) || INTENT_OPTIONS[2];
@@ -226,7 +214,7 @@ export default function HomeScreen({ navigation }: any) {
     (maxAge !== '45' ? 1 : 0);
 
   if (loading) return <AppState title="Tuning your feed" description="Finding people who match your pace." loading />;
-  if (error) return <AppState title="Couldn't load discovery" description={error} actionLabel="Try again" onAction={fetchFeed} isError />;
+  if (errorMessage) return <AppState title="Couldn't load discovery" description={errorMessage} actionLabel="Try again" onAction={() => { void refetch(); }} isError />;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -329,7 +317,9 @@ export default function HomeScreen({ navigation }: any) {
             title="You're all caught up"
             description="Pull again in a bit or explore events nearby."
             actionLabel="Refresh"
-            onAction={fetchFeed}
+            onAction={() => {
+              void refetch();
+            }}
           />
         ) : (
           <SwipeDeck
@@ -416,7 +406,10 @@ export default function HomeScreen({ navigation }: any) {
               />
               <AppButton
                 label="Apply"
-                onPress={() => { void fetchFeed(); setShowFiltersModal(false); }}
+                onPress={() => {
+                  void refetch();
+                  setShowFiltersModal(false);
+                }}
                 variant="primary"
                 style={{ flex: 1 }}
               />

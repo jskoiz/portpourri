@@ -12,14 +12,18 @@ jest.mock('../../store/authStore', () => ({
 describe('LoginScreen', () => {
   const navigation = {
     navigate: jest.fn(),
-  };
+  } as any;
+  const route = {
+    key: 'Login',
+    name: 'Login',
+  } as any;
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('validates required fields before submitting', async () => {
-    render(<LoginScreen navigation={navigation} />);
+    render(<LoginScreen navigation={navigation} route={route} />);
 
     fireEvent.press(screen.getByText('Sign in'));
 
@@ -31,7 +35,7 @@ describe('LoginScreen', () => {
   it('submits normalized credentials', async () => {
     mockLogin.mockResolvedValue(undefined);
 
-    render(<LoginScreen navigation={navigation} />);
+    render(<LoginScreen navigation={navigation} route={route} />);
 
     fireEvent.changeText(screen.getByPlaceholderText('you@example.com'), 'Jordan@Example.com ');
     fireEvent.changeText(screen.getByPlaceholderText('••••••••'), 'password123');
@@ -48,7 +52,7 @@ describe('LoginScreen', () => {
   it('shows API failures inline', async () => {
     mockLogin.mockRejectedValue(new Error('Invalid credentials'));
 
-    render(<LoginScreen navigation={navigation} />);
+    render(<LoginScreen navigation={navigation} route={route} />);
 
     fireEvent.changeText(screen.getByPlaceholderText('you@example.com'), 'jordan@example.com');
     fireEvent.changeText(screen.getByPlaceholderText('••••••••'), 'bad-password');

@@ -3,8 +3,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { Share } from 'react-native';
 import ExploreScreen from '../ExploreScreen';
 
-const mockList = jest.fn();
 const mockNavigate = jest.fn();
+const mockRefetch = jest.fn();
+const mockUseExploreEvents = jest.fn();
 
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
@@ -19,10 +20,8 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 
-jest.mock('../../services/api', () => ({
-  eventsApi: {
-    list: (...args: unknown[]) => mockList(...args),
-  },
+jest.mock('../../features/events/hooks/useExploreEvents', () => ({
+  useExploreEvents: (...args: unknown[]) => mockUseExploreEvents(...args),
 }));
 
 jest.mock('../../store/authStore', () => ({
@@ -30,9 +29,10 @@ jest.mock('../../store/authStore', () => ({
     selector({ user: { id: 'user-1' } }),
 }));
 
-jest.mock('../../store/notificationStore', () => ({
-  useNotificationStore: (selector: (state: { unreadCount: number }) => unknown) =>
-    selector({ unreadCount: 2 }),
+jest.mock('../../features/notifications/hooks/useUnreadNotificationCount', () => ({
+  useUnreadNotificationCount: () => ({
+    unreadCount: 2,
+  }),
 }));
 
 jest.mock('../../components/ui/AppNotificationButton', () => {
@@ -54,12 +54,17 @@ jest.mock('react-native-safe-area-context', () => {
 describe('ExploreScreen', () => {
   const navigation = {
     navigate: mockNavigate,
-  };
+  } as any;
+  const route = {
+    key: 'Explore',
+    name: 'Explore',
+  } as any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockList.mockResolvedValue({
-      data: [
+    mockUseExploreEvents.mockReturnValue({
+      error: null,
+      events: [
         {
           id: 'trail-1',
           title: 'Makapuu Sunrise Hike',
@@ -81,11 +86,14 @@ describe('ExploreScreen', () => {
           joined: false,
         },
       ],
+      isLoading: false,
+      isRefetching: false,
+      refetch: mockRefetch,
     });
   });
 
   it('filters explore content when category pills change', async () => {
-    render(<ExploreScreen navigation={navigation} />);
+    render(<ExploreScreen navigation={navigation} route={route} />);
 
     expect(await screen.findByText('Makapuu Sunrise Hike')).toBeTruthy();
     expect(screen.getByText('Downtown Strength Hour')).toBeTruthy();
@@ -113,7 +121,7 @@ describe('ExploreScreen', () => {
   it('does not navigate to Create when the Share sheet fails', async () => {
     jest.spyOn(Share, 'share').mockRejectedValue(new Error('sharing unavailable'));
 
-    render(<ExploreScreen navigation={navigation} />);
+    render(<ExploreScreen navigation={navigation} route={route} />);
 
     await screen.findByText('Makapuu Sunrise Hike');
 

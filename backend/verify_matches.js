@@ -54,14 +54,18 @@ async function run() {
     console.log(`   User B ID: ${idB}`);
 
     console.log('3. User A likes User B...');
-    const like1 = await request('POST', '/matches/like', { toUserId: idB }, tokenA);
+    const like1 = await request('POST', `/discovery/like/${idB}`, null, tokenA);
     console.log(`   Result: ${JSON.stringify(like1.data)}`);
-    if (like1.data.isMatch) console.error('   Unexpected match!');
+    if (like1.data.status !== 'liked') {
+        throw new Error(`   Expected liked status, got: ${JSON.stringify(like1.data)}`);
+    }
 
     console.log('4. User B likes User A...');
-    const like2 = await request('POST', '/matches/like', { toUserId: idA }, tokenB);
+    const like2 = await request('POST', `/discovery/like/${idA}`, null, tokenB);
     console.log(`   Result: ${JSON.stringify(like2.data)}`);
-    if (!like2.data.isMatch) throw new Error('   Expected match!');
+    if (like2.data.status !== 'match') {
+        throw new Error(`   Expected match status, got: ${JSON.stringify(like2.data)}`);
+    }
 
     console.log('5. Verifying Matches for User A...');
     const matchesA = await request('GET', '/matches', null, tokenA);

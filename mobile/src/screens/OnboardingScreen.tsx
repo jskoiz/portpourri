@@ -10,9 +10,10 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import client from '../api/client';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { profileApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { useIntentStore, type SessionIntent } from '../store/intentStore';
 import { normalizeApiError } from '../api/errors';
 import AppButton from '../components/ui/AppButton';
 import AppBackButton from '../components/ui/AppBackButton';
@@ -20,6 +21,9 @@ import AppIcon from '../components/ui/AppIcon';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
+import { type SessionIntent } from '../types/sessionIntent';
+import type { RootStackScreenProps } from '../core/navigation/types';
+import { onboardingSchema } from '../features/onboarding/schema';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -98,26 +102,34 @@ const TOTAL_STEPS = 9;
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export default function OnboardingScreen({ navigation }: any) {
+export default function OnboardingScreen({
+  navigation,
+}: RootStackScreenProps<'Onboarding'>) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { setIntent } = useIntentStore();
   const setUser = useAuthStore((state) => state.setUser);
   const user = useAuthStore((state) => state.user);
 
   const [step, setStep] = useState(0);
-  const [saving, setSaving] = useState(false);
-
-  const [data, setData] = useState<OnboardingData>({
-    intent: 'both',
-    activities: [],
-    frequencyLabel: '3-4',
-    intensityLevel: 'moderate',
-    weeklyFrequencyBand: '3-4',
-    environment: [],
-    schedule: [],
-    socialComfort: '',
+  const {
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { isSubmitting },
+  } = useForm<OnboardingData>({
+    defaultValues: {
+      intent: 'both',
+      activities: [],
+      frequencyLabel: '3-4',
+      intensityLevel: 'moderate',
+      weeklyFrequencyBand: '3-4',
+      environment: [],
+      schedule: [],
+      socialComfort: '',
+    },
+    resolver: zodResolver(onboardingSchema),
   });
+  const data = watch();
 
   // Pulse animation for holy sh*t step
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -136,35 +148,31 @@ export default function OnboardingScreen({ navigation }: any) {
   const toggleArray = (arr: string[], key: string): string[] =>
     arr.includes(key) ? arr.filter((k) => k !== key) : [...arr, key];
 
-  const handleSubmit = async () => {
-    setSaving(true);
+  const submitOnboarding = handleSubmit(async (values) => {
     try {
-      const favoriteActivities = data.activities
+      const favoriteActivities = values.activities
         .map((key) => ACTIVITIES.find((activity) => activity.key === key)?.label ?? key)
         .join(', ');
 
-      await client.put('/profile/fitness', {
-        intensityLevel: data.intensityLevel,
-        weeklyFrequencyBand: data.weeklyFrequencyBand,
+      await profileApi.updateFitness({
+        intensityLevel: values.intensityLevel,
+        weeklyFrequencyBand: values.weeklyFrequencyBand,
         primaryGoal:
-          data.intent === 'dating'
+          values.intent === 'dating'
             ? 'connection'
-            : data.intent === 'workout'
+            : values.intent === 'workout'
               ? 'performance'
               : 'both',
         favoriteActivities,
-        prefersMorning: data.schedule.includes('morning'),
-        prefersEvening: data.schedule.includes('evening'),
+        prefersMorning: values.schedule.includes('morning'),
+        prefersEvening: values.schedule.includes('evening'),
       });
-      await setIntent(data.intent);
       if (user) setUser({ ...user, isOnboarded: true });
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (error) {
       Alert.alert('Could not save profile', normalizeApiError(error).message);
-    } finally {
-      setSaving(false);
     }
-  };
+  });
 
   const startPulse = () => {
     Animated.loop(
@@ -223,7 +231,7 @@ export default function OnboardingScreen({ navigation }: any) {
                 return (
                   <Pressable
                     key={opt.key}
-                    onPress={() => setData((d) => ({ ...d, intent: opt.key }))}
+                    onPress={() => setValue('intent', opt.key)}
                     style={[
                       styles.intentCard,
                       {
@@ -266,7 +274,9 @@ export default function OnboardingScreen({ navigation }: any) {
                 return (
                   <Pressable
                     key={act.key}
-                    onPress={() => setData((d) => ({ ...d, activities: toggleArray(d.activities, act.key) }))}
+                    onPress={() =>
+                      setValue('activities', toggleArray(data.activities, act.key))
+                    }
                     style={[
                       styles.activityTile,
                       {
@@ -309,12 +319,11 @@ export default function OnboardingScreen({ navigation }: any) {
                   <Pressable
                     key={opt.key}
                     onPress={() =>
-                      setData((d) => ({
-                        ...d,
-                        frequencyLabel: opt.key,
-                        weeklyFrequencyBand: opt.key,
-                        intensityLevel: opt.intensity,
-                      }))
+                      {
+                        setValue('frequencyLabel', opt.key);
+                        setValue('weeklyFrequencyBand', opt.key);
+                        setValue('intensityLevel', opt.intensity);
+                      }
                     }
                     style={[
                       styles.largeCard,
@@ -355,7 +364,9 @@ export default function OnboardingScreen({ navigation }: any) {
                 return (
                   <Pressable
                     key={env.key}
-                    onPress={() => setData((d) => ({ ...d, environment: toggleArray(d.environment, env.key) }))}
+                    onPress={() =>
+                      setValue('environment', toggleArray(data.environment, env.key))
+                    }
                     style={[
                       styles.activityTile,
                       {
@@ -397,7 +408,9 @@ export default function OnboardingScreen({ navigation }: any) {
                 return (
                   <Pressable
                     key={opt.key}
-                    onPress={() => setData((d) => ({ ...d, schedule: toggleArray(d.schedule, opt.key) }))}
+                    onPress={() =>
+                      setValue('schedule', toggleArray(data.schedule, opt.key))
+                    }
                     style={[
                       styles.scheduleCard,
                       {
@@ -439,7 +452,7 @@ export default function OnboardingScreen({ navigation }: any) {
                 return (
                   <Pressable
                     key={opt.key}
-                    onPress={() => setData((d) => ({ ...d, socialComfort: opt.key }))}
+                    onPress={() => setValue('socialComfort', opt.key)}
                     style={[
                       styles.socialCard,
                       {
@@ -576,10 +589,10 @@ export default function OnboardingScreen({ navigation }: any) {
 
             <View style={[styles.stepFooter, { paddingBottom: Math.max(insets.bottom + 8, spacing.xxl) }]}>
               <AppButton
-                label={saving ? 'Setting up your profile…' : 'Meet them now'}
-                onPress={handleSubmit}
-                loading={saving}
-                disabled={saving}
+                label={isSubmitting ? 'Setting up your profile…' : 'Meet them now'}
+                onPress={submitOnboarding}
+                loading={isSubmitting}
+                disabled={isSubmitting}
               />
             </View>
           </View>
@@ -610,7 +623,7 @@ export default function OnboardingScreen({ navigation }: any) {
       {/* Back button */}
       {step > 0 && (
         <View style={styles.backButtonRow}>
-          <AppBackButton onPress={goBack} disabled={saving} style={{ marginBottom: 0 }} />
+          <AppBackButton onPress={goBack} disabled={isSubmitting} style={{ marginBottom: 0 }} />
         </View>
       )}
 

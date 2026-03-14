@@ -2,7 +2,11 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import HomeScreen from '../HomeScreen';
 
-const mockFeed = jest.fn();
+const mockUseDiscoveryFeed = jest.fn();
+const mockPassUser = jest.fn();
+const mockLikeUser = jest.fn();
+const mockUndoSwipe = jest.fn();
+const mockRefetch = jest.fn();
 const mockUser = {
   firstName: 'Jordan',
   isOnboarded: true,
@@ -12,13 +16,14 @@ const mockUser = {
   },
 };
 
-jest.mock('../../services/api', () => ({
-  discoveryApi: {
-    feed: (...args: unknown[]) => mockFeed(...args),
-    like: jest.fn(),
-    pass: jest.fn(),
-    undo: jest.fn(),
-  },
+jest.mock('../../features/discovery/hooks/useDiscoveryFeed', () => ({
+  useDiscoveryFeed: (...args: unknown[]) => mockUseDiscoveryFeed(...args),
+}));
+
+jest.mock('../../features/notifications/hooks/useUnreadNotificationCount', () => ({
+  useUnreadNotificationCount: () => ({
+    unreadCount: 0,
+  }),
 }));
 
 jest.mock('../../store/authStore', () => ({
@@ -46,29 +51,39 @@ jest.mock('../../components/ui/AppIcon', () => {
 describe('HomeScreen', () => {
   const navigation = {
     navigate: jest.fn(),
-  };
+  } as any;
+  const route = {
+    key: 'Discover',
+    name: 'Discover',
+  } as any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockFeed.mockResolvedValue({
-      data: [
+    mockUseDiscoveryFeed.mockReturnValue({
+      error: null,
+      feed: [
         {
           id: 'user-2',
           firstName: 'Leilani',
         },
       ],
+      isLoading: false,
+      likeUser: mockLikeUser,
+      passUser: mockPassUser,
+      refetch: mockRefetch,
+      undoSwipe: mockUndoSwipe,
     });
   });
 
   it('uses quick filters to refetch discovery with API-backed params', async () => {
-    render(<HomeScreen navigation={navigation} />);
+    render(<HomeScreen navigation={navigation} route={route} />);
 
     expect(await screen.findByText('Swipe deck')).toBeTruthy();
 
     fireEvent.press(screen.getByText('Strength'));
 
     await waitFor(() => {
-      expect(mockFeed).toHaveBeenLastCalledWith(
+      expect(mockUseDiscoveryFeed).toHaveBeenLastCalledWith(
         expect.objectContaining({
           goals: ['strength'],
         }),

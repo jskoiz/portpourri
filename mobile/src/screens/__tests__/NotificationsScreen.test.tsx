@@ -1,12 +1,11 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import NotificationsScreen from '../NotificationsScreen';
-import { useNotificationStore } from '../../store/notificationStore';
 
 const mockGoBack = jest.fn();
-const mockList = jest.fn();
 const mockMarkRead = jest.fn();
 const mockMarkAllRead = jest.fn();
+const mockUseNotifications = jest.fn();
 
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
@@ -24,12 +23,8 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 
-jest.mock('../../services/api', () => ({
-  notificationsApi: {
-    list: (...args: unknown[]) => mockList(...args),
-    markRead: (...args: unknown[]) => mockMarkRead(...args),
-    markAllRead: (...args: unknown[]) => mockMarkAllRead(...args),
-  },
+jest.mock('../../features/notifications/hooks/useNotifications', () => ({
+  useNotifications: (...args: unknown[]) => mockUseNotifications(...args),
 }));
 
 jest.mock('../../components/ui/AppIcon', () => {
@@ -42,9 +37,13 @@ jest.mock('../../components/ui/AppIcon', () => {
 describe('NotificationsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    useNotificationStore.setState({ unreadCount: 0, isSyncing: false });
-    mockList.mockResolvedValue({
-      data: [
+    mockUseNotifications.mockReturnValue({
+      error: null,
+      isLoading: false,
+      isRefetching: false,
+      markAllRead: mockMarkAllRead,
+      markRead: mockMarkRead,
+      notifications: [
         {
           id: 'notif-1',
           userId: 'user-1',
@@ -55,19 +54,11 @@ describe('NotificationsScreen', () => {
           createdAt: new Date().toISOString(),
         },
       ],
+      refetch: jest.fn(),
+      unreadCount: 1,
     });
-    mockMarkRead.mockResolvedValue({
-      data: {
-        id: 'notif-1',
-        userId: 'user-1',
-        type: 'message_received',
-        title: 'New message',
-        body: 'Meet me for coffee after?',
-        readAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      },
-    });
-    mockMarkAllRead.mockResolvedValue({ data: { updated: 1 } });
+    mockMarkRead.mockResolvedValue(undefined);
+    mockMarkAllRead.mockResolvedValue(undefined);
   });
 
   it('loads notifications and marks an item as read', async () => {
@@ -78,7 +69,6 @@ describe('NotificationsScreen', () => {
 
     await waitFor(() => {
       expect(mockMarkRead).toHaveBeenCalledWith('notif-1');
-      expect(useNotificationStore.getState().unreadCount).toBe(0);
     });
   });
 
@@ -90,7 +80,6 @@ describe('NotificationsScreen', () => {
 
     await waitFor(() => {
       expect(mockMarkAllRead).toHaveBeenCalled();
-      expect(useNotificationStore.getState().unreadCount).toBe(0);
     });
   });
 });

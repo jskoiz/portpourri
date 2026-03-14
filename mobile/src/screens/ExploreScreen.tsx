@@ -15,15 +15,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { normalizeApiError } from '../api/errors';
 import type { EventSummary } from '../api/types';
-import { eventsApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { useNotificationStore } from '../store/notificationStore';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import AppButton from '../components/ui/AppButton';
 import { radii, spacing, typography } from '../theme/tokens';
 import AppIcon from '../components/ui/AppIcon';
 import AppState from '../components/ui/AppState';
 import AppNotificationButton from '../components/ui/AppNotificationButton';
+import { useUnreadNotificationCount } from '../features/notifications/hooks/useUnreadNotificationCount';
+import { useExploreEvents } from '../features/events/hooks/useExploreEvents';
+import type { MainTabScreenProps } from '../core/navigation/types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_PADDING = spacing.xxl;
@@ -402,35 +403,20 @@ function CommunityCard({ post, onInvite }: { post: typeof COMMUNITY_POSTS[0]; on
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function ExploreScreen({ navigation }: any) {
+export default function ExploreScreen({
+  navigation,
+}: MainTabScreenProps<'Explore'>) {
   const currentUserId = useAuthStore((state) => state.user?.id);
-  const unreadCount = useNotificationStore((state) => state.unreadCount);
+  const { unreadCount } = useUnreadNotificationCount();
   const [activeCategory, setActiveCategory] = useState<ExploreCategory>('All');
-  const [events, setEvents] = useState<EventSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchEvents = useCallback(async (silent = false) => {
-    if (silent) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
-
-    try {
-      const response = await eventsApi.list();
-      setEvents(response.data || []);
-    } catch (err) {
-      setError(normalizeApiError(err).message);
-    } finally {
-      if (silent) setRefreshing(false);
-      else setLoading(false);
-    }
-  }, []);
+  const { events, error, isLoading: loading, isRefetching, refetch } =
+    useExploreEvents();
+  const errorMessage = error ? normalizeApiError(error).message : null;
 
   useFocusEffect(
     useCallback(() => {
-      fetchEvents();
-    }, [fetchEvents]),
+      void refetch();
+    }, [refetch]),
   );
 
   const handleInvite = async (event?: EventSummary) => {
@@ -463,8 +449,10 @@ export default function ExploreScreen({ navigation }: any) {
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => fetchEvents(true)}
+            refreshing={isRefetching && !loading}
+            onRefresh={() => {
+              void refetch();
+            }}
             tintColor={PRIMARY}
           />
         }
@@ -525,12 +513,14 @@ export default function ExploreScreen({ navigation }: any) {
             </View>
             {loading ? (
               <AppState title="Loading events" loading />
-            ) : error ? (
+            ) : errorMessage ? (
               <AppState
                 title="Couldn't load events"
-                description={error}
+                description={errorMessage}
                 actionLabel="Try again"
-                onAction={fetchEvents}
+                onAction={() => {
+                  void refetch();
+                }}
                 isError
               />
             ) : filteredEvents.length === 0 ? (

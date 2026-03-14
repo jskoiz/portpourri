@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Controller, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthStore } from '../store/authStore';
 import { normalizeApiError } from '../api/errors';
 import AppButton from '../components/ui/AppButton';
@@ -8,36 +10,38 @@ import AppInput from '../components/ui/AppInput';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
+import { loginSchema, type LoginFormValues } from '../features/auth/schema';
+import type { RootStackScreenProps } from '../core/navigation/types';
 
-export default function LoginScreen({ navigation }: any) {
+export default function LoginScreen({
+  navigation,
+}: RootStackScreenProps<'Login'>) {
   const theme = useTheme();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
   const login = useAuthStore((state) => state.login);
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+    resolver: zodResolver(loginSchema),
+  });
 
-  const validate = () => {
-    const next: Record<string, string> = {};
-    if (!email.trim()) next.email = 'Email is required.';
-    if (!password.trim()) next.password = 'Password is required.';
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  };
-
-  const handleLogin = async () => {
-    if (!validate()) return;
+  const handleLogin = handleSubmit(async (values) => {
     setSubmitError('');
-    setSubmitting(true);
     try {
-      await login({ email: email.trim().toLowerCase(), password });
+      await login({
+        email: values.email.trim().toLowerCase(),
+        password: values.password,
+      });
     } catch (error) {
       setSubmitError(normalizeApiError(error).message);
-    } finally {
-      setSubmitting(false);
     }
-  };
+  });
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: '#0D1117' }]}>
@@ -75,24 +79,44 @@ export default function LoginScreen({ navigation }: any) {
           <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Text style={[styles.formEyebrow, { color: theme.textMuted }]}>SIGN IN</Text>
             <Text style={[styles.formTitle, { color: theme.textPrimary }]}>Welcome back.</Text>
-            <AppInput
-              label="Email"
-              placeholder="you@example.com"
-              value={email}
-              onChangeText={(v) => { setEmail(v); if (errors.email) setErrors((p) => ({ ...p, email: '' })); }}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              editable={!submitting}
-              error={errors.email}
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { onBlur, onChange, value } }) => (
+                <AppInput
+                  label="Email"
+                  placeholder="you@example.com"
+                  value={value}
+                  onBlur={onBlur}
+                  onChangeText={(nextValue) => {
+                    setSubmitError('');
+                    onChange(nextValue);
+                  }}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  editable={!isSubmitting}
+                  error={errors.email?.message}
+                />
+              )}
             />
-            <AppInput
-              label="Password"
-              placeholder="••••••••"
-              value={password}
-              onChangeText={(v) => { setPassword(v); if (errors.password) setErrors((p) => ({ ...p, password: '' })); }}
-              secureTextEntry
-              editable={!submitting}
-              error={errors.password}
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onBlur, onChange, value } }) => (
+                <AppInput
+                  label="Password"
+                  placeholder="••••••••"
+                  value={value}
+                  onBlur={onBlur}
+                  onChangeText={(nextValue) => {
+                    setSubmitError('');
+                    onChange(nextValue);
+                  }}
+                  secureTextEntry
+                  editable={!isSubmitting}
+                  error={errors.password?.message}
+                />
+              )}
             />
 
             {submitError ? (
@@ -104,14 +128,14 @@ export default function LoginScreen({ navigation }: any) {
             <AppButton
               label="Sign in"
               onPress={handleLogin}
-              loading={submitting}
+              loading={isSubmitting}
               style={styles.ctaButton}
             />
           </View>
 
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: theme.textMuted }]}>Don't have an account? </Text>
-            <Pressable onPress={() => navigation.navigate('Signup')} disabled={submitting}>
+            <Pressable onPress={() => navigation.navigate('Signup')} disabled={isSubmitting}>
               <Text style={[styles.footerLink, { color: theme.accent }]}>Join BRDG</Text>
             </Pressable>
           </View>

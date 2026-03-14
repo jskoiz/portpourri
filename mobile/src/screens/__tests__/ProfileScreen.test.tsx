@@ -5,8 +5,23 @@ import ProfileScreen from "../ProfileScreen";
 const mockNavigate = jest.fn();
 const mockLogout = jest.fn();
 const mockDeleteAccount = jest.fn();
-const mockGet = jest.fn();
-const mockPut = jest.fn();
+const mockUpdateFitness = jest.fn();
+const mockRefetch = jest.fn();
+const mockProfile = {
+  id: "user-1",
+  firstName: "Jordan",
+  age: 29,
+  profile: { city: "Honolulu" },
+  fitnessProfile: {
+    intensityLevel: "moderate",
+    weeklyFrequencyBand: "3-4",
+    primaryGoal: "connection",
+    favoriteActivities: "Running, Surfing",
+    prefersMorning: true,
+    prefersEvening: false,
+  },
+  photos: [],
+};
 const mockAuthState = {
   user: { id: "user-1", firstName: "Jordan" },
   logout: mockLogout,
@@ -25,35 +40,23 @@ jest.mock("../../store/authStore", () => ({
   ) => selector(mockAuthState),
 }));
 
-jest.mock("../../api/client", () => ({
-  __esModule: true,
-  default: {
-    get: (...args: unknown[]) => mockGet(...args),
-    put: (...args: unknown[]) => mockPut(...args),
-  },
+jest.mock("../../features/profile/hooks/useProfile", () => ({
+  useProfile: () => ({
+    error: null,
+    isLoading: false,
+    isRefetching: false,
+    isSavingFitness: false,
+    profile: mockProfile,
+    refetch: mockRefetch,
+    updateFitness: mockUpdateFitness,
+  }),
 }));
 
 describe("ProfileScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGet.mockResolvedValue({
-      data: {
-        id: "user-1",
-        firstName: "Jordan",
-        age: 29,
-        profile: { city: "Honolulu" },
-        fitnessProfile: {
-          intensityLevel: "moderate",
-          weeklyFrequencyBand: "3-4",
-          primaryGoal: "connection",
-          favoriteActivities: "Running, Surfing",
-          prefersMorning: true,
-          prefersEvening: false,
-        },
-        photos: [],
-      },
-    });
-    mockPut.mockResolvedValue({ data: {} });
+    mockUpdateFitness.mockResolvedValue(undefined);
+    mockRefetch.mockResolvedValue(undefined);
   });
 
   it("persists hydrated activity and schedule preferences when saving", async () => {
@@ -66,7 +69,7 @@ describe("ProfileScreen", () => {
     fireEvent.press(screen.getByText(/Save Changes/));
 
     await waitFor(() => {
-      expect(mockPut).toHaveBeenCalledWith("/profile/fitness", {
+      expect(mockUpdateFitness).toHaveBeenCalledWith({
         intensityLevel: "moderate",
         weeklyFrequencyBand: "3-4",
         primaryGoal: "connection",

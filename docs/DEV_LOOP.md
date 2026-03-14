@@ -43,29 +43,16 @@ npm run check:backend
 npm run check:mobile
 ```
 
-## Preview surfaces
+## Component workshop
 
-Use preview mode for stable UI review instead of steering through live app state:
-
-```bash
-cd mobile
-EXPO_PUBLIC_PREVIEW_SURFACES=1 EXPO_PUBLIC_PREVIEW_SCENARIO=home-populated npm run web
-```
-
-Common scenarios:
-- `home-populated`
-- `auth-login`
-- `chat-thread`
-- `notifications`
-- `profile-edit`
-- `create-flow`
-
-Use screenshot mode to jump directly to a runtime tab:
+Use Storybook for isolated component work instead of ad hoc preview routes:
 
 ```bash
 cd mobile
-EXPO_PUBLIC_SCREENSHOT_MODE=1 EXPO_PUBLIC_SCREENSHOT_ROUTE=Discover npm run web
+npm run storybook
 ```
+
+This is the supported component-level preview surface for BRDG UI primitives and composed cards/modules.
 
 ## Backend reset path for QA
 
@@ -76,6 +63,8 @@ npm run dev:scenario -- ui-preview
 ```
 
 This recreates fixed preview users, a mutual match, chat history, notifications, and an event RSVP path.
+
+Use this seeded runtime path for integrated QA inside the real app navigation.
 
 ## No-fragmentation release rule
 
@@ -104,10 +93,8 @@ This recreates fixed preview users, a mutual match, chat history, notifications,
   - `AuthService`
   - `ProfileService`
   - `DiscoveryService`
-- Mobile logs request failure context via `logApiFailure(...)` in:
-  - auth actions (`login`, `signup`, `me`)
-  - profile actions (`getProfile`, `updateFitness`)
-  - discovery actions (`feed`, `like`, `pass`)
+- Mobile routes should not call the raw axios client directly.
+- Server reads/mutations should flow through React Query-backed feature hooks and the service layer.
 
 ### Mobile can't hit backend from device
 

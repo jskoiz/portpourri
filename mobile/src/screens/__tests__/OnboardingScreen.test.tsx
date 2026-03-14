@@ -2,21 +2,13 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import OnboardingScreen from '../OnboardingScreen';
 
-const mockPut = jest.fn();
-const mockSetIntent = jest.fn().mockResolvedValue(undefined);
+const mockUpdateFitness = jest.fn();
 const mockSetUser = jest.fn();
 
-jest.mock('../../api/client', () => ({
-  __esModule: true,
-  default: {
-    put: (...args: unknown[]) => mockPut(...args),
+jest.mock('../../services/api', () => ({
+  profileApi: {
+    updateFitness: (...args: unknown[]) => mockUpdateFitness(...args),
   },
-}));
-
-jest.mock('../../store/intentStore', () => ({
-  useIntentStore: () => ({
-    setIntent: mockSetIntent,
-  }),
 }));
 
 jest.mock('../../store/authStore', () => ({
@@ -47,15 +39,19 @@ describe('OnboardingScreen', () => {
     canGoBack: jest.fn(() => false),
     goBack: jest.fn(),
     reset: jest.fn(),
-  };
+  } as any;
+  const route = {
+    key: 'Onboarding',
+    name: 'Onboarding',
+  } as any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockPut.mockResolvedValue({ data: {} });
+    mockUpdateFitness.mockResolvedValue({ data: {} });
   });
 
   it('submits canonical discovery intensity values for high-frequency onboarding choices', async () => {
-    render(<OnboardingScreen navigation={navigation} />);
+    render(<OnboardingScreen navigation={navigation} route={route} />);
 
     fireEvent.press(screen.getByText("Let's go →"));
     fireEvent.press(screen.getByText('Continue'));
@@ -73,8 +69,7 @@ describe('OnboardingScreen', () => {
     fireEvent.press(screen.getByText('Meet them now'));
 
     await waitFor(() => {
-      expect(mockPut).toHaveBeenCalledWith(
-        '/profile/fitness',
+      expect(mockUpdateFitness).toHaveBeenCalledWith(
         expect.objectContaining({
           weeklyFrequencyBand: '5-6',
           intensityLevel: 'high',

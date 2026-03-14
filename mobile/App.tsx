@@ -1,22 +1,22 @@
-import './global.css';
 import 'react-native-gesture-handler';
 import React from 'react';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { ThemeProvider } from './src/theme/useTheme';
-import { colors } from './src/theme/tokens';
+import { AppProviders } from './src/core/providers/AppProviders';
+import { env } from './src/config/env';
+
+function AppRoot() {
+  return (
+    <AppProviders>
+      <AppNavigator />
+    </AppProviders>
+  );
+}
 
 export default function App() {
-  return (
-    <SafeAreaProvider>
-      <GestureHandlerRootView
-        style={{ flex: 1, backgroundColor: colors.background }}
-      >
-        <ThemeProvider>
-          <AppNavigator />
-        </ThemeProvider>
-      </GestureHandlerRootView>
-    </SafeAreaProvider>
-  );
+  if (env.storybookEnabled) {
+    const StorybookUIRoot = require('./.rnstorybook').default;
+    return <StorybookUIRoot />;
+  }
+
+  return <AppRoot />;
 }

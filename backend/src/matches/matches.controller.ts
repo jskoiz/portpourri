@@ -1,7 +1,7 @@
 import {
+  Body,
   Controller,
   Post,
-  Body,
   UseGuards,
   Request,
   Get,
@@ -18,14 +18,6 @@ import type { AuthenticatedRequest } from '../common/auth-request.interface';
 @UseGuards(AuthGuard('jwt'))
 export class MatchesController {
   constructor(private readonly matchesService: MatchesService) {}
-
-  @Post('like')
-  async likeUser(
-    @Request() req: AuthenticatedRequest,
-    @Body() body: { toUserId: string },
-  ) {
-    return this.matchesService.likeUser(req.user.id, body.toUserId);
-  }
 
   @Get()
   async getMatches(@Request() req: AuthenticatedRequest) {

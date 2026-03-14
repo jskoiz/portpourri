@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { DarkTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuthStore } from "../store/authStore";
+import type { RootStackParamList } from "../core/navigation/types";
 import LoginScreen from "../screens/LoginScreen";
 import SignupScreen from "../screens/SignupScreen";
 import OnboardingScreen from "../screens/OnboardingScreen";
@@ -16,7 +17,7 @@ import MainTabNavigator from "./MainTabNavigator";
 import { setUnauthorizedHandler } from "../api/authSession";
 import { useTheme } from "../theme/useTheme";
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   const token = useAuthStore((state) => state.token);

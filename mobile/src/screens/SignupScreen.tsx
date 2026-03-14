@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Controller, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthStore } from '../store/authStore';
 import { normalizeApiError } from '../api/errors';
 import AppButton from '../components/ui/AppButton';
@@ -11,6 +13,12 @@ import AppSelect from '../components/ui/AppSelect';
 import { GENDER_OPTIONS } from '../constants/signup';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
+import {
+  buildBirthdate,
+  signupSchema,
+  type SignupFormValues,
+} from '../features/auth/schema';
+import type { RootStackScreenProps } from '../core/navigation/types';
 
 const STEPS = 3;
 const STEP_LABELS = ['Account', 'Profile', 'Done'];
@@ -37,35 +45,38 @@ const YEAR_OPTIONS = Array.from({ length: 101 }, (_, index) => {
   return { label: year, value: year };
 });
 
-function buildBirthdate(year: string, month: string, day: string) {
-  if (!year || !month || !day) {
-    return '';
-  }
-
-  const birthdate = `${year}-${month}-${day}`;
-  const parsed = new Date(`${birthdate}T00:00:00.000Z`);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return '';
-  }
-
-  return parsed.toISOString().slice(0, 10) === birthdate ? birthdate : '';
-}
-
-export default function SignupScreen({ navigation }: any) {
+export default function SignupScreen({
+  navigation,
+}: RootStackScreenProps<'Signup'>) {
   const theme = useTheme();
   const [step, setStep] = useState(0);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [birthMonth, setBirthMonth] = useState('');
-  const [birthDay, setBirthDay] = useState('');
-  const [birthYear, setBirthYear] = useState('');
-  const [gender, setGender] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const signup = useAuthStore((state) => state.signup);
-  const birthdate = buildBirthdate(birthYear, birthMonth, birthDay);
+  const {
+    control,
+    handleSubmit,
+    trigger,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<SignupFormValues>({
+    defaultValues: {
+      birthdate: '',
+      birthDay: '',
+      birthMonth: '',
+      birthYear: '',
+      email: '',
+      firstName: '',
+      gender: '',
+      password: '',
+    },
+    resolver: zodResolver(signupSchema),
+  });
+  const firstName = watch('firstName');
+  const email = watch('email');
+  const password = watch('password');
+  const birthMonth = watch('birthMonth');
+  const birthDay = watch('birthDay');
+  const birthYear = watch('birthYear');
+  const gender = watch('gender');
 
   const stepTitles = ["Let's start with you.", 'Secure your account.', 'One last thing.'];
   const stepSubtitles = [
@@ -73,34 +84,31 @@ export default function SignupScreen({ navigation }: any) {
     'Your email and a strong password.',
     'Your birthday and how you identify.',
   ];
+  const fieldsByStep: Array<Array<keyof SignupFormValues>> = [
+    ['firstName'],
+    ['email', 'password'],
+    ['birthMonth', 'birthDay', 'birthYear', 'gender', 'birthdate'],
+  ];
 
-  const validateStep = () => {
-    const next: Record<string, string> = {};
-    if (step === 0 && !firstName.trim()) next.firstName = 'First name is required.';
-    if (step === 1) {
-      if (!email.trim()) next.email = 'Email is required.';
-      else if (!/^\S+@\S+\.\S+$/.test(email.trim())) next.email = 'Enter a valid email.';
-      if (!password.trim()) next.password = 'Password is required.';
-      else if (password.trim().length < 8) next.password = 'Use at least 8 characters.';
-    }
-    if (step === 2) {
-      if (!birthMonth || !birthDay || !birthYear) {
-        next.birthdate = 'Choose your birth month, day, and year.';
-      } else if (!birthdate) {
-        next.birthdate = 'Choose a real birthdate.';
-      }
-      if (!gender.trim()) next.gender = 'Choose one of the listed gender options.';
-    }
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  };
-
-  const handleNext = () => {
-    if (!validateStep()) return;
+  const handleNext = async () => {
+    const isValid = await trigger(fieldsByStep[step], { shouldFocus: true });
+    if (!isValid) return;
     if (step < STEPS - 1) {
-      setStep(step + 1);
+      setStep((current) => current + 1);
     } else {
-      handleSignup();
+      await handleSubmit(async (values) => {
+        try {
+          await signup({
+            email: values.email.trim().toLowerCase(),
+            password: values.password,
+            firstName: values.firstName.trim(),
+            birthdate: buildBirthdate(values.birthYear, values.birthMonth, values.birthDay),
+            gender: values.gender,
+          });
+        } catch (error) {
+          Alert.alert("Couldn't create account", normalizeApiError(error).message);
+        }
+      })();
     }
   };
 
@@ -112,23 +120,7 @@ export default function SignupScreen({ navigation }: any) {
     }
     return false;
   }, [step, firstName, email, password, birthMonth, birthDay, birthYear, gender]);
-
-  const handleSignup = async () => {
-    setSubmitting(true);
-    try {
-      await signup({
-        email: email.trim().toLowerCase(),
-        password,
-        firstName: firstName.trim(),
-        birthdate,
-        gender,
-      });
-    } catch (error) {
-      Alert.alert("Couldn't create account", normalizeApiError(error).message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const birthdateError = errors.birthdate?.message;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: '#0D1117' }]}>
@@ -142,7 +134,7 @@ export default function SignupScreen({ navigation }: any) {
 
           <AppBackButton
             onPress={() => step > 0 ? setStep(step - 1) : navigation.goBack()}
-            disabled={submitting}
+            disabled={isSubmitting}
           />
 
           <View style={[styles.brandStrip, { backgroundColor: theme.surfaceGlass, borderColor: theme.border }]}>
@@ -188,37 +180,58 @@ export default function SignupScreen({ navigation }: any) {
           <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Text style={[styles.formKicker, { color: theme.textMuted }]}>{STEP_LABELS[step].toUpperCase()}</Text>
             {step === 0 && (
-              <AppInput
-                label="First name"
-                placeholder="Alex"
-                value={firstName}
-                onChangeText={(v) => { setFirstName(v); if (errors.firstName) setErrors((p) => ({ ...p, firstName: '' })); }}
-                editable={!submitting}
-                error={errors.firstName}
-                autoFocus
+              <Controller
+                control={control}
+                name="firstName"
+                render={({ field: { onBlur, onChange, value } }) => (
+                  <AppInput
+                    label="First name"
+                    placeholder="Alex"
+                    value={value}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    editable={!isSubmitting}
+                    error={errors.firstName?.message}
+                    autoFocus
+                  />
+                )}
               />
             )}
             {step === 1 && (
               <>
-                <AppInput
-                  label="Email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChangeText={(v) => { setEmail(v); if (errors.email) setErrors((p) => ({ ...p, email: '' })); }}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  editable={!submitting}
-                  error={errors.email}
-                  autoFocus
+                <Controller
+                  control={control}
+                  name="email"
+                  render={({ field: { onBlur, onChange, value } }) => (
+                    <AppInput
+                      label="Email"
+                      placeholder="you@example.com"
+                      value={value}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      editable={!isSubmitting}
+                      error={errors.email?.message}
+                      autoFocus
+                    />
+                  )}
                 />
-                <AppInput
-                  label="Password"
-                  placeholder="At least 8 characters"
-                  value={password}
-                  onChangeText={(v) => { setPassword(v); if (errors.password) setErrors((p) => ({ ...p, password: '' })); }}
-                  secureTextEntry
-                  editable={!submitting}
-                  error={errors.password}
+                <Controller
+                  control={control}
+                  name="password"
+                  render={({ field: { onBlur, onChange, value } }) => (
+                    <AppInput
+                      label="Password"
+                      placeholder="At least 8 characters"
+                      value={value}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      secureTextEntry
+                      editable={!isSubmitting}
+                      error={errors.password?.message}
+                    />
+                  )}
                 />
               </>
             )}
@@ -226,68 +239,82 @@ export default function SignupScreen({ navigation }: any) {
               <>
                 <Text style={[styles.selectGroupLabel, { color: theme.textMuted }]}>Birthday</Text>
                 <View style={styles.birthdateRow}>
-                  <AppSelect
-                    placeholder="Month"
-                    options={MONTH_OPTIONS}
-                    value={birthMonth}
-                    onSelect={(value) => {
-                      setBirthMonth(value);
-                      if (errors.birthdate) setErrors((p) => ({ ...p, birthdate: '' }));
-                    }}
-                    disabled={submitting}
-                    wrapperStyle={styles.birthdateMonthField}
-                    triggerStyle={styles.birthdateTrigger}
+                  <Controller
+                    control={control}
+                    name="birthMonth"
+                    render={({ field: { onChange, value } }) => (
+                      <AppSelect
+                        placeholder="Month"
+                        options={MONTH_OPTIONS}
+                        value={value}
+                        onSelect={onChange}
+                        disabled={isSubmitting}
+                        wrapperStyle={styles.birthdateMonthField}
+                        triggerStyle={styles.birthdateTrigger}
+                      />
+                    )}
                   />
-                  <AppSelect
-                    placeholder="Day"
-                    options={DAY_OPTIONS}
-                    value={birthDay}
-                    onSelect={(value) => {
-                      setBirthDay(value);
-                      if (errors.birthdate) setErrors((p) => ({ ...p, birthdate: '' }));
-                    }}
-                    disabled={submitting}
-                    wrapperStyle={styles.birthdateField}
-                    triggerStyle={styles.birthdateTrigger}
+                  <Controller
+                    control={control}
+                    name="birthDay"
+                    render={({ field: { onChange, value } }) => (
+                      <AppSelect
+                        placeholder="Day"
+                        options={DAY_OPTIONS}
+                        value={value}
+                        onSelect={onChange}
+                        disabled={isSubmitting}
+                        wrapperStyle={styles.birthdateField}
+                        triggerStyle={styles.birthdateTrigger}
+                      />
+                    )}
                   />
-                  <AppSelect
-                    placeholder="Year"
-                    options={YEAR_OPTIONS}
-                    value={birthYear}
-                    onSelect={(value) => {
-                      setBirthYear(value);
-                      if (errors.birthdate) setErrors((p) => ({ ...p, birthdate: '' }));
-                    }}
-                    disabled={submitting}
-                    wrapperStyle={styles.birthdateField}
-                    triggerStyle={styles.birthdateTrigger}
+                  <Controller
+                    control={control}
+                    name="birthYear"
+                    render={({ field: { onChange, value } }) => (
+                      <AppSelect
+                        placeholder="Year"
+                        options={YEAR_OPTIONS}
+                        value={value}
+                        onSelect={onChange}
+                        disabled={isSubmitting}
+                        wrapperStyle={styles.birthdateField}
+                        triggerStyle={styles.birthdateTrigger}
+                      />
+                    )}
                   />
                 </View>
-                {errors.birthdate ? (
+                {birthdateError ? (
                   <Text style={[styles.inlineErrorText, { color: theme.danger }]}>
-                    {errors.birthdate}
+                    {birthdateError}
                   </Text>
                 ) : null}
-                <AppSelect
-                  label="I identify as"
-                  placeholder="Choose a gender"
-                  options={[...GENDER_OPTIONS]}
-                  value={gender}
-                  onSelect={(value) => {
-                    setGender(value);
-                    if (errors.gender) setErrors((p) => ({ ...p, gender: '' }));
-                  }}
-                  disabled={submitting}
-                  error={errors.gender}
+                <Controller
+                  control={control}
+                  name="gender"
+                  render={({ field: { onChange, value } }) => (
+                    <AppSelect
+                      label="I identify as"
+                      placeholder="Choose a gender"
+                      options={[...GENDER_OPTIONS]}
+                      value={value}
+                      onSelect={onChange}
+                      disabled={isSubmitting}
+                      error={errors.gender?.message}
+                    />
+                  )}
                 />
               </>
             )}
 
             <AppButton
               label={step < STEPS - 1 ? 'Continue' : 'Create my account'}
-              onPress={handleNext}
-              loading={submitting}
-              disabled={!canProceed || submitting}
+              onPress={() => {
+                void handleNext();
+              }}
+              loading={isSubmitting}
+              disabled={!canProceed || isSubmitting}
               style={styles.ctaButton}
             />
           </View>

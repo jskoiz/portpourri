@@ -1,6 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -15,12 +14,19 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Controller, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { normalizeApiError } from '../api/errors';
 import type { EventSummary } from '../api/types';
 import { eventsApi } from '../services/api';
 import { radii, spacing, typography } from '../theme/tokens';
 import AppIcon from '../components/ui/AppIcon';
 import AppButton from '../components/ui/AppButton';
+import {
+  createEventSchema,
+  type CreateEventFormValues,
+} from '../features/events/schema';
+import type { MainTabScreenProps } from '../core/navigation/types';
 
 const BASE = '#0D1117';
 const SURFACE = '#161B22';
@@ -50,6 +56,15 @@ const ACTIVITY_TYPES = [
 const WHEN_OPTIONS = ['Today', 'Tomorrow', 'This Weekend', 'Next Week'] as const;
 const TIME_OPTIONS = ['Morning', 'Afternoon', 'Evening'] as const;
 const SKILL_OPTIONS = ['Beginner', 'Intermediate', 'Advanced'] as const;
+const DEFAULT_FORM_VALUES: CreateEventFormValues = {
+  note: '',
+  selectedActivity: '',
+  selectedTime: '',
+  selectedWhen: '',
+  skillLevel: '',
+  spots: 2,
+  where: '',
+};
 
 function ActivityTile({
   activity,
@@ -186,26 +201,44 @@ function formatCreatedEventMeta(event: EventSummary) {
   });
 }
 
-export default function CreateScreen({ navigation }: any) {
+export default function CreateScreen({
+  navigation,
+}: MainTabScreenProps<'Create'>) {
   const scrollRef = useRef<ScrollView | null>(null);
-  const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
-  const [selectedWhen, setSelectedWhen] = useState<string | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [where, setWhere] = useState('');
-  const [skillLevel, setSkillLevel] = useState<string | null>(null);
-  const [spots, setSpots] = useState(2);
-  const [note, setNote] = useState('');
-  const [posting, setPosting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [lastCreatedTitle, setLastCreatedTitle] = useState<string | null>(null);
   const [lastCreatedEvent, setLastCreatedEvent] = useState<EventSummary | null>(null);
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<CreateEventFormValues>({
+    defaultValues: DEFAULT_FORM_VALUES,
+    resolver: zodResolver(createEventSchema),
+  });
+  const selectedActivity = watch('selectedActivity');
+  const selectedWhen = watch('selectedWhen');
+  const selectedTime = watch('selectedTime');
+  const where = watch('where');
+  const skillLevel = watch('skillLevel');
+  const spots = watch('spots');
+  const note = watch('note');
 
   const activityObj = useMemo(
     () => ACTIVITY_TYPES.find((a) => a.label === selectedActivity),
     [selectedActivity],
   );
   const selectedColor = activityObj?.color ?? PRIMARY;
-  const canPost = !!selectedActivity && !!selectedWhen && !!selectedTime && !!where.trim() && !posting;
+  const canPost =
+    !!selectedActivity &&
+    !!selectedWhen &&
+    !!selectedTime &&
+    !!where.trim() &&
+    !isSubmitting;
+  const timingError = errors.selectedWhen?.message || errors.selectedTime?.message;
 
   const handleNoteFocus = () => {
     requestAnimationFrame(() => {
@@ -214,13 +247,7 @@ export default function CreateScreen({ navigation }: any) {
   };
 
   const resetForm = () => {
-    setSelectedActivity(null);
-    setSelectedWhen(null);
-    setSelectedTime(null);
-    setWhere('');
-    setSkillLevel(null);
-    setSpots(2);
-    setNote('');
+    reset(DEFAULT_FORM_VALUES);
   };
 
   const clearSuccessState = () => {
@@ -240,48 +267,28 @@ export default function CreateScreen({ navigation }: any) {
     }
   };
 
-  const handlePost = async () => {
-    if (posting) return;
-
-    if (!selectedActivity) {
-      Alert.alert('Pick an activity', 'Choose what you want to do first.');
-      return;
-    }
-    if (!selectedWhen) {
-      Alert.alert('When?', 'Choose a day for your activity.');
-      return;
-    }
-    if (!selectedTime) {
-      Alert.alert('What time?', 'Choose a time window for your activity.');
-      return;
-    }
-    if (!where.trim()) {
-      Alert.alert('Add a location', 'Tell people where to meet.');
-      return;
-    }
-
-    setPosting(true);
+  const handlePost = handleSubmit(async (values) => {
     setSubmitError(null);
     setLastCreatedTitle(null);
     setLastCreatedEvent(null);
 
-    const startsAt = buildStartDate(selectedWhen, selectedTime);
+    const startsAt = buildStartDate(values.selectedWhen, values.selectedTime);
     const endsAt = new Date(startsAt.getTime() + 2 * 60 * 60 * 1000);
-    const title = buildTitle(selectedActivity, where);
+    const title = buildTitle(values.selectedActivity, values.where);
 
     try {
       const response = await eventsApi.create({
         title,
-        location: where.trim(),
-        category: selectedActivity,
+        location: values.where.trim(),
+        category: values.selectedActivity,
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString(),
         description: buildDescription({
-          note,
-          skillLevel,
-          spots,
-          selectedWhen,
-          selectedTime,
+          note: values.note,
+          skillLevel: values.skillLevel || null,
+          spots: values.spots,
+          selectedWhen: values.selectedWhen,
+          selectedTime: values.selectedTime,
         }),
       });
 
@@ -294,10 +301,8 @@ export default function CreateScreen({ navigation }: any) {
       });
     } catch (error) {
       setSubmitError(normalizeApiError(error).message);
-    } finally {
-      setPosting(false);
     }
-  };
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -375,10 +380,16 @@ export default function CreateScreen({ navigation }: any) {
                 key={a.label}
                 activity={a}
                 selected={selectedActivity === a.label}
-                onPress={() => setSelectedActivity(a.label)}
+                onPress={() => {
+                  setSubmitError(null);
+                  setValue('selectedActivity', a.label, { shouldDirty: true, shouldValidate: true });
+                }}
               />
             ))}
           </View>
+          {errors.selectedActivity?.message ? (
+            <Text style={styles.inlineError}>{errors.selectedActivity.message}</Text>
+          ) : null}
         </View>
 
         <View style={styles.formSection}>
@@ -389,7 +400,10 @@ export default function CreateScreen({ navigation }: any) {
                 key={w}
                 label={w}
                 active={selectedWhen === w}
-                onPress={() => setSelectedWhen(w)}
+                onPress={() => {
+                  setSubmitError(null);
+                  setValue('selectedWhen', w, { shouldDirty: true, shouldValidate: true });
+                }}
                 accentColor={PRIMARY}
               />
             ))}
@@ -400,24 +414,43 @@ export default function CreateScreen({ navigation }: any) {
                 key={t}
                 label={t}
                 active={selectedTime === t}
-                onPress={() => setSelectedTime(t)}
+                onPress={() => {
+                  setSubmitError(null);
+                  setValue('selectedTime', t, { shouldDirty: true, shouldValidate: true });
+                }}
                 accentColor={ENERGY}
               />
             ))}
           </View>
+          {timingError ? (
+            <Text style={styles.inlineError}>{timingError}</Text>
+          ) : null}
         </View>
 
         <View style={styles.formSection}>
           <SectionLabel label="Where?" />
-          <TextInput
-            style={styles.textInput}
-            placeholder="Runyon Canyon, Venice Beach..."
-            placeholderTextColor={TEXT_MUTED}
-            value={where}
-            onChangeText={setWhere}
-            returnKeyType="done"
-            onSubmitEditing={Keyboard.dismiss}
+          <Controller
+            control={control}
+            name="where"
+            render={({ field: { onBlur, onChange, value } }) => (
+              <TextInput
+                style={styles.textInput}
+                placeholder="Runyon Canyon, Venice Beach..."
+                placeholderTextColor={TEXT_MUTED}
+                value={value}
+                onBlur={onBlur}
+                onChangeText={(nextValue) => {
+                  setSubmitError(null);
+                  onChange(nextValue);
+                }}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+            )}
           />
+          {errors.where?.message ? (
+            <Text style={styles.inlineError}>{errors.where.message}</Text>
+          ) : null}
         </View>
 
         <View style={styles.formSection}>
@@ -428,7 +461,10 @@ export default function CreateScreen({ navigation }: any) {
                 key={s}
                 label={s}
                 active={skillLevel === s}
-                onPress={() => setSkillLevel(s)}
+                onPress={() => {
+                  setSubmitError(null);
+                  setValue('skillLevel', s, { shouldDirty: true, shouldValidate: true });
+                }}
                 accentColor={ACCENT}
               />
             ))}
@@ -440,9 +476,14 @@ export default function CreateScreen({ navigation }: any) {
           <View style={styles.stepperRow}>
             <TouchableOpacity
               style={styles.stepperBtn}
-              onPress={() => setSpots(Math.max(1, spots - 1))}
+              onPress={() =>
+                setValue('spots', Math.max(1, spots - 1), {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }
               activeOpacity={0.7}
-              disabled={posting}
+              disabled={isSubmitting}
             >
               <Text style={styles.stepperBtnText}>−</Text>
             </TouchableOpacity>
@@ -452,9 +493,14 @@ export default function CreateScreen({ navigation }: any) {
             </View>
             <TouchableOpacity
               style={styles.stepperBtn}
-              onPress={() => setSpots(Math.min(10, spots + 1))}
+              onPress={() =>
+                setValue('spots', Math.min(10, spots + 1), {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }
               activeOpacity={0.7}
-              disabled={posting}
+              disabled={isSubmitting}
             >
               <Text style={styles.stepperBtnText}>+</Text>
             </TouchableOpacity>
@@ -463,18 +509,31 @@ export default function CreateScreen({ navigation }: any) {
 
         <View style={styles.formSection}>
           <SectionLabel label="Add a note" />
-          <TextInput
-            style={[styles.textInput, styles.textArea]}
-            placeholder="Easy pace, bring water, no experience needed..."
-            placeholderTextColor={TEXT_MUTED}
-            value={note}
-            onChangeText={setNote}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-            onFocus={handleNoteFocus}
-            blurOnSubmit
+          <Controller
+            control={control}
+            name="note"
+            render={({ field: { onBlur, onChange, value } }) => (
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                placeholder="Easy pace, bring water, no experience needed..."
+                placeholderTextColor={TEXT_MUTED}
+                value={value}
+                onBlur={onBlur}
+                onChangeText={(nextValue) => {
+                  setSubmitError(null);
+                  onChange(nextValue);
+                }}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                onFocus={handleNoteFocus}
+                blurOnSubmit
+              />
+            )}
           />
+          {errors.note?.message ? (
+            <Text style={styles.inlineError}>{errors.note.message}</Text>
+          ) : null}
         </View>
 
         {submitError ? (
@@ -529,9 +588,10 @@ export default function CreateScreen({ navigation }: any) {
         ) : null}
 
         <AppButton
-          label={posting ? 'Posting...' : canPost ? `Post ${selectedActivity}` : 'Finish the plan to post'}
+          label={isSubmitting ? 'Posting...' : canPost ? `Post ${selectedActivity}` : 'Finish the plan to post'}
           onPress={handlePost}
-          disabled={!canPost || posting}
+          loading={isSubmitting}
+          disabled={!canPost || isSubmitting}
           variant="accent"
           style={styles.postBtnWrap}
         />
@@ -809,6 +869,12 @@ const styles = StyleSheet.create({
   feedbackWrap: {
     marginHorizontal: spacing.xxl,
     marginBottom: spacing.md,
+  },
+  inlineError: {
+    color: ERROR,
+    fontSize: typography.caption,
+    fontWeight: '700',
+    marginTop: spacing.sm,
   },
   feedbackError: {
     color: ERROR,

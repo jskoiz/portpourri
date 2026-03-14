@@ -1,28 +1,28 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
   Pressable,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
-  Image,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { FlashList } from '@shopify/flash-list';
+import { Image } from 'expo-image';
 import { normalizeApiError } from '../api/errors';
 import type { ChatMessage } from '../api/types';
-import { connectMatchMessageStream } from '../services/matchRealtime';
-import { matchesApi } from '../services/api';
 import AppState from '../components/ui/AppState';
 import AppBackButton from '../components/ui/AppBackButton';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import AppIcon from '../components/ui/AppIcon';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
+import { useChatThread } from '../features/chat/hooks/useChatThread';
+import type { RootStackScreenProps } from '../core/navigation/types';
 
 function getActivityTag(user: any): string {
   const goal = user?.fitnessProfile?.primaryGoal;
@@ -41,17 +41,13 @@ function getActivityTag(user: any): string {
 
 export default function ChatScreen() {
   const theme = useTheme();
-  const navigation = useNavigation<any>();
-  const route = useRoute();
+  const navigation = useNavigation<RootStackScreenProps<'Chat'>['navigation']>();
+  const route = useRoute<RootStackScreenProps<'Chat'>['route']>();
   const {
     matchId,
     user,
     prefillMessage,
-  } = route.params as {
-    matchId: string;
-    user: any;
-    prefillMessage?: string;
-  };
+  } = route.params;
 
   const photoUrl =
     user?.photoUrl ||
@@ -61,78 +57,34 @@ export default function ChatScreen() {
   const activityTag = getActivityTag(user);
 
   const [message, setMessage] = useState(prefillMessage?.trim() ?? '');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'fallback'>('fallback');
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const {
+    connectionStatus,
+    error,
+    loading,
+    messages,
+    refresh,
+    refreshing,
+    sendMessage: sendChatMessage,
+    sending,
+  } = useChatThread(matchId);
+  const errorMessage = error ? normalizeApiError(error).message : null;
 
-  const fetchMessages = useCallback(async (silent = false) => {
-    if (silent) setRefreshing(true);
-    try {
-      const response = await matchesApi.getMessages(matchId);
-      setMessages(response.data || []);
-      setError(null);
-    } catch (err) {
-      setError(normalizeApiError(err).message);
-    } finally {
-      if (silent) setRefreshing(false);
-      else setLoading(false);
-    }
-  }, [matchId]);
-
-  useEffect(() => { setLoading(true); fetchMessages(); }, [fetchMessages]);
   useEffect(() => {
     if (prefillMessage?.trim()) {
       setMessage(prefillMessage.trim());
     }
   }, [prefillMessage]);
 
-  useEffect(() => {
-    const stopPolling = () => {
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
-        pollTimerRef.current = null;
-      }
-    };
-    const startPolling = () => {
-      if (!pollTimerRef.current) pollTimerRef.current = setInterval(fetchMessages, 5000);
-    };
-    let disconnect: () => void = () => {};
-
-    const setupRealtime = async () => {
-      disconnect = await connectMatchMessageStream(matchId, {
-        onStatus: (status) => {
-          setConnectionStatus(status);
-          if (status === 'connected') stopPolling(); else startPolling();
-        },
-        onMessage: (payload) => { if (payload?.type === 'message') fetchMessages(); },
-        onError: () => { setConnectionStatus('fallback'); startPolling(); },
-      });
-    };
-    setupRealtime();
-    startPolling();
-    return () => { disconnect(); stopPolling(); };
-  }, [fetchMessages, matchId]);
-
   const sendMessage = async () => {
     if (!message.trim() || sending) return;
-    const tempId = Date.now().toString();
     const text = message.trim();
-    const tempMsg: ChatMessage = { id: tempId, text, sender: 'me', timestamp: new Date() };
-    setMessages((prev) => [tempMsg, ...prev]);
     setMessage('');
-    setSending(true);
     try {
-      await matchesApi.sendMessage(matchId, text);
-      await fetchMessages();
-    } catch {
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      setError('Could not send message. Try again.');
-    } finally {
-      setSending(false);
+      setSendError(null);
+      await sendChatMessage(text);
+    } catch (err) {
+      setSendError(normalizeApiError(err).message);
     }
   };
 
@@ -166,6 +118,7 @@ export default function ChatScreen() {
           <Image
             source={{ uri: photoUrl }}
             style={[styles.headerAvatar, { borderColor: theme.primary }]}
+            contentFit="cover"
           />
         ) : (
           <View
@@ -199,10 +152,10 @@ export default function ChatScreen() {
 
       {loading ? (
         <AppState title="Loading messages" loading />
-      ) : error && messages.length === 0 ? (
-        <AppState title="Couldn't load messages" description={error} actionLabel="Retry" onAction={fetchMessages} />
+      ) : errorMessage && messages.length === 0 ? (
+        <AppState title="Couldn't load messages" description={errorMessage} actionLabel="Retry" onAction={() => { void refresh(); }} />
       ) : (
-        <FlatList
+        <FlashList
           data={messages}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
@@ -212,7 +165,9 @@ export default function ChatScreen() {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => fetchMessages(true)}
+              onRefresh={() => {
+                void refresh();
+              }}
               tintColor={theme.primary}
             />
           }
@@ -224,8 +179,10 @@ export default function ChatScreen() {
           {connectionStatus === 'connecting' ? 'Connecting…' : 'Auto-refresh mode'}
         </Text>
       ) : null}
-      {error && messages.length > 0 ? (
-        <Text style={[styles.errorNote, { color: theme.danger }]}>{error}</Text>
+      {(sendError || errorMessage) && messages.length > 0 ? (
+        <Text style={[styles.errorNote, { color: theme.danger }]}>
+          {sendError || errorMessage}
+        </Text>
       ) : null}
 
       <KeyboardAvoidingView

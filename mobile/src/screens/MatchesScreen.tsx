@@ -1,14 +1,17 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, Pressable, RefreshControl } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { matchesApi } from '../services/api';
+import { FlashList } from '@shopify/flash-list';
+import { Image } from 'expo-image';
 import { normalizeApiError } from '../api/errors';
 import type { Match } from '../api/types';
 import AppState from '../components/ui/AppState';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import { radii, spacing, typography } from '../theme/tokens';
+import { useMatches } from '../features/matches/hooks/useMatches';
+import type { MainTabScreenProps } from '../core/navigation/types';
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const BASE = '#0D1117';
@@ -70,6 +73,7 @@ function MatchRow({ item, onPress }: { item: Match; onPress: () => void }) {
           <Image
             source={{ uri: item.user.photoUrl }}
             style={[styles.avatar, { borderColor: hasUnread ? accent : BORDER }]}
+            contentFit="cover"
           />
         ) : (
           <View
@@ -112,28 +116,16 @@ function MatchRow({ item, onPress }: { item: Match; onPress: () => void }) {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function MatchesScreen() {
-  const navigation = useNavigation<any>();
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const navigation = useNavigation<MainTabScreenProps<'Inbox'>['navigation']>();
+  const { error, isLoading: loading, isRefetching, matches, refetch } =
+    useMatches();
+  const errorMessage = error ? normalizeApiError(error).message : null;
 
-  const fetchMatches = async (silent = false) => {
-    if (silent) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
-    try {
-      const response = await matchesApi.list();
-      setMatches(response.data || []);
-    } catch (err) {
-      setError(normalizeApiError(err).message);
-    } finally {
-      if (silent) setRefreshing(false);
-      else setLoading(false);
-    }
-  };
-
-  useFocusEffect(useCallback(() => { fetchMatches(); }, []));
+  useFocusEffect(
+    useCallback(() => {
+      void refetch();
+    }, [refetch]),
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -152,12 +144,14 @@ export default function MatchesScreen() {
 
       {loading ? (
         <AppState title="Loading conversations" loading />
-      ) : error ? (
+      ) : errorMessage ? (
         <AppState
           title="Couldn't load inbox"
-          description={error}
+          description={errorMessage}
           actionLabel="Try again"
-          onAction={fetchMatches}
+          onAction={() => {
+            void refetch();
+          }}
           isError
         />
       ) : matches.length === 0 ? (
@@ -168,7 +162,7 @@ export default function MatchesScreen() {
           onAction={() => navigation.navigate('Discover')}
         />
       ) : (
-        <FlatList
+        <FlashList
           data={matches}
           renderItem={({ item }) =>
             <MatchRow
@@ -181,8 +175,10 @@ export default function MatchesScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => fetchMatches(true)}
+              refreshing={isRefetching && !loading}
+              onRefresh={() => {
+                void refetch();
+              }}
               tintColor={PRIMARY}
             />
           }

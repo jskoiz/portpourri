@@ -16,12 +16,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useAuthStore } from "../store/authStore";
-import client from "../api/client";
 import { normalizeApiError } from "../api/errors";
 import type { User } from "../api/types";
 import { buildInfo } from "../config/buildInfo";
 import AppState from "../components/ui/AppState";
 import { radii, spacing, typography } from "../theme/tokens";
+import { useProfile } from "../features/profile/hooks/useProfile";
+import type { MainTabScreenProps } from "../core/navigation/types";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -226,13 +227,17 @@ export default function ProfileScreen() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const deleteAccount = useAuthStore((state) => state.deleteAccount);
-  const navigation = useNavigation<any>();
-
-  const [profile, setProfile] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const navigation = useNavigation<MainTabScreenProps<'You'>['navigation']>();
+  const {
+    error: queryError,
+    isLoading: loading,
+    isRefetching,
+    profile,
+    refetch,
+    updateFitness,
+    isSavingFitness,
+  } = useProfile();
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [showBuildInfo, setShowBuildInfo] = useState(false);
@@ -249,38 +254,22 @@ export default function ProfileScreen() {
   ]);
 
   useEffect(() => {
-    if (user) fetchProfile();
-    else setLoading(false);
-  }, [user]);
-
-  const fetchProfile = async (silent = false) => {
-    if (silent) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
-    try {
-      const response = await client.get<User>("/profile");
-      const next = response.data;
-      setProfile(next);
-      setIntensityLevel(next.fitnessProfile?.intensityLevel || "");
-      setWeeklyFrequencyBand(next.fitnessProfile?.weeklyFrequencyBand || "");
-      setPrimaryGoal(next.fitnessProfile?.primaryGoal || "");
-      setSelectedActivities(
-        parseFavoriteActivities(next.fitnessProfile?.favoriteActivities),
-      );
-      setSelectedSchedule(buildSchedulePreferences(next.fitnessProfile));
-    } catch (err) {
-      setError(normalizeApiError(err).message);
-    } finally {
-      if (silent) setRefreshing(false);
-      else setLoading(false);
+    if (!profile) {
+      return;
     }
-  };
+    setIntensityLevel(profile.fitnessProfile?.intensityLevel || "");
+    setWeeklyFrequencyBand(profile.fitnessProfile?.weeklyFrequencyBand || "");
+    setPrimaryGoal(profile.fitnessProfile?.primaryGoal || "");
+    setSelectedActivities(
+      parseFavoriteActivities(profile.fitnessProfile?.favoriteActivities),
+    );
+    setSelectedSchedule(buildSchedulePreferences(profile.fitnessProfile));
+  }, [profile]);
 
   const saveFitness = async () => {
-    setSaving(true);
     setError(null);
     try {
-      await client.put("/profile/fitness", {
+      await updateFitness({
         intensityLevel,
         weeklyFrequencyBand,
         primaryGoal,
@@ -289,11 +278,9 @@ export default function ProfileScreen() {
         prefersEvening: selectedSchedule.includes("Evening"),
       });
       setEditMode(false);
-      await fetchProfile(true);
+      await refetch();
     } catch (err) {
       setError(normalizeApiError(err).message);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -330,14 +317,19 @@ export default function ProfileScreen() {
     );
   };
 
+  const errorMessage =
+    error ?? (queryError ? normalizeApiError(queryError).message : null);
+
   if (loading) return <AppState title="Loading your profile" loading />;
-  if (error && !profile)
+  if (errorMessage && !profile)
     return (
       <AppState
         title="Couldn't load profile"
-        description={error}
+        description={errorMessage}
         actionLabel="Retry"
-        onAction={fetchProfile}
+        onAction={() => {
+          void refetch();
+        }}
         isError
       />
     );
@@ -346,7 +338,9 @@ export default function ProfileScreen() {
       <AppState
         title="No profile found"
         actionLabel="Refresh"
-        onAction={fetchProfile}
+        onAction={() => {
+          void refetch();
+        }}
       />
     );
 
@@ -375,8 +369,10 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => fetchProfile(true)}
+            refreshing={isRefetching && !loading}
+            onRefresh={() => {
+              void refetch();
+            }}
             tintColor={PRIMARY}
           />
         }
@@ -440,7 +436,7 @@ export default function ProfileScreen() {
         <View style={styles.editBar}>
           <Pressable
             onPress={() => (editMode ? saveFitness() : setEditMode(true))}
-            disabled={saving}
+            disabled={isSavingFitness}
             style={styles.editBtnWrap}
           >
             <LinearGradient
@@ -459,7 +455,7 @@ export default function ProfileScreen() {
                   { color: editMode ? "#FFFFFF" : TEXT_SECONDARY },
                 ]}
               >
-                {saving
+                {isSavingFitness
                   ? "Saving..."
                   : editMode
                     ? "✓ Save Changes"

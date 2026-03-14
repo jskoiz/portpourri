@@ -7,7 +7,6 @@ describe('MatchesController', () => {
   let controller: MatchesController;
 
   const matchesServiceMock = {
-    likeUser: jest.fn(),
     getMatches: jest.fn(),
     getMessages: jest.fn(),
     streamMessages: jest.fn(),
@@ -29,13 +28,6 @@ describe('MatchesController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
-  });
-
-  it('delegates likeUser to service', async () => {
-    matchesServiceMock.likeUser.mockResolvedValue({ isMatch: false });
-    const result = await controller.likeUser(req, { toUserId: 'user-2' });
-    expect(matchesServiceMock.likeUser).toHaveBeenCalledWith('user-1', 'user-2');
-    expect(result).toEqual({ isMatch: false });
   });
 
   it('delegates getMatches to service', async () => {

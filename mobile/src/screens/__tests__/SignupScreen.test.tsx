@@ -13,14 +13,18 @@ jest.mock('../../store/authStore', () => ({
 describe('SignupScreen', () => {
   const navigation = {
     goBack: jest.fn(),
-  };
+  } as any;
+  const route = {
+    key: 'Signup',
+    name: 'Signup',
+  } as any;
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('validates later signup steps before allowing submission', async () => {
-    render(<SignupScreen navigation={navigation} />);
+    render(<SignupScreen navigation={navigation} route={route} />);
 
     fireEvent.changeText(screen.getByPlaceholderText('Alex'), 'Jordan');
     fireEvent.press(screen.getByText('Continue'));
@@ -57,14 +61,16 @@ describe('SignupScreen', () => {
   it('submits normalized signup data after completing the flow', async () => {
     mockSignup.mockResolvedValue(undefined);
 
-    render(<SignupScreen navigation={navigation} />);
+    render(<SignupScreen navigation={navigation} route={route} />);
 
     fireEvent.changeText(screen.getByPlaceholderText('Alex'), ' Jordan ');
     fireEvent.press(screen.getByText('Continue'));
+    expect(await screen.findByText('Secure your account.')).toBeTruthy();
 
     fireEvent.changeText(screen.getByPlaceholderText('you@example.com'), 'Jordan@Example.com ');
     fireEvent.changeText(screen.getByPlaceholderText('At least 8 characters'), 'password123');
     fireEvent.press(screen.getByText('Continue'));
+    expect(await screen.findByText('One last thing.')).toBeTruthy();
 
     fireEvent.press(screen.getByText('Month'));
     fireEvent.press(screen.getByText('February'));
@@ -91,13 +97,15 @@ describe('SignupScreen', () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     mockSignup.mockRejectedValue(new Error('Email already in use'));
 
-    render(<SignupScreen navigation={navigation} />);
+    render(<SignupScreen navigation={navigation} route={route} />);
 
     fireEvent.changeText(screen.getByPlaceholderText('Alex'), 'Jordan');
     fireEvent.press(screen.getByText('Continue'));
+    expect(await screen.findByText('Secure your account.')).toBeTruthy();
     fireEvent.changeText(screen.getByPlaceholderText('you@example.com'), 'jordan@example.com');
     fireEvent.changeText(screen.getByPlaceholderText('At least 8 characters'), 'password123');
     fireEvent.press(screen.getByText('Continue'));
+    expect(await screen.findByText('One last thing.')).toBeTruthy();
     fireEvent.press(screen.getByText('Month'));
     fireEvent.press(screen.getByText('February'));
     fireEvent.press(screen.getByText('Day'));

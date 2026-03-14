@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { eventsApi } from '../services/api';
+import { Image } from 'expo-image';
 import { normalizeApiError } from '../api/errors';
-import type { EventDetail } from '../api/types';
 import AppState from '../components/ui/AppState';
 import AppButton from '../components/ui/AppButton';
 import AppBackButton from '../components/ui/AppBackButton';
@@ -11,6 +10,8 @@ import AppBackdrop from '../components/ui/AppBackdrop';
 import AppIcon from '../components/ui/AppIcon';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
+import { useEventDetail } from '../features/events/hooks/useEventDetail';
+import type { RootStackScreenProps } from '../core/navigation/types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const HERO_HEIGHT = 300;
@@ -24,49 +25,25 @@ function formatDateRange(startsAt: string, endsAt?: string | null) {
   return { date, time: endTime ? `${startTime} – ${endTime}` : startTime };
 }
 
-export default function EventDetailScreen({ route, navigation }: any) {
+export default function EventDetailScreen({
+  route,
+  navigation,
+}: RootStackScreenProps<'EventDetail'>) {
   const theme = useTheme();
-  const eventId = route.params?.eventId as string;
-  const [event, setEvent] = useState<EventDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [joining, setJoining] = useState(false);
-
-  const fetchEvent = useCallback(async () => {
-    if (!eventId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await eventsApi.detail(eventId);
-      setEvent(response.data);
-    } catch (err) {
-      setError(normalizeApiError(err).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [eventId]);
-
-  useEffect(() => {
-    void fetchEvent();
-  }, [fetchEvent]);
+  const eventId = route.params?.eventId;
+  const { error, event, isJoining: joining, isLoading: loading, joinEvent, refetch } =
+    useEventDetail(eventId);
+  const errorMessage = error ? normalizeApiError(error).message : null;
 
   const handleJoin = async () => {
     if (!event || joining || event.joined) return;
-    setJoining(true);
-    const prev = event;
-    setEvent({ ...event, joined: true, attendeesCount: event.attendeesCount + 1 });
     try {
-      const response = await eventsApi.rsvp(event.id);
-      setEvent((current) => current ? { ...current, joined: true, attendeesCount: response.data.attendeesCount } : current);
-    } catch {
-      setEvent(prev);
-    } finally {
-      setJoining(false);
-    }
+      await joinEvent();
+    } catch {}
   };
 
   if (loading) return <AppState title="Loading event" loading />;
-  if (error || !event) return <AppState title="Couldn't load event" description={error ?? 'Event not found'} actionLabel="Try again" onAction={fetchEvent} isError />;
+  if (errorMessage || !event) return <AppState title="Couldn't load event" description={errorMessage ?? 'Event not found'} actionLabel="Try again" onAction={() => { void refetch(); }} isError />;
 
   const dateInfo = formatDateRange(event.startsAt, event.endsAt);
 
@@ -78,7 +55,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
         {/* Full-bleed hero */}
         <View style={styles.heroContainer}>
           {event.imageUrl ? (
-            <Image source={{ uri: event.imageUrl }} style={styles.heroImage} resizeMode="cover" />
+            <Image source={{ uri: event.imageUrl }} style={styles.heroImage} contentFit="cover" />
           ) : (
             <View style={[styles.heroImage, { backgroundColor: theme.surfaceElevated }]} />
           )}

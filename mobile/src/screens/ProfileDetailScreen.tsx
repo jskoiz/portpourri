@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Alert,
   Dimensions,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { Image } from 'expo-image';
 import { normalizeApiError } from '../api/errors';
 import { discoveryApi, matchesApi } from '../services/api';
 import AppBackButton from '../components/ui/AppBackButton';
@@ -20,7 +20,7 @@ import AppIcon from '../components/ui/AppIcon';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
-import { type SessionIntent } from '../store/intentStore';
+import { type SessionIntent } from '../types/sessionIntent';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const HERO_HEIGHT = 420;
@@ -138,7 +138,7 @@ export default function ProfileDetailScreen() {
                 : require('../../assets/icon.png')
             }
             style={styles.heroImage}
-            resizeMode="cover"
+            contentFit="cover"
           />
 
           <LinearGradient

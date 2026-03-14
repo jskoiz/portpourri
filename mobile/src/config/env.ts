@@ -22,4 +22,6 @@ if (!apiUrl) {
 
 export const env = {
   apiUrl,
+  sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || null,
+  storybookEnabled: process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === 'true',
 };

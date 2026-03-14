@@ -1,24 +1,17 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { useFocusEffect } from '@react-navigation/native';
 import HomeScreen from '../screens/HomeScreen';
 import ExploreScreen from '../screens/ExploreScreen';
 import CreateScreen from '../screens/CreateScreen';
 import MatchesScreen from '../screens/MatchesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import {
-  CreatePreviewScreen,
-  DiscoverPreviewScreen,
-  ExplorePreviewScreen,
-  InboxPreviewScreen,
-  ProfilePreviewScreen,
-} from '../screens/AppStorePreviewScreens';
 import { Text, View, Platform } from 'react-native';
 import { useTheme } from '../theme/useTheme';
 import AppIcon from '../components/ui/AppIcon';
-import { useNotificationStore } from '../store/notificationStore';
+import type { MainTabParamList } from '../core/navigation/types';
+import { useUnreadNotificationCount } from '../features/notifications/hooks/useUnreadNotificationCount';
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const TAB_ICONS: Record<string, React.ComponentProps<typeof AppIcon>['name']> = {
   Discover: 'compass',
@@ -101,32 +94,12 @@ function TabLabel({ color, children, focused }: { color: string; children: strin
   );
 }
 
-const screenshotInitialRoute =
-  process.env.EXPO_PUBLIC_SCREENSHOT_ROUTE?.trim() || 'Discover';
-
-export default function MainTabNavigator({
-  previewMode = false,
-}: {
-  previewMode?: boolean;
-}) {
+export default function MainTabNavigator() {
   const theme = useTheme();
-  const unreadCount = useNotificationStore((state) => state.unreadCount);
-  const syncUnreadCount = useNotificationStore((state) => state.syncUnreadCount);
-  const DiscoverComponent = previewMode ? DiscoverPreviewScreen : HomeScreen;
-  const ExploreComponent = previewMode ? ExplorePreviewScreen : ExploreScreen;
-  const CreateComponent = previewMode ? CreatePreviewScreen : CreateScreen;
-  const InboxComponent = previewMode ? InboxPreviewScreen : MatchesScreen;
-  const YouComponent = previewMode ? ProfilePreviewScreen : ProfileScreen;
-
-  useFocusEffect(
-    React.useCallback(() => {
-      void syncUnreadCount();
-    }, [syncUnreadCount]),
-  );
+  const { unreadCount } = useUnreadNotificationCount();
 
   return (
     <Tab.Navigator
-      initialRouteName={previewMode ? screenshotInitialRoute : undefined}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
@@ -153,11 +126,11 @@ export default function MainTabNavigator({
         ),
       })}
     >
-      <Tab.Screen name="Discover" component={DiscoverComponent} />
-      <Tab.Screen name="Explore" component={ExploreComponent} />
-      <Tab.Screen name="Create" component={CreateComponent} />
-      <Tab.Screen name="Inbox" component={InboxComponent} />
-      <Tab.Screen name="You" component={YouComponent} />
+      <Tab.Screen name="Discover" component={HomeScreen} />
+      <Tab.Screen name="Explore" component={ExploreScreen} />
+      <Tab.Screen name="Create" component={CreateScreen} />
+      <Tab.Screen name="Inbox" component={MatchesScreen} />
+      <Tab.Screen name="You" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }

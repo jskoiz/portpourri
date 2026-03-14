@@ -4,7 +4,8 @@ import MyEventsScreen from '../MyEventsScreen';
 
 const mockGoBack = jest.fn();
 const mockNavigate = jest.fn();
-const mockMine = jest.fn();
+const mockRefetch = jest.fn();
+const mockUseMyEvents = jest.fn();
 
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
@@ -19,10 +20,8 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 
-jest.mock('../../services/api', () => ({
-  eventsApi: {
-    mine: (...args: unknown[]) => mockMine(...args),
-  },
+jest.mock('../../features/events/hooks/useMyEvents', () => ({
+  useMyEvents: (...args: unknown[]) => mockUseMyEvents(...args),
 }));
 
 jest.mock('../../components/ui/AppIcon', () => {
@@ -42,12 +41,17 @@ describe('MyEventsScreen', () => {
     canGoBack: () => true,
     goBack: mockGoBack,
     navigate: mockNavigate,
-  };
+  } as any;
+  const route = {
+    key: 'MyEvents',
+    name: 'MyEvents',
+  } as any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockMine.mockResolvedValue({
-      data: [
+    mockUseMyEvents.mockReturnValue({
+      error: null,
+      events: [
         {
           id: 'joined-1',
           title: 'Joined Sunrise Run',
@@ -57,11 +61,14 @@ describe('MyEventsScreen', () => {
           host: { id: 'other-user', firstName: 'Nia' },
         },
       ],
+      isLoading: false,
+      isRefetching: false,
+      refetch: mockRefetch,
     });
   });
 
   it('renders joined events and shows the created empty state when no hosted events', async () => {
-    render(<MyEventsScreen navigation={navigation} />);
+    render(<MyEventsScreen navigation={navigation} route={route} />);
 
     expect(await screen.findByText('Joined Sunrise Run')).toBeTruthy();
     expect(screen.getByTestId('my-events-tab-joined-count')).toBeTruthy();
@@ -75,8 +82,9 @@ describe('MyEventsScreen', () => {
   });
 
   it('shows hosted events in the Created tab and hides them from the Joined tab', async () => {
-    mockMine.mockResolvedValue({
-      data: [
+    mockUseMyEvents.mockReturnValue({
+      error: null,
+      events: [
         {
           id: 'joined-1',
           title: 'Joined Sunrise Run',
@@ -94,9 +102,12 @@ describe('MyEventsScreen', () => {
           host: { id: 'current-user-id', firstName: 'Jordan' },
         },
       ],
+      isLoading: false,
+      isRefetching: false,
+      refetch: mockRefetch,
     });
 
-    render(<MyEventsScreen navigation={navigation} />);
+    render(<MyEventsScreen navigation={navigation} route={route} />);
 
     expect(await screen.findByText('Joined Sunrise Run')).toBeTruthy();
     fireEvent.press(screen.getByText('Created'));
@@ -110,8 +121,9 @@ describe('MyEventsScreen', () => {
   });
 
   it('does not crash when my events returns malformed rows', async () => {
-    mockMine.mockResolvedValue({
-      data: [
+    mockUseMyEvents.mockReturnValue({
+      error: null,
+      events: [
         null,
         {
           id: 'joined-2',
@@ -122,9 +134,12 @@ describe('MyEventsScreen', () => {
           host: { id: 'other-user', firstName: 'Unknown' },
         },
       ],
+      isLoading: false,
+      isRefetching: false,
+      refetch: mockRefetch,
     });
 
-    render(<MyEventsScreen navigation={navigation} />);
+    render(<MyEventsScreen navigation={navigation} route={route} />);
 
     expect(await screen.findByText('Mystery Event')).toBeTruthy();
     expect(screen.getByText('Date TBD')).toBeTruthy();

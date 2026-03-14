@@ -30,7 +30,11 @@ jest.mock('react-native-safe-area-context', () => {
 describe('CreateScreen', () => {
   const navigation = {
     navigate: jest.fn(),
-  };
+  } as any;
+  const route = {
+    key: 'Create',
+    name: 'Create',
+  } as any;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -48,7 +52,7 @@ describe('CreateScreen', () => {
   });
 
   it('uses keyboard-aware layout and dismissal props for the create form', () => {
-    const { UNSAFE_getByType } = render(<CreateScreen navigation={navigation} />);
+    const { UNSAFE_getByType } = render(<CreateScreen navigation={navigation} route={route} />);
 
     const keyboardAvoider = UNSAFE_getByType(KeyboardAvoidingView);
     const scrollView = UNSAFE_getByType(ScrollView);
@@ -70,7 +74,7 @@ describe('CreateScreen', () => {
   });
 
   it('shows an inline success card after posting an activity', async () => {
-    render(<CreateScreen navigation={navigation} />);
+    render(<CreateScreen navigation={navigation} route={route} />);
 
     fireEvent.press(screen.getByText('Run'));
     fireEvent.press(screen.getByText('Tomorrow'));
