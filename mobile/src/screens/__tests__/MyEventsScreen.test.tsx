@@ -57,4 +57,23 @@ describe('MyEventsScreen', () => {
       expect(screen.getByText("You haven't hosted anything yet")).toBeTruthy();
     });
   });
+
+  it('does not crash when my events returns malformed rows', async () => {
+    mockMine.mockResolvedValue({
+      data: [
+        null,
+        {
+          id: 'joined-2',
+          title: 'Mystery Event',
+          location: null,
+          startsAt: 'not-a-date',
+        },
+      ],
+    });
+
+    render(<MyEventsScreen navigation={navigation} />);
+
+    expect(await screen.findByText('Mystery Event')).toBeTruthy();
+    expect(screen.getByText('Date TBD')).toBeTruthy();
+  });
 });

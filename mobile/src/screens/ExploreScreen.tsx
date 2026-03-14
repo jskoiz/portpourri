@@ -133,6 +133,16 @@ function formatEventDate(startsAt: string) {
   });
 }
 
+function openMyEvents(navigation: any) {
+  const parentNavigation = navigation.getParent?.();
+  if (parentNavigation?.navigate) {
+    parentNavigation.navigate('MyEvents');
+    return;
+  }
+
+  navigation.navigate('MyEvents');
+}
+
 function EventCard({
   event,
   onOpen,
@@ -360,7 +370,7 @@ export default function ExploreScreen({ navigation }: any) {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Near You</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('MyEvents')}>
+              <TouchableOpacity onPress={() => openMyEvents(navigation)}>
                 <Text style={styles.seeAll}>My Events →</Text>
               </TouchableOpacity>
             </View>

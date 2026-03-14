@@ -41,13 +41,36 @@ const EMPTY_STATES: Record<TabKey, { icon: React.ComponentProps<typeof AppIcon>[
 };
 
 function formatDate(startsAt: string) {
-  return new Date(startsAt).toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const parsed = new Date(startsAt);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Date TBD';
+  }
+
+  try {
+    return parsed.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return 'Date TBD';
+  }
+}
+
+function normalizeEvents(data: unknown): EventSummary[] {
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.filter(
+    (item): item is EventSummary =>
+      !!item &&
+      typeof item === 'object' &&
+      typeof (item as EventSummary).id === 'string' &&
+      typeof (item as EventSummary).title === 'string',
+  );
 }
 
 export default function MyEventsScreen({ navigation }: any) {
@@ -64,7 +87,7 @@ export default function MyEventsScreen({ navigation }: any) {
     setError(null);
     try {
       const response = await eventsApi.mine();
-      setEvents(response.data || []);
+      setEvents(normalizeEvents(response.data));
     } catch (err) {
       setError(normalizeApiError(err).message);
     } finally {
@@ -148,7 +171,7 @@ export default function MyEventsScreen({ navigation }: any) {
         <FlatList
           contentContainerStyle={styles.list}
           data={displayedEvents}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => item.id || `event-${index}`}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -167,7 +190,10 @@ export default function MyEventsScreen({ navigation }: any) {
                   opacity: pressed ? 0.88 : 1,
                 },
               ]}
-              onPress={() => navigation.navigate('EventDetail', { eventId: item.id })}
+              onPress={() => {
+                if (!item.id) return;
+                navigation.navigate('EventDetail', { eventId: item.id });
+              }}
             >
               {/* Category bar */}
               {!!item.category && (
