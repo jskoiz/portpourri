@@ -28,8 +28,9 @@ export class EventsController {
   }
 
   @Get(':id')
-  detail(@Param('id') id: string) {
-    return this.eventsService.detail(id);
+  @UseGuards(AuthGuard('jwt'))
+  detail(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.eventsService.detail(id, req.user.id);
   }
 
   @UseGuards(AuthGuard('jwt'))
