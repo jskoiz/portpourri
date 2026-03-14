@@ -35,6 +35,14 @@ export class ProfileController {
     return profile;
   }
 
+  @Put()
+  async updateProfile(
+    @Request() req: AuthenticatedRequest,
+    @Body() data: Record<string, unknown>,
+  ) {
+    return this.profileService.updateProfile(req.user.id, data);
+  }
+
   @Put('fitness')
   async updateFitnessProfile(
     @Request() req: AuthenticatedRequest,

@@ -8,15 +8,17 @@ export class ProfileService {
   constructor(private prisma: PrismaService) {}
 
   async updateFitnessProfile(userId: string, data: Record<string, unknown>) {
+    // Strip userId from caller-supplied data to prevent overwriting the relation key
+    const { userId: _ignored, ...safeData } = data;
     try {
       const profile = await this.prisma.userFitnessProfile.upsert({
         where: { userId },
         update: {
-          ...data,
+          ...safeData,
         },
         create: {
           userId,
-          ...data,
+          ...safeData,
         },
       });
 
@@ -38,11 +40,13 @@ export class ProfileService {
   }
 
   async updateProfile(userId: string, data: Record<string, unknown>) {
+    // Strip userId from caller-supplied data to prevent overwriting the relation key
+    const { userId: _ignored, ...safeData } = data;
     try {
       return await this.prisma.userProfile.upsert({
         where: { userId },
-        update: { ...data },
-        create: { userId, ...data },
+        update: { ...safeData },
+        create: { userId, ...safeData },
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -89,7 +93,8 @@ export class ProfileService {
     }
   }
 
-  private calculateAge(birthdate: Date): number {
+  private calculateAge(birthdate: Date | null | undefined): number | null {
+    if (!birthdate) return null;
     const today = new Date();
     let age = today.getFullYear() - birthdate.getFullYear();
     const m = today.getMonth() - birthdate.getMonth();

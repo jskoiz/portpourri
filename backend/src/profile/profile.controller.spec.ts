@@ -8,6 +8,7 @@ describe('ProfileController', () => {
 
   const profileServiceMock = {
     getProfile: jest.fn(),
+    updateProfile: jest.fn(),
     updateFitnessProfile: jest.fn(),
   };
 
@@ -47,5 +48,21 @@ describe('ProfileController', () => {
       'user-1',
       { userId: 'user-1', ...dto },
     );
+  });
+
+  it('delegates updateProfile to profile service', async () => {
+    const req = { user: { id: 'user-1' } } as AuthenticatedRequest;
+    const dto = { bio: 'I like running' };
+
+    profileServiceMock.updateProfile.mockResolvedValue({
+      userId: 'user-1',
+      ...dto,
+    });
+
+    await expect(controller.updateProfile(req, dto)).resolves.toEqual({
+      userId: 'user-1',
+      ...dto,
+    });
+    expect(profileServiceMock.updateProfile).toHaveBeenCalledWith('user-1', dto);
   });
 });
