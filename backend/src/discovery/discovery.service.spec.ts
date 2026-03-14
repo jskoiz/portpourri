@@ -122,8 +122,8 @@ describe('DiscoveryService', () => {
 
     const query = prismaMock.user.findMany.mock.calls[0][0];
     expect(query.where.id).toEqual({ not: 'me' });
-    expect(query.where.sentLikes).toEqual({ none: { fromUserId: 'me' } });
-    expect(query.where.sentPasses).toEqual({ none: { fromUserId: 'me' } });
+    expect(query.where.receivedLikes).toEqual({ none: { fromUserId: 'me' } });
+    expect(query.where.receivedPasses).toEqual({ none: { fromUserId: 'me' } });
     expect(query.where.birthdate).toEqual(
       expect.objectContaining({
         gte: expect.any(Date),

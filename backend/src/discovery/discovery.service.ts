@@ -63,8 +63,8 @@ export class DiscoveryService {
           isDeleted: false,
           isBanned: false,
           isOnboarded: true,
-          sentLikes: { none: { fromUserId: userId } },
-          sentPasses: { none: { fromUserId: userId } },
+          receivedLikes: { none: { fromUserId: userId } },
+          receivedPasses: { none: { fromUserId: userId } },
           ...(birthdateFilter ? { birthdate: birthdateFilter } : {}),
           ...(fitnessProfileFilter
             ? {
@@ -479,91 +479,111 @@ export class DiscoveryService {
   }
 
   async undoLastSwipe(userId: string) {
-    const [lastLike, lastPass] = await Promise.all([
-      this.prisma.like.findFirst({
-        where: { fromUserId: userId },
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.pass.findFirst({
-        where: { fromUserId: userId },
-        orderBy: { createdAt: 'desc' },
-      }),
-    ]);
+    try {
+      const [lastLike, lastPass] = await Promise.all([
+        this.prisma.like.findFirst({
+          where: { fromUserId: userId },
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.pass.findFirst({
+          where: { fromUserId: userId },
+          orderBy: { createdAt: 'desc' },
+        }),
+      ]);
 
-    if (!lastLike && !lastPass) return { status: 'nothing_to_undo' };
+      if (!lastLike && !lastPass) return { status: 'nothing_to_undo' };
 
-    const undoLike =
-      !!lastLike && (!lastPass || lastLike.createdAt >= lastPass.createdAt);
+      const undoLike =
+        !!lastLike && (!lastPass || lastLike.createdAt >= lastPass.createdAt);
 
-    if (undoLike && lastLike) {
-      await this.prisma.like.delete({ where: { id: lastLike.id } });
-      return {
-        status: 'undone',
-        action: 'like',
-        targetUserId: lastLike.toUserId,
-      };
+      if (undoLike && lastLike) {
+        await this.prisma.like.delete({ where: { id: lastLike.id } });
+        return {
+          status: 'undone',
+          action: 'like',
+          targetUserId: lastLike.toUserId,
+        };
+      }
+
+      if (lastPass) {
+        await this.prisma.pass.delete({ where: { id: lastPass.id } });
+        return {
+          status: 'undone',
+          action: 'pass',
+          targetUserId: lastPass.toUserId,
+        };
+      }
+
+      return { status: 'nothing_to_undo' };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(
+        `undoLastSwipe failed for userId=${userId}: ${message}`,
+        stack,
+      );
+      throw error;
     }
-
-    if (lastPass) {
-      await this.prisma.pass.delete({ where: { id: lastPass.id } });
-      return {
-        status: 'undone',
-        action: 'pass',
-        targetUserId: lastPass.toUserId,
-      };
-    }
-
-    return { status: 'nothing_to_undo' };
   }
 
   async getProfileCompleteness(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        profile: true,
-        fitnessProfile: true,
-        photos: { where: { isHidden: false } },
-      },
-    });
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          profile: true,
+          fitnessProfile: true,
+          photos: { where: { isHidden: false } },
+        },
+      });
 
-    if (!user) return { score: 0, prompts: ['Complete your profile setup.'] };
+      if (!user) return { score: 0, prompts: ['Complete your profile setup.'] };
 
-    const checks = [
-      { ok: !!user.firstName, prompt: 'Add your first name.' },
-      { ok: !!user.birthdate, prompt: 'Add your birthday.' },
-      {
-        ok: !!user.profile?.bio && user.profile.bio.length >= 20,
-        prompt: 'Write a bio (20+ chars) so people know your vibe.',
-      },
-      {
-        ok: !!user.profile?.city,
-        prompt: 'Add your city for better nearby matches.',
-      },
-      {
-        ok: user.photos.length >= 2,
-        prompt: 'Upload at least 2 profile photos.',
-      },
-      {
-        ok: !!user.fitnessProfile?.primaryGoal,
-        prompt: 'Set a primary fitness goal.',
-      },
-      {
-        ok: !!user.fitnessProfile?.intensityLevel,
-        prompt: 'Choose your training intensity.',
-      },
-      {
-        ok: !!(
-          user.fitnessProfile?.prefersMorning ||
-          user.fitnessProfile?.prefersEvening
-        ),
-        prompt: 'Set your availability (morning/evening).',
-      },
-    ];
+      const checks = [
+        { ok: !!user.firstName, prompt: 'Add your first name.' },
+        { ok: !!user.birthdate, prompt: 'Add your birthday.' },
+        {
+          ok: !!user.profile?.bio && user.profile.bio.length >= 20,
+          prompt: 'Write a bio (20+ chars) so people know your vibe.',
+        },
+        {
+          ok: !!user.profile?.city,
+          prompt: 'Add your city for better nearby matches.',
+        },
+        {
+          ok: user.photos.length >= 2,
+          prompt: 'Upload at least 2 profile photos.',
+        },
+        {
+          ok: !!user.fitnessProfile?.primaryGoal,
+          prompt: 'Set a primary fitness goal.',
+        },
+        {
+          ok: !!user.fitnessProfile?.intensityLevel,
+          prompt: 'Choose your training intensity.',
+        },
+        {
+          ok: !!(
+            user.fitnessProfile?.prefersMorning ||
+            user.fitnessProfile?.prefersEvening
+          ),
+          prompt: 'Set your availability (morning/evening).',
+        },
+      ];
 
-    const earned = checks.filter((c) => c.ok).length;
-    const score = Math.round((earned / checks.length) * 100);
-    const prompts = checks.filter((c) => !c.ok).map((c) => c.prompt);
+      const earned = checks.filter((c) => c.ok).length;
+      const score = Math.round((earned / checks.length) * 100);
+      const prompts = checks.filter((c) => !c.ok).map((c) => c.prompt);
 
-    return { score, prompts };
+      return { score, prompts };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(
+        `getProfileCompleteness failed for userId=${userId}: ${message}`,
+        stack,
+      );
+      throw error;
+    }
   }
 }
