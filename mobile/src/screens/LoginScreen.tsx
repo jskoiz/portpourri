@@ -5,8 +5,9 @@ import { useAuthStore } from '../store/authStore';
 import { normalizeApiError } from '../api/errors';
 import AppButton from '../components/ui/AppButton';
 import AppInput from '../components/ui/AppInput';
+import AppBackdrop from '../components/ui/AppBackdrop';
 import { useTheme } from '../theme/useTheme';
-import { spacing, typography } from '../theme/tokens';
+import { radii, spacing, typography } from '../theme/tokens';
 
 export default function LoginScreen({ navigation }: any) {
   const theme = useTheme();
@@ -46,23 +47,34 @@ export default function LoginScreen({ navigation }: any) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Abstract graphic shapes */}
-          <View style={styles.bgShapes} pointerEvents="none">
-            <View style={[styles.bgCircle, styles.bgCircle1]} />
-            <View style={[styles.bgCircle, styles.bgCircle2]} />
-            <View style={[styles.bgCircle, styles.bgCircle3]} />
-          </View>
+          <AppBackdrop />
 
-          {/* BRDG Wordmark */}
           <View style={styles.hero}>
+            <View style={[styles.wordmarkPill, { borderColor: theme.border, backgroundColor: theme.surfaceGlass }]}>
+              <Text style={[styles.eyebrow, { color: theme.accent }]}>PRIVATE SOCIAL / MOVEMENT</Text>
+            </View>
             <Text style={styles.wordmark}>BRDG</Text>
-            <Text style={[styles.tagline, { color: theme.textMuted }]}>
-              Meet people who match your pace.
+            <Text style={[styles.headline, { color: theme.textPrimary }]}>
+              Meet people through the way they actually move.
             </Text>
+            <Text style={[styles.tagline, { color: theme.textMuted }]}>
+              Dating energy, training energy, and social momentum stay in one refined flow.
+            </Text>
+            <View style={styles.heroMetaRow}>
+              <View style={[styles.heroMetaCard, { backgroundColor: theme.surfaceGlass, borderColor: theme.border }]}>
+                <Text style={styles.heroMetaLabel}>Curation</Text>
+                <Text style={[styles.heroMetaValue, { color: theme.textPrimary }]}>Intent-aware discovery</Text>
+              </View>
+              <View style={[styles.heroMetaCard, { backgroundColor: theme.surfaceGlass, borderColor: theme.border }]}>
+                <Text style={styles.heroMetaLabel}>Pace</Text>
+                <Text style={[styles.heroMetaValue, { color: theme.textPrimary }]}>Quieter, more selective</Text>
+              </View>
+            </View>
           </View>
 
-          {/* Form card */}
           <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.formEyebrow, { color: theme.textMuted }]}>SIGN IN</Text>
+            <Text style={[styles.formTitle, { color: theme.textPrimary }]}>Welcome back.</Text>
             <AppInput
               label="Email"
               placeholder="you@example.com"
@@ -97,7 +109,6 @@ export default function LoginScreen({ navigation }: any) {
             />
           </View>
 
-          {/* Footer */}
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: theme.textMuted }]}>Don't have an account? </Text>
             <Pressable onPress={() => navigation.navigate('Signup')} disabled={submitting}>
@@ -118,63 +129,73 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xxxxl,
+    paddingTop: spacing.xxxl,
     paddingBottom: spacing.xxxl,
   },
-  // Background decorative shapes
-  bgShapes: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  bgCircle: {
-    position: 'absolute',
-    borderRadius: 999,
-    opacity: 0.07,
-  },
-  bgCircle1: {
-    width: 320,
-    height: 320,
-    backgroundColor: '#7C6AF7',
-    top: -80,
-    right: -80,
-  },
-  bgCircle2: {
-    width: 200,
-    height: 200,
-    backgroundColor: '#34D399',
-    bottom: 100,
-    left: -60,
-  },
-  bgCircle3: {
-    width: 140,
-    height: 140,
-    backgroundColor: '#F59E0B',
-    top: '35%',
-    right: -40,
-  },
   hero: {
-    alignItems: 'center',
-    marginBottom: spacing.xxxxl,
+    marginBottom: spacing.xxxl,
+  },
+  wordmarkPill: {
+    alignSelf: 'flex-start',
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  eyebrow: {
+    fontSize: typography.caption,
+    fontWeight: '800',
+    letterSpacing: 2.2,
   },
   wordmark: {
     fontSize: 40,
     fontWeight: '900',
     letterSpacing: -2,
     lineHeight: 44,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     color: '#7C6AF7',
+  },
+  headline: {
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: -1,
+    lineHeight: 40,
+    marginBottom: spacing.md,
   },
   tagline: {
     fontSize: typography.body,
-    textAlign: 'center',
     lineHeight: 24,
     letterSpacing: 0.2,
+    maxWidth: 320,
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xl,
+  },
+  heroMetaCard: {
+    flex: 1,
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: spacing.lg,
+    minHeight: 86,
+  },
+  heroMetaLabel: {
+    color: '#64748B',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.6,
+    marginBottom: spacing.xs,
+    textTransform: 'uppercase',
+  },
+  heroMetaValue: {
+    fontSize: typography.bodySmall,
+    fontWeight: '700',
+    lineHeight: 20,
   },
   formCard: {
-    borderRadius: 20,
+    borderRadius: 28,
     borderWidth: 1,
     padding: spacing.xxl,
     shadowColor: '#000',
@@ -182,6 +203,18 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
     elevation: 8,
+  },
+  formEyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.8,
+    marginBottom: spacing.sm,
+  },
+  formTitle: {
+    fontSize: typography.h2,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+    marginBottom: spacing.xl,
   },
   ctaButton: {
     marginTop: spacing.sm,

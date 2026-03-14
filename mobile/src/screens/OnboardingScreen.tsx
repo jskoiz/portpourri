@@ -16,6 +16,8 @@ import { useIntentStore, type SessionIntent } from '../store/intentStore';
 import { normalizeApiError } from '../api/errors';
 import AppButton from '../components/ui/AppButton';
 import AppBackButton from '../components/ui/AppBackButton';
+import AppIcon from '../components/ui/AppIcon';
+import AppBackdrop from '../components/ui/AppBackdrop';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
 
@@ -37,18 +39,18 @@ interface OnboardingData {
 // ─── Step Constants ──────────────────────────────────────────────────────────
 
 const ACTIVITIES = [
-  { key: 'lifting', label: 'Lifting', emoji: '🏋️' },
-  { key: 'yoga', label: 'Yoga', emoji: '🧘' },
-  { key: 'surfing', label: 'Surfing', emoji: '🏄' },
-  { key: 'hiking', label: 'Hiking', emoji: '🥾' },
-  { key: 'running', label: 'Running', emoji: '🏃' },
-  { key: 'cycling', label: 'Cycling', emoji: '🚴' },
-  { key: 'beach', label: 'Beach Workouts', emoji: '🏖️' },
-  { key: 'climbing', label: 'Climbing', emoji: '🧗' },
-  { key: 'skiing', label: 'Skiing', emoji: '⛷️' },
-  { key: 'swimming', label: 'Swimming', emoji: '🏊' },
-  { key: 'boxing', label: 'Boxing', emoji: '🥊' },
-  { key: 'crossfit', label: 'CrossFit', emoji: '🤸' },
+  { key: 'lifting', label: 'Lifting', icon: 'activity' },
+  { key: 'yoga', label: 'Yoga', icon: 'circle' },
+  { key: 'surfing', label: 'Surfing', icon: 'wind' },
+  { key: 'hiking', label: 'Hiking', icon: 'map' },
+  { key: 'running', label: 'Running', icon: 'activity' },
+  { key: 'cycling', label: 'Cycling', icon: 'navigation' },
+  { key: 'beach', label: 'Beach Workouts', icon: 'sun' },
+  { key: 'climbing', label: 'Climbing', icon: 'triangle' },
+  { key: 'skiing', label: 'Skiing', icon: 'navigation-2' },
+  { key: 'swimming', label: 'Swimming', icon: 'droplet' },
+  { key: 'boxing', label: 'Boxing', icon: 'target' },
+  { key: 'crossfit', label: 'CrossFit', icon: 'shuffle' },
 ];
 
 const FREQUENCY_OPTIONS = [
@@ -59,26 +61,38 @@ const FREQUENCY_OPTIONS = [
 ];
 
 const ENVIRONMENTS = [
-  { key: 'gym', label: 'Gym', emoji: '🏋️' },
-  { key: 'outdoors', label: 'Outdoors', emoji: '🌿' },
-  { key: 'beach', label: 'Beach', emoji: '🏖️' },
-  { key: 'mountains', label: 'Mountains', emoji: '⛰️' },
-  { key: 'city', label: 'City', emoji: '🏙️' },
-  { key: 'studio', label: 'Studio', emoji: '🧘' },
+  { key: 'gym', label: 'Gym', icon: 'activity' },
+  { key: 'outdoors', label: 'Outdoors', icon: 'compass' },
+  { key: 'beach', label: 'Beach', icon: 'sun' },
+  { key: 'mountains', label: 'Mountains', icon: 'triangle' },
+  { key: 'city', label: 'City', icon: 'grid' },
+  { key: 'studio', label: 'Studio', icon: 'circle' },
 ];
 
 const SCHEDULE_OPTIONS = [
-  { key: 'morning', label: 'Morning', emoji: '🌅' },
-  { key: 'evening', label: 'Evening', emoji: '🌙' },
-  { key: 'weekends', label: 'Weekends', emoji: '📅' },
-  { key: 'flexible', label: 'Flexible', emoji: '🔄' },
+  { key: 'morning', label: 'Morning', icon: 'sun' },
+  { key: 'evening', label: 'Evening', icon: 'moon' },
+  { key: 'weekends', label: 'Weekends', icon: 'calendar' },
+  { key: 'flexible', label: 'Flexible', icon: 'refresh-cw' },
 ];
 
 const SOCIAL_OPTIONS = [
-  { key: '1-on-1', label: '1-on-1', subtitle: 'Deep focus, just us', emoji: '🤝' },
-  { key: 'small-group', label: 'Small Group', subtitle: '3–5 people, tight-knit', emoji: '👥' },
-  { key: 'group-first', label: 'Group First', subtitle: 'Start big, connect naturally', emoji: '🎯' },
+  { key: '1-on-1', label: '1-on-1', subtitle: 'Deep focus, just us', icon: 'user' },
+  { key: 'small-group', label: 'Small Group', subtitle: '3–5 people, tight-knit', icon: 'users' },
+  { key: 'group-first', label: 'Group First', subtitle: 'Start big, connect naturally', icon: 'target' },
 ];
+
+const STEP_CHAPTERS = [
+  'Arrival',
+  'Intent',
+  'Identity',
+  'Rhythm',
+  'Environment',
+  'Schedule',
+  'Comfort',
+  'Summary',
+  'Activation',
+] as const;
 
 const TOTAL_STEPS = 9;
 
@@ -125,11 +139,22 @@ export default function OnboardingScreen({ navigation }: any) {
   const handleSubmit = async () => {
     setSaving(true);
     try {
+      const favoriteActivities = data.activities
+        .map((key) => ACTIVITIES.find((activity) => activity.key === key)?.label ?? key)
+        .join(', ');
+
       await client.put('/profile/fitness', {
         intensityLevel: data.intensityLevel,
         weeklyFrequencyBand: data.weeklyFrequencyBand,
-        primaryGoal: data.intent === 'dating' ? 'connection' : data.intent === 'workout' ? 'performance' : 'both',
-        favoriteActivities: data.activities.join(', '),
+        primaryGoal:
+          data.intent === 'dating'
+            ? 'connection'
+            : data.intent === 'workout'
+              ? 'performance'
+              : 'both',
+        favoriteActivities,
+        prefersMorning: data.schedule.includes('morning'),
+        prefersEvening: data.schedule.includes('evening'),
       });
       await setIntent(data.intent);
       if (user) setUser({ ...user, isOnboarded: true });
@@ -162,7 +187,9 @@ export default function OnboardingScreen({ navigation }: any) {
         return (
           <View style={styles.fullScreenStep}>
             <View style={styles.welcomeContent}>
-              <Text style={styles.welcomeEmoji}>🏃‍♀️</Text>
+              <View style={[styles.welcomeIconWrap, { backgroundColor: theme.primarySubtle }]}>
+                <AppIcon name="activity" size={30} color={theme.primary} />
+              </View>
               <Text style={[styles.welcomeHeadline, { color: theme.textPrimary }]}>
                 Move together.{'\n'}Meet naturally.
               </Text>
@@ -188,9 +215,9 @@ export default function OnboardingScreen({ navigation }: any) {
             </Text>
             <View style={styles.intentCards}>
               {[
-                { key: 'dating' as SessionIntent, icon: '❤️', title: 'Dating', sub: 'Meet someone special through shared movement' },
-                { key: 'workout' as SessionIntent, icon: '💪', title: 'Workout Partner', sub: 'Find your perfect training companion' },
-                { key: 'both' as SessionIntent, icon: '🔀', title: 'Both', sub: 'Open to love and lifting — why choose?' },
+                { key: 'dating' as SessionIntent, icon: 'heart', title: 'Dating', sub: 'Meet someone special through shared movement' },
+                { key: 'workout' as SessionIntent, icon: 'activity', title: 'Training Partner', sub: 'Find your perfect training companion' },
+                { key: 'both' as SessionIntent, icon: 'shuffle', title: 'Open to both', sub: 'Keep it open to chemistry and momentum.' },
               ].map((opt) => {
                 const selected = data.intent === opt.key;
                 return (
@@ -206,7 +233,9 @@ export default function OnboardingScreen({ navigation }: any) {
                       },
                     ]}
                   >
-                    <Text style={styles.intentCardIcon}>{opt.icon}</Text>
+                    <View style={[styles.intentCardIconWrap, { backgroundColor: selected ? theme.primarySubtle : theme.surfaceElevated }]}>
+                      <AppIcon name={opt.icon} size={18} color={selected ? theme.primary : theme.textSecondary} />
+                    </View>
                     <Text style={[styles.intentCardTitle, { color: selected ? theme.primary : theme.textPrimary }]}>
                       {opt.title}
                     </Text>
@@ -247,7 +276,9 @@ export default function OnboardingScreen({ navigation }: any) {
                       },
                     ]}
                   >
-                    <Text style={styles.activityEmoji}>{act.emoji}</Text>
+                    <View style={[styles.activityIconWrap, { backgroundColor: selected ? theme.primarySubtle : theme.surfaceElevated }]}>
+                      <AppIcon name={act.icon} size={16} color={selected ? theme.primary : theme.textSecondary} />
+                    </View>
                     <Text style={[styles.activityLabel, { color: selected ? theme.primary : theme.textPrimary }]}>
                       {act.label}
                     </Text>
@@ -334,7 +365,9 @@ export default function OnboardingScreen({ navigation }: any) {
                       },
                     ]}
                   >
-                    <Text style={styles.activityEmoji}>{env.emoji}</Text>
+                    <View style={[styles.activityIconWrap, { backgroundColor: selected ? theme.accentSubtle : theme.surfaceElevated }]}>
+                      <AppIcon name={env.icon} size={16} color={selected ? theme.accent : theme.textSecondary} />
+                    </View>
                     <Text style={[styles.activityLabel, { color: selected ? theme.accent : theme.textPrimary }]}>
                       {env.label}
                     </Text>
@@ -374,7 +407,9 @@ export default function OnboardingScreen({ navigation }: any) {
                       },
                     ]}
                   >
-                    <Text style={styles.scheduleEmoji}>{opt.emoji}</Text>
+                    <View style={[styles.scheduleIconWrap, { backgroundColor: selected ? theme.accentSubtle : theme.surfaceElevated }]}>
+                      <AppIcon name={opt.icon} size={16} color={selected ? theme.accent : theme.textSecondary} />
+                    </View>
                     <Text style={[styles.largeCardLabel, { color: selected ? theme.accent : theme.textPrimary }]}>
                       {opt.label}
                     </Text>
@@ -414,7 +449,9 @@ export default function OnboardingScreen({ navigation }: any) {
                       },
                     ]}
                   >
-                    <Text style={styles.socialCardEmoji}>{opt.emoji}</Text>
+                    <View style={[styles.socialCardIconWrap, { backgroundColor: selected ? theme.primarySubtle : theme.surfaceElevated }]}>
+                      <AppIcon name={opt.icon} size={16} color={selected ? theme.primary : theme.textSecondary} />
+                    </View>
                     <View style={styles.socialCardText}>
                       <Text style={[styles.socialCardTitle, { color: selected ? theme.primary : theme.textPrimary }]}>
                         {opt.label}
@@ -423,7 +460,7 @@ export default function OnboardingScreen({ navigation }: any) {
                     </View>
                     {selected && (
                       <View style={[styles.checkDot, { backgroundColor: theme.primary }]}>
-                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>✓</Text>
+                        <AppIcon name="check" size={12} color={theme.textInverse} />
                       </View>
                     )}
                   </Pressable>
@@ -437,8 +474,8 @@ export default function OnboardingScreen({ navigation }: any) {
         );
 
       // ── Step 7: Profile Summary ──────────────────────────────────────────
-      case 7:
-        const intentLabel = data.intent === 'dating' ? '❤️ Dating' : data.intent === 'workout' ? '💪 Workout' : '🔀 Both';
+      case 7: {
+        const intentLabel = data.intent === 'dating' ? 'Dating' : data.intent === 'workout' ? 'Training' : 'Open to both';
         const freqOpt = FREQUENCY_OPTIONS.find((f) => f.key === data.frequencyLabel);
         return (
           <ScrollView contentContainerStyle={[styles.stepContent, { paddingBottom: 120 + insets.bottom }]} showsVerticalScrollIndicator={false}>
@@ -495,6 +532,7 @@ export default function OnboardingScreen({ navigation }: any) {
             </View>
           </ScrollView>
         );
+      }
 
       // ── Step 8: Holy Sh*t Moment ─────────────────────────────────────────
       case 8:
@@ -526,9 +564,11 @@ export default function OnboardingScreen({ navigation }: any) {
                       },
                     ]}
                   >
-                    <Text style={styles.avatarEmoji}>
-                      {['🏃', '🧘', '🏋️', '🚴', '🏄', '🥾', '🧗', '🏊'][i]}
-                    </Text>
+                    <AppIcon
+                      name={(['activity', 'circle', 'activity', 'navigation', 'wind', 'map', 'triangle', 'droplet'] as const)[i]}
+                      size={18}
+                      color={i % 2 === 0 ? theme.primary : theme.accent}
+                    />
                   </View>
                 ))}
               </View>
@@ -536,7 +576,7 @@ export default function OnboardingScreen({ navigation }: any) {
 
             <View style={[styles.stepFooter, { paddingBottom: Math.max(insets.bottom + 8, spacing.xxl) }]}>
               <AppButton
-                label={saving ? 'Setting up your profile…' : 'Meet them now ✦'}
+                label={saving ? 'Setting up your profile…' : 'Meet them now'}
                 onPress={handleSubmit}
                 loading={saving}
                 disabled={saving}
@@ -552,6 +592,8 @@ export default function OnboardingScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+      <AppBackdrop />
+
       {/* Progress bar */}
       <View style={[styles.progressTrack, { backgroundColor: theme.border }]}>
         <Animated.View
@@ -571,6 +613,10 @@ export default function OnboardingScreen({ navigation }: any) {
           <AppBackButton onPress={goBack} disabled={saving} style={{ marginBottom: 0 }} />
         </View>
       )}
+
+      <View style={styles.shellHeader}>
+        <Text style={[styles.chapterLabel, { color: theme.accent }]}>{STEP_CHAPTERS[step]}</Text>
+      </View>
 
       {renderStep()}
     </SafeAreaView>
@@ -633,11 +679,12 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   progressTrack: {
-    height: 3,
+    height: 4,
     width: '100%',
+    opacity: 0.7,
   },
   progressFill: {
-    height: 3,
+    height: 4,
     borderRadius: 2,
   },
 
@@ -645,13 +692,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
   },
+  shellHeader: {
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.md,
+  },
+  chapterLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: spacing.sm,
+  },
 
   // Full-screen steps (Welcome + Holy Sh*t)
   fullScreenStep: {
     flex: 1,
     justifyContent: 'space-between',
     paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xxxl,
+    paddingTop: spacing.xxxl + 4,
   },
 
   // Scroll steps
@@ -663,14 +721,15 @@ const styles = StyleSheet.create({
   stepHeadline: {
     fontSize: 34,
     fontWeight: '800',
-    letterSpacing: -0.8,
-    lineHeight: 42,
+    letterSpacing: -1,
+    lineHeight: 40,
     marginBottom: spacing.sm,
   },
   stepSubtitle: {
     fontSize: typography.body,
-    lineHeight: 24,
+    lineHeight: 25,
     marginBottom: spacing.xxxl,
+    maxWidth: 320,
   },
 
   stepFooter: {
@@ -683,20 +742,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xl,
   },
-  welcomeEmoji: {
-    fontSize: 64,
+  welcomeIconWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.sm,
   },
   welcomeHeadline: {
     fontSize: 42,
     fontWeight: '900',
-    letterSpacing: -1.2,
-    lineHeight: 50,
+    letterSpacing: -1.4,
+    lineHeight: 48,
   },
   welcomeBody: {
-    fontSize: typography.h3,
-    lineHeight: 30,
+    fontSize: typography.body,
+    lineHeight: 28,
     fontWeight: '400',
+    maxWidth: 320,
   },
 
   // ── Intent cards ──────────────────────────────────────────────────────────
@@ -705,12 +769,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxxl,
   },
   intentCard: {
-    borderRadius: radii.xl,
+    borderRadius: 24,
     padding: spacing.xl,
     gap: spacing.xs,
   },
-  intentCardIcon: {
-    fontSize: 32,
+  intentCardIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.xs,
   },
   intentCardTitle: {
@@ -734,14 +802,18 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.xl,
+    borderRadius: 22,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.sm,
     gap: spacing.xs,
     minWidth: 90,
   },
-  activityEmoji: {
-    fontSize: 28,
+  activityIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   activityLabel: {
     fontSize: typography.caption,
@@ -755,7 +827,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxxl,
   },
   largeCard: {
-    borderRadius: radii.xl,
+    borderRadius: 24,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
     gap: 4,
@@ -771,15 +843,19 @@ const styles = StyleSheet.create({
 
   // ── Schedule cards ────────────────────────────────────────────────────────
   scheduleCard: {
-    borderRadius: radii.xl,
+    borderRadius: 24,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
-  scheduleEmoji: {
-    fontSize: 24,
+  scheduleIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // ── Social cards ──────────────────────────────────────────────────────────
@@ -788,15 +864,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxxl,
   },
   socialCard: {
-    borderRadius: radii.xl,
+    borderRadius: 24,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
-  socialCardEmoji: {
-    fontSize: 28,
+  socialCardIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   socialCardText: {
     flex: 1,
@@ -820,7 +900,7 @@ const styles = StyleSheet.create({
 
   // ── Summary card ──────────────────────────────────────────────────────────
   summaryCard: {
-    borderRadius: radii.xl,
+    borderRadius: 24,
     borderWidth: 1,
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.xxxl,
@@ -840,6 +920,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
+    shadowColor: '#7C6AF7',
+    shadowOpacity: 0.24,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
   },
   countNumber: {
     fontSize: 48,
@@ -880,8 +965,5 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  avatarEmoji: {
-    fontSize: 24,
   },
 });

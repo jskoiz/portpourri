@@ -6,8 +6,9 @@ import { normalizeApiError } from '../api/errors';
 import AppButton from '../components/ui/AppButton';
 import AppInput from '../components/ui/AppInput';
 import AppBackButton from '../components/ui/AppBackButton';
+import AppBackdrop from '../components/ui/AppBackdrop';
 import { useTheme } from '../theme/useTheme';
-import { spacing, typography } from '../theme/tokens';
+import { radii, spacing, typography } from '../theme/tokens';
 
 const STEPS = 3;
 const STEP_LABELS = ['Account', 'Profile', 'Done'];
@@ -89,13 +90,17 @@ export default function SignupScreen({ navigation }: any) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Back */}
+          <AppBackdrop />
+
           <AppBackButton
             onPress={() => step > 0 ? setStep(step - 1) : navigation.goBack()}
             disabled={submitting}
           />
 
-          {/* Progress dots with step labels */}
+          <View style={[styles.brandStrip, { backgroundColor: theme.surfaceGlass, borderColor: theme.border }]}>
+            <Text style={[styles.brandStripText, { color: theme.accent }]}>JOIN BRDG / SELECTIVE ENTRY</Text>
+          </View>
+
           <View style={styles.progressRow}>
             {Array.from({ length: STEPS }).map((_, i) => (
               <View key={i} style={styles.progressItem}>
@@ -124,7 +129,6 @@ export default function SignupScreen({ navigation }: any) {
             ))}
           </View>
 
-          {/* Step header */}
           <View style={styles.stepHeader}>
             <Text style={[styles.stepNum, { color: theme.accent }]}>
               Step {step + 1} of {STEPS}
@@ -133,8 +137,8 @@ export default function SignupScreen({ navigation }: any) {
             <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{stepSubtitles[step]}</Text>
           </View>
 
-          {/* Form section */}
           <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.formKicker, { color: theme.textMuted }]}>{STEP_LABELS[step].toUpperCase()}</Text>
             {step === 0 && (
               <AppInput
                 label="First name"
@@ -223,6 +227,20 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     paddingBottom: spacing.xxxl,
   },
+  brandStrip: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    marginTop: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  brandStripText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.8,
+  },
   progressRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -245,25 +263,26 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxl,
   },
   stepNum: {
-    fontSize: typography.caption,
+    fontSize: 10,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: spacing.xs,
+    letterSpacing: 1.8,
+    marginBottom: spacing.sm,
   },
   title: {
-    fontSize: typography.h1,
+    fontSize: 34,
     fontWeight: '800',
-    letterSpacing: -0.5,
+    letterSpacing: -1,
     marginBottom: spacing.sm,
-    lineHeight: 38,
+    lineHeight: 40,
   },
   subtitle: {
     fontSize: typography.body,
     lineHeight: 24,
+    maxWidth: 300,
   },
   formCard: {
-    borderRadius: 20,
+    borderRadius: 28,
     borderWidth: 1,
     padding: spacing.xxl,
     shadowColor: '#000',
@@ -271,6 +290,12 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
     elevation: 6,
+  },
+  formKicker: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.8,
+    marginBottom: spacing.lg,
   },
   ctaButton: {
     marginTop: spacing.sm,

@@ -70,7 +70,7 @@ describe('OnboardingScreen', () => {
     fireEvent.press(screen.getByText('1-on-1'));
     fireEvent.press(screen.getByText('Continue'));
     fireEvent.press(screen.getByText("That's me →"));
-    fireEvent.press(screen.getByText('Meet them now ✦'));
+    fireEvent.press(screen.getByText('Meet them now'));
 
     await waitFor(() => {
       expect(mockPut).toHaveBeenCalledWith(
