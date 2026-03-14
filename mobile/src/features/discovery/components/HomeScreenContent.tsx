@@ -1,0 +1,129 @@
+import React from 'react';
+import { Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import type { User } from '../../../api/types';
+import SwipeDeck from '../../../components/SwipeDeck';
+import MatchAnimation from '../../../components/MatchAnimation';
+import AppBackdrop from '../../../components/ui/AppBackdrop';
+import AppState from '../../../components/ui/AppState';
+import { HomeHero } from './HomeHero';
+import { HomeQuickFilters } from './HomeQuickFilters';
+import { DiscoveryFilterSheet } from './DiscoveryFilterSheet';
+import { homeStyles as styles } from './home.styles';
+import type { FilterModalState, QuickFilterKey } from './discoveryFilters';
+
+export function HomeScreenContent({
+  activeFilterCount,
+  activeQuickFilter,
+  filterState,
+  feed,
+  greeting,
+  intentOption,
+  onApplyFilters,
+  onOpenFilters,
+  onMatchAnimationFinish,
+  onPressNotifications,
+  onPressProfile,
+  onQuickFilterPress,
+  onRefetch,
+  onSwipeLeft,
+  onSwipeRight,
+  onToggleAvailability,
+  onToggleGoal,
+  onToggleIntensity,
+  onUndoAndClose,
+  onUpdateDistanceKm,
+  onUpdateMaxAge,
+  onUpdateMinAge,
+  setFiltersVisible,
+  showFilters,
+  showMatch,
+  unreadCount,
+}: {
+  activeFilterCount: number;
+  activeQuickFilter: QuickFilterKey;
+  filterState: FilterModalState;
+  feed: User[];
+  greeting: string;
+  intentOption: { color: string; label: string };
+  onApplyFilters: () => void;
+  onOpenFilters: () => void;
+  onMatchAnimationFinish: () => void;
+  onPressNotifications: () => void;
+  onPressProfile: (profile: User) => void;
+  onQuickFilterPress: (filterId: QuickFilterKey) => void;
+  onRefetch: () => void;
+  onSwipeLeft: (profile: User) => void;
+  onSwipeRight: (profile: User) => void;
+  onToggleAvailability: (value: 'morning' | 'evening') => void;
+  onToggleGoal: (value: string) => void;
+  onToggleIntensity: (value: string) => void;
+  onUndoAndClose: () => void;
+  onUpdateDistanceKm: (value: string) => void;
+  onUpdateMaxAge: (value: string) => void;
+  onUpdateMinAge: (value: string) => void;
+  setFiltersVisible: (visible: boolean) => void;
+  showFilters: boolean;
+  showMatch: boolean;
+  unreadCount: number;
+}) {
+  return (
+    <SafeAreaView style={styles.container}>
+      <AppBackdrop />
+
+      <HomeHero
+        feedCount={feed.length}
+        filterCount={activeFilterCount}
+        greeting={greeting}
+        intentOption={intentOption}
+        onPressNotifications={onPressNotifications}
+        unreadCount={unreadCount}
+      />
+
+      <HomeQuickFilters
+        activeFilterCount={activeFilterCount}
+        activeQuickFilter={activeQuickFilter}
+        onPressFilter={onQuickFilterPress}
+        onPressRefine={onOpenFilters}
+      />
+
+      <View style={styles.deckHeader}>
+        <Text style={styles.deckHeaderLabel}>Featured profile</Text>
+      </View>
+
+      <View style={styles.deckArea}>
+        {feed.length === 0 ? (
+          <AppState
+            title="You're all caught up"
+            description="Pull again in a bit or explore events nearby."
+            actionLabel="Refresh"
+            onAction={onRefetch}
+          />
+        ) : (
+          <SwipeDeck
+            data={feed}
+            onSwipeLeft={onSwipeLeft}
+            onSwipeRight={onSwipeRight}
+            onPress={onPressProfile}
+          />
+        )}
+      </View>
+
+      <MatchAnimation visible={showMatch} onFinish={onMatchAnimationFinish} />
+
+      <DiscoveryFilterSheet
+        visible={showFilters}
+        state={filterState}
+        onApply={onApplyFilters}
+        onChangeAvailability={onToggleAvailability}
+        onChangeDistanceKm={onUpdateDistanceKm}
+        onChangeGoals={onToggleGoal}
+        onChangeIntensity={onToggleIntensity}
+        onChangeMaxAge={onUpdateMaxAge}
+        onChangeMinAge={onUpdateMinAge}
+        onClose={() => setFiltersVisible(false)}
+        onUndoSwipe={onUndoAndClose}
+      />
+    </SafeAreaView>
+  );
+}

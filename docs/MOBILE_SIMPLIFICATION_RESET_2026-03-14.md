@@ -263,6 +263,8 @@ This pass established the new baseline, but it did not complete the whole long-r
 
 ### Phase 1: Finish screen decomposition
 
+Status: completed on March 14, 2026.
+
 Priority order:
 
 1. `mobile/src/screens/HomeScreen.tsx`
@@ -276,6 +278,15 @@ Target rules:
 - route containers under 200 LOC where practical
 - no giant `StyleSheet.create` blocks in route files
 - extracted subcomponents for all repeated sections
+- completed with no LOC exceptions:
+  - `HomeScreen.tsx` 153 LOC
+  - `ExploreScreen.tsx` 69 LOC
+  - `ProfileScreen.tsx` 126 LOC
+  - `CreateScreen.tsx` 136 LOC
+  - `ChatScreen.tsx` 91 LOC
+- route-local styles moved into feature-local `*.styles.ts` modules
+- `CreateScreen` create submission moved behind `useCreateEvent`
+- `ProfileScreen` environment chips are now explicitly non-persisted/read-only in this phase
 
 ### Phase 2: Make the design system real
 
@@ -304,4 +315,3 @@ Target rules:
 - The release workflow was not touched.
 - The backend was intentionally not rewritten.
 - The reset favored stable migration steps over a risky all-at-once restructure.
-

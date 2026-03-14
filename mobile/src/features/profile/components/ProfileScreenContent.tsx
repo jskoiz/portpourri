@@ -1,0 +1,276 @@
+import React from 'react';
+import { Image, Pressable, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { buildInfo } from '../../../config/buildInfo';
+import type { User } from '../../../api/types';
+import { profileStyles as styles } from './profile.styles';
+import { ACTIVITY_OPTIONS, ENVIRONMENT_OPTIONS, SCHEDULE_OPTIONS } from './profile.helpers';
+import { EditableField, TagPill } from './ProfileSections';
+
+function SettingsRow({
+  accessory = '›',
+  icon,
+  label,
+  onPress,
+  testID,
+}: {
+  accessory?: string;
+  icon: string;
+  label: string;
+  onPress: () => void;
+  testID?: string;
+}) {
+  return (
+    <TouchableOpacity testID={testID} style={styles.settingsRow} onPress={onPress} activeOpacity={0.7}>
+      <Text style={styles.settingsIcon}>{icon}</Text>
+      <Text style={styles.settingsLabel}>{label}</Text>
+      <Text style={styles.settingsArrow}>{accessory}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function BuildInfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.buildInfoRow}>
+      <Text style={styles.buildInfoLabel}>{label}</Text>
+      <Text selectable style={styles.buildInfoValue}>{value}</Text>
+    </View>
+  );
+}
+
+export function ProfileScreenContent({
+  deletingAccount,
+  editMode,
+  errorMessage,
+  intensityLevel,
+  isRefetching,
+  isSavingFitness,
+  navigation,
+  onCancelEdit,
+  onConfirmDeleteAccount,
+  onRefresh,
+  onLogout,
+  onSave,
+  onSetIntensityLevel,
+  onSetPrimaryGoal,
+  onSetSelectedActivities,
+  onSetSelectedSchedule,
+  onSetWeeklyFrequencyBand,
+  onToggleBuildInfo,
+  primaryGoal,
+  profile,
+  selectedActivities,
+  selectedSchedule,
+  showBuildInfo,
+  weeklyFrequencyBand,
+}: {
+  deletingAccount: boolean;
+  editMode: boolean;
+  errorMessage: string | null;
+  intensityLevel: string;
+  isRefetching: boolean;
+  isSavingFitness: boolean;
+  navigation: { navigate: (screen: string) => void };
+  onCancelEdit: () => void;
+  onConfirmDeleteAccount: () => void;
+  onRefresh: () => void;
+  onLogout: () => void;
+  onSave: () => void;
+  onSetIntensityLevel: (value: string) => void;
+  onSetPrimaryGoal: (value: string) => void;
+  onSetSelectedActivities: (value: string) => void;
+  onSetSelectedSchedule: (value: string) => void;
+  onSetWeeklyFrequencyBand: (value: string) => void;
+  onToggleBuildInfo: () => void;
+  primaryGoal: string;
+  profile: User;
+  selectedActivities: string[];
+  selectedSchedule: string[];
+  showBuildInfo: boolean;
+  weeklyFrequencyBand: string;
+}) {
+  const primaryPhoto = profile.photos?.find((photo) => photo.isPrimary)?.storageKey || profile.photoUrl;
+  const buildRows = [
+    { label: 'App env', value: buildInfo.appEnv },
+    { label: 'Version', value: `${buildInfo.version} (${buildInfo.iosBuildNumber})` },
+    { label: 'Branch', value: buildInfo.gitBranch },
+    { label: 'Git SHA', value: buildInfo.gitSha },
+    { label: 'API URL', value: buildInfo.apiBaseUrl || 'not set' },
+    { label: 'Built at', value: buildInfo.buildDate },
+    { label: 'Release path', value: buildInfo.releaseMode },
+  ];
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.heroBg} pointerEvents="none" />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor="#7C6AF7" />}
+      >
+        <View style={styles.hero}>
+          <View style={styles.avatarGlowWrap}>
+            <LinearGradient colors={['#7C6AF7', '#34D399']} style={styles.avatarGlowRing}>
+              <View style={styles.avatarInnerWrap}>
+                <Image
+                  source={primaryPhoto ? { uri: primaryPhoto } : require('../../../../assets/icon.png')}
+                  style={styles.avatar}
+                />
+              </View>
+            </LinearGradient>
+          </View>
+          <Text style={styles.heroName}>
+            {profile.firstName}
+            {profile.age ? `, ${profile.age}` : ''}
+          </Text>
+          <View style={styles.intentBadge}>
+            <Text style={styles.intentBadgeText}>🏃 Active Mover</Text>
+          </View>
+          <Text style={styles.heroLocation}>📍 {profile.profile?.city || 'Location not set'}</Text>
+          <View style={styles.ambientStats}>
+            <View style={styles.ambientStat}>
+              <Text style={[styles.ambientStatNum, { color: '#7C6AF7' }]}>12</Text>
+              <Text style={styles.ambientStatLabel}>matches</Text>
+            </View>
+            <View style={styles.ambientStatDot} />
+            <View style={styles.ambientStat}>
+              <Text style={[styles.ambientStatNum, { color: '#34D399' }]}>8</Text>
+              <Text style={styles.ambientStatLabel}>activities</Text>
+            </View>
+            <View style={styles.ambientStatDot} />
+            <View style={styles.ambientStat}>
+              <Text style={[styles.ambientStatNum, { color: '#F59E0B' }]}>5</Text>
+              <Text style={styles.ambientStatLabel}>connections</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.editBar}>
+          <Pressable onPress={onSave} disabled={isSavingFitness} style={styles.editBtnWrap}>
+            <LinearGradient
+              colors={editMode ? ['#7C6AF7', '#7C6AF7AA'] : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.04)']}
+              style={styles.editBtn}
+            >
+              <Text style={[styles.editBtnText, { color: editMode ? '#FFFFFF' : 'rgba(240,246,252,0.6)' }]}>
+                {isSavingFitness ? 'Saving...' : editMode ? '✓ Save Changes' : '✏️ Edit Profile'}
+              </Text>
+            </LinearGradient>
+          </Pressable>
+          {editMode ? (
+            <Pressable onPress={onCancelEdit} style={styles.cancelBtn}>
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        {errorMessage ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionEyebrow}>Movement Identity</Text>
+          <View style={styles.tagCloud}>
+            {ACTIVITY_OPTIONS.map(({ label, value, color }) => (
+              <TagPill
+                key={value}
+                label={label}
+                selected={selectedActivities.includes(value)}
+                onPress={() => editMode && onSetSelectedActivities(value)}
+                color={color}
+                interactive={editMode}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionEyebrow}>Fitness Profile</Text>
+          <View style={styles.fieldsCard}>
+            <EditableField label="Intensity" value={intensityLevel} onChangeText={onSetIntensityLevel} placeholder="moderate" editMode={editMode} />
+            <View style={styles.fieldDivider} />
+            <EditableField label="Days / week" value={weeklyFrequencyBand} onChangeText={onSetWeeklyFrequencyBand} placeholder="3-4" editMode={editMode} />
+            <View style={styles.fieldDivider} />
+            <EditableField label="Primary goal" value={primaryGoal} onChangeText={onSetPrimaryGoal} placeholder="health" editMode={editMode} />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionEyebrow}>Schedule</Text>
+          <View style={styles.tagCloud}>
+            {SCHEDULE_OPTIONS.map((tag) => (
+              <TagPill
+                key={tag}
+                label={tag}
+                selected={selectedSchedule.includes(tag)}
+                onPress={() => editMode && onSetSelectedSchedule(tag)}
+                color="#34D399"
+                interactive={editMode}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionEyebrow}>Environment</Text>
+          <View style={styles.tagCloud}>
+            {ENVIRONMENT_OPTIONS.map((tag) => (
+              <TagPill key={tag} label={tag} selected={['Outdoors', 'Gym'].includes(tag)} onPress={() => undefined} color="#F59E0B" interactive={false} />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionEyebrow}>Settings</Text>
+          <View style={styles.settingsCard}>
+            <SettingsRow icon="👤" label="Account" onPress={() => undefined} />
+            <View style={styles.fieldDivider} />
+            <SettingsRow icon="🔒" label="Privacy" onPress={() => undefined} />
+            <View style={styles.fieldDivider} />
+            <SettingsRow icon="🔔" label="Notifications" onPress={() => navigation.navigate('Notifications')} />
+            <View style={styles.fieldDivider} />
+            <SettingsRow testID="build-provenance-toggle" icon="🧾" label="Build provenance" accessory={showBuildInfo ? '⌄' : '›'} onPress={onToggleBuildInfo} />
+            {showBuildInfo ? (
+              <>
+                <View style={styles.fieldDivider} />
+                <View testID="build-provenance-panel" style={styles.buildInfoCard}>
+                  {buildRows.map((row, index) => (
+                    <View key={row.label}>
+                      <BuildInfoRow label={row.label} value={row.value} />
+                      {index < buildRows.length - 1 ? <View style={styles.buildInfoDivider} /> : null}
+                    </View>
+                  ))}
+                </View>
+              </>
+            ) : null}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionEyebrow}>Account deletion</Text>
+          <View style={styles.dangerCard}>
+            <Text style={styles.dangerTitle}>Delete your account</Text>
+            <Text style={styles.dangerBody}>Remove your BRDG profile and associated data directly from the app.</Text>
+            <Pressable
+              onPress={onConfirmDeleteAccount}
+              disabled={deletingAccount}
+              style={({ pressed }) => [
+                styles.deleteAccountBtn,
+                pressed && !deletingAccount ? styles.deleteAccountBtnPressed : null,
+                deletingAccount ? styles.deleteAccountBtnDisabled : null,
+              ]}
+            >
+              <Text style={styles.deleteAccountText}>{deletingAccount ? 'Deleting...' : 'Delete account'}</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <TouchableOpacity onPress={onLogout} style={styles.logoutBtn} activeOpacity={0.7}>
+          <Text style={styles.logoutText}>Log out</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

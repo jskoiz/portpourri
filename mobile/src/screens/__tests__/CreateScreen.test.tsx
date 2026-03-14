@@ -3,12 +3,16 @@ import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import CreateScreen, { buildStartDate } from '../CreateScreen';
 
-const mockCreate = jest.fn();
+const mockCreateEvent = jest.fn();
+const mockReset = jest.fn();
 
-jest.mock('../../services/api', () => ({
-  eventsApi: {
-    create: (...args: unknown[]) => mockCreate(...args),
-  },
+jest.mock('../../features/events/hooks/useCreateEvent', () => ({
+  useCreateEvent: () => ({
+    createEvent: (...args: unknown[]) => mockCreateEvent(...args),
+    createError: null,
+    isCreating: false,
+    reset: mockReset,
+  }),
 }));
 
 jest.mock('../../components/ui/AppIcon', () => {
@@ -38,16 +42,14 @@ describe('CreateScreen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockCreate.mockResolvedValue({
-      data: {
-        id: 'event-1',
-        title: 'Run at Magic Island',
-        location: 'Magic Island',
-        startsAt: '2026-03-15T16:00:00.000Z',
-        host: { id: 'user-1', firstName: 'Jordan' },
-        attendeesCount: 1,
-        joined: true,
-      },
+    mockCreateEvent.mockResolvedValue({
+      id: 'event-1',
+      title: 'Run at Magic Island',
+      location: 'Magic Island',
+      startsAt: '2026-03-15T16:00:00.000Z',
+      host: { id: 'user-1', firstName: 'Jordan' },
+      attendeesCount: 1,
+      joined: true,
     });
   });
 
@@ -81,6 +83,16 @@ describe('CreateScreen', () => {
     fireEvent.press(screen.getByText('Evening'));
     fireEvent.changeText(screen.getByPlaceholderText('Runyon Canyon, Venice Beach...'), 'Magic Island');
     fireEvent.press(screen.getByText('Post Run'));
+
+    await waitFor(() => {
+      expect(mockCreateEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          category: 'Run',
+          location: 'Magic Island',
+          title: 'Run at Magic Island',
+        }),
+      );
+    });
 
     expect(await screen.findByText('INVITE POSTED')).toBeTruthy();
     expect(screen.getByText('Run at Magic Island')).toBeTruthy();

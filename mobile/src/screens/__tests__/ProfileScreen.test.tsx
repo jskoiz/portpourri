@@ -79,4 +79,15 @@ describe("ProfileScreen", () => {
       });
     });
   });
+
+  it("renders environment preferences as read-only chips in edit mode", async () => {
+    render(<ProfileScreen />);
+
+    expect(await screen.findByText("Environment")).toBeTruthy();
+    fireEvent.press(screen.getByText(/Edit Profile/));
+
+    expect(screen.getByText("Outdoors")).toBeTruthy();
+    expect(screen.getByText("Gym")).toBeTruthy();
+    expect(screen.getByText("Pool")).toBeTruthy();
+  });
 });

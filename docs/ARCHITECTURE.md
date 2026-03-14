@@ -8,7 +8,7 @@
 
 ## Mobile Architecture (`mobile/src`)
 
-- `app/`
+- `core/`
   - `providers/` — app shell providers for Tamagui, React Query, Safe Area, Bottom Sheet, and Sentry
   - `navigation/types.ts` — typed root stack and tab params
 - `design/`

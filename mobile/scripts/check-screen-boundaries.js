@@ -8,12 +8,34 @@ const files = fs
   .map((file) => path.join(root, file));
 
 const violations = [];
+const targetScreens = new Set([
+  'ChatScreen.tsx',
+  'CreateScreen.tsx',
+  'ExploreScreen.tsx',
+  'HomeScreen.tsx',
+  'ProfileScreen.tsx',
+]);
+const maxTargetScreenLines = 220;
 
 for (const file of files) {
   const content = fs.readFileSync(file, 'utf8');
+  const lineCount = content.split('\n').length;
+  const fileName = path.basename(file);
 
   if (content.includes("../api/client") || content.includes('../api/client')) {
     violations.push(`${path.relative(path.resolve(__dirname, '..'), file)} imports raw api/client`);
+  }
+
+  if (targetScreens.has(fileName)) {
+    if (content.includes('StyleSheet.create(')) {
+      violations.push(`${path.relative(path.resolve(__dirname, '..'), file)} defines route-local StyleSheet.create`);
+    }
+
+    if (lineCount > maxTargetScreenLines) {
+      violations.push(
+        `${path.relative(path.resolve(__dirname, '..'), file)} exceeds ${maxTargetScreenLines} lines (${lineCount})`,
+      );
+    }
   }
 }
 

@@ -1,0 +1,73 @@
+import { StyleSheet } from 'react-native';
+import { radii, spacing, typography } from '../../../theme/tokens';
+
+export const chatStyles = StyleSheet.create({
+  container: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.sm,
+    borderBottomWidth: 1,
+    gap: spacing.sm,
+  },
+  backBtn: { marginBottom: 0 },
+  headerAvatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 2 },
+  headerInfo: { flex: 1, gap: 2 },
+  headerEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 1.6 },
+  headerName: { fontSize: typography.h3, fontWeight: '800', letterSpacing: -0.3 },
+  headerTag: {
+    alignSelf: 'flex-start',
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    marginTop: spacing.xs,
+  },
+  headerTagText: { fontSize: 10, fontWeight: '700' },
+  listContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
+  bubble: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radii.lg,
+    marginBottom: spacing.sm,
+    maxWidth: '82%',
+  },
+  bubbleMe: { alignSelf: 'flex-end', borderBottomRightRadius: 4 },
+  bubbleThem: { alignSelf: 'flex-start', borderBottomLeftRadius: 4, borderWidth: 1 },
+  bubbleText: { fontSize: typography.body, lineHeight: 22 },
+  statusNote: { textAlign: 'center', fontSize: typography.caption, paddingVertical: spacing.xs },
+  errorNote: {
+    textAlign: 'center',
+    fontSize: typography.caption,
+    paddingVertical: spacing.xs,
+    fontWeight: '600',
+  },
+  inputBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    gap: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  input: {
+    flex: 1,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: typography.body,
+    minHeight: 48,
+  },
+  sendBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
+
