@@ -17,6 +17,7 @@ import AppBackButton from '../components/ui/AppBackButton';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import AppState from '../components/ui/AppState';
 import AppIcon from '../components/ui/AppIcon';
+import { useAuthStore } from '../store/authStore';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
 
@@ -75,6 +76,7 @@ function normalizeEvents(data: unknown): EventSummary[] {
 
 export default function MyEventsScreen({ navigation }: any) {
   const theme = useTheme();
+  const userId = useAuthStore((state) => state.user?.id);
   const [activeTab, setActiveTab] = useState<TabKey>('Joined');
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +102,10 @@ export default function MyEventsScreen({ navigation }: any) {
 
   const emptyMeta = EMPTY_STATES[activeTab];
 
-  const displayedEvents = activeTab === 'Joined' ? events : [];
+  const displayedEvents =
+    activeTab === 'Joined'
+      ? events.filter((event) => event.joined)
+      : events.filter((event) => userId != null && event.host.id === userId);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>

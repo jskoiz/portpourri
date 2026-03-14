@@ -80,7 +80,7 @@ export default function ProfileDetailScreen() {
     setSubmitting(true);
     try {
       const response = await matchesApi.list();
-      const existingMatch = response.data.find((match) => match.user.id === user.id);
+      const existingMatch = (response.data ?? []).find((match) => match.user.id === user.id);
 
       if (!existingMatch) {
         Alert.alert(
