@@ -78,6 +78,19 @@ export class MatchesService {
         },
       });
 
+      this.notifications.create(fromUserId, {
+        type: 'match_created',
+        title: "It's a match!",
+        body: 'You both liked each other.',
+        data: { matchId: match.id },
+      });
+      this.notifications.create(toUserId, {
+        type: 'match_created',
+        title: "It's a match!",
+        body: 'You both liked each other.',
+        data: { matchId: match.id },
+      });
+
       return { isMatch: true, matchId: match.id };
     }
 
@@ -137,7 +150,7 @@ export class MatchesService {
       take: 50,
     });
 
-    return messages.map((msg) => ({
+    return messages.reverse().map((msg) => ({
       id: msg.id,
       text: msg.body,
       sender: msg.senderId === userId ? 'me' : 'them',

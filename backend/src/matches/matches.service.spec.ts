@@ -128,6 +128,60 @@ describe('MatchesService realtime', () => {
     expect(jest.mocked(prisma.message.create)).not.toHaveBeenCalled();
   });
 
+  it('returns messages in ascending chronological order', async () => {
+    const older = {
+      id: 'msg-1',
+      body: 'first',
+      createdAt: new Date('2026-01-01T10:00:00.000Z'),
+      senderId: 'user-2',
+    };
+    const newer = {
+      id: 'msg-2',
+      body: 'second',
+      createdAt: new Date('2026-01-01T11:00:00.000Z'),
+      senderId: 'user-1',
+    };
+
+    jest.mocked(prisma.match.findUnique).mockResolvedValue({
+      id: 'match-1',
+      userAId: 'user-1',
+      userBId: 'user-2',
+      isBlocked: false,
+    } as any);
+    jest.mocked(prisma.message.findMany).mockResolvedValue([newer, older] as any);
+
+    const messages = await service.getMessages('match-1', 'user-1');
+
+    expect(messages).toHaveLength(2);
+    expect(messages[0].id).toBe('msg-1');
+    expect(messages[1].id).toBe('msg-2');
+  });
+
+  it('sends match notifications to both users on mutual like', async () => {
+    jest
+      .mocked(prisma.like.findUnique)
+      .mockResolvedValueOnce(null as any)
+      .mockResolvedValueOnce({ id: 'like-2' } as any);
+    jest.mocked(prisma.like.create).mockResolvedValue({ id: 'like-1' } as any);
+    jest.mocked(prisma.match.findUnique).mockResolvedValue(null as any);
+    jest.mocked(prisma.userProfile.findMany).mockResolvedValue([
+      { userId: 'user-1', intentDating: true, intentWorkout: false },
+      { userId: 'user-2', intentDating: true, intentWorkout: false },
+    ] as any);
+    jest.mocked(prisma.match.create).mockResolvedValue({ id: 'match-1' } as any);
+
+    await service.likeUser('user-1', 'user-2');
+
+    expect(jest.mocked(notifications.create)).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ type: 'match_created' }),
+    );
+    expect(jest.mocked(notifications.create)).toHaveBeenCalledWith(
+      'user-2',
+      expect.objectContaining({ type: 'match_created' }),
+    );
+  });
+
   it('creates a mutual-like match using shared profile intents', async () => {
     jest
       .mocked(prisma.like.findUnique)
