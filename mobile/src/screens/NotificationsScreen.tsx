@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -7,121 +8,76 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { normalizeApiError } from '../api/errors';
+import type { AppNotification } from '../api/types';
+import { notificationsApi } from '../services/api';
 import AppBackButton from '../components/ui/AppBackButton';
+import AppBackdrop from '../components/ui/AppBackdrop';
+import AppIcon from '../components/ui/AppIcon';
+import AppState from '../components/ui/AppState';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type NotifType = 'match' | 'message' | 'invite' | 'confirmed';
-
-interface MockNotif {
-  id: string;
-  type: NotifType;
-  title: string;
-  body: string;
-  group: 'Today' | 'Earlier';
-  read: boolean;
+function getNotificationMeta(type: AppNotification['type']) {
+  switch (type) {
+    case 'match_created':
+    case 'like_received':
+      return { icon: 'heart' as const, color: '#7C6AF7' };
+    case 'message_received':
+      return { icon: 'message-square' as const, color: '#34D399' };
+    case 'event_rsvp':
+      return { icon: 'users' as const, color: '#F59E0B' };
+    case 'event_reminder':
+      return { icon: 'calendar' as const, color: '#34D399' };
+    default:
+      return { icon: 'bell' as const, color: '#60A5FA' };
+  }
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+function getNotificationGroup(dateValue: string | Date) {
+  const createdAt = new Date(dateValue);
+  const now = new Date();
+  const isToday =
+    createdAt.getFullYear() === now.getFullYear() &&
+    createdAt.getMonth() === now.getMonth() &&
+    createdAt.getDate() === now.getDate();
 
-const INITIAL_NOTIFS: MockNotif[] = [
-  {
-    id: '1',
-    type: 'match',
-    title: 'New Match!',
-    body: 'You and Sofia both love trail running. Say hi 👋',
-    group: 'Today',
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'invite',
-    title: 'Activity Invite',
-    body: 'Jake invited you to his lap swim session Saturday.',
-    group: 'Today',
-    read: false,
-  },
-  {
-    id: '3',
-    type: 'message',
-    title: 'New Message from Emma',
-    body: '"Hey! Still up for yoga tomorrow? 🧘"',
-    group: 'Today',
-    read: true,
-  },
-  {
-    id: '4',
-    type: 'confirmed',
-    title: 'Activity Confirmed',
-    body: 'Your hike at Griffith Park this Sunday is confirmed. 6 people joining!',
-    group: 'Earlier',
-    read: true,
-  },
-  {
-    id: '5',
-    type: 'match',
-    title: 'New Match!',
-    body: 'You matched with Lena — she cycles 5x/week. 🚴',
-    group: 'Earlier',
-    read: true,
-  },
-  {
-    id: '6',
-    type: 'message',
-    title: 'New Message from Mia',
-    body: '"Are you free this weekend for the beach walk?"',
-    group: 'Earlier',
-    read: true,
-  },
-];
-
-// ─── Icon map ─────────────────────────────────────────────────────────────────
-
-const NOTIF_ICONS: Record<NotifType, string> = {
-  match: '💜',
-  message: '💬',
-  invite: '🤝',
-  confirmed: '✅',
-};
-
-const NOTIF_COLORS: Record<NotifType, string> = {
-  match: '#7C6AF7',
-  message: '#34D399',
-  invite: '#F59E0B',
-  confirmed: '#34D399',
-};
+  return isToday ? 'Today' : 'Earlier';
+}
 
 // ─── NotifRow ─────────────────────────────────────────────────────────────────
 
 function NotifRow({
   notif,
   theme,
-  onDismiss,
+  onMarkRead,
 }: {
-  notif: MockNotif;
+  notif: AppNotification;
   theme: any;
-  onDismiss: (id: string) => void;
+  onMarkRead: (id: string) => void;
 }) {
-  const color = NOTIF_COLORS[notif.type];
-  const icon = NOTIF_ICONS[notif.type];
+  const { color, icon } = getNotificationMeta(notif.type);
+  const isRead = Boolean(notif.readAt);
 
   return (
-    <View
+    <TouchableOpacity
       style={[
         styles.notifRow,
         {
-          backgroundColor: notif.read ? theme.surfaceElevated : theme.surface,
-          borderColor: notif.read ? theme.border : color + '44',
+          backgroundColor: isRead ? theme.surfaceElevated : theme.surface,
+          borderColor: isRead ? theme.border : color + '44',
           borderLeftColor: color,
         },
       ]}
+      onPress={() => {
+        if (!isRead) onMarkRead(notif.id);
+      }}
+      activeOpacity={0.85}
     >
       {/* Icon */}
       <View style={[styles.notifIconWrap, { backgroundColor: color + '20' }]}>
-        <Text style={styles.notifIcon}>{icon}</Text>
+        <AppIcon name={icon} size={18} color={color} />
       </View>
 
       {/* Content */}
@@ -130,21 +86,22 @@ function NotifRow({
         <Text style={[styles.notifBody, { color: theme.textSecondary }]}>{notif.body}</Text>
       </View>
 
-      {/* Dismiss */}
-      <TouchableOpacity
-        style={styles.dismissBtn}
-        onPress={() => onDismiss(notif.id)}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        activeOpacity={0.6}
-      >
-        <Text style={[styles.dismissText, { color: theme.textMuted }]}>✕</Text>
-      </TouchableOpacity>
+      {!isRead ? (
+        <TouchableOpacity
+          style={styles.dismissBtn}
+          onPress={() => onMarkRead(notif.id)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.6}
+        >
+          <AppIcon name="check" size={16} color={color} />
+        </TouchableOpacity>
+      ) : null}
 
       {/* Unread dot */}
-      {!notif.read && (
+      {!isRead && (
         <View style={[styles.unreadDot, { backgroundColor: color }]} />
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -153,33 +110,103 @@ function NotifRow({
 export default function NotificationsScreen() {
   const theme = useTheme();
   const navigation = useNavigation<any>();
-  const [notifs, setNotifs] = useState<MockNotif[]>(INITIAL_NOTIFS);
+  const [notifs, setNotifs] = useState<AppNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const dismiss = (id: string) => {
-    setNotifs((prev) => prev.filter((n) => n.id !== id));
+  const fetchNotifications = useCallback(async (silent = false) => {
+    if (silent) setRefreshing(true);
+    else setLoading(true);
+    setError(null);
+
+    try {
+      const response = await notificationsApi.list();
+      setNotifs(response.data || []);
+    } catch (err) {
+      setError(normalizeApiError(err).message);
+    } finally {
+      if (silent) setRefreshing(false);
+      else setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchNotifications();
+    }, [fetchNotifications]),
+  );
+
+  const markRead = async (id: string) => {
+    try {
+      const response = await notificationsApi.markRead(id);
+      const updated = response.data;
+      if (!updated) return;
+
+      setNotifs((current) =>
+        current.map((item) => (item.id === id ? updated : item)),
+      );
+    } catch (err) {
+      setError(normalizeApiError(err).message);
+    }
   };
 
-  const clearAll = () => setNotifs([]);
+  const clearAll = async () => {
+    try {
+      await notificationsApi.markAllRead();
+      const now = new Date().toISOString();
+      setNotifs((current) =>
+        current.map((item) => ({
+          ...item,
+          readAt: item.readAt ?? now,
+        })),
+      );
+    } catch (err) {
+      setError(normalizeApiError(err).message);
+    }
+  };
 
-  const todayNotifs = notifs.filter((n) => n.group === 'Today');
-  const earlierNotifs = notifs.filter((n) => n.group === 'Earlier');
+  const todayNotifs = notifs.filter(
+    (n) => getNotificationGroup(n.createdAt) === 'Today',
+  );
+  const earlierNotifs = notifs.filter(
+    (n) => getNotificationGroup(n.createdAt) === 'Earlier',
+  );
+  const unreadCount = notifs.filter((notif) => !notif.readAt).length;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <AppBackdrop />
+
       {/* Header */}
       <View style={styles.header}>
         <AppBackButton onPress={() => navigation.goBack()} />
-        <Text style={[styles.title, { color: theme.textPrimary }]}>Notifications</Text>
-        {notifs.length > 0 && (
+        <View style={styles.headerCopy}>
+          <Text style={[styles.eyebrow, { color: theme.accent }]}>INBOX</Text>
+          <Text style={[styles.title, { color: theme.textPrimary }]}>Notifications</Text>
+        </View>
+        {unreadCount > 0 && (
           <TouchableOpacity onPress={clearAll} activeOpacity={0.7}>
             <Text style={[styles.clearAll, { color: theme.textMuted }]}>Clear all</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {notifs.length === 0 ? (
+      {loading ? (
+        <AppState title="Loading notifications" loading />
+      ) : error && notifs.length === 0 ? (
+        <AppState
+          title="Couldn't load notifications"
+          description={error}
+          actionLabel="Try again"
+          onAction={fetchNotifications}
+          isError
+        />
+      ) : notifs.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>🔔</Text>
+          <View style={[styles.emptyIconWrap, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <AppIcon name="bell" size={24} color={theme.primary} />
+          </View>
           <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>All caught up!</Text>
           <Text style={[styles.emptyBody, { color: theme.textSecondary }]}>
             Notifications will appear here when you get matches, messages, and activity invites.
@@ -189,12 +216,19 @@ export default function NotificationsScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => fetchNotifications(true)}
+              tintColor={theme.primary}
+            />
+          }
         >
           {todayNotifs.length > 0 && (
             <View style={styles.group}>
               <Text style={[styles.groupLabel, { color: theme.textMuted }]}>Today</Text>
               {todayNotifs.map((n) => (
-                <NotifRow key={n.id} notif={n} theme={theme} onDismiss={dismiss} />
+                <NotifRow key={n.id} notif={n} theme={theme} onMarkRead={markRead} />
               ))}
             </View>
           )}
@@ -202,7 +236,7 @@ export default function NotificationsScreen() {
             <View style={styles.group}>
               <Text style={[styles.groupLabel, { color: theme.textMuted }]}>Earlier</Text>
               {earlierNotifs.map((n) => (
-                <NotifRow key={n.id} notif={n} theme={theme} onDismiss={dismiss} />
+                <NotifRow key={n.id} notif={n} theme={theme} onMarkRead={markRead} />
               ))}
             </View>
           )}
@@ -225,10 +259,18 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     gap: spacing.sm,
   },
+  headerCopy: {
+    flex: 1,
+  },
+  eyebrow: {
+    fontSize: typography.caption,
+    fontWeight: '800',
+    letterSpacing: 2.2,
+    marginBottom: spacing.xs,
+  },
   title: {
     fontSize: typography.h2,
     fontWeight: '800',
-    flex: 1,
     letterSpacing: -0.3,
   },
   clearAll: {
@@ -271,9 +313,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  notifIcon: {
-    fontSize: 18,
-  },
   notifContent: {
     flex: 1,
   },
@@ -288,10 +327,6 @@ const styles = StyleSheet.create({
   },
   dismissBtn: {
     padding: 4,
-  },
-  dismissText: {
-    fontSize: 14,
-    fontWeight: '700',
   },
   unreadDot: {
     position: 'absolute',
@@ -309,8 +344,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.xxxl || 40,
   },
-  emptyIcon: {
-    fontSize: 52,
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.md,
   },
   emptyTitle: {

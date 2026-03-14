@@ -7,6 +7,7 @@ import { matchesApi } from '../services/api';
 import { normalizeApiError } from '../api/errors';
 import type { Match } from '../api/types';
 import AppState from '../components/ui/AppState';
+import AppBackdrop from '../components/ui/AppBackdrop';
 import { radii, spacing, typography } from '../theme/tokens';
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
@@ -34,10 +35,13 @@ function getActivityTag(user: any): string {
   const goal = user?.fitnessProfile?.primaryGoal;
   if (!goal) return '';
   const map: Record<string, string> = {
-    strength: '🏋️ Strength',
-    weight_loss: '🔥 Weight Loss',
-    endurance: '🏃 Endurance',
-    mobility: '🧘 Mobility',
+    strength: 'Strength',
+    weight_loss: 'Conditioning',
+    endurance: 'Endurance',
+    mobility: 'Mobility',
+    connection: 'Connection',
+    performance: 'Performance',
+    both: 'Open',
   };
   return map[goal] || goal;
 }
@@ -89,10 +93,10 @@ function MatchRow({ item, onPress }: { item: Match; onPress: () => void }) {
       <View style={styles.rowContent}>
         <View style={styles.nameRow}>
           <Text style={styles.name}>{item.user.firstName || 'Match'}</Text>
-          <Text style={styles.timestamp}>{timeAgo((item as any).matchedAt)}</Text>
+          <Text style={styles.timestamp}>{timeAgo(item.createdAt as string)}</Text>
         </View>
         <Text style={styles.lastMsg} numberOfLines={1}>
-          {item.lastMessage || 'Start the conversation 👋'}
+          {item.lastMessage || 'Start the conversation'}
         </Text>
       </View>
 
@@ -133,13 +137,12 @@ export default function MatchesScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Ambient glow */}
+      <AppBackdrop />
       <View style={styles.ambientGlow} pointerEvents="none" />
 
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>MATCHES</Text>
-        <Text style={styles.title}>Your{'\n'}Connections.</Text>
+        <Text style={styles.eyebrow}>MATCHES / INNER CIRCLE</Text>
+        <Text style={styles.title}>Your{'\n'}circle.</Text>
         {matches.length > 0 && (
           <View style={styles.countBadge}>
             <Text style={styles.countBadgeText}>{matches.length} active</Text>
@@ -249,7 +252,7 @@ const styles = StyleSheet.create({
     backgroundColor: SURFACE,
     padding: spacing.md,
     marginBottom: 10,
-    borderRadius: 18,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: BORDER,
     gap: spacing.md,

@@ -13,12 +13,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import client from '../api/client';
 import { normalizeApiError } from '../api/errors';
 import type { ChatMessage } from '../api/types';
 import { connectMatchMessageStream } from '../services/matchRealtime';
+import { matchesApi } from '../services/api';
 import AppState from '../components/ui/AppState';
 import AppBackButton from '../components/ui/AppBackButton';
+import AppBackdrop from '../components/ui/AppBackdrop';
+import AppIcon from '../components/ui/AppIcon';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
 
@@ -26,10 +28,13 @@ function getActivityTag(user: any): string {
   const goal = user?.fitnessProfile?.primaryGoal;
   if (!goal) return '';
   const map: Record<string, string> = {
-    strength: '🏋️ Strength',
-    weight_loss: '🔥 Weight Loss',
-    endurance: '🏃 Endurance',
-    mobility: '🧘 Mobility',
+    strength: 'Strength',
+    weight_loss: 'Conditioning',
+    endurance: 'Endurance',
+    mobility: 'Mobility',
+    connection: 'Connection',
+    performance: 'Performance',
+    both: 'Open',
   };
   return map[goal] || '';
 }
@@ -38,7 +43,15 @@ export default function ChatScreen() {
   const theme = useTheme();
   const navigation = useNavigation<any>();
   const route = useRoute();
-  const { matchId, user } = route.params as { matchId: string; user: any };
+  const {
+    matchId,
+    user,
+    prefillMessage,
+  } = route.params as {
+    matchId: string;
+    user: any;
+    prefillMessage?: string;
+  };
 
   const photoUrl =
     user?.photoUrl ||
@@ -47,7 +60,7 @@ export default function ChatScreen() {
 
   const activityTag = getActivityTag(user);
 
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(prefillMessage?.trim() ?? '');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -59,7 +72,7 @@ export default function ChatScreen() {
   const fetchMessages = useCallback(async (silent = false) => {
     if (silent) setRefreshing(true);
     try {
-      const response = await client.get<ChatMessage[]>(`/matches/${matchId}/messages`);
+      const response = await matchesApi.getMessages(matchId);
       setMessages(response.data || []);
       setError(null);
     } catch (err) {
@@ -71,6 +84,11 @@ export default function ChatScreen() {
   }, [matchId]);
 
   useEffect(() => { setLoading(true); fetchMessages(); }, [fetchMessages]);
+  useEffect(() => {
+    if (prefillMessage?.trim()) {
+      setMessage(prefillMessage.trim());
+    }
+  }, [prefillMessage]);
 
   useEffect(() => {
     const stopPolling = () => {
@@ -108,7 +126,7 @@ export default function ChatScreen() {
     setMessage('');
     setSending(true);
     try {
-      await client.post(`/matches/${matchId}/messages`, { content: text });
+      await matchesApi.sendMessage(matchId, text);
       await fetchMessages();
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
@@ -139,8 +157,10 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: '#0D1117' }]} edges={['top']}>
+      <AppBackdrop />
+
       {/* Top bar */}
-      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+      <View style={[styles.header, { backgroundColor: theme.surfaceGlass, borderBottomColor: theme.border }]}>
         <AppBackButton onPress={() => navigation.goBack()} style={styles.backBtn} />
         {photoUrl ? (
           <Image
@@ -165,6 +185,7 @@ export default function ChatScreen() {
           </View>
         )}
         <View style={styles.headerInfo}>
+          <Text style={[styles.headerEyebrow, { color: theme.textMuted }]}>MATCH CONVERSATION</Text>
           <Text style={[styles.headerName, { color: theme.textPrimary }]}>
             {user?.firstName || 'Chat'}
           </Text>
@@ -200,7 +221,7 @@ export default function ChatScreen() {
 
       {connectionStatus !== 'connected' ? (
         <Text style={[styles.statusNote, { color: theme.textMuted }]}>
-          {connectionStatus === 'connecting' ? '⟳ Connecting…' : '⟳ Auto-refresh mode'}
+          {connectionStatus === 'connecting' ? 'Connecting…' : 'Auto-refresh mode'}
         </Text>
       ) : null}
       {error && messages.length > 0 ? (
@@ -211,7 +232,7 @@ export default function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={10}
       >
-        <View style={[styles.inputBar, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
+        <View style={[styles.inputBar, { backgroundColor: theme.surfaceGlass, borderTopColor: theme.border }]}>
           <TextInput
             style={[
               styles.input,
@@ -244,9 +265,7 @@ export default function ChatScreen() {
               },
             ]}
           >
-            <Text style={[styles.sendBtnText, { color: message.trim() ? theme.white : theme.textMuted }]}>
-              ↑
-            </Text>
+            <AppIcon name="arrow-up" size={16} color={message.trim() ? theme.white : theme.textMuted} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -276,9 +295,12 @@ const styles = StyleSheet.create({
   },
   headerInfo: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+    gap: 2,
+  },
+  headerEyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.6,
   },
   headerName: {
     fontSize: typography.h3,
@@ -286,10 +308,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   headerTag: {
+    alignSelf: 'flex-start',
     borderRadius: radii.pill,
     borderWidth: 1,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
+    marginTop: spacing.xs,
   },
   headerTagText: {
     fontSize: 10,
@@ -354,9 +378,5 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  sendBtnText: {
-    fontSize: 20,
-    fontWeight: '800',
   },
 });

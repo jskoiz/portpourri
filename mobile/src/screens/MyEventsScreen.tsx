@@ -14,34 +14,29 @@ import { eventsApi } from '../services/api';
 import { normalizeApiError } from '../api/errors';
 import type { EventSummary } from '../api/types';
 import AppBackButton from '../components/ui/AppBackButton';
+import AppBackdrop from '../components/ui/AppBackdrop';
 import AppState from '../components/ui/AppState';
+import AppIcon from '../components/ui/AppIcon';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
 
-type TabKey = 'Joined' | 'Created' | 'Saved';
-const TABS: TabKey[] = ['Joined', 'Created', 'Saved'];
+type TabKey = 'Joined' | 'Created';
+const TABS: TabKey[] = ['Joined', 'Created'];
 
-const EMPTY_STATES: Record<TabKey, { icon: string; title: string; body: string; cta: string; route: string }> = {
+const EMPTY_STATES: Record<TabKey, { icon: React.ComponentProps<typeof AppIcon>['name']; title: string; body: string; cta: string; route: string }> = {
   Joined: {
-    icon: '🎉',
+    icon: 'calendar',
     title: 'No events joined yet',
     body: 'Find something that excites you and jump in.',
     cta: 'Explore Events',
     route: 'Explore',
   },
   Created: {
-    icon: '✨',
+    icon: 'plus-circle',
     title: "You haven't hosted anything yet",
     body: 'Start an activity and invite people to move with you.',
     cta: 'Create Activity',
     route: 'Create',
-  },
-  Saved: {
-    icon: '🔖',
-    title: 'Nothing saved yet',
-    body: 'Bookmark events you want to revisit later.',
-    cta: 'Browse Events',
-    route: 'Explore',
   },
 };
 
@@ -82,17 +77,21 @@ export default function MyEventsScreen({ navigation }: any) {
 
   const emptyMeta = EMPTY_STATES[activeTab];
 
-  // For "Created" and "Saved" tabs we show empty state since API only provides joined events
   const displayedEvents = activeTab === 'Joined' ? events : [];
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <AppBackdrop />
+
       {/* Header */}
       <View style={styles.header}>
         {navigation.canGoBack() && (
           <AppBackButton onPress={() => navigation.goBack()} />
         )}
-        <Text style={[styles.title, { color: theme.textPrimary }]}>My Events</Text>
+        <View style={styles.headerCopy}>
+          <Text style={[styles.eyebrow, { color: theme.accent }]}>EVENTS</Text>
+          <Text style={[styles.title, { color: theme.textPrimary }]}>My Events</Text>
+        </View>
       </View>
 
       {/* Tab Switcher */}
@@ -132,7 +131,9 @@ export default function MyEventsScreen({ navigation }: any) {
         />
       ) : displayedEvents.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>{emptyMeta.icon}</Text>
+          <View style={[styles.emptyIconWrap, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <AppIcon name={emptyMeta.icon} size={24} color={theme.primary} />
+          </View>
           <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>{emptyMeta.title}</Text>
           <Text style={[styles.emptyBody, { color: theme.textSecondary }]}>{emptyMeta.body}</Text>
           <TouchableOpacity
@@ -176,13 +177,15 @@ export default function MyEventsScreen({ navigation }: any) {
               )}
               <View style={styles.cardBody}>
                 <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{item.title}</Text>
-                <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>
-                  📅 {formatDate(item.startsAt)}
-                </Text>
+                <View style={styles.cardMetaRow}>
+                  <AppIcon name="calendar" size={13} color={theme.textSecondary} />
+                  <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{formatDate(item.startsAt)}</Text>
+                </View>
                 {!!item.location && (
-                  <Text style={[styles.cardMeta, { color: theme.textMuted }]}>
-                    📍 {item.location}
-                  </Text>
+                  <View style={styles.cardMetaRow}>
+                    <AppIcon name="map-pin" size={13} color={theme.textMuted} />
+                    <Text style={[styles.cardMeta, { color: theme.textMuted }]}>{item.location}</Text>
+                  </View>
                 )}
               </View>
             </Pressable>
@@ -203,6 +206,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  headerCopy: {
+    flex: 1,
+  },
+  eyebrow: {
+    fontSize: typography.caption,
+    fontWeight: '800',
+    letterSpacing: 2.2,
+    marginBottom: spacing.xs,
   },
   title: {
     fontSize: typography.h1,
@@ -238,8 +250,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.xxxl || 40,
   },
-  emptyIcon: {
-    fontSize: 52,
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.md,
   },
   emptyTitle: {
@@ -297,6 +314,11 @@ const styles = StyleSheet.create({
   },
   cardMeta: {
     fontSize: typography.bodySmall,
+  },
+  cardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 3,
   },
 });

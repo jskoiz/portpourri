@@ -349,9 +349,11 @@ export default function ProfileScreen() {
             >
               <View style={styles.avatarInnerWrap}>
                 <Image
-                  source={{
-                    uri: primaryPhoto || "https://via.placeholder.com/120",
-                  }}
+                  source={
+                    primaryPhoto
+                      ? { uri: primaryPhoto }
+                      : require("../../assets/icon.png")
+                  }
                   style={styles.avatar}
                 />
               </View>

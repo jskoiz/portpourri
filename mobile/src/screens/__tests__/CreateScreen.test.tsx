@@ -1,0 +1,119 @@
+import React from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { render, screen } from '@testing-library/react-native';
+import CreateScreen, { buildStartDate } from '../CreateScreen';
+
+jest.mock('../../services/api', () => ({
+  eventsApi: {
+    create: jest.fn(),
+  },
+}));
+
+jest.mock('react-native-safe-area-context', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  return {
+    SafeAreaView: ({ children }: { children: React.ReactNode }) => <View>{children}</View>,
+  };
+});
+
+describe('CreateScreen', () => {
+  const navigation = {
+    navigate: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('uses keyboard-aware layout and dismissal props for the create form', () => {
+    const { UNSAFE_getByType } = render(<CreateScreen navigation={navigation} />);
+
+    const keyboardAvoider = UNSAFE_getByType(KeyboardAvoidingView);
+    const scrollView = UNSAFE_getByType(ScrollView);
+    const noteInput = screen.getByPlaceholderText(
+      'Easy pace, bring water, no experience needed...',
+    );
+
+    expect(keyboardAvoider.props.behavior).toBe(
+      Platform.OS === 'ios' ? 'padding' : undefined,
+    );
+    expect(scrollView.props.keyboardShouldPersistTaps).toBe('handled');
+    expect(scrollView.props.keyboardDismissMode).toBe(
+      Platform.OS === 'ios' ? 'interactive' : 'on-drag',
+    );
+    expect(scrollView.props.automaticallyAdjustKeyboardInsets).toBe(true);
+    expect(scrollView.props.onScrollBeginDrag).toEqual(expect.any(Function));
+    expect(noteInput.props.onFocus).toEqual(expect.any(Function));
+    expect(noteInput.props.blurOnSubmit).toBe(true);
+  });
+});
+
+describe('buildStartDate', () => {
+  function mockDateToDay(dayOfWeek: number, hour = 8) {
+    // dayOfWeek: 0=Sun, 1=Mon, ..., 6=Sat
+    const real = Date;
+    const fakeNow = new Date(2024, 0, 1); // Jan 1 2024 = Monday
+    // advance to the desired day of week
+    const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    fakeNow.setDate(fakeNow.getDate() + mondayOffset);
+    fakeNow.setHours(hour, 0, 0, 0);
+    jest.spyOn(globalThis, 'Date').mockImplementation((...args: any[]) => {
+      if (args.length === 0) return new real(fakeNow);
+      // @ts-ignore
+      return new real(...args);
+    });
+    (globalThis.Date as DateConstructor & { now: () => number }).now = () => fakeNow.getTime();
+    return fakeNow;
+  }
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('returns a Saturday when "This Weekend" is selected on a Monday morning', () => {
+    mockDateToDay(1, 8); // Monday 8am
+    const result = buildStartDate('This Weekend', 'Morning');
+    expect(result.getDay()).toBe(6); // Saturday
+  });
+
+  it('returns a Sunday (not next Saturday) when "This Weekend" is selected on a Sunday morning', () => {
+    mockDateToDay(0, 8); // Sunday 8am
+    const result = buildStartDate('This Weekend', 'Morning');
+    // Should stay within the current weekend (Sunday), not jump 6 days to next Saturday
+    expect(result.getDay()).toBe(0); // Sunday
+  });
+
+  it('returns tomorrow when "Tomorrow" is selected', () => {
+    const now = mockDateToDay(1, 8); // Monday 8am
+    const result = buildStartDate('Tomorrow', 'Morning');
+    expect(result.getDate()).toBe(now.getDate() + 1);
+  });
+
+  it('sets morning hours to 9am', () => {
+    mockDateToDay(1, 8); // Monday 8am
+    const result = buildStartDate('Tomorrow', 'Morning');
+    expect(result.getHours()).toBe(9);
+  });
+
+  it('sets afternoon hours to 2pm', () => {
+    mockDateToDay(1, 8); // Monday 8am
+    const result = buildStartDate('Tomorrow', 'Afternoon');
+    expect(result.getHours()).toBe(14);
+  });
+
+  it('sets evening hours to 6pm', () => {
+    mockDateToDay(1, 8); // Monday 8am
+    const result = buildStartDate('Tomorrow', 'Evening');
+    expect(result.getHours()).toBe(18);
+  });
+
+  it('bumps to next day when resulting time is in the past', () => {
+    mockDateToDay(1, 20); // Monday 8pm — "Morning" on "Today" would be 9am, already past
+    const result = buildStartDate('Today', 'Morning');
+    // 9am today has passed (it's 8pm), so it should advance to Tuesday
+    expect(result.getDay()).toBe(2); // Tuesday
+    expect(result.getHours()).toBe(9);
+  });
+});
