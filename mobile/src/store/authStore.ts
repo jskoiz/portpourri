@@ -22,6 +22,7 @@ interface AuthState {
   token: string | null;
   user: User | null;
   isLoading: boolean;
+  clearSession: () => void;
   login: (data: LoginPayload) => Promise<void>;
   signup: (data: SignupPayload) => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -30,10 +31,12 @@ interface AuthState {
   setUser: (user: User | null) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   user: null,
   isLoading: true,
+
+  clearSession: () => set({ token: null, user: null }),
 
   setUser: (user) => set({ user }),
 
@@ -61,7 +64,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     await AsyncStorage.removeItem(STORAGE_KEYS.accessToken);
-    set({ token: null, user: null });
+    get().clearSession();
   },
 
   deleteAccount: async () => {
@@ -72,7 +75,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
 
     await AsyncStorage.removeItem(STORAGE_KEYS.accessToken);
-    set({ token: null, user: null });
+    get().clearSession();
   },
 
   loadToken: async () => {

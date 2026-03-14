@@ -1,7 +1,8 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { env } from '../config/env';
 import { STORAGE_KEYS } from '../constants/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { handleUnauthorized } from './authSession';
 
 const client = axios.create({
     baseURL: env.apiUrl,
@@ -26,7 +27,7 @@ client.interceptors.response.use(
     (response) => response,
     async (error) => {
         if (error?.response?.status === 401) {
-            await AsyncStorage.removeItem(STORAGE_KEYS.accessToken);
+            await handleUnauthorized();
         }
         return Promise.reject(error);
     }

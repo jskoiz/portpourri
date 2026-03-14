@@ -11,37 +11,24 @@ import { ActivityIndicator, View } from "react-native";
 import EventDetailScreen from "../screens/EventDetailScreen";
 import MyEventsScreen from "../screens/MyEventsScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
-import AppBackdrop from "../components/ui/AppBackdrop";
-import { useTheme } from "../theme/useTheme";
-import CodexPreviewScreen from "../screens/CodexPreviewScreen";
 
 import MainTabNavigator from "./MainTabNavigator";
+import { setUnauthorizedHandler } from "../api/authSession";
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
-  const theme = useTheme();
-  const screenshotMode = process.env.EXPO_PUBLIC_SCREENSHOT_MODE === "1";
-  const previewSurfacesMode =
-    __DEV__ && process.env.EXPO_PUBLIC_PREVIEW_SURFACES === "1";
   const token = useAuthStore((state) => state.token);
   const isLoading = useAuthStore((state) => state.isLoading);
   const loadToken = useAuthStore((state) => state.loadToken);
+  const clearSession = useAuthStore((state) => state.clearSession);
 
   useEffect(() => {
-    if (screenshotMode || previewSurfacesMode) {
-      return;
-    }
+    const cleanupUnauthorizedHandler = setUnauthorizedHandler(clearSession);
     loadToken();
-  }, [loadToken, previewSurfacesMode, screenshotMode]);
 
-  if (screenshotMode || previewSurfacesMode) {
-    return (
-      <NavigationContainer>
-        {previewSurfacesMode ? <CodexPreviewScreen /> : <MainTabNavigator previewMode />}
-      </NavigationContainer>
-    );
-  }
+    return cleanupUnauthorizedHandler;
+  }, [clearSession, loadToken]);
 
   if (isLoading) {
     return (
@@ -50,11 +37,10 @@ export default function AppNavigator() {
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: theme.background,
+          backgroundColor: "#FAF7F4",
         }}
       >
-        <AppBackdrop />
-        <ActivityIndicator size="large" color={theme.primary} />
+        <ActivityIndicator size="large" color="#C9897A" />
       </View>
     );
   }
@@ -64,7 +50,7 @@ export default function AppNavigator() {
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: theme.background },
+          contentStyle: { backgroundColor: "#FAF7F4" },
         }}
       >
         {token ? (
