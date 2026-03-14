@@ -1,6 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { normalizeApiError } from '../api/errors';
 import { eventsApi } from '../services/api';
 import { radii, spacing, typography } from '../theme/tokens';
+import AppIcon from '../components/ui/AppIcon';
 
 const BASE = '#0D1117';
 const SURFACE = '#161B22';
@@ -28,16 +32,16 @@ const ENERGY = '#F59E0B';
 const ERROR = '#F87171';
 
 const ACTIVITY_TYPES = [
-  { emoji: '🏃', label: 'Run', color: ACCENT },
-  { emoji: '🧘', label: 'Yoga', color: PRIMARY },
-  { emoji: '🏋️', label: 'Lift', color: '#F87171' },
-  { emoji: '🥾', label: 'Hike', color: ENERGY },
-  { emoji: '🏖️', label: 'Beach', color: '#60A5FA' },
-  { emoji: '🚴', label: 'Cycle', color: '#34D399' },
-  { emoji: '🏄', label: 'Surf', color: '#38BDF8' },
-  { emoji: '🧗', label: 'Climb', color: '#FB923C' },
-  { emoji: '🥊', label: 'Box', color: '#F87171' },
-  { emoji: '🏊', label: 'Swim', color: '#60A5FA' },
+  { icon: 'activity', label: 'Run', color: ACCENT },
+  { icon: 'circle', label: 'Yoga', color: PRIMARY },
+  { icon: 'activity', label: 'Lift', color: '#F87171' },
+  { icon: 'map', label: 'Hike', color: ENERGY },
+  { icon: 'sun', label: 'Beach', color: '#60A5FA' },
+  { icon: 'navigation', label: 'Cycle', color: '#34D399' },
+  { icon: 'wind', label: 'Surf', color: '#38BDF8' },
+  { icon: 'triangle', label: 'Climb', color: '#FB923C' },
+  { icon: 'target', label: 'Box', color: '#F87171' },
+  { icon: 'droplet', label: 'Swim', color: '#60A5FA' },
 ] as const;
 
 const WHEN_OPTIONS = ['Today', 'Tomorrow', 'This Weekend', 'Next Week'] as const;
@@ -62,8 +66,8 @@ function ActivityTile({
             ? { borderColor: activity.color, backgroundColor: activity.color + '20' }
             : { borderColor: BORDER, backgroundColor: SURFACE },
         ]}
-      >
-        <Text style={styles.activityEmoji}>{activity.emoji}</Text>
+        >
+        <AppIcon name={activity.icon} size={20} color={selected ? activity.color : TEXT_MUTED} />
       </View>
       <Text style={[styles.activityLabel, { color: selected ? activity.color : TEXT_MUTED }]}>
         {activity.label}
@@ -108,7 +112,7 @@ function SectionLabel({ label }: { label: string }) {
   return <Text style={styles.sectionLabel}>{label}</Text>;
 }
 
-function buildStartDate(selectedWhen: string, selectedTime: string) {
+export function buildStartDate(selectedWhen: string, selectedTime: string) {
   const now = new Date();
   const start = new Date(now);
 
@@ -116,8 +120,11 @@ function buildStartDate(selectedWhen: string, selectedTime: string) {
     start.setDate(start.getDate() + 1);
   } else if (selectedWhen === 'This Weekend') {
     const currentDay = start.getDay();
-    const daysUntilSaturday = (6 - currentDay + 7) % 7;
-    start.setDate(start.getDate() + daysUntilSaturday);
+    const isWeekend = currentDay === 0 || currentDay === 6;
+    if (!isWeekend) {
+      const daysUntilSaturday = (6 - currentDay + 7) % 7;
+      start.setDate(start.getDate() + daysUntilSaturday);
+    }
   } else if (selectedWhen === 'Next Week') {
     start.setDate(start.getDate() + 7);
   }
@@ -165,6 +172,7 @@ function buildDescription({
 }
 
 export default function CreateScreen({ navigation }: any) {
+  const scrollRef = useRef<ScrollView | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
   const [selectedWhen, setSelectedWhen] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -181,6 +189,13 @@ export default function CreateScreen({ navigation }: any) {
     [selectedActivity],
   );
   const selectedColor = activityObj?.color ?? PRIMARY;
+  const canPost = !!selectedActivity && !!selectedWhen && !!selectedTime && !!where.trim() && !posting;
+
+  const handleNoteFocus = () => {
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    });
+  };
 
   const resetForm = () => {
     setSelectedActivity(null);
@@ -240,7 +255,7 @@ export default function CreateScreen({ navigation }: any) {
       setLastCreatedTitle(createdEvent.title);
       resetForm();
 
-      Alert.alert('🎉 Activity posted!', 'Your invite is live now.', [
+      Alert.alert('Activity posted', 'Your invite is live now.', [
         {
           text: 'View event',
           onPress: () => navigation?.navigate('EventDetail', { eventId: createdEvent.id }),
@@ -261,15 +276,50 @@ export default function CreateScreen({ navigation }: any) {
     <SafeAreaView style={styles.container}>
       <View style={[styles.ambientGlow, { backgroundColor: selectedColor }]} pointerEvents="none" />
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+        style={styles.keyboardAvoider}
       >
+        <ScrollView
+          ref={scrollRef}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          automaticallyAdjustKeyboardInsets
+          onScrollBeginDrag={Keyboard.dismiss}
+        >
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>CREATE</Text>
-          <Text style={styles.title}>{`Start\nSomething.`}</Text>
-          <Text style={styles.subtitle}>Invite people to move with you</Text>
+          <Text style={styles.eyebrow}>HOST FLOW / INVITATION-FIRST</Text>
+          <Text style={styles.title}>{`Invite people\nto move.`}</Text>
+          <Text style={styles.subtitle}>Pick the activity, set timing, then publish one clean invite.</Text>
+        </View>
+
+        <View style={styles.planCard}>
+          <View style={styles.planHeader}>
+            <Text style={styles.planTitle}>Build the plan</Text>
+            <Text style={[styles.planStepCount, { color: selectedColor }]}>
+              {[selectedActivity, selectedWhen && selectedTime, where.trim()].filter(Boolean).length}/3
+            </Text>
+          </View>
+          <View style={styles.planRow}>
+            <View style={[styles.planPill, selectedActivity && styles.planPillActive]}>
+              <Text style={[styles.planPillLabel, selectedActivity && styles.planPillLabelActive]}>
+                {selectedActivity ?? 'Pick activity'}
+              </Text>
+            </View>
+            <View style={[styles.planPill, selectedWhen && selectedTime && styles.planPillActive]}>
+              <Text style={[styles.planPillLabel, selectedWhen && selectedTime && styles.planPillLabelActive]}>
+                {selectedWhen && selectedTime ? `${selectedWhen} / ${selectedTime}` : 'Choose timing'}
+              </Text>
+            </View>
+            <View style={[styles.planPill, where.trim() && styles.planPillActive]}>
+              <Text style={[styles.planPillLabel, where.trim() && styles.planPillLabelActive]}>
+                {where.trim() || 'Add location'}
+              </Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.activitySection}>
@@ -279,16 +329,17 @@ export default function CreateScreen({ navigation }: any) {
                 colors={[selectedColor + '40', selectedColor + '10', 'transparent']}
                 style={styles.selectedPreviewGradient}
               >
-                <Text style={styles.selectedPreviewEmoji}>{activityObj.emoji}</Text>
-                <Text style={[styles.selectedPreviewLabel, { color: selectedColor }]}>
-                  {activityObj.label}
-                </Text>
+                <View style={[styles.selectedPreviewIconWrap, { backgroundColor: selectedColor + '16' }]}>
+                  <AppIcon name={activityObj.icon} size={24} color={selectedColor} />
+                </View>
+                <View style={styles.selectedPreviewText}>
+                  <Text style={[styles.selectedPreviewEyebrow, { color: selectedColor }]}>ACTIVITY</Text>
+                  <Text style={styles.selectedPreviewLabel}>{activityObj.label}</Text>
+                </View>
               </LinearGradient>
             </View>
           ) : (
-            <View style={styles.selectedPreviewEmpty}>
-              <Text style={styles.selectedPreviewEmptyText}>Pick an activity ↓</Text>
-            </View>
+            <Text style={styles.activityPrompt}>Start with the anchor activity.</Text>
           )}
 
           <View style={styles.activityGrid}>
@@ -337,6 +388,8 @@ export default function CreateScreen({ navigation }: any) {
             placeholderTextColor={TEXT_MUTED}
             value={where}
             onChangeText={setWhere}
+            returnKeyType="done"
+            onSubmitEditing={Keyboard.dismiss}
           />
         </View>
 
@@ -392,34 +445,37 @@ export default function CreateScreen({ navigation }: any) {
             multiline
             numberOfLines={3}
             textAlignVertical="top"
+            onFocus={handleNoteFocus}
+            blurOnSubmit
           />
         </View>
 
         {submitError ? (
           <View style={styles.feedbackWrap}>
-            <Text style={styles.feedbackError}>⚠️ {submitError}</Text>
+            <Text style={styles.feedbackError}>{submitError}</Text>
           </View>
         ) : null}
 
         {lastCreatedTitle ? (
           <View style={styles.feedbackWrap}>
-            <Text style={styles.feedbackSuccess}>✅ Posted: {lastCreatedTitle}</Text>
+            <Text style={styles.feedbackSuccess}>Posted: {lastCreatedTitle}</Text>
           </View>
         ) : null}
 
-        <Pressable onPress={handlePost} disabled={posting} style={styles.postBtnWrap}>
+        <Pressable onPress={handlePost} disabled={!canPost} style={styles.postBtnWrap}>
           <LinearGradient
-            colors={posting ? [ACCENT + '80', ACCENT + '40'] : [selectedColor, selectedColor + 'BB']}
+            colors={!canPost ? ['rgba(255,255,255,0.10)', 'rgba(255,255,255,0.05)'] : posting ? [ACCENT + '80', ACCENT + '40'] : [selectedColor, selectedColor + 'BB']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={[styles.postBtn, posting && styles.postBtnDisabled]}
+            style={[styles.postBtn, (!canPost || posting) && styles.postBtnDisabled]}
           >
             <Text style={styles.postBtnText}>
-              {posting ? 'Posting...' : `🚀  Post ${selectedActivity ?? 'Activity'}`}
+              {posting ? 'Posting...' : canPost ? `Post ${selectedActivity}` : 'Finish the plan to post'}
             </Text>
           </LinearGradient>
         </Pressable>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -428,6 +484,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: BASE,
+  },
+  keyboardAvoider: {
+    flex: 1,
   },
   ambientGlow: {
     position: 'absolute',
@@ -439,41 +498,93 @@ const styles = StyleSheet.create({
     opacity: 0.05,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingBottom: 64,
   },
   header: {
     paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
   },
   eyebrow: {
     fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 3.5,
+    fontWeight: '800',
+    letterSpacing: 2.8,
     color: PRIMARY,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   title: {
-    fontSize: 44,
-    fontWeight: '900',
-    letterSpacing: -1.5,
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: -1,
     color: TEXT_PRIMARY,
-    lineHeight: 48,
+    lineHeight: 36,
     marginBottom: spacing.xs,
   },
   subtitle: {
     fontSize: typography.bodySmall,
     fontWeight: '500',
     color: TEXT_MUTED,
+    lineHeight: 20,
+    maxWidth: 300,
+  },
+  planCard: {
+    marginHorizontal: spacing.xxl,
+    marginBottom: spacing.md,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: 'rgba(28,35,48,0.68)',
+    padding: spacing.md,
+  },
+  planHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  planTitle: {
+    color: TEXT_PRIMARY,
+    fontSize: typography.body,
+    fontWeight: '800',
+  },
+  planStepCount: {
+    fontSize: typography.bodySmall,
+    fontWeight: '800',
+  },
+  planRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  planPill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  planPillActive: {
+    borderColor: 'rgba(124,106,247,0.32)',
+    backgroundColor: 'rgba(124,106,247,0.14)',
+  },
+  planPillLabel: {
+    color: TEXT_MUTED,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  planPillLabelActive: {
+    color: TEXT_PRIMARY,
   },
   activitySection: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   selectedPreview: {
     marginHorizontal: spacing.xxl,
     borderRadius: 20,
     overflow: 'hidden',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: BORDER,
   },
@@ -481,62 +592,65 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    padding: spacing.xl,
+    padding: spacing.lg,
   },
-  selectedPreviewEmoji: {
-    fontSize: 52,
+  selectedPreviewIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedPreviewText: {
+    flex: 1,
+  },
+  selectedPreviewEyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.8,
+    marginBottom: 4,
   },
   selectedPreviewLabel: {
-    fontSize: 32,
-    fontWeight: '900',
-    letterSpacing: -0.8,
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.6,
+    color: TEXT_PRIMARY,
   },
-  selectedPreviewEmpty: {
+  activityPrompt: {
     marginHorizontal: spacing.xxl,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderStyle: 'dashed',
-    padding: spacing.xl,
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  selectedPreviewEmptyText: {
+    marginBottom: spacing.md,
     color: TEXT_MUTED,
-    fontSize: typography.bodySmall,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
   },
   activityGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: spacing.xxl,
-    gap: 12,
+    gap: 10,
   },
   activityTileWrap: {
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
   },
   activityTile: {
-    width: 62,
-    height: 62,
+    width: 58,
+    height: 58,
     borderRadius: 16,
     borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  activityEmoji: {
-    fontSize: 26,
-  },
   activityLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.2,
     textAlign: 'center',
   },
   formSection: {
     paddingHorizontal: spacing.xxl,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   sectionLabel: {
     fontSize: 10,
@@ -581,7 +695,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 18,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     fontSize: typography.body,
@@ -659,7 +773,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   postBtnDisabled: {
-    opacity: 0.8,
+    opacity: 0.78,
   },
   postBtnText: {
     fontSize: typography.body,

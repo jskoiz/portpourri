@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Dimensions, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { eventsApi } from '../services/api';
 import { normalizeApiError } from '../api/errors';
@@ -7,6 +7,8 @@ import type { EventDetail } from '../api/types';
 import AppState from '../components/ui/AppState';
 import AppButton from '../components/ui/AppButton';
 import AppBackButton from '../components/ui/AppBackButton';
+import AppBackdrop from '../components/ui/AppBackdrop';
+import AppIcon from '../components/ui/AppIcon';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
 
@@ -30,7 +32,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
   const [error, setError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
 
-  const fetchEvent = async () => {
+  const fetchEvent = useCallback(async () => {
     if (!eventId) return;
     setLoading(true);
     setError(null);
@@ -42,9 +44,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId]);
 
-  useEffect(() => { fetchEvent(); }, [eventId]);
+  useEffect(() => {
+    void fetchEvent();
+  }, [fetchEvent]);
 
   const handleJoin = async () => {
     if (!event || joining || event.joined) return;
@@ -68,6 +72,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <AppBackdrop />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
         {/* Full-bleed hero */}
@@ -94,14 +99,26 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
         {/* Content card overlapping hero */}
         <View style={[styles.contentCard, { backgroundColor: theme.surface }]}>
+          <Text style={[styles.kicker, { color: theme.accent }]}>EVENT DETAIL / SOCIAL MOTION</Text>
           <Text style={[styles.title, { color: theme.textPrimary }]}>{event.title}</Text>
+          <View style={[styles.hostStrip, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <View style={[styles.hostAvatar, { backgroundColor: theme.primarySubtle, borderColor: theme.primary }]}>
+              <Text style={[styles.hostAvatarText, { color: theme.primary }]}>{event.host.firstName?.[0] ?? 'H'}</Text>
+            </View>
+            <View style={styles.hostCopy}>
+              <Text style={[styles.hostLabel, { color: theme.textMuted }]}>Hosted by</Text>
+              <Text style={[styles.hostName, { color: theme.textPrimary }]}>{event.host.firstName}</Text>
+            </View>
+            <Pressable style={[styles.hostPill, { borderColor: theme.border }]}>
+              <Text style={[styles.hostPillText, { color: theme.textSecondary }]}>Open invite</Text>
+            </Pressable>
+          </View>
 
           {/* Metadata rows */}
           <View style={styles.metaList}>
-            <MetaRow icon="📅" label={dateInfo.date} sub={dateInfo.time} />
-            <MetaRow icon="📍" label={event.location} />
-            <MetaRow icon="👤" label={`Hosted by ${event.host.firstName}`} />
-            <MetaRow icon="🙌" label={`${event.attendeesCount} attending`} />
+            <MetaRow icon="calendar" label={dateInfo.date} sub={dateInfo.time} />
+            <MetaRow icon="map-pin" label={event.location} />
+            <MetaRow icon="users" label={`${event.attendeesCount} attending`} />
           </View>
 
           {event.description ? (
@@ -114,10 +131,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
           {/* CTA pinned inside card */}
           <View style={styles.ctaArea}>
             <AppButton
-              label={event.joined ? "✓ You're going" : joining ? 'Joining…' : 'Join event'}
+              label={event.joined ? "You're going" : joining ? 'Joining…' : 'Join event'}
               onPress={handleJoin}
               disabled={event.joined}
               loading={joining}
+              variant="energy"
             />
           </View>
         </View>
@@ -126,11 +144,21 @@ export default function EventDetailScreen({ route, navigation }: any) {
   );
 }
 
-function MetaRow({ icon, label, sub }: { icon: string; label: string; sub?: string }) {
+function MetaRow({
+  icon,
+  label,
+  sub,
+}: {
+  icon: React.ComponentProps<typeof AppIcon>['name'];
+  label: string;
+  sub?: string;
+}) {
   const theme = useTheme();
   return (
     <View style={styles.metaRow}>
-      <Text style={styles.metaIcon}>{icon}</Text>
+      <View style={[styles.metaIconWrap, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+        <AppIcon name={icon} size={15} color={theme.primary} />
+      </View>
       <View>
         <Text style={[styles.metaLabel, { color: theme.textPrimary }]}>{label}</Text>
         {sub ? <Text style={[styles.metaSub, { color: theme.textSecondary }]}>{sub}</Text> : null}
@@ -157,13 +185,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: HERO_HEIGHT * 0.5,
-    backgroundColor: 'rgba(28,23,20,0.35)',
+    backgroundColor: 'rgba(13,17,23,0.55)',
   },
   backBtnOverlay: {
     position: 'absolute',
     top: spacing.lg,
     left: spacing.lg,
-    backgroundColor: 'rgba(28,23,20,0.50)',
+    backgroundColor: 'rgba(13,17,23,0.50)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -188,12 +216,20 @@ const styles = StyleSheet.create({
     marginTop: -28,
     paddingTop: spacing.xxl,
     paddingHorizontal: spacing.xxl,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
     shadowColor: '#000',
-    shadowOpacity: 0.10,
-    shadowRadius: 12,
+    shadowOpacity: 0.28,
+    shadowRadius: 24,
     shadowOffset: { width: 0, height: -4 },
     elevation: 8,
     minHeight: 300,
+  },
+  kicker: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 2,
+    marginBottom: spacing.sm,
   },
   title: {
     fontSize: typography.h1,
@@ -201,6 +237,51 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     marginBottom: spacing.lg,
     lineHeight: 36,
+  },
+  hostStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 22,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  hostAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hostAvatarText: {
+    fontSize: typography.body,
+    fontWeight: '800',
+  },
+  hostCopy: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  hostLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  hostName: {
+    fontSize: typography.body,
+    fontWeight: '700',
+  },
+  hostPill: {
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+  },
+  hostPillText: {
+    fontSize: typography.caption,
+    fontWeight: '700',
   },
   metaList: {
     gap: spacing.md,
@@ -211,11 +292,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.md,
   },
-  metaIcon: {
-    fontSize: typography.body,
-    lineHeight: 24,
-    width: 26,
-    textAlign: 'center',
+  metaIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
   },
   metaLabel: {
     fontSize: typography.body,
