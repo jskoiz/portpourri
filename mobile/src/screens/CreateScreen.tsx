@@ -126,7 +126,9 @@ export function buildStartDate(selectedWhen: string, selectedTime: string) {
       start.setDate(start.getDate() + daysUntilSaturday);
     }
   } else if (selectedWhen === 'Next Week') {
-    start.setDate(start.getDate() + 7);
+    const currentDay = start.getDay();
+    const daysUntilNextMonday = currentDay === 0 ? 1 : 8 - currentDay;
+    start.setDate(start.getDate() + daysUntilNextMonday);
   }
 
   if (selectedTime === 'Morning') {

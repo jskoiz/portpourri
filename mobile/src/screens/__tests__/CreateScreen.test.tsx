@@ -91,6 +91,13 @@ describe('buildStartDate', () => {
     expect(result.getDate()).toBe(now.getDate() + 1);
   });
 
+  it('returns next Monday when "Next Week" is selected midweek', () => {
+    mockDateToDay(3, 8); // Wednesday 8am
+    const result = buildStartDate('Next Week', 'Morning');
+    expect(result.getDay()).toBe(1); // Monday
+    expect(result.getDate()).toBe(8); // Jan 8 2024
+  });
+
   it('sets morning hours to 9am', () => {
     mockDateToDay(1, 8); // Monday 8am
     const result = buildStartDate('Tomorrow', 'Morning');
