@@ -293,6 +293,18 @@ Target rules:
 - migrate shared UI primitives to the Tamagui-backed design layer
 - standardize buttons, cards, surfaces, inputs, chips, and empty states
 - remove redundant legacy custom primitives after migration
+- canonical primitives now live in `mobile/src/design/primitives/index.tsx`:
+  - `Button`
+  - `Card`
+  - `Input`
+  - `Chip`
+  - `StatePanel`
+- legacy wrappers remain transitional for route-level compatibility:
+  - `AppButton`
+  - `AppCard`
+  - `AppInput`
+  - `AppState`
+- feature modules should import the design primitives directly instead of the legacy wrappers
 
 ### Phase 3: Complete iOS-first interaction cleanup
 

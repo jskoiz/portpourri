@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { buildInfo } from '../../../config/buildInfo';
 import type { User } from '../../../api/types';
+import { Button, Card } from '../../../design/primitives';
 import { profileStyles as styles } from './profile.styles';
 import { ACTIVITY_OPTIONS, ENVIRONMENT_OPTIONS, SCHEDULE_OPTIONS } from './profile.helpers';
 import { EditableField, TagPill } from './ProfileSections';
@@ -188,13 +189,13 @@ export function ProfileScreenContent({
 
         <View style={styles.section}>
           <Text style={styles.sectionEyebrow}>Fitness Profile</Text>
-          <View style={styles.fieldsCard}>
+          <Card style={styles.fieldsCard}>
             <EditableField label="Intensity" value={intensityLevel} onChangeText={onSetIntensityLevel} placeholder="moderate" editMode={editMode} />
             <View style={styles.fieldDivider} />
             <EditableField label="Days / week" value={weeklyFrequencyBand} onChangeText={onSetWeeklyFrequencyBand} placeholder="3-4" editMode={editMode} />
             <View style={styles.fieldDivider} />
             <EditableField label="Primary goal" value={primaryGoal} onChangeText={onSetPrimaryGoal} placeholder="health" editMode={editMode} />
-          </View>
+          </Card>
         </View>
 
         <View style={styles.section}>
@@ -224,7 +225,7 @@ export function ProfileScreenContent({
 
         <View style={styles.section}>
           <Text style={styles.sectionEyebrow}>Settings</Text>
-          <View style={styles.settingsCard}>
+          <Card style={styles.settingsCard}>
             <SettingsRow icon="👤" label="Account" onPress={() => undefined} />
             <View style={styles.fieldDivider} />
             <SettingsRow icon="🔒" label="Privacy" onPress={() => undefined} />
@@ -235,36 +236,26 @@ export function ProfileScreenContent({
             {showBuildInfo ? (
               <>
                 <View style={styles.fieldDivider} />
-                <View testID="build-provenance-panel" style={styles.buildInfoCard}>
+                <Card testID="build-provenance-panel" style={styles.buildInfoCard as any}>
                   {buildRows.map((row, index) => (
                     <View key={row.label}>
                       <BuildInfoRow label={row.label} value={row.value} />
                       {index < buildRows.length - 1 ? <View style={styles.buildInfoDivider} /> : null}
                     </View>
                   ))}
-                </View>
+                </Card>
               </>
             ) : null}
-          </View>
+          </Card>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionEyebrow}>Account deletion</Text>
-          <View style={styles.dangerCard}>
+          <Card style={styles.dangerCard}>
             <Text style={styles.dangerTitle}>Delete your account</Text>
             <Text style={styles.dangerBody}>Remove your BRDG profile and associated data directly from the app.</Text>
-            <Pressable
-              onPress={onConfirmDeleteAccount}
-              disabled={deletingAccount}
-              style={({ pressed }) => [
-                styles.deleteAccountBtn,
-                pressed && !deletingAccount ? styles.deleteAccountBtnPressed : null,
-                deletingAccount ? styles.deleteAccountBtnDisabled : null,
-              ]}
-            >
-              <Text style={styles.deleteAccountText}>{deletingAccount ? 'Deleting...' : 'Delete account'}</Text>
-            </Pressable>
-          </View>
+            <Button label={deletingAccount ? 'Deleting...' : 'Delete account'} onPress={onConfirmDeleteAccount} disabled={deletingAccount} variant="danger" style={styles.deleteAccountBtn} />
+          </Card>
         </View>
 
         <TouchableOpacity onPress={onLogout} style={styles.logoutBtn} activeOpacity={0.7}>

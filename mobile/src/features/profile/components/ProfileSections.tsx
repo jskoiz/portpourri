@@ -1,6 +1,7 @@
 import React from 'react';
-import { Pressable, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Card, Chip } from '../../../design/primitives';
 import { profileStyles as styles } from './profile.styles';
 
 export function TagPill({
@@ -17,17 +18,15 @@ export function TagPill({
   selected: boolean;
 }) {
   return (
-    <Pressable
-      onPress={interactive ? onPress : undefined}
-      style={[
-        styles.tagPill,
-        selected
-          ? { backgroundColor: color + '22', borderColor: color + '70' }
-          : { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.07)' },
-      ]}
-    >
-      <Text style={[styles.tagPillText, { color: selected ? color : 'rgba(240,246,252,0.35)' }]}>{label}</Text>
-    </Pressable>
+    <Chip
+      onPress={onPress}
+      label={label}
+      active={selected}
+      accentColor={color}
+      interactive={interactive}
+      style={styles.tagPill as any}
+      textStyle={styles.tagPillText as any}
+    />
   );
 }
 
@@ -64,51 +63,3 @@ export function EditableField({
     </View>
   );
 }
-
-export function ProfileHero({
-  primaryPhoto,
-  profile,
-}: {
-  primaryPhoto?: string;
-  profile: any;
-}) {
-  return (
-    <View style={styles.hero}>
-      <View style={styles.avatarGlowWrap}>
-        <LinearGradient colors={['#7C6AF7', '#34D399']} style={styles.avatarGlowRing}>
-          <View style={styles.avatarInnerWrap}>
-            {/* eslint-disable-next-line @typescript-eslint/no-require-imports */}
-            <TouchableOpacity activeOpacity={1}>
-              <Text />
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
-      </View>
-      <Text style={styles.heroName}>
-        {profile.firstName}
-        {profile.age ? `, ${profile.age}` : ''}
-      </Text>
-      <View style={styles.intentBadge}>
-        <Text style={styles.intentBadgeText}>🏃 Active Mover</Text>
-      </View>
-      <Text style={styles.heroLocation}>📍 {profile.profile?.city || 'Location not set'}</Text>
-      <View style={styles.ambientStats}>
-        <View style={styles.ambientStat}>
-          <Text style={[styles.ambientStatNum, { color: '#7C6AF7' }]}>12</Text>
-          <Text style={styles.ambientStatLabel}>matches</Text>
-        </View>
-        <View style={styles.ambientStatDot} />
-        <View style={styles.ambientStat}>
-          <Text style={[styles.ambientStatNum, { color: '#34D399' }]}>8</Text>
-          <Text style={styles.ambientStatLabel}>activities</Text>
-        </View>
-        <View style={styles.ambientStatDot} />
-        <View style={styles.ambientStat}>
-          <Text style={[styles.ambientStatNum, { color: '#F59E0B' }]}>5</Text>
-          <Text style={styles.ambientStatLabel}>connections</Text>
-        </View>
-      </View>
-    </View>
-  );
-}
-

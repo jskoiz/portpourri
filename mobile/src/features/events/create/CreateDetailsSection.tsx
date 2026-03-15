@@ -1,6 +1,7 @@
 import React from 'react';
 import { Controller, type Control } from 'react-hook-form';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { Input } from '../../../design/primitives';
 import type { CreateEventFormValues } from '../schema';
 import { createStyles as styles } from './create.styles';
 
@@ -33,10 +34,9 @@ export function CreateDetailsSection({
           control={control}
           name="where"
           render={({ field: { onBlur, onChange, value } }) => (
-            <TextInput
+            <Input
               style={styles.textInput}
               placeholder="Runyon Canyon, Venice Beach..."
-              placeholderTextColor="rgba(240,246,252,0.38)"
               value={value}
               onBlur={onBlur}
               onChangeText={(nextValue) => {
@@ -82,10 +82,9 @@ export function CreateDetailsSection({
           control={control}
           name="note"
           render={({ field: { onBlur, onChange, value } }) => (
-            <TextInput
+            <Input
               style={[styles.textInput, styles.textArea]}
               placeholder="Easy pace, bring water, no experience needed..."
-              placeholderTextColor="rgba(240,246,252,0.38)"
               value={value}
               onBlur={onBlur}
               onChangeText={(nextValue) => {
@@ -94,7 +93,6 @@ export function CreateDetailsSection({
               }}
               multiline
               numberOfLines={3}
-              textAlignVertical="top"
               onFocus={noteInputFocus}
               blurOnSubmit
             />
@@ -105,4 +103,3 @@ export function CreateDetailsSection({
     </>
   );
 }
-

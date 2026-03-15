@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
+import { Card, Chip } from '../../../design/primitives';
 import { createStyles as styles } from './create.styles';
 
 export function CreatePlanSummaryCard({
@@ -16,7 +17,7 @@ export function CreatePlanSummaryCard({
   where: string;
 }) {
   return (
-    <View style={styles.planCard}>
+    <Card style={styles.planCard}>
       <View style={styles.planHeader}>
         <Text style={styles.planTitle}>Build the plan</Text>
         <Text style={[styles.planStepCount, { color: selectedColor }]}>
@@ -25,22 +26,19 @@ export function CreatePlanSummaryCard({
       </View>
       <View style={styles.planRow}>
         <View style={[styles.planPill, selectedActivity && styles.planPillActive]}>
-          <Text style={[styles.planPillLabel, selectedActivity && styles.planPillLabelActive]}>
-            {selectedActivity || 'Pick activity'}
-          </Text>
+          <Chip label={selectedActivity || 'Pick activity'} active={Boolean(selectedActivity)} interactive={false} />
         </View>
-        <View style={[styles.planPill, selectedWhen && selectedTime && styles.planPillActive]}>
-          <Text style={[styles.planPillLabel, selectedWhen && selectedTime && styles.planPillLabelActive]}>
-            {selectedWhen && selectedTime ? `${selectedWhen} / ${selectedTime}` : 'Choose timing'}
-          </Text>
+        <View style={styles.planPill}>
+          <Chip
+            label={selectedWhen && selectedTime ? `${selectedWhen} / ${selectedTime}` : 'Choose timing'}
+            active={Boolean(selectedWhen && selectedTime)}
+            interactive={false}
+          />
         </View>
-        <View style={[styles.planPill, where.trim() && styles.planPillActive]}>
-          <Text style={[styles.planPillLabel, where.trim() && styles.planPillLabelActive]}>
-            {where.trim() || 'Add location'}
-          </Text>
+        <View style={styles.planPill}>
+          <Chip label={where.trim() || 'Add location'} active={Boolean(where.trim())} interactive={false} />
         </View>
       </View>
-    </View>
+    </Card>
   );
 }
-

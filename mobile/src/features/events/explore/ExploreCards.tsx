@@ -2,8 +2,8 @@ import React from 'react';
 import { Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { EventSummary } from '../../../api/types';
-import AppButton from '../../../components/ui/AppButton';
 import AppIcon from '../../../components/ui/AppIcon';
+import { Button, Card, Chip } from '../../../design/primitives';
 import { ACTIVITY_SPOTS, COMMUNITY_POSTS } from './explore.data';
 import { getEventMeta, formatEventDate } from './explore.helpers';
 import { exploreStyles as styles } from './explore.styles';
@@ -24,7 +24,8 @@ export function EventCard({
   const statusLabel = isHostedByYou ? 'Hosted by you' : event.joined ? 'Going' : null;
 
   return (
-    <Pressable style={styles.eventCard} onPress={onOpen}>
+    <Card style={styles.eventCard}>
+      <Pressable onPress={onOpen}>
       <LinearGradient
         colors={[...meta.gradientColors, 'rgba(13,17,23,0.95)']}
         locations={[0, 0.45, 1]}
@@ -39,14 +40,10 @@ export function EventCard({
           {(event.category || statusLabel) && (
             <View style={styles.bannerBadgeRow}>
               {!!event.category && (
-                <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryBadgeText}>{event.category.toUpperCase()}</Text>
-                </View>
+                <Chip label={event.category.toUpperCase()} active interactive={false} style={styles.categoryBadge as any} textStyle={styles.categoryBadgeText as any} />
               )}
               {statusLabel ? (
-                <View style={[styles.categoryBadge, styles.stateBadge]}>
-                  <Text style={styles.categoryBadgeText}>{statusLabel.toUpperCase()}</Text>
-                </View>
+                <Chip label={statusLabel.toUpperCase()} active interactive={false} style={[styles.categoryBadge, styles.stateBadge] as any} textStyle={styles.categoryBadgeText as any} />
               ) : null}
             </View>
           )}
@@ -69,29 +66,30 @@ export function EventCard({
         </View>
 
         <View style={styles.eventActions}>
-          <AppButton
+          <Button
             label={event.joined ? 'View again' : 'View event'}
             onPress={onOpen}
             variant={event.joined ? 'secondary' : 'accent'}
             style={styles.joinBtn}
           />
-          <AppButton label="Share" onPress={onInvite} variant="ghost" style={styles.inviteBtn} />
+          <Button label="Share" onPress={onInvite} variant="ghost" style={styles.inviteBtn} />
         </View>
       </View>
-    </Pressable>
+      </Pressable>
+    </Card>
   );
 }
 
 export function SpotCard({ spot }: { spot: (typeof ACTIVITY_SPOTS)[number] }) {
   return (
-    <View style={[styles.spotCard, { borderColor: spot.color + '30' }]}>
+    <Card style={[styles.spotCard, { borderColor: spot.color + '30' }] as any}>
       <View style={[styles.spotIconWrap, { backgroundColor: spot.color + '18' }]}>
         <AppIcon name={spot.icon} size={18} color={spot.color} />
       </View>
       <Text style={styles.spotName} numberOfLines={1}>{spot.name}</Text>
       <Text style={styles.spotType}>{spot.type}</Text>
       <Text style={[styles.spotDistance, { color: spot.color }]}>{spot.distance}</Text>
-    </View>
+    </Card>
   );
 }
 
@@ -103,8 +101,7 @@ export function CommunityCard({
   post: (typeof COMMUNITY_POSTS)[number];
 }) {
   return (
-    <View style={styles.communityCard}>
-      <View style={[styles.communityAccentStrip, { backgroundColor: post.color }]} />
+    <Card style={styles.communityCard} accent={post.color}>
       <View style={styles.communityInner}>
         <View style={styles.communityHeader}>
           <View style={[styles.avatar, { backgroundColor: post.color + '25', borderColor: post.color + '50' }]}>
@@ -112,9 +109,7 @@ export function CommunityCard({
           </View>
           <View style={styles.communityMeta}>
             <Text style={styles.communityUser}>{post.user}</Text>
-            <View style={[styles.activityPill, { backgroundColor: post.color + '18', borderColor: post.color + '40' }]}>
-              <Text style={[styles.activityPillText, { color: post.color }]}>{post.activity}</Text>
-            </View>
+            <Chip label={post.activity} active interactive={false} accentColor={post.color} style={[styles.activityPill, { backgroundColor: post.color + '18', borderColor: post.color + '40' }] as any} textStyle={[styles.activityPillText, { color: post.color }] as any} />
           </View>
           <View style={styles.spotsBadge}>
             <Text style={styles.spotsBadgeText}>{post.spots} open</Text>
@@ -129,7 +124,7 @@ export function CommunityCard({
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </Card>
   );
 }
 
@@ -146,4 +141,3 @@ export function SpotsRow({
     </ScrollView>
   );
 }
-

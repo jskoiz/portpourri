@@ -5,7 +5,7 @@ import type { User } from '../../../api/types';
 import SwipeDeck from '../../../components/SwipeDeck';
 import MatchAnimation from '../../../components/MatchAnimation';
 import AppBackdrop from '../../../components/ui/AppBackdrop';
-import AppState from '../../../components/ui/AppState';
+import { StatePanel } from '../../../design/primitives';
 import { HomeHero } from './HomeHero';
 import { HomeQuickFilters } from './HomeQuickFilters';
 import { DiscoveryFilterSheet } from './DiscoveryFilterSheet';
@@ -93,7 +93,7 @@ export function HomeScreenContent({
 
       <View style={styles.deckArea}>
         {feed.length === 0 ? (
-          <AppState
+          <StatePanel
             title="You're all caught up"
             description="Pull again in a bit or explore events nearby."
             actionLabel="Refresh"

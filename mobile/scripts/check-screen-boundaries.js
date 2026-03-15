@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..', 'src', 'screens');
+const featuresRoot = path.resolve(__dirname, '..', 'src', 'features');
 const files = fs
   .readdirSync(root)
   .filter((file) => file.endsWith('.tsx'))
@@ -36,6 +37,38 @@ for (const file of files) {
         `${path.relative(path.resolve(__dirname, '..'), file)} exceeds ${maxTargetScreenLines} lines (${lineCount})`,
       );
     }
+  }
+}
+
+const featureFiles = [];
+
+function collectFeatureFiles(directory) {
+  const entries = fs.readdirSync(directory, { withFileTypes: true });
+  for (const entry of entries) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      collectFeatureFiles(entryPath);
+      continue;
+    }
+    if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) {
+      featureFiles.push(entryPath);
+    }
+  }
+}
+
+collectFeatureFiles(featuresRoot);
+
+for (const file of featureFiles) {
+  const content = fs.readFileSync(file, 'utf8');
+  if (
+    content.includes("components/ui/AppButton") ||
+    content.includes("components/ui/AppInput") ||
+    content.includes("components/ui/AppCard") ||
+    content.includes("components/ui/AppState")
+  ) {
+    violations.push(
+      `${path.relative(path.resolve(__dirname, '..'), file)} imports legacy ui wrapper instead of design primitive`,
+    );
   }
 }
 

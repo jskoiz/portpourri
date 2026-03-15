@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AppNotificationButton from '../../../components/ui/AppNotificationButton';
+import { Card } from '../../../design/primitives';
 import { useTheme } from '../../../theme/useTheme';
 import { homeStyles as styles } from './home.styles';
 
@@ -29,7 +30,7 @@ export function HomeHero({
 
   return (
     <View style={styles.topBar}>
-      <View
+      <Card
         style={[
           styles.heroPanel,
           { backgroundColor: theme.surfaceGlass, borderColor: theme.border },
@@ -70,8 +71,7 @@ export function HomeHero({
             </Text>
           </View>
         </View>
-      </View>
+      </Card>
     </View>
   );
 }
-

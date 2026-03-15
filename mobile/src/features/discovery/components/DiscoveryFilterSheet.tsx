@@ -1,15 +1,6 @@
 import React from 'react';
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import AppButton from '../../../components/ui/AppButton';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, View } from 'react-native';
+import { Button, Chip } from '../../../design/primitives';
 import { homeStyles as styles } from './home.styles';
 import {
   availabilityOptions,
@@ -28,19 +19,14 @@ function ModalFilterPill({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <Chip
       onPress={onPress}
-      style={[styles.filterPill, active ? styles.filterPillActive : styles.filterPillInactive]}
-    >
-      <Text
-        style={[
-          styles.filterPillText,
-          { color: active ? '#FFFFFF' : 'rgba(255,255,255,0.5)', textTransform: 'capitalize' },
-        ]}
-      >
-        {label}
-      </Text>
-    </Pressable>
+      label={label}
+      active={active}
+      accentColor="#7C6AF7"
+      style={[styles.filterPill, active ? styles.filterPillActive : styles.filterPillInactive] as any}
+      textStyle={[styles.filterPillText, { textTransform: 'capitalize' }] as any}
+    />
   );
 }
 
@@ -116,9 +102,9 @@ export function DiscoveryFilterSheet({
           <View style={styles.pillWrap}>
             {goalOptions.map((goal) => (
               <ModalFilterPill
+                active={state.goals.includes(goal)}
                 key={goal}
                 label={goal}
-                active={state.goals.includes(goal)}
                 onPress={() => onChangeGoals(goal)}
               />
             ))}
@@ -128,9 +114,9 @@ export function DiscoveryFilterSheet({
           <View style={styles.pillWrap}>
             {intensityOptions.map((option) => (
               <ModalFilterPill
+                active={state.intensity.includes(option)}
                 key={option}
                 label={option}
-                active={state.intensity.includes(option)}
                 onPress={() => onChangeIntensity(option)}
               />
             ))}
@@ -140,21 +126,20 @@ export function DiscoveryFilterSheet({
           <View style={styles.pillWrap}>
             {availabilityOptions.map((option) => (
               <ModalFilterPill
+                active={state.availability.includes(option)}
                 key={option}
                 label={option}
-                active={state.availability.includes(option)}
                 onPress={() => onChangeAvailability(option)}
               />
             ))}
           </View>
 
           <View style={styles.modalActions}>
-            <AppButton label="Undo swipe" onPress={onUndoSwipe} variant="ghost" style={{ flex: 1 }} />
-            <AppButton label="Apply" onPress={onApply} variant="primary" style={{ flex: 1 }} />
+            <Button label="Undo swipe" onPress={onUndoSwipe} variant="ghost" style={{ flex: 1 }} />
+            <Button label="Apply" onPress={onApply} variant="primary" style={{ flex: 1 }} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );
 }
-

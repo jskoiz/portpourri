@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import AppIcon from '../../../components/ui/AppIcon';
+import { Chip } from '../../../design/primitives';
 import { homeStyles as styles } from './home.styles';
 import { QUICK_FILTERS, type QuickFilterKey } from './discoveryFilters';
 
@@ -46,19 +47,18 @@ export function HomeQuickFilters({
           const active = activeQuickFilter === filter.id;
 
           return (
-            <Pressable
+            <Chip
               key={filter.id}
               onPress={() => onPressFilter(filter.id)}
-              style={[styles.filterPill, active ? styles.filterPillActive : styles.filterPillInactive]}
-            >
-              <Text style={[styles.filterPillText, { color: active ? '#FFFFFF' : 'rgba(255,255,255,0.45)' }]}>
-                {filter.label}
-              </Text>
-            </Pressable>
+              style={[styles.filterPill, active ? styles.filterPillActive : styles.filterPillInactive] as any}
+              label={filter.label}
+              active={active}
+              accentColor="#7C6AF7"
+              textStyle={styles.filterPillText as any}
+            />
           );
         })}
       </ScrollView>
     </View>
   );
 }
-

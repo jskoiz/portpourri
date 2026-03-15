@@ -1,6 +1,7 @@
 import React from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import AppIcon from '../../../components/ui/AppIcon';
+import { Input } from '../../../design/primitives';
 import { chatStyles as styles } from './chat.styles';
 
 export function ChatComposer({
@@ -18,19 +19,16 @@ export function ChatComposer({
 }) {
   return (
     <View style={[styles.inputBar, { backgroundColor: theme.surfaceGlass, borderTopColor: theme.border }]}>
-      <TextInput
+      <Input
         style={[
           styles.input,
           {
-            backgroundColor: theme.surfaceElevated,
-            borderColor: theme.border,
             color: theme.textPrimary,
           },
         ]}
         value={message}
         onChangeText={onChangeMessage}
         placeholder="Say something…"
-        placeholderTextColor={theme.textMuted}
         editable={!sending}
         returnKeyType="send"
         onSubmitEditing={onSend}
@@ -55,4 +53,3 @@ export function ChatComposer({
     </View>
   );
 }
-

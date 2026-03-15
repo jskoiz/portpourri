@@ -1,8 +1,8 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { EventSummary } from '../../../api/types';
-import AppButton from '../../../components/ui/AppButton';
 import AppIcon from '../../../components/ui/AppIcon';
+import { Button, Card } from '../../../design/primitives';
 import { createStyles as styles } from './create.styles';
 import { formatCreatedEventMeta } from './create.helpers';
 
@@ -18,7 +18,7 @@ export function CreateSuccessCard({
   onViewEvent: () => void;
 }) {
   return (
-    <View style={styles.successCard}>
+    <Card style={styles.successCard}>
       <View style={styles.successHeader}>
         <View style={styles.successIconWrap}>
           <AppIcon name="check" size={18} color="#34D399" />
@@ -34,14 +34,13 @@ export function CreateSuccessCard({
       </View>
 
       <View style={styles.successActions}>
-        <AppButton label="View event" onPress={onViewEvent} variant="accent" style={styles.successActionButton} />
-        <AppButton label="Share" onPress={onShare} variant="ghost" style={styles.successActionButton} />
+        <Button label="View event" onPress={onViewEvent} variant="accent" style={styles.successActionButton} />
+        <Button label="Share" onPress={onShare} variant="ghost" style={styles.successActionButton} />
       </View>
 
       <Pressable onPress={onClear} style={({ pressed }) => [styles.successSecondaryAction, { opacity: pressed ? 0.82 : 1 }]}>
         <Text style={styles.successSecondaryActionText}>Create another</Text>
       </Pressable>
-    </View>
+    </Card>
   );
 }
-

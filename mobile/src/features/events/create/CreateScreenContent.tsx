@@ -3,7 +3,7 @@ import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Control, FieldErrors } from 'react-hook-form';
 import type { EventSummary } from '../../../api/types';
-import AppButton from '../../../components/ui/AppButton';
+import { Button } from '../../../design/primitives';
 import type { CreateEventFormValues } from '../schema';
 import { CreateActivityPicker } from './CreateActivityPicker';
 import { CreateDetailsSection } from './CreateDetailsSection';
@@ -131,7 +131,7 @@ export function CreateScreenContent({
             />
           ) : null}
 
-          <AppButton
+          <Button
             label={isSubmitting ? 'Posting...' : canPost ? `Post ${selectedActivity}` : 'Finish the plan to post'}
             onPress={onPost}
             loading={isSubmitting}
@@ -144,4 +144,3 @@ export function CreateScreenContent({
     </SafeAreaView>
   );
 }
-

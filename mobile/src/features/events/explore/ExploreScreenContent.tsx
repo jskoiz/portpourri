@@ -3,7 +3,7 @@ import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { EventSummary } from '../../../api/types';
 import AppBackdrop from '../../../components/ui/AppBackdrop';
-import AppState from '../../../components/ui/AppState';
+import { StatePanel } from '../../../design/primitives';
 import { ACTIVITY_SPOTS, COMMUNITY_POSTS, type ExploreCategory } from './explore.data';
 import { EventCard, CommunityCard, SpotsRow } from './ExploreCards';
 import { ExploreCategoryBar } from './ExploreCategoryBar';
@@ -78,11 +78,11 @@ export function ExploreScreenContent({
               </TouchableOpacity>
             </View>
             {isLoading ? (
-              <AppState title="Loading events" loading />
+              <StatePanel title="Loading events" loading />
             ) : errorMessage ? (
-              <AppState title="Couldn't load events" description={errorMessage} actionLabel="Try again" onAction={onRefresh} isError />
+              <StatePanel title="Couldn't load events" description={errorMessage} actionLabel="Try again" onAction={onRefresh} isError />
             ) : events.length === 0 ? (
-              <AppState
+              <StatePanel
                 title="No matching events yet"
                 description={getEventEmptyDescription(activeCategory)}
                 actionLabel="Create event"
@@ -133,4 +133,3 @@ export function ExploreScreenContent({
     </SafeAreaView>
   );
 }
-

@@ -1,36 +1,8 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Text, View } from 'react-native';
+import { Chip } from '../../../design/primitives';
 import { createStyles as styles } from './create.styles';
 import { SKILL_OPTIONS, TIME_OPTIONS, WHEN_OPTIONS } from './create.helpers';
-
-function Pill({
-  active,
-  accentColor,
-  label,
-  onPress,
-}: {
-  active: boolean;
-  accentColor: string;
-  label: string;
-  onPress: () => void;
-}) {
-  if (active) {
-    return (
-      <Pressable onPress={onPress} style={styles.pillWrap}>
-        <LinearGradient colors={[accentColor + 'CC', accentColor + '88']} style={styles.pillActive}>
-          <Text style={styles.pillTextActive}>{label}</Text>
-        </LinearGradient>
-      </Pressable>
-    );
-  }
-
-  return (
-    <Pressable onPress={onPress} style={styles.pillInactive}>
-      <Text style={styles.pillTextInactive}>{label}</Text>
-    </Pressable>
-  );
-}
 
 function SectionLabel({ label }: { label: string }) {
   return <Text style={styles.sectionLabel}>{label}</Text>;
@@ -59,7 +31,7 @@ export function CreateTimingSection({
         <SectionLabel label="When?" />
         <View style={styles.pillRow}>
           {WHEN_OPTIONS.map((option) => (
-            <Pill
+            <Chip
               key={option}
               label={option}
               active={selectedWhen === option}
@@ -70,7 +42,7 @@ export function CreateTimingSection({
         </View>
         <View style={[styles.pillRow, { marginTop: 12 }]}>
           {TIME_OPTIONS.map((option) => (
-            <Pill
+            <Chip
               key={option}
               label={option}
               active={selectedTime === option}
@@ -86,7 +58,7 @@ export function CreateTimingSection({
         <SectionLabel label="Skill level" />
         <View style={styles.pillRow}>
           {SKILL_OPTIONS.map((option) => (
-            <Pill
+            <Chip
               key={option}
               label={option}
               active={skillLevel === option}
@@ -99,4 +71,3 @@ export function CreateTimingSection({
     </>
   );
 }
-
