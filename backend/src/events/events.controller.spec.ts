@@ -30,6 +30,20 @@ describe('EventsController', () => {
     controller = module.get<EventsController>(EventsController);
   });
 
+  it('defaults pagination at the controller boundary', async () => {
+    eventsServiceMock.list.mockResolvedValue([]);
+
+    await expect(controller.list(undefined, undefined)).resolves.toEqual([]);
+    expect(eventsServiceMock.list).toHaveBeenCalledWith(undefined, 20, 0);
+  });
+
+  it('parses provided pagination params before delegating', async () => {
+    eventsServiceMock.list.mockResolvedValue([]);
+
+    await expect(controller.list('12', '4')).resolves.toEqual([]);
+    expect(eventsServiceMock.list).toHaveBeenCalledWith(undefined, 12, 4);
+  });
+
   it('delegates event detail lookups with the authenticated user id', async () => {
     const req = {
       user: { id: 'user-1', email: 'u@example.com' },
