@@ -27,12 +27,13 @@ export class VerificationService {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     });
 
-    // Scaffold only: return code in response until real provider integrations exist.
+    // In production, dispatch via real SMS/email provider and never return the code.
+    const isDev = process.env.NODE_ENV !== 'production';
     return {
       started: true,
       channel,
       maskedTarget: this.maskTarget(channel, target),
-      devCode: code,
+      ...(isDev ? { devCode: code } : {}),
     };
   }
 

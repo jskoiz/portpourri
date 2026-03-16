@@ -1,4 +1,4 @@
-import { IsEnum, IsString } from 'class-validator';
+import { IsEnum, IsString, MaxLength } from 'class-validator';
 import { VerificationChannel } from '../common/enums';
 
 export class StartVerificationDto {
@@ -6,6 +6,7 @@ export class StartVerificationDto {
   channel: VerificationChannel;
 
   @IsString()
+  @MaxLength(254)
   target: string;
 }
 
@@ -14,5 +15,6 @@ export class ConfirmVerificationDto {
   channel: VerificationChannel;
 
   @IsString()
+  @MaxLength(10)
   code: string;
 }
