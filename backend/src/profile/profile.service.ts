@@ -8,107 +8,77 @@ export class ProfileService {
   private readonly logger = new Logger(ProfileService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private photoStorage: PhotoStorageService,
+    private readonly prisma: PrismaService,
+    private readonly photoStorage: PhotoStorageService,
   ) {}
 
   async updateFitnessProfile(userId: string, data: UpdateFitnessProfileDto) {
     // Strip userId from caller-supplied data to prevent overwriting the relation key
     const { userId: _ignored, ...safeData } = data;
-    try {
-      const profile = await this.prisma.$transaction(async (tx) => {
-        const updatedProfile = await tx.userFitnessProfile.upsert({
-          where: { userId },
-          update: {
-            ...safeData,
-          },
-          create: {
-            userId,
-            ...safeData,
-          },
-        });
-
-        await tx.user.update({
-          where: { id: userId },
-          data: { isOnboarded: true },
-        });
-
-        return updatedProfile;
+    const profile = await this.prisma.$transaction(async (tx) => {
+      const updatedProfile = await tx.userFitnessProfile.upsert({
+        where: { userId },
+        update: {
+          ...safeData,
+        },
+        create: {
+          userId,
+          ...safeData,
+        },
       });
 
-      return profile;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(
-        `Failed updating fitness profile for userId=${userId}: ${message}`,
-        stack,
-      );
-      throw error;
-    }
+      await tx.user.update({
+        where: { id: userId },
+        data: { isOnboarded: true },
+      });
+
+      return updatedProfile;
+    });
+
+    return profile;
   }
 
   async updateProfile(userId: string, data: UpdateProfileDto) {
     // Strip userId from caller-supplied data to prevent overwriting the relation key
     const { userId: _ignored, ...safeData } = data;
-    try {
-      return await this.prisma.userProfile.upsert({
-        where: { userId },
-        update: { ...safeData },
-        create: { userId, ...safeData },
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(
-        `Failed updating profile for userId=${userId}: ${message}`,
-        stack,
-      );
-      throw error;
-    }
+    return await this.prisma.userProfile.upsert({
+      where: { userId },
+      update: { ...safeData },
+      create: { userId, ...safeData },
+    });
   }
 
   async getProfile(userId: string) {
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          fitnessProfile: true,
-          profile: true,
-          photos: {
-            where: { isHidden: false },
-            orderBy: { sortOrder: 'asc' },
-          },
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        fitnessProfile: true,
+        profile: true,
+        photos: {
+          where: { isHidden: false },
+          orderBy: { sortOrder: 'asc' },
         },
-      });
+      },
+    });
 
-      if (!user) {
-        this.logger.warn(`Profile not found for userId=${userId}`);
-        return null;
-      }
-
-      // Strip sensitive auth fields before returning — passwordHash must never
-      // leave the service layer (affects both own-profile and getProfileById).
-      const {
-        passwordHash: _ph,
-        providerId: _pid,
-        authProvider: _ap,
-        ...safeUser
-      } = user;
-
-      return {
-        ...safeUser,
-        age: this.calculateAge(user.birthdate),
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(
-        `Failed loading profile for userId=${userId}: ${message}`,
-        stack,
-      );
-      throw error;
+    if (!user) {
+      this.logger.warn(`Profile not found for userId=${userId}`);
+      return null;
     }
+
+    // Strip sensitive auth fields before returning — passwordHash must never
+    // leave the service layer (affects both own-profile and getProfileById).
+    const {
+      passwordHash: _ph,
+      providerId: _pid,
+      authProvider: _ap,
+      ...safeUser
+    } = user;
+
+    return {
+      ...safeUser,
+      age: this.calculateAge(user.birthdate),
+    };
   }
 
   async uploadPhoto(userId: string, file: Express.Multer.File) {

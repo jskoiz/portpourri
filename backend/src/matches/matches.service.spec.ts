@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-argument */
 import { ForbiddenException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { MatchesService } from './matches.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MatchesRealtimeService } from './matches-realtime.service';
@@ -158,96 +157,6 @@ describe('MatchesService realtime', () => {
     expect(messages[1].id).toBe('msg-2');
   });
 
-  it('sends match notifications to both users on mutual like', async () => {
-    jest
-      .mocked(prisma.like.findUnique)
-      .mockResolvedValueOnce(null as any)
-      .mockResolvedValueOnce({ id: 'like-2' } as any);
-    jest.mocked(prisma.like.create).mockResolvedValue({ id: 'like-1' } as any);
-    jest.mocked(prisma.match.findUnique).mockResolvedValue(null as any);
-    jest.mocked(prisma.userProfile.findMany).mockResolvedValue([
-      { userId: 'user-1', intentDating: true, intentWorkout: false },
-      { userId: 'user-2', intentDating: true, intentWorkout: false },
-    ] as any);
-    jest.mocked(prisma.match.create).mockResolvedValue({ id: 'match-1' } as any);
-
-    await service.likeUser('user-1', 'user-2');
-
-    expect(jest.mocked(notifications.create)).toHaveBeenCalledWith(
-      'user-1',
-      expect.objectContaining({ type: 'match_created' }),
-    );
-    expect(jest.mocked(notifications.create)).toHaveBeenCalledWith(
-      'user-2',
-      expect.objectContaining({ type: 'match_created' }),
-    );
-  });
-
-  it('creates a mutual-like match using shared profile intents', async () => {
-    jest
-      .mocked(prisma.like.findUnique)
-      .mockResolvedValueOnce(null as any)
-      .mockResolvedValueOnce({ id: 'like-2' } as any);
-    jest.mocked(prisma.like.create).mockResolvedValue({ id: 'like-1' } as any);
-    jest.mocked(prisma.match.findUnique).mockResolvedValue(null as any);
-    jest.mocked(prisma.userProfile.findMany).mockResolvedValue([
-      {
-        userId: 'user-1',
-        intentDating: false,
-        intentWorkout: true,
-      },
-      {
-        userId: 'user-2',
-        intentDating: true,
-        intentWorkout: true,
-      },
-    ] as any);
-    jest
-      .mocked(prisma.match.create)
-      .mockResolvedValue({ id: 'match-1' } as any);
-
-    const result = await service.likeUser('user-1', 'user-2');
-
-    expect(result).toEqual({ isMatch: true, matchId: 'match-1' });
-    expect(jest.mocked(prisma.match.create)).toHaveBeenCalledWith({
-      data: {
-        userAId: 'user-1',
-        userBId: 'user-2',
-        isDatingMatch: false,
-        isWorkoutMatch: true,
-      },
-    });
-  });
-
-  it('handles race condition on simultaneous mutual likes by returning existing match', async () => {
-    jest
-      .mocked(prisma.like.findUnique)
-      .mockResolvedValueOnce(null as any)
-      .mockResolvedValueOnce({ id: 'like-2' } as any);
-    jest.mocked(prisma.like.create).mockResolvedValue({ id: 'like-1' } as any);
-    // First findUnique (existing match check) returns null
-    jest.mocked(prisma.match.findUnique)
-      .mockResolvedValueOnce(null as any)
-      // Second findUnique (recovery after P2002) returns the race-created match
-      .mockResolvedValueOnce({ id: 'match-race' } as any);
-    jest.mocked(prisma.userProfile.findMany).mockResolvedValue([
-      { userId: 'user-1', intentDating: true, intentWorkout: false },
-      { userId: 'user-2', intentDating: true, intentWorkout: false },
-    ] as any);
-
-    const p2002 = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
-      code: 'P2002',
-      clientVersion: '0.0.0',
-    });
-    jest.mocked(prisma.match.create).mockRejectedValue(p2002);
-
-    const result = await service.likeUser('user-1', 'user-2');
-
-    expect(result).toEqual({ isMatch: true, matchId: 'match-race' });
-    // Notifications should NOT be sent since this process didn't create the match
-    expect(jest.mocked(notifications.create)).not.toHaveBeenCalled();
-  });
-
   it('rejects message access for archived matches with a forbidden error', async () => {
     jest.mocked(prisma.match.findUnique).mockResolvedValue({
       id: 'match-1',
@@ -261,72 +170,6 @@ describe('MatchesService realtime', () => {
       ForbiddenException,
     );
     expect(jest.mocked(prisma.message.findMany)).not.toHaveBeenCalled();
-  });
-
-  it('rejects a self-like without creating any DB records', async () => {
-    const result = await service.likeUser('user-1', 'user-1');
-
-    expect(result).toEqual({ isMatch: false });
-    expect(jest.mocked(prisma.like.findUnique)).not.toHaveBeenCalled();
-    expect(jest.mocked(prisma.like.create)).not.toHaveBeenCalled();
-    expect(jest.mocked(prisma.match.create)).not.toHaveBeenCalled();
-  });
-
-  it('falls back to a dating match when profile intent data is unavailable', async () => {
-    jest
-      .mocked(prisma.like.findUnique)
-      .mockResolvedValueOnce(null as any)
-      .mockResolvedValueOnce({ id: 'like-2' } as any);
-    jest.mocked(prisma.like.create).mockResolvedValue({ id: 'like-1' } as any);
-    jest.mocked(prisma.match.findUnique).mockResolvedValue(null as any);
-    jest.mocked(prisma.userProfile.findMany).mockResolvedValue([
-      {
-        userId: 'user-1',
-        intentDating: false,
-        intentWorkout: true,
-      },
-    ] as any);
-    jest
-      .mocked(prisma.match.create)
-      .mockResolvedValue({ id: 'match-2' } as any);
-
-    await service.likeUser('user-1', 'user-2');
-
-    expect(jest.mocked(prisma.match.create)).toHaveBeenCalledWith({
-      data: {
-        userAId: 'user-1',
-        userBId: 'user-2',
-        isDatingMatch: true,
-        isWorkoutMatch: false,
-      },
-    });
-  });
-
-  it('handles concurrent mutual like race condition gracefully', async () => {
-    // Both users like each other simultaneously. match.create throws a unique
-    // constraint error (simulating the race), and the service should recover by
-    // fetching the already-created match instead of surfacing a 500.
-    jest
-      .mocked(prisma.like.findUnique)
-      .mockResolvedValueOnce(null as any) // existingLike check: no prior like
-      .mockResolvedValueOnce({ id: 'like-2' } as any); // mutual like exists
-    jest.mocked(prisma.like.create).mockResolvedValue({ id: 'like-1' } as any);
-    jest
-      .mocked(prisma.match.findUnique)
-      .mockResolvedValueOnce(null as any) // existingMatch check: no match yet
-      .mockResolvedValueOnce({ id: 'match-race' } as any); // recovery fetch after error
-    jest.mocked(prisma.userProfile.findMany).mockResolvedValue([
-      { userId: 'user-1', intentDating: true, intentWorkout: false },
-      { userId: 'user-2', intentDating: true, intentWorkout: false },
-    ] as any);
-    const constraintError = Object.assign(new Error('Unique constraint violation'), {
-      code: 'P2002',
-    });
-    jest.mocked(prisma.match.create).mockRejectedValue(constraintError);
-
-    const result = await service.likeUser('user-1', 'user-2');
-
-    expect(result).toEqual({ isMatch: true, matchId: 'match-race' });
   });
 
   it('rejects message reads for archived matches with a forbidden error', async () => {

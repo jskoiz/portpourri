@@ -179,7 +179,7 @@ export class EventsService {
       });
 
       if (event.host.id !== userId) {
-        this.notifications.create(event.host.id, {
+        void this.notifications.create(event.host.id, {
           type: 'event_rsvp',
           title: 'New RSVP',
           body: `Someone joined ${event.title}`,
@@ -187,7 +187,7 @@ export class EventsService {
         });
       }
 
-      this.notifications.create(userId, {
+      void this.notifications.create(userId, {
         type: 'event_reminder',
         title: 'Event joined',
         body: `You are in for ${event.title}`,
@@ -201,29 +201,21 @@ export class EventsService {
   }
 
   async myEvents(userId: string) {
-    try {
-      const rows = await this.prisma.eventRsvp.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-        include: {
-          event: {
-            include: {
-              host: { select: { id: true, firstName: true } },
-              _count: { select: { rsvps: true } },
-            },
+    const rows = await this.prisma.eventRsvp.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        event: {
+          include: {
+            host: { select: { id: true, firstName: true } },
+            _count: { select: { rsvps: true } },
           },
         },
-      });
+      },
+    });
 
-      return rows.map(({ event }) =>
-        mapEventSummary({ ...event, rsvps: [{ id: userId }] }),
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `Failed to fetch my events for userId=${userId}: ${message}`,
-      );
-      throw error;
-    }
+    return rows.map(({ event }) =>
+      mapEventSummary({ ...event, rsvps: [{ id: userId }] }),
+    );
   }
 }
