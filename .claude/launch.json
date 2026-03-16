@@ -9,6 +9,12 @@
       "autoPort": true
     },
     {
+      "name": "backend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd backend && npx nest start --watch"],
+      "port": 3010
+    },
+    {
       "name": "storybook-web",
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "cd mobile && EXPO_PUBLIC_STORYBOOK_ENABLED=true npx expo start --web --port $PORT"],

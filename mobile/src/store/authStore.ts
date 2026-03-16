@@ -1,9 +1,26 @@
 import { create } from "zustand";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 import { authApi } from "../services/api";
 import { STORAGE_KEYS } from "../constants/storage";
 import { normalizeApiError } from "../api/errors";
 import type { User } from "../api/types";
+
+// expo-secure-store has no web implementation; fall back to localStorage
+const storage = {
+  getItemAsync: (key: string) =>
+    Platform.OS === "web"
+      ? Promise.resolve(localStorage.getItem(key))
+      : SecureStore.getItemAsync(key),
+  setItemAsync: (key: string, value: string) =>
+    Platform.OS === "web"
+      ? Promise.resolve(localStorage.setItem(key, value))
+      : SecureStore.setItemAsync(key, value),
+  deleteItemAsync: (key: string) =>
+    Platform.OS === "web"
+      ? Promise.resolve(localStorage.removeItem(key))
+      : SecureStore.deleteItemAsync(key),
+};
 
 interface LoginPayload {
   email: string;
@@ -44,7 +61,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await authApi.login(data);
       const { access_token, user } = response.data;
-      await SecureStore.setItemAsync(STORAGE_KEYS.accessToken, access_token);
+      await storage.setItemAsync(STORAGE_KEYS.accessToken, access_token);
       set({ token: access_token, user });
     } catch (error) {
       throw normalizeApiError(error);
@@ -55,7 +72,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await authApi.signup(data);
       const { access_token, user } = response.data;
-      await SecureStore.setItemAsync(STORAGE_KEYS.accessToken, access_token);
+      await storage.setItemAsync(STORAGE_KEYS.accessToken, access_token);
       set({ token: access_token, user });
     } catch (error) {
       throw normalizeApiError(error);
@@ -63,7 +80,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await SecureStore.deleteItemAsync(STORAGE_KEYS.accessToken);
+    await storage.deleteItemAsync(STORAGE_KEYS.accessToken);
     get().clearSession();
   },
 
@@ -75,7 +92,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     try {
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.accessToken);
+      await storage.deleteItemAsync(STORAGE_KEYS.accessToken);
     } finally {
       get().clearSession();
     }
@@ -83,7 +100,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   loadToken: async () => {
     set({ isLoading: true });
-    const token = await SecureStore.getItemAsync(STORAGE_KEYS.accessToken);
+    const token = await storage.getItemAsync(STORAGE_KEYS.accessToken);
     if (!token) {
       set({ token: null, user: null, isLoading: false });
       return;
@@ -93,7 +110,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const response = await authApi.me(token);
       set({ token, user: response.data, isLoading: false });
     } catch {
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.accessToken);
+      await storage.deleteItemAsync(STORAGE_KEYS.accessToken);
       set({ token: null, user: null, isLoading: false });
     }
   },
