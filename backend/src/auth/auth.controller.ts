@@ -9,6 +9,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { SignupDto, LoginDto } from './auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -18,11 +19,13 @@ import type { AuthenticatedRequest } from '../common/auth-request.interface';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('signup')
   async signup(@Body() signUpDto: SignupDto) {
     return this.authService.signup(signUpDto);
   }
 
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(@Body() loginDto: LoginDto) {

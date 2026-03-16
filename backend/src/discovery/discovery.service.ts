@@ -136,8 +136,11 @@ export class DiscoveryService {
             age,
             distanceKm,
           );
+          const { profile, ...userWithoutProfile } = user;
+          const { latitude, longitude, ...safeProfile } = profile ?? {};
           return {
-            ...user,
+            ...userWithoutProfile,
+            profile: safeProfile,
             age,
             distanceKm,
             recommendationScore: score,

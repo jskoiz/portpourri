@@ -1,7 +1,6 @@
 import {
   Injectable,
   UnauthorizedException,
-  ConflictException,
   BadRequestException,
   Logger,
 } from '@nestjs/common';
@@ -141,7 +140,7 @@ export class AuthService {
       });
       if (existing) {
         this.logger.warn(`Signup conflict for email=${normalizedEmail}`);
-        throw new ConflictException('User already exists');
+        throw new BadRequestException('Unable to create account');
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -159,10 +158,7 @@ export class AuthService {
 
       return this.issueAuthToken(user);
     } catch (error) {
-      if (
-        error instanceof ConflictException ||
-        error instanceof BadRequestException
-      ) {
+      if (error instanceof BadRequestException) {
         throw error;
       }
 
