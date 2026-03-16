@@ -10,7 +10,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { EventsService } from './events.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
-import type { CreateEventInput } from './create-event.types';
+import { CreateEventDto } from './create-event.dto';
 
 @Controller('events')
 export class EventsController {
@@ -36,7 +36,7 @@ export class EventsController {
   @UseGuards(AuthGuard('jwt'))
   @Post()
   create(
-    @Body() payload: CreateEventInput,
+    @Body() payload: CreateEventDto,
     @Request() req: AuthenticatedRequest,
   ) {
     return this.eventsService.create(payload, req.user.id);

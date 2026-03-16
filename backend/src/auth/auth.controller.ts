@@ -10,7 +10,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import type { SignupDto, LoginDto } from './auth.service';
+import { SignupDto, LoginDto } from './auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
 

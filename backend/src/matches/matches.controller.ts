@@ -13,6 +13,7 @@ import { Observable } from 'rxjs';
 import { MatchesService } from './matches.service';
 import { AuthGuard } from '@nestjs/passport';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
+import { SendMessageDto } from './matches.dto';
 
 @Controller('matches')
 @UseGuards(AuthGuard('jwt'))
@@ -44,7 +45,7 @@ export class MatchesController {
   async sendMessage(
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
-    @Body() body: { content: string },
+    @Body() body: SendMessageDto,
   ) {
     return this.matchesService.sendMessage(id, req.user.id, body.content);
   }

@@ -336,7 +336,7 @@ describe('AuthService', () => {
   });
 
   it('rejects login when credentials are incomplete', async () => {
-    await expect(service.login({ email: '   ' })).rejects.toBeInstanceOf(
+    await expect(service.login({ email: '   ', password: '' })).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
     expect(jwtServiceMock.sign).not.toHaveBeenCalled();

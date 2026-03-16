@@ -15,6 +15,7 @@ import {
   NotificationType,
 } from './notifications.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
+import { EmitNotificationDto } from './notifications.dto';
 
 const VALID_TYPES = new Set<NotificationType>([
   'like_received',
@@ -59,13 +60,7 @@ export class NotificationsController {
   @Post('emit')
   emit(
     @Request() req: AuthenticatedRequest,
-    @Body()
-    body: {
-      type: string;
-      title: string;
-      body: string;
-      data?: Record<string, unknown>;
-    },
+    @Body() body: EmitNotificationDto,
   ) {
     return this.notificationsService.create(req.user.id, {
       type: toNotificationType(body.type),

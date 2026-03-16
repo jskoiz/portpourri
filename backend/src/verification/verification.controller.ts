@@ -9,6 +9,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { VerificationService } from './verification.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
+import { StartVerificationDto, ConfirmVerificationDto } from './verification.dto';
 
 @Controller('verification')
 @UseGuards(AuthGuard('jwt'))
@@ -23,7 +24,7 @@ export class VerificationController {
   @Post('start')
   start(
     @Request() req: AuthenticatedRequest,
-    @Body() body: { channel: 'email' | 'phone'; target: string },
+    @Body() body: StartVerificationDto,
   ) {
     return this.verificationService.start(
       req.user.id,
@@ -35,7 +36,7 @@ export class VerificationController {
   @Post('confirm')
   confirm(
     @Request() req: AuthenticatedRequest,
-    @Body() body: { channel: 'email' | 'phone'; code: string },
+    @Body() body: ConfirmVerificationDto,
   ) {
     return this.verificationService.confirm(
       req.user.id,

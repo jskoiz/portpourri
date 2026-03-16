@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import type { CreateEventInput } from './create-event.types';
+import type { CreateEventDto } from './create-event.dto';
 
 interface EventWithRsvps {
   rsvps?: { id: string }[];
@@ -96,7 +96,7 @@ export class EventsService {
     return mapEventSummary(event as typeof event & EventWithRsvps);
   }
 
-  async create(payload: CreateEventInput, userId: string) {
+  async create(payload: CreateEventDto, userId: string) {
     const title = payload.title?.trim();
     const location = payload.location?.trim();
     const description = payload.description?.trim();

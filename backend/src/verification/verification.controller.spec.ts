@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { VerificationController } from './verification.controller';
 import { VerificationService } from './verification.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
+import { VerificationChannel } from '../common/enums';
 
 describe('VerificationController', () => {
   let controller: VerificationController;
@@ -41,7 +42,7 @@ describe('VerificationController', () => {
     const startResult = { started: true, channel: 'email', maskedTarget: 'a***@example.com' };
     verificationServiceMock.start.mockReturnValue(startResult);
 
-    const result = controller.start(req, { channel: 'email', target: 'alice@example.com' });
+    const result = controller.start(req, { channel: VerificationChannel.Email, target: 'alice@example.com' });
 
     expect(verificationServiceMock.start).toHaveBeenCalledWith('user-1', 'email', 'alice@example.com');
     expect(result).toBe(startResult);
@@ -50,7 +51,7 @@ describe('VerificationController', () => {
   it('delegates confirm to verification service', async () => {
     verificationServiceMock.confirm.mockResolvedValue({ verified: true });
 
-    const result = await controller.confirm(req, { channel: 'email', code: '123456' });
+    const result = await controller.confirm(req, { channel: VerificationChannel.Email, code: '123456' });
 
     expect(verificationServiceMock.confirm).toHaveBeenCalledWith('user-1', 'email', '123456');
     expect(result).toEqual({ verified: true });

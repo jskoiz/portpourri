@@ -8,19 +8,9 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import type { SignupDto, LoginDto } from './auth.dto';
 
-export interface SignupDto {
-  email: string;
-  password: string;
-  firstName: string;
-  birthdate: string;
-  gender: string;
-}
-
-export interface LoginDto {
-  email?: string | null;
-  password?: string;
-}
+export type { SignupDto, LoginDto };
 
 export interface AuthResult {
   access_token: string;
