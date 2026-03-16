@@ -1,10 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
-import React from 'react';
 import { ProfileScreenContent } from '../features/profile/components/ProfileScreenContent';
 
 const meta = {
   title: 'Profile/BuildInfo',
   component: ProfileScreenContent,
+  parameters: {
+    backgrounds: { default: 'light', values: [{ name: 'light', value: '#F8F7F4' }] },
+  },
 } satisfies Meta<typeof ProfileScreenContent>;
 
 export default meta;

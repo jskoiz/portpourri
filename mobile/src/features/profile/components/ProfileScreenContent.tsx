@@ -205,10 +205,10 @@ export function ProfileScreenContent({
         <View style={styles.editBar}>
           <Pressable onPress={onSave} disabled={isSavingFitness} style={styles.editBtnWrap}>
             <LinearGradient
-              colors={editMode ? ['#7C6AF7', '#7C6AF7AA'] : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.04)']}
+              colors={editMode ? ['#7C6AF7', '#7C6AF7AA'] : ['rgba(0,0,0,0.04)', 'rgba(0,0,0,0.02)']}
               style={styles.editBtn}
             >
-              <Text style={[styles.editBtnText, { color: editMode ? '#FFFFFF' : 'rgba(240,246,252,0.6)' }]}>
+              <Text style={[styles.editBtnText, { color: editMode ? '#FFFFFF' : '#64748B' }]}>
                 {isSavingFitness || isSavingProfile ? 'Saving...' : editMode ? '✓ Save Changes' : '✏️ Edit Profile'}
               </Text>
             </LinearGradient>
@@ -265,7 +265,7 @@ export function ProfileScreenContent({
         <View style={styles.section}>
           <Text style={styles.sectionEyebrow}>Intent</Text>
           <View style={styles.tagCloud}>
-            <TagPill label="Dating" selected={intentDating} onPress={() => onSetIntentDating(!intentDating)} color="#F87171" interactive={editMode} />
+            <TagPill label="Dating" selected={intentDating} onPress={() => onSetIntentDating(!intentDating)} color="#EF4444" interactive={editMode} />
             <TagPill label="Workout" selected={intentWorkout} onPress={() => onSetIntentWorkout(!intentWorkout)} color="#7C6AF7" interactive={editMode} />
             <TagPill label="Friends" selected={intentFriends} onPress={() => onSetIntentFriends(!intentFriends)} color="#34D399" interactive={editMode} />
           </View>
