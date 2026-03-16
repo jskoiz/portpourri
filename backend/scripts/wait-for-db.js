@@ -1,4 +1,5 @@
-const net = require('net');
+const { spawnSync } = require('child_process');
+const path = require('path');
 
 const connectionString =
   process.env.DATABASE_URL ||
@@ -6,38 +7,32 @@ const connectionString =
 
 const timeoutMs = Number(process.env.DB_WAIT_TIMEOUT_MS || 30000);
 const intervalMs = Number(process.env.DB_WAIT_INTERVAL_MS || 1000);
+const repoBackendDir = path.resolve(__dirname, '..');
 
-function getTarget(connectionUrl) {
-  const url = new URL(connectionUrl);
-  return {
-    host: url.hostname || 'localhost',
-    port: Number(url.port || 5432),
-  };
+function getNpxCommand() {
+  return process.platform === 'win32' ? 'npx.cmd' : 'npx';
 }
 
-function canConnect({ host, port }) {
-  return new Promise((resolve) => {
-    const socket = net.createConnection({ host, port });
+function canRunQuery(connectionUrl) {
+  const result = spawnSync(
+    getNpxCommand(),
+    ['prisma', 'db', 'execute', '--stdin', '--url', connectionUrl],
+    {
+      cwd: repoBackendDir,
+      env: process.env,
+      input: 'SELECT 1;',
+      stdio: ['pipe', 'ignore', 'ignore'],
+    },
+  );
 
-    const finish = (ready) => {
-      socket.removeAllListeners();
-      socket.destroy();
-      resolve(ready);
-    };
-
-    socket.setTimeout(intervalMs);
-    socket.once('connect', () => finish(true));
-    socket.once('timeout', () => finish(false));
-    socket.once('error', () => finish(false));
-  });
+  return result.status === 0;
 }
 
 async function main() {
   const start = Date.now();
-  const target = getTarget(connectionString);
 
   while (Date.now() - start < timeoutMs) {
-    if (await canConnect(target)) {
+    if (canRunQuery(connectionString)) {
       console.log('Database is ready.');
       return;
     }
