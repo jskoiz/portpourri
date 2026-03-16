@@ -1,5 +1,22 @@
-import { Controller, Get, Post, UseGuards, Request, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  UseGuards,
+  Request,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiTooManyRequestsResponse,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { DiscoveryService, type DiscoveryFilters } from './discovery.service';
 import { AuthGuard } from '@nestjs/passport';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
@@ -62,10 +79,15 @@ const buildDiscoveryFilters = (
 
 @Controller('discovery')
 @UseGuards(AuthGuard('jwt'))
+@ApiTags('Discovery')
+@ApiBearerAuth()
+@ApiUnauthorizedResponse({ description: 'Authentication is required.' })
 export class DiscoveryController {
   constructor(private readonly discoveryService: DiscoveryService) {}
 
   @Get('feed')
+  @ApiOperation({ summary: 'Return the discovery feed for the current user' })
+  @ApiOkResponse({ description: 'Discovery feed returned successfully.' })
   async getFeed(
     @Request() req: AuthenticatedRequest,
     @Query() query: DiscoveryFeedQuery,
@@ -78,6 +100,9 @@ export class DiscoveryController {
 
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @Post('like/:id')
+  @ApiOperation({ summary: 'Like a discovery profile' })
+  @ApiCreatedResponse({ description: 'Profile liked successfully.' })
+  @ApiTooManyRequestsResponse({ description: 'Swipe rate limit exceeded.' })
   async likeUser(
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
@@ -87,6 +112,9 @@ export class DiscoveryController {
 
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @Post('pass/:id')
+  @ApiOperation({ summary: 'Pass on a discovery profile' })
+  @ApiCreatedResponse({ description: 'Profile passed successfully.' })
+  @ApiTooManyRequestsResponse({ description: 'Swipe rate limit exceeded.' })
   async passUser(
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
@@ -95,11 +123,15 @@ export class DiscoveryController {
   }
 
   @Post('undo')
+  @ApiOperation({ summary: 'Undo the most recent swipe action' })
+  @ApiCreatedResponse({ description: 'Last swipe undone successfully.' })
   async undoLastSwipe(@Request() req: AuthenticatedRequest) {
     return this.discoveryService.undoLastSwipe(req.user.id);
   }
 
   @Get('profile-completeness')
+  @ApiOperation({ summary: 'Return profile completeness for the current user' })
+  @ApiOkResponse({ description: 'Profile completeness returned successfully.' })
   async getProfileCompleteness(@Request() req: AuthenticatedRequest) {
     return this.discoveryService.getProfileCompleteness(req.user.id);
   }

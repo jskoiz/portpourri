@@ -16,19 +16,40 @@ import {
 } from '@nestjs/common';
 import { ProfileService } from './profile.service';
 import { AuthGuard } from '@nestjs/passport';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { UpdateFitnessProfileDto, UpdatePhotoDto, UpdateProfileDto } from './profile.dto';
+import {
+  UpdateFitnessProfileDto,
+  UpdatePhotoDto,
+  UpdateProfileDto,
+} from './profile.dto';
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 @Controller('profile')
 @UseGuards(AuthGuard('jwt'))
+@ApiTags('Profile')
+@ApiBearerAuth()
+@ApiUnauthorizedResponse({ description: 'Authentication is required.' })
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
   @Get()
+  @ApiOperation({ summary: 'Return the current user profile' })
+  @ApiOkResponse({ description: 'Profile returned successfully.' })
+  @ApiNotFoundResponse({ description: 'Profile not found.' })
   async getProfile(@Request() req: AuthenticatedRequest) {
     const profile = await this.profileService.getProfile(req.user.id);
     if (!profile) {
@@ -38,6 +59,9 @@ export class ProfileController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Return a profile by user identifier' })
+  @ApiOkResponse({ description: 'Profile returned successfully.' })
+  @ApiNotFoundResponse({ description: 'Profile not found.' })
   async getProfileById(@Param('id') id: string) {
     const profile = await this.profileService.getProfile(id);
     if (!profile) {
@@ -47,6 +71,8 @@ export class ProfileController {
   }
 
   @Put()
+  @ApiOperation({ summary: 'Update the current user profile' })
+  @ApiOkResponse({ description: 'Profile updated successfully.' })
   async updateProfile(
     @Request() req: AuthenticatedRequest,
     @Body() data: UpdateProfileDto,
@@ -55,6 +81,8 @@ export class ProfileController {
   }
 
   @Put('fitness')
+  @ApiOperation({ summary: 'Update the current user fitness profile' })
+  @ApiOkResponse({ description: 'Fitness profile updated successfully.' })
   async updateFitnessProfile(
     @Request() req: AuthenticatedRequest,
     @Body() data: UpdateFitnessProfileDto,
@@ -69,6 +97,10 @@ export class ProfileController {
       limits: { fileSize: 8 * 1024 * 1024 },
     }),
   )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload a new profile photo' })
+  @ApiCreatedResponse({ description: 'Photo uploaded successfully.' })
+  @ApiBadRequestResponse({ description: 'Photo file is missing or invalid.' })
   async uploadPhoto(
     @Request() req: AuthenticatedRequest,
     @UploadedFile() file?: Express.Multer.File,
@@ -84,6 +116,8 @@ export class ProfileController {
   }
 
   @Patch('photos/:id')
+  @ApiOperation({ summary: 'Update profile photo metadata' })
+  @ApiOkResponse({ description: 'Photo updated successfully.' })
   async updatePhoto(
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
@@ -93,6 +127,8 @@ export class ProfileController {
   }
 
   @Delete('photos/:id')
+  @ApiOperation({ summary: 'Delete a profile photo' })
+  @ApiOkResponse({ description: 'Photo deleted successfully.' })
   async deletePhoto(
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
