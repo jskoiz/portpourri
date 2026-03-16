@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { IntensityLevel } from '@prisma/client';
 import { ProfileService } from './profile.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PhotoStorageService } from './photo-storage.service';
@@ -23,6 +24,7 @@ describe('ProfileService', () => {
     user: {
       update: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -56,12 +58,12 @@ describe('ProfileService', () => {
   });
 
   it('marks user as onboarded when fitness profile is updated', async () => {
-    const profile = { userId: 'user-1', intensityLevel: 'high' };
+    const profile = { userId: 'user-1', intensityLevel: IntensityLevel.ADVANCED };
     prismaMock.$transaction.mockImplementation(async (fn: (tx: typeof prismaMock) => Promise<typeof profile>) => fn(prismaMock));
     prismaMock.userFitnessProfile.upsert.mockResolvedValue(profile);
 
     const result = await service.updateFitnessProfile('user-1', {
-      intensityLevel: 'high',
+      intensityLevel: IntensityLevel.ADVANCED,
     });
 
     expect(result).toEqual(profile);
@@ -72,11 +74,11 @@ describe('ProfileService', () => {
   });
 
   it('runs fitness upsert and isOnboarded update inside a transaction', async () => {
-    const profile = { userId: 'user-1', intensityLevel: 'high' };
+    const profile = { userId: 'user-1', intensityLevel: IntensityLevel.ADVANCED };
     prismaMock.$transaction.mockImplementation(async (fn: (tx: typeof prismaMock) => Promise<typeof profile>) => fn(prismaMock));
     prismaMock.userFitnessProfile.upsert.mockResolvedValue(profile);
 
-    await service.updateFitnessProfile('user-1', { intensityLevel: 'high' });
+    await service.updateFitnessProfile('user-1', { intensityLevel: IntensityLevel.ADVANCED });
 
     // Both DB writes must happen inside the same $transaction call
     expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
@@ -90,7 +92,7 @@ describe('ProfileService', () => {
 
     await service.updateFitnessProfile('user-1', {
       userId: 'attacker-id',
-      intensityLevel: 'low',
+      intensityLevel: IntensityLevel.BEGINNER,
     });
 
     const call = prismaMock.userFitnessProfile.upsert.mock.calls[0][0];
@@ -114,7 +116,7 @@ describe('ProfileService', () => {
   });
 
   it('returns null age when birthdate is null', async () => {
-    prismaMock.user.findUnique.mockResolvedValue({
+    prismaMock.user.findFirst.mockResolvedValue({
       id: 'user-1',
       birthdate: null,
       fitnessProfile: null,
@@ -129,7 +131,7 @@ describe('ProfileService', () => {
 
   it('calculates age correctly when birthdate is set', async () => {
     const birthdate = new Date('1990-01-01');
-    prismaMock.user.findUnique.mockResolvedValue({
+    prismaMock.user.findFirst.mockResolvedValue({
       id: 'user-1',
       birthdate,
       fitnessProfile: null,
@@ -143,7 +145,7 @@ describe('ProfileService', () => {
   });
 
   it('strips passwordHash, providerId, and authProvider from getProfile result', async () => {
-    prismaMock.user.findUnique.mockResolvedValue({
+    prismaMock.user.findFirst.mockResolvedValue({
       id: 'user-1',
       birthdate: new Date('1995-06-15'),
       passwordHash: 'super-secret-hash',

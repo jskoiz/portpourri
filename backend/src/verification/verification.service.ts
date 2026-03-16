@@ -52,49 +52,33 @@ export class VerificationService {
     // code from also passing the guard and double-verifying.
     this.pending.delete(key);
 
-    try {
-      if (channel === 'email') {
-        await this.prisma.user.update({
-          where: { id: userId },
-          data: { hasVerifiedEmail: true },
-        });
-      } else {
-        await this.prisma.user.update({
-          where: { id: userId },
-          data: { hasVerifiedPhone: true },
-        });
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `confirm failed for userId=${userId}, channel=${channel}: ${message}`,
-      );
-      throw error;
+    if (channel === 'email') {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { hasVerifiedEmail: true },
+      });
+    } else {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { hasVerifiedPhone: true },
+      });
     }
 
     return { verified: true };
   }
 
   async status(userId: string) {
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          hasVerifiedEmail: true,
-          hasVerifiedPhone: true,
-          email: true,
-          phoneNumber: true,
-        },
-      });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        hasVerifiedEmail: true,
+        hasVerifiedPhone: true,
+        email: true,
+        phoneNumber: true,
+      },
+    });
 
-      return user;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `status failed for userId=${userId}: ${message}`,
-      );
-      throw error;
-    }
+    return user;
   }
 
   private maskTarget(channel: 'email' | 'phone', target: string) {

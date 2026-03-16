@@ -19,7 +19,7 @@ import { AuthGuard } from '@nestjs/passport';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import type { UpdateFitnessProfileDto, UpdatePhotoDto, UpdateProfileDto } from './profile.dto';
+import { UpdateFitnessProfileDto, UpdatePhotoDto, UpdateProfileDto } from './profile.dto';
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 

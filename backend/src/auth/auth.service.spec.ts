@@ -2,9 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import {
   BadRequestException,
-  ConflictException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { AuthProvider, Gender } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -26,6 +26,7 @@ describe('AuthService', () => {
       create: jest.fn(),
       findUnique: jest.fn(),
       delete: jest.fn(),
+      update: jest.fn(),
     },
   };
 
@@ -78,7 +79,9 @@ describe('AuthService', () => {
           equals: 'test@example.com',
           mode: 'insensitive',
         },
-        authProvider: 'email',
+        authProvider: AuthProvider.EMAIL,
+        isDeleted: false,
+        isBanned: false,
       },
       orderBy: {
         createdAt: 'asc',
@@ -128,7 +131,7 @@ describe('AuthService', () => {
           equals: 'jordan@example.com',
           mode: 'insensitive',
         },
-        authProvider: 'email',
+        authProvider: AuthProvider.EMAIL,
       },
     });
     expect(prismaMock.user.create).toHaveBeenCalledWith({
@@ -161,7 +164,7 @@ describe('AuthService', () => {
         birthdate: '1995-02-03',
         gender: 'non-binary',
       }),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(prismaMock.user.create).not.toHaveBeenCalled();
   });
@@ -246,7 +249,7 @@ describe('AuthService', () => {
 
     expect(prismaMock.user.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        gender: 'non-binary',
+        gender: Gender.NON_BINARY,
       }),
     });
   });
@@ -313,16 +316,22 @@ describe('AuthService', () => {
     });
   });
 
-  it('deletes the current user account when it exists', async () => {
+  it('soft-deletes the current user account when it exists', async () => {
     prismaMock.user.findUnique.mockResolvedValue({
       id: 'user-1',
       email: 'test@example.com',
     });
-    prismaMock.user.delete.mockResolvedValue({ id: 'user-1' });
+    prismaMock.user.update.mockResolvedValue({ id: 'user-1', isDeleted: true });
 
     await expect(service.deleteAccount('user-1')).resolves.toBeUndefined();
-    expect(prismaMock.user.delete).toHaveBeenCalledWith({
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
       where: { id: 'user-1' },
+      data: expect.objectContaining({
+        isDeleted: true,
+        passwordHash: null,
+        phoneNumber: null,
+        providerId: null,
+      }),
     });
   });
 
@@ -332,11 +341,11 @@ describe('AuthService', () => {
     await expect(service.deleteAccount('missing-user')).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
-    expect(prismaMock.user.delete).not.toHaveBeenCalled();
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
   });
 
   it('rejects login when credentials are incomplete', async () => {
-    await expect(service.login({ email: '   ' })).rejects.toBeInstanceOf(
+    await expect(service.login({ email: '   ', password: '' })).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
     expect(jwtServiceMock.sign).not.toHaveBeenCalled();
@@ -364,7 +373,9 @@ describe('AuthService', () => {
           equals: 'jordan@example.com',
           mode: 'insensitive',
         },
-        authProvider: 'email',
+        authProvider: AuthProvider.EMAIL,
+        isDeleted: false,
+        isBanned: false,
       },
       orderBy: {
         createdAt: 'asc',
@@ -408,7 +419,9 @@ describe('AuthService', () => {
           equals: 'jordan@example.com',
           mode: 'insensitive',
         },
-        authProvider: 'email',
+        authProvider: AuthProvider.EMAIL,
+        isDeleted: false,
+        isBanned: false,
       },
       orderBy: {
         createdAt: 'asc',

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 import { Test, TestingModule } from '@nestjs/testing';
+import { IntensityLevel } from '@prisma/client';
 import { DiscoveryService } from './discovery.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -53,7 +54,7 @@ describe('DiscoveryService', () => {
     fitnessProfile: {
       primaryGoal: 'strength',
       secondaryGoal: 'endurance',
-      intensityLevel: 'moderate',
+      intensityLevel: IntensityLevel.INTERMEDIATE,
       prefersMorning: true,
       prefersEvening: false,
       favoriteActivities: null,
@@ -101,7 +102,7 @@ describe('DiscoveryService', () => {
         longitude: -157.8,
       },
       fitnessProfile: {
-        intensityLevel: 'moderate',
+        intensityLevel: IntensityLevel.INTERMEDIATE,
         primaryGoal: 'strength',
         secondaryGoal: 'endurance',
       },
@@ -112,7 +113,7 @@ describe('DiscoveryService', () => {
       minAge: 25,
       maxAge: 32,
       goals: ['Strength'],
-      intensity: ['Moderate'],
+      intensity: ['INTERMEDIATE'],
       availability: ['morning', 'evening'],
     });
 
@@ -151,8 +152,7 @@ describe('DiscoveryService', () => {
           },
           {
             intensityLevel: {
-              in: ['moderate'],
-              mode: 'insensitive',
+              in: [IntensityLevel.INTERMEDIATE],
             },
           },
           {
@@ -171,7 +171,7 @@ describe('DiscoveryService', () => {
         longitude: -157.8583,
       },
       fitnessProfile: {
-        intensityLevel: 'moderate',
+        intensityLevel: IntensityLevel.INTERMEDIATE,
         primaryGoal: 'strength',
         secondaryGoal: 'mobility',
       },
@@ -219,7 +219,7 @@ describe('DiscoveryService', () => {
         longitude: -157.8583,
       },
       fitnessProfile: {
-        intensityLevel: 'moderate',
+        intensityLevel: IntensityLevel.INTERMEDIATE,
         primaryGoal: 'strength',
         secondaryGoal: 'mobility',
       },
@@ -263,7 +263,7 @@ describe('DiscoveryService', () => {
         longitude: null,
       },
       fitnessProfile: {
-        intensityLevel: 'moderate',
+        intensityLevel: IntensityLevel.INTERMEDIATE,
         primaryGoal: 'strength',
         secondaryGoal: 'mobility',
       },

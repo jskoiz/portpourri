@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { env } from '../config/env';
 import { STORAGE_KEYS } from '../constants/storage';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { handleUnauthorized } from './authSession';
 
 const client = axios.create({
@@ -18,7 +18,7 @@ client.interceptors.request.use(
         // Authorization header.  This lets call-sites pass an explicit token (e.g.
         // authApi.me) without having it silently overwritten by the interceptor.
         if (!config.headers.Authorization) {
-            const token = await AsyncStorage.getItem(STORAGE_KEYS.accessToken);
+            const token = await SecureStore.getItemAsync(STORAGE_KEYS.accessToken);
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
             }

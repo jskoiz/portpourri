@@ -7,6 +7,64 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AuthProvider {
+  EMAIL
+  PHONE
+  GOOGLE
+  APPLE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  OTHER
+}
+
+enum IntensityLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum ReportCategory {
+  HARASSMENT
+  SPAM
+  INAPPROPRIATE
+  BLOCK
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+enum EventCategory {
+  RUNNING
+  CYCLING
+  HIKING
+  YOGA
+  FITNESS
+  SWIMMING
+  SURFING
+  BOXING
+  PADDLING
+  VOLLEYBALL
+  CLIMBING
+  PILATES
+  DANCE
+  OTHER
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  SYSTEM
+}
+
 model User {
   id        String   @id @default(uuid()) @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -17,13 +75,13 @@ model User {
   hasVerifiedPhone Boolean  @default(false) @map("has_verified_phone")
   hasVerifiedEmail Boolean  @default(false) @map("has_verified_email")
 
-  authProvider String  @default("phone") @map("auth_provider") @db.VarChar(32)
+  authProvider AuthProvider @default(PHONE) @map("auth_provider")
   providerId   String? @map("provider_id") @db.VarChar(255)
   passwordHash String? @map("password_hash") @db.Text
 
   firstName String   @map("first_name") @db.VarChar(64)
   birthdate DateTime @db.Date
-  gender    String   @db.VarChar(16)
+  gender    Gender
   pronouns  String?  @db.VarChar(32)
 
   isOnboarded Boolean @default(false) @map("is_onboarded")
@@ -54,11 +112,14 @@ model User {
 
   subscriptions Subscription[]
   purchases     Purchase[]
-  
+
   fitnessActivities UserFitnessActivity[]
+
+  notifications Notification[]
 
   @@index([phoneNumber])
   @@index([email])
+  @@index([isDeleted, isBanned, isOnboarded])
   @@map("users")
 }
 
@@ -94,7 +155,7 @@ model UserFitnessProfile {
   userId String @id @map("user_id") @db.Uuid
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  intensityLevel      String @default("moderate") @map("intensity_level") @db.VarChar(16)
+  intensityLevel      IntensityLevel @default(INTERMEDIATE) @map("intensity_level")
   weeklyFrequencyBand String @default("3-4") @map("weekly_frequency_band") @db.VarChar(16)
   
   primaryGoal   String? @map("primary_goal") @db.VarChar(32)
@@ -217,7 +278,7 @@ model Message {
   sender   User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   body     String? @db.Text
-  type     String  @default("text") @db.VarChar(16)
+  type     MessageType @default(TEXT)
   mediaKey String? @map("media_key") @db.Text
 
   isRead Boolean   @default(false) @map("is_read")
@@ -241,12 +302,12 @@ model Report {
   matchId String? @map("match_id") @db.Uuid
   match   Match?  @relation(fields: [matchId], references: [id], onDelete: SetNull)
 
-  category    String  @db.VarChar(32)
+  category    ReportCategory
   description String? @db.Text
 
   handledBy String?   @map("handled_by") @db.Uuid
   handledAt DateTime? @map("handled_at")
-  status    String    @default("open") @db.VarChar(16)
+  status    ReportStatus @default(PENDING)
 
   @@index([reportedUserId])
   @@index([reporterId])
@@ -262,7 +323,7 @@ model Event {
   description String?  @db.Text
   location    String   @db.VarChar(180)
   imageUrl    String?  @map("image_url") @db.Text
-  category    String?  @db.VarChar(48)
+  category    EventCategory?
   startsAt    DateTime @map("starts_at")
   endsAt      DateTime? @map("ends_at")
 
@@ -327,4 +388,21 @@ model Purchase {
 
   @@index([userId, createdAt])
   @@map("purchases")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  data      Json?
+  read      Boolean  @default(false)
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([userId, read])
 }

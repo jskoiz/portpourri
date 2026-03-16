@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ReportCategory } from '@prisma/client';
 import { ModerationController } from './moderation.controller';
 import { ModerationService } from './moderation.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
@@ -32,7 +33,7 @@ describe('ModerationController', () => {
     const report = { id: 'report-1', status: 'open' };
     moderationServiceMock.reportUser.mockResolvedValue(report);
 
-    const body = { reportedUserId: 'user-2', category: 'spam', description: 'test' };
+    const body = { reportedUserId: 'user-2', category: ReportCategory.SPAM, description: 'test' };
     const result = await controller.report(req, body);
 
     expect(moderationServiceMock.reportUser).toHaveBeenCalledWith('user-1', body);

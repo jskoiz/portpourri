@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ReportCategory, ReportStatus } from '@prisma/client';
 
 @Injectable()
 export class ModerationService {
@@ -17,7 +18,7 @@ export class ModerationService {
     reporterId: string,
     payload: {
       reportedUserId: string;
-      category: string;
+      category: ReportCategory;
       description?: string;
       matchId?: string;
     },
@@ -45,7 +46,7 @@ export class ModerationService {
         matchId: payload.matchId,
         category: payload.category,
         description: payload.description,
-        status: 'open',
+        status: ReportStatus.PENDING,
       },
     });
 
@@ -85,8 +86,8 @@ export class ModerationService {
         data: {
           reporterId: actorId,
           reportedUserId: targetUserId,
-          category: 'block',
-          status: 'open',
+          category: ReportCategory.BLOCK,
+          status: ReportStatus.PENDING,
         },
       });
     }

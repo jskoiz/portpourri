@@ -37,7 +37,7 @@ describe('ProfileController', () => {
 
   it('delegates updateFitnessProfile to profile service', async () => {
     const req = { user: { id: 'user-1' } } as AuthenticatedRequest;
-    const dto = { intensityLevel: 'high' };
+    const dto = { intensityLevel: 'ADVANCED' as const };
 
     profileServiceMock.updateFitnessProfile.mockResolvedValue({
       userId: 'user-1',

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { authApi } from "../services/api";
 import { STORAGE_KEYS } from "../constants/storage";
 import { normalizeApiError } from "../api/errors";
@@ -44,7 +44,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await authApi.login(data);
       const { access_token, user } = response.data;
-      await AsyncStorage.setItem(STORAGE_KEYS.accessToken, access_token);
+      await SecureStore.setItemAsync(STORAGE_KEYS.accessToken, access_token);
       set({ token: access_token, user });
     } catch (error) {
       throw normalizeApiError(error);
@@ -55,7 +55,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await authApi.signup(data);
       const { access_token, user } = response.data;
-      await AsyncStorage.setItem(STORAGE_KEYS.accessToken, access_token);
+      await SecureStore.setItemAsync(STORAGE_KEYS.accessToken, access_token);
       set({ token: access_token, user });
     } catch (error) {
       throw normalizeApiError(error);
@@ -63,7 +63,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await AsyncStorage.removeItem(STORAGE_KEYS.accessToken);
+    await SecureStore.deleteItemAsync(STORAGE_KEYS.accessToken);
     get().clearSession();
   },
 
@@ -75,7 +75,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     try {
-      await AsyncStorage.removeItem(STORAGE_KEYS.accessToken);
+      await SecureStore.deleteItemAsync(STORAGE_KEYS.accessToken);
     } finally {
       get().clearSession();
     }
@@ -83,7 +83,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   loadToken: async () => {
     set({ isLoading: true });
-    const token = await AsyncStorage.getItem(STORAGE_KEYS.accessToken);
+    const token = await SecureStore.getItemAsync(STORAGE_KEYS.accessToken);
     if (!token) {
       set({ token: null, user: null, isLoading: false });
       return;
@@ -93,7 +93,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const response = await authApi.me(token);
       set({ token, user: response.data, isLoading: false });
     } catch {
-      await AsyncStorage.removeItem(STORAGE_KEYS.accessToken);
+      await SecureStore.deleteItemAsync(STORAGE_KEYS.accessToken);
       set({ token: null, user: null, isLoading: false });
     }
   },

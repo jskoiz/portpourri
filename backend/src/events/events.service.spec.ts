@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-argument */
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { EventCategory } from '@prisma/client';
 import { EventsService } from './events.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -37,7 +38,7 @@ const baseEvent = {
   description: 'A fun run',
   location: 'Central Park',
   imageUrl: null,
-  category: 'fitness',
+  category: EventCategory.FITNESS,
   startsAt: new Date('2026-06-01T08:00:00Z'),
   endsAt: new Date('2026-06-01T09:00:00Z'),
   host: { id: 'host-1', firstName: 'Alice' },

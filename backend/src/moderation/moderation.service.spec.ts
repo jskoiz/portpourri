@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { ReportCategory } from '@prisma/client';
 import { ModerationService } from './moderation.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -32,7 +33,7 @@ describe('ModerationService', () => {
       await expect(
         service.reportUser('user-1', {
           reportedUserId: 'user-1',
-          category: 'spam',
+          category: ReportCategory.SPAM,
         }),
       ).rejects.toThrow(BadRequestException);
     });
@@ -47,7 +48,7 @@ describe('ModerationService', () => {
       await expect(
         service.reportUser('user-1', {
           reportedUserId: 'user-2',
-          category: 'spam',
+          category: ReportCategory.SPAM,
           matchId: 'match-1',
         }),
       ).rejects.toThrow(ForbiddenException);
@@ -63,7 +64,7 @@ describe('ModerationService', () => {
 
       const result = await service.reportUser('user-1', {
         reportedUserId: 'user-2',
-        category: 'harassment',
+        category: ReportCategory.HARASSMENT,
         matchId: 'match-1',
       });
 
@@ -79,7 +80,7 @@ describe('ModerationService', () => {
 
       const result = await service.reportUser('user-1', {
         reportedUserId: 'user-3',
-        category: 'spam',
+        category: ReportCategory.SPAM,
       });
 
       expect(result).toMatchObject({ id: 'report-2' });

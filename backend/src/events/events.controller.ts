@@ -4,21 +4,26 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { EventsService } from './events.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
-import type { CreateEventInput } from './create-event.types';
+import { CreateEventDto } from './create-event.dto';
 
 @Controller('events')
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
   @Get()
-  list() {
-    return this.eventsService.list();
+  list(@Query('take') take?: string, @Query('skip') skip?: string) {
+    return this.eventsService.list(
+      undefined,
+      take ? parseInt(take, 10) : undefined,
+      skip ? parseInt(skip, 10) : undefined,
+    );
   }
 
   @UseGuards(AuthGuard('jwt'))
@@ -36,7 +41,7 @@ export class EventsController {
   @UseGuards(AuthGuard('jwt'))
   @Post()
   create(
-    @Body() payload: CreateEventInput,
+    @Body() payload: CreateEventDto,
     @Request() req: AuthenticatedRequest,
   ) {
     return this.eventsService.create(payload, req.user.id);

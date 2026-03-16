@@ -34,13 +34,24 @@ export interface User {
   hasVerifiedPhone?: boolean;
   firstName?: string;
   age?: number;
-  distanceKm?: number | null;
-  recommendationScore?: number;
   isOnboarded?: boolean;
   photoUrl?: string;
   profile?: UserProfile;
   fitnessProfile?: FitnessProfile;
   photos?: UserPhoto[];
+}
+
+/** User returned from /auth/me — fields that are always present for the authenticated user. */
+export interface AuthenticatedUser extends User {
+  email: string;
+  firstName: string;
+  isOnboarded: boolean;
+}
+
+/** User returned from /discovery/feed — includes discovery-specific scoring fields. */
+export interface DiscoveryUser extends User {
+  distanceKm?: number | null;
+  recommendationScore?: number;
 }
 
 export interface UpdateProfilePayload {
@@ -78,12 +89,12 @@ export interface UpdatePhotoPayload {
 
 export interface AuthResponse {
   access_token: string;
-  user: User;
+  user: AuthenticatedUser;
 }
 
 export interface Match {
   id: string;
-  createdAt: string | Date;
+  createdAt: string;
   user: User;
   lastMessage?: string;
 }
@@ -92,7 +103,7 @@ export interface ChatMessage {
   id: string;
   text: string;
   sender: string;
-  timestamp?: string | Date;
+  timestamp?: string;
 }
 
 export interface LikeResponse {
@@ -158,8 +169,8 @@ export interface AppNotification {
   title: string;
   body: string;
   data?: Record<string, unknown>;
-  readAt: string | Date | null;
-  createdAt: string | Date;
+  readAt: string | null;
+  createdAt: string;
 }
 
 export interface ApiErrorPayload {

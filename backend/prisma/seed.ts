@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Gender, AuthProvider, IntensityLevel, EventCategory } from '@prisma/client';
 import { appConfig } from '../src/config/app.config';
 
 const prisma = new PrismaClient();
@@ -37,7 +37,7 @@ const PHOTO_FILES = [
 type SeedUser = {
   slug: string;
   firstName: string;
-  gender: string;
+  gender: Gender;
   birthdate: string;
   city: string;
   country: string;
@@ -48,7 +48,7 @@ type SeedUser = {
   intentWorkout: boolean;
   intentFriends: boolean;
   fitness: {
-    intensityLevel: string;
+    intensityLevel: IntensityLevel;
     weeklyFrequencyBand: string;
     primaryGoal: string;
     secondaryGoal?: string;
@@ -65,7 +65,7 @@ type SeedEvent = {
   title: string;
   description: string;
   location: string;
-  category: string;
+  category: EventCategory;
   imageUrl: string;
   hostSlug: string;
   startDayOffset: number;
@@ -95,7 +95,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'kai',
     firstName: 'Kai',
-    gender: 'male',
+    gender: Gender.MALE,
     birthdate: '1994-05-17',
     city: 'Kakaako',
     country: 'USA',
@@ -106,7 +106,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: true,
     fitness: {
-      intensityLevel: 'high',
+      intensityLevel: IntensityLevel.ADVANCED,
       weeklyFrequencyBand: '5+',
       primaryGoal: 'endurance',
       secondaryGoal: 'strength',
@@ -120,7 +120,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'leilani',
     firstName: 'Leilani',
-    gender: 'female',
+    gender: Gender.FEMALE,
     birthdate: '1997-08-11',
     city: 'Waikiki',
     country: 'USA',
@@ -131,7 +131,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: true,
     fitness: {
-      intensityLevel: 'moderate',
+      intensityLevel: IntensityLevel.INTERMEDIATE,
       weeklyFrequencyBand: '4-5',
       primaryGoal: 'mobility',
       secondaryGoal: 'health',
@@ -145,7 +145,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'mason',
     firstName: 'Mason',
-    gender: 'male',
+    gender: Gender.MALE,
     birthdate: '1991-02-03',
     city: 'Ala Moana',
     country: 'USA',
@@ -156,7 +156,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: true,
     fitness: {
-      intensityLevel: 'high',
+      intensityLevel: IntensityLevel.ADVANCED,
       weeklyFrequencyBand: '5+',
       primaryGoal: 'strength',
       secondaryGoal: 'skill',
@@ -170,7 +170,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'nia',
     firstName: 'Nia',
-    gender: 'female',
+    gender: Gender.FEMALE,
     birthdate: '1998-10-26',
     city: 'Manoa',
     country: 'USA',
@@ -181,7 +181,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: true,
     fitness: {
-      intensityLevel: 'moderate',
+      intensityLevel: IntensityLevel.INTERMEDIATE,
       weeklyFrequencyBand: '3-4',
       primaryGoal: 'adventure',
       secondaryGoal: 'endurance',
@@ -195,7 +195,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'jordan',
     firstName: 'Jordan',
-    gender: 'male',
+    gender: Gender.MALE,
     birthdate: '1995-12-14',
     city: 'Kaimuki',
     country: 'USA',
@@ -206,7 +206,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: false,
     fitness: {
-      intensityLevel: 'high',
+      intensityLevel: IntensityLevel.ADVANCED,
       weeklyFrequencyBand: '4-5',
       primaryGoal: 'conditioning',
       secondaryGoal: 'strength',
@@ -220,7 +220,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'malia',
     firstName: 'Malia',
-    gender: 'female',
+    gender: Gender.FEMALE,
     birthdate: '1993-07-09',
     city: 'Kailua',
     country: 'USA',
@@ -231,7 +231,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: true,
     fitness: {
-      intensityLevel: 'moderate',
+      intensityLevel: IntensityLevel.INTERMEDIATE,
       weeklyFrequencyBand: '4-5',
       primaryGoal: 'endurance',
       secondaryGoal: 'health',
@@ -245,7 +245,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'rowan',
     firstName: 'Rowan',
-    gender: 'male',
+    gender: Gender.MALE,
     birthdate: '1989-11-02',
     city: 'Downtown Honolulu',
     country: 'USA',
@@ -256,7 +256,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: true,
     fitness: {
-      intensityLevel: 'high',
+      intensityLevel: IntensityLevel.ADVANCED,
       weeklyFrequencyBand: '6-7',
       primaryGoal: 'hypertrophy',
       secondaryGoal: 'strength',
@@ -270,7 +270,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'tessa',
     firstName: 'Tessa',
-    gender: 'female',
+    gender: Gender.FEMALE,
     birthdate: '1996-03-19',
     city: 'Kapahulu',
     country: 'USA',
@@ -281,7 +281,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: true,
     fitness: {
-      intensityLevel: 'moderate',
+      intensityLevel: IntensityLevel.INTERMEDIATE,
       weeklyFrequencyBand: '3-4',
       primaryGoal: 'fun',
       secondaryGoal: 'mobility',
@@ -295,7 +295,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'keoni',
     firstName: 'Keoni',
-    gender: 'male',
+    gender: Gender.MALE,
     birthdate: '1992-09-21',
     city: 'Hawaii Kai',
     country: 'USA',
@@ -306,7 +306,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: true,
     fitness: {
-      intensityLevel: 'high',
+      intensityLevel: IntensityLevel.ADVANCED,
       weeklyFrequencyBand: '5+',
       primaryGoal: 'adventure',
       secondaryGoal: 'endurance',
@@ -320,7 +320,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'sasha',
     firstName: 'Sasha',
-    gender: 'female',
+    gender: Gender.FEMALE,
     birthdate: '1999-01-30',
     city: 'McCully',
     country: 'USA',
@@ -331,7 +331,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: true,
     fitness: {
-      intensityLevel: 'moderate',
+      intensityLevel: IntensityLevel.INTERMEDIATE,
       weeklyFrequencyBand: '3-4',
       primaryGoal: 'health',
       secondaryGoal: 'mobility',
@@ -345,7 +345,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'eli',
     firstName: 'Eli',
-    gender: 'male',
+    gender: Gender.MALE,
     birthdate: '1997-04-05',
     city: 'Pearl City',
     country: 'USA',
@@ -356,7 +356,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: true,
     fitness: {
-      intensityLevel: 'moderate',
+      intensityLevel: IntensityLevel.INTERMEDIATE,
       weeklyFrequencyBand: '4-5',
       primaryGoal: 'strength',
       secondaryGoal: 'endurance',
@@ -370,7 +370,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'alana',
     firstName: 'Alana',
-    gender: 'female',
+    gender: Gender.FEMALE,
     birthdate: '1994-12-28',
     city: 'Kakaako',
     country: 'USA',
@@ -381,7 +381,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: true,
     fitness: {
-      intensityLevel: 'low',
+      intensityLevel: IntensityLevel.BEGINNER,
       weeklyFrequencyBand: '2-3',
       primaryGoal: 'health',
       secondaryGoal: 'fun',
@@ -395,7 +395,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'devon',
     firstName: 'Devon',
-    gender: 'male',
+    gender: Gender.MALE,
     birthdate: '1990-06-24',
     city: 'Kaneohe',
     country: 'USA',
@@ -406,7 +406,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: true,
     fitness: {
-      intensityLevel: 'high',
+      intensityLevel: IntensityLevel.ADVANCED,
       weeklyFrequencyBand: '4-5',
       primaryGoal: 'skill',
       secondaryGoal: 'adventure',
@@ -420,7 +420,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'priya',
     firstName: 'Priya',
-    gender: 'female',
+    gender: Gender.FEMALE,
     birthdate: '1995-09-14',
     city: 'Aiea',
     country: 'USA',
@@ -431,7 +431,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: false,
     fitness: {
-      intensityLevel: 'moderate',
+      intensityLevel: IntensityLevel.INTERMEDIATE,
       weeklyFrequencyBand: '4-5',
       primaryGoal: 'strength',
       secondaryGoal: 'health',
@@ -445,7 +445,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'cole',
     firstName: 'Cole',
-    gender: 'male',
+    gender: Gender.MALE,
     birthdate: '1998-02-16',
     city: 'North Shore',
     country: 'USA',
@@ -456,7 +456,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: true,
     fitness: {
-      intensityLevel: 'high',
+      intensityLevel: IntensityLevel.ADVANCED,
       weeklyFrequencyBand: '5+',
       primaryGoal: 'fun',
       secondaryGoal: 'conditioning',
@@ -470,7 +470,7 @@ const seedUsers: SeedUser[] = [
   {
     slug: 'maren',
     firstName: 'Maren',
-    gender: 'female',
+    gender: Gender.FEMALE,
     birthdate: '1992-11-08',
     city: 'Kapolei',
     country: 'USA',
@@ -481,7 +481,7 @@ const seedUsers: SeedUser[] = [
     intentWorkout: true,
     intentFriends: true,
     fitness: {
-      intensityLevel: 'high',
+      intensityLevel: IntensityLevel.ADVANCED,
       weeklyFrequencyBand: '5+',
       primaryGoal: 'endurance',
       secondaryGoal: 'health',
@@ -500,7 +500,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Ala Moana Sunrise Run Club',
     description: 'Easy 4-mile social loop with coffee at the end. Plenty of walk breaks if the heat shows up early.',
     location: 'Magic Island, Ala Moana Beach Park',
-    category: 'Running',
+    category: EventCategory.RUNNING,
     imageUrl: 'https://images.unsplash.com/photo-1552674605-469523170d9e?w=1200&q=80',
     hostSlug: 'kai',
     startDayOffset: 1,
@@ -513,7 +513,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Golden Hour Rooftop Flow',
     description: 'Vinyasa with city light views, then tea and introductions on the deck after class.',
     location: 'Salt at Our Kakaako Rooftop',
-    category: 'Yoga',
+    category: EventCategory.YOGA,
     imageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1200&q=80',
     hostSlug: 'leilani',
     startDayOffset: 1,
@@ -526,7 +526,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Diamond Head Power Hike',
     description: 'Fast-paced sunset hike with a scenic cooldown at Kapiolani Park after. Bring water and shoes with grip.',
     location: 'Diamond Head State Monument',
-    category: 'Hiking',
+    category: EventCategory.HIKING,
     imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80',
     hostSlug: 'nia',
     startDayOffset: 2,
@@ -539,7 +539,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Kailua Paddle + Breakfast',
     description: 'Beginner-friendly paddle session followed by breakfast burritos and shaded hangs on the beach.',
     location: 'Kailua Beach Park',
-    category: 'Paddling',
+    category: EventCategory.PADDLING,
     imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80',
     hostSlug: 'malia',
     startDayOffset: 3,
@@ -552,7 +552,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Kaimuki Boxing Circuit Night',
     description: 'Glove work, bag intervals, and a beginner lane for anyone new but curious.',
     location: 'Kaimuki Community Boxing Club',
-    category: 'Boxing',
+    category: EventCategory.BOXING,
     imageUrl: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=1200&q=80',
     hostSlug: 'jordan',
     startDayOffset: 3,
@@ -565,7 +565,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Waikiki Open Water Swim',
     description: 'Short buoy loop for steady swimmers with a safety-first pace and post-swim shave ice walk.',
     location: 'Queen’s Beach, Waikiki',
-    category: 'Swimming',
+    category: EventCategory.SWIMMING,
     imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1200&q=80',
     hostSlug: 'malia',
     startDayOffset: 4,
@@ -578,7 +578,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Downtown Strength Hour',
     description: 'Lift-focused small group session: squat emphasis, simple accessories, zero influencer energy.',
     location: 'Honolulu Strength Lab',
-    category: 'Strength',
+    category: EventCategory.FITNESS,
     imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=1200&q=80',
     hostSlug: 'rowan',
     startDayOffset: 4,
@@ -591,7 +591,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Beach Volleyball Sunset Social',
     description: 'Drop-in games, rotating teams, beginner-friendly rules, and no one taking it too seriously.',
     location: 'Kapiolani Park Sand Courts',
-    category: 'Volleyball',
+    category: EventCategory.VOLLEYBALL,
     imageUrl: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=1200&q=80',
     hostSlug: 'tessa',
     startDayOffset: 5,
@@ -604,7 +604,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Makapuu First Light Hike',
     description: 'Early climb for sunrise and whale spotting if conditions cooperate. Breakfast stop after for whoever is still awake.',
     location: 'Makapuu Lighthouse Trail',
-    category: 'Hiking',
+    category: EventCategory.HIKING,
     imageUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&q=80',
     hostSlug: 'keoni',
     startDayOffset: 6,
@@ -617,7 +617,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Dance Cardio + Mocktails',
     description: 'High-energy dance class with a social cooldown nearby. Perfect if you want movement without a serious vibe.',
     location: 'McCully Movement Studio',
-    category: 'Dance',
+    category: EventCategory.DANCE,
     imageUrl: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=1200&q=80',
     hostSlug: 'sasha',
     startDayOffset: 6,
@@ -630,7 +630,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Pearl City Long Ride',
     description: 'Moderate 25-mile loop with regroup points, good road etiquette, and a cafe stop mid-ride.',
     location: 'Pearl City Shopping Center lot',
-    category: 'Cycling',
+    category: EventCategory.CYCLING,
     imageUrl: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=1200&q=80',
     hostSlug: 'eli',
     startDayOffset: 7,
@@ -643,7 +643,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Pilates + Brunch Plans',
     description: 'Reformer-style mat flow, then brunch for anyone who wants to actually keep hanging out.',
     location: 'Our Kakaako Courtyard',
-    category: 'Pilates',
+    category: EventCategory.PILATES,
     imageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1200&q=80',
     hostSlug: 'alana',
     startDayOffset: 7,
@@ -656,7 +656,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Climb Night + Technique Laps',
     description: 'Routes and boulders, plus a mellow intro lane for anyone trying climbing for the first time.',
     location: 'Kaneohe Climbing Club',
-    category: 'Climbing',
+    category: EventCategory.CLIMBING,
     imageUrl: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=1200&q=80',
     hostSlug: 'devon',
     startDayOffset: 8,
@@ -669,7 +669,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Combat Conditioning Session',
     description: 'Fast circuits, mitt rounds, and good coaching if you like intensity without chaos.',
     location: 'Aiea Performance Studio',
-    category: 'Boxing',
+    category: EventCategory.BOXING,
     imageUrl: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=1200&q=80',
     hostSlug: 'priya',
     startDayOffset: 9,
@@ -682,7 +682,7 @@ const seedEvents: SeedEvent[] = [
     title: 'North Shore Surf Carpool',
     description: 'Carpool up, catch a few beginner-to-intermediate waves, and split poke after if the morning goes well.',
     location: 'Puaena Point, Haleiwa',
-    category: 'Surfing',
+    category: EventCategory.SURFING,
     imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80',
     hostSlug: 'cole',
     startDayOffset: 10,
@@ -695,7 +695,7 @@ const seedEvents: SeedEvent[] = [
     title: 'West Side Endurance Club',
     description: 'Tempo run into recovery swim. Great for people training consistently who still want a social feel.',
     location: 'Ko Olina Lagoons',
-    category: 'Endurance',
+    category: EventCategory.FITNESS,
     imageUrl: 'https://images.unsplash.com/photo-1483721310020-03333e577078?w=1200&q=80',
     hostSlug: 'maren',
     startDayOffset: 10,
@@ -708,7 +708,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Manoa Reset Walk',
     description: 'Low-pressure recovery walk for anyone wanting movement, fresh air, and normal conversation after a long week.',
     location: 'Manoa Valley District Park',
-    category: 'Wellness',
+    category: EventCategory.OTHER,
     imageUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&q=80',
     hostSlug: 'nia',
     startDayOffset: 11,
@@ -721,7 +721,7 @@ const seedEvents: SeedEvent[] = [
     title: 'Friends Lift + Mobility Night',
     description: 'Partner sets, mobility finisher, and a beginner lane so new people can get comfortable fast.',
     location: 'Ala Moana Functional Fitness',
-    category: 'Strength',
+    category: EventCategory.FITNESS,
     imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=1200&q=80',
     hostSlug: 'mason',
     startDayOffset: 12,
@@ -786,7 +786,7 @@ async function main() {
         firstName: user.firstName,
         birthdate: new Date(user.birthdate),
         gender: user.gender,
-        authProvider: 'email',
+        authProvider: AuthProvider.EMAIL,
         hasVerifiedEmail: true,
         isOnboarded: true,
         profile: {

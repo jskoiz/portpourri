@@ -33,7 +33,7 @@ describe('MatchesController', () => {
   it('delegates getMatches to service', async () => {
     matchesServiceMock.getMatches.mockResolvedValue([]);
     const result = await controller.getMatches(req);
-    expect(matchesServiceMock.getMatches).toHaveBeenCalledWith('user-1');
+    expect(matchesServiceMock.getMatches).toHaveBeenCalledWith('user-1', undefined, undefined);
     expect(result).toEqual([]);
   });
 

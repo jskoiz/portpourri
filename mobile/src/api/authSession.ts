@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { STORAGE_KEYS } from '../constants/storage';
 
 type UnauthorizedHandler = () => void | Promise<void>;
@@ -15,7 +15,15 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler | null) {
   };
 }
 
+let isHandlingUnauthorized = false;
+
 export async function handleUnauthorized() {
-  await AsyncStorage.removeItem(STORAGE_KEYS.accessToken);
-  await unauthorizedHandler?.();
+  if (isHandlingUnauthorized) return;
+  isHandlingUnauthorized = true;
+  try {
+    await SecureStore.deleteItemAsync(STORAGE_KEYS.accessToken);
+    await unauthorizedHandler?.();
+  } finally {
+    isHandlingUnauthorized = false;
+  }
 }
