@@ -102,7 +102,6 @@ export function AppBottomSheet({
             styles.closeButton,
             {
               backgroundColor: theme.surfaceElevated,
-              borderColor: theme.border,
               opacity: pressed ? 0.76 : 1,
             },
           ]}
@@ -152,6 +151,11 @@ const styles = StyleSheet.create({
   sheetBackground: {
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
+    shadowColor: '#000000',
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 8,
   },
   handleIndicator: {
     width: 46,
@@ -185,9 +189,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   content: {
     flex: 1,

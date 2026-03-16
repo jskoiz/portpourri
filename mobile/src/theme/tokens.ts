@@ -48,18 +48,68 @@ export const darkTheme = {
   shadowColorDark: '#000000',
 };
 
+export const lightTheme: Theme = {
+  // Backgrounds
+  background: '#F8F7F4',
+  backgroundSoft: '#F5F3EF',
+
+  // Surfaces
+  surface: '#FFFFFF',
+  surfaceElevated: '#F5F3EF',
+  surfaceGlass: 'rgba(255,255,255,0.92)',
+
+  // Borders
+  border: 'rgba(0,0,0,0.06)',
+  borderSoft: 'rgba(0,0,0,0.12)',
+  borderFocus: '#7C6AF7',
+
+  // Text
+  textPrimary: '#1A1A1A',
+  textSecondary: '#64748B',
+  textMuted: '#94A3B8',
+  textInverse: '#FFFFFF',
+
+  // Primary — electric violet
+  primary: '#7C6AF7',
+  primaryPressed: '#6B5CE7',
+  primarySubtle: 'rgba(124,106,247,0.10)',
+
+  // Accent — emerald
+  accent: '#10B981',
+  accentSoft: '#6EE7B7',
+  accentSubtle: 'rgba(16,185,129,0.10)',
+
+  // Energy — amber warmth
+  energy: '#F59E0B',
+  energySubtle: 'rgba(245,158,11,0.10)',
+
+  // Semantic
+  danger: '#EF4444',
+  dangerSubtle: 'rgba(239,68,68,0.08)',
+  success: '#10B981',
+  warning: '#F59E0B',
+
+  // Fixed
+  white: '#FFFFFF',
+  black: '#000000',
+
+  // Shadows
+  shadowColor: '#000000',
+  shadowColorDark: '#000000',
+};
+
 export type Theme = typeof darkTheme;
 
 // Legacy flat colors export (dark values for backward compat)
 export const colors = darkTheme;
 
 export const gradients = {
-  appBg: ['#0D1117', '#161B22'],
-  appBgDark: ['#0D1117', '#1C2330'],
-  cardChrome: ['rgba(28,35,48,0.9)', 'rgba(36,45,61,0.6)'],
-  spotlight: ['rgba(124,106,247,0.18)', 'rgba(52,211,153,0.08)'],
-  photoOverlay: ['transparent', 'rgba(0,0,0,0.82)'],
-  cardOverlay: ['transparent', 'rgba(0,0,0,0.0)', 'rgba(0,0,0,0.80)'],
+  appBg: ['#F8F7F4', '#F5F3EF'],
+  appBgDark: ['#F5F3EF', '#FFFFFF'],
+  cardChrome: ['rgba(255,255,255,0.95)', 'rgba(245,243,239,0.8)'],
+  spotlight: ['rgba(124,106,247,0.08)', 'rgba(16,185,129,0.04)'],
+  photoOverlay: ['transparent', 'rgba(0,0,0,0.52)'],
+  cardOverlay: ['transparent', 'rgba(0,0,0,0.0)', 'rgba(0,0,0,0.50)'],
 };
 
 export const spacing = {
@@ -95,30 +145,30 @@ export const typography = {
 export const shadows = {
   soft: {
     shadowColor: '#000000',
-    shadowOpacity: 0.20,
+    shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    elevation: 2,
   },
   medium: {
     shadowColor: '#000000',
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.10,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
+    elevation: 4,
   },
   glow: {
     shadowColor: '#7C6AF7',
-    shadowOpacity: 0.40,
+    shadowOpacity: 0.18,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    elevation: 4,
   },
   card: {
     shadowColor: '#000000',
-    shadowOpacity: 0.50,
+    shadowOpacity: 0.08,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 12 },
-    elevation: 12,
+    elevation: 6,
   },
 };
