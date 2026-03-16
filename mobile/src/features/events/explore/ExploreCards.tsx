@@ -54,12 +54,12 @@ export function EventCard({
         <Text style={styles.eventTitle}>{event.title}</Text>
         <View style={styles.eventMetaRow}>
           <View style={styles.eventMetaInline}>
-            <AppIcon name="calendar" size={13} color="rgba(240,246,252,0.65)" />
+            <AppIcon name="calendar" size={13} color="#64748B" />
             <Text style={styles.eventMeta}>{formatEventDate(event.startsAt)}</Text>
           </View>
           <View style={styles.attendeesBadge}>
             <View style={styles.attendeesBadgeInner}>
-              <AppIcon name="users" size={12} color="rgba(240,246,252,0.38)" />
+              <AppIcon name="users" size={12} color="#94A3B8" />
               <Text style={styles.attendeesBadgeText}>{event.attendeesCount}</Text>
             </View>
           </View>
@@ -82,8 +82,8 @@ export function EventCard({
 
 export function SpotCard({ spot }: { spot: (typeof ACTIVITY_SPOTS)[number] }) {
   return (
-    <Card style={[styles.spotCard, { borderColor: spot.color + '30' }] as any}>
-      <View style={[styles.spotIconWrap, { backgroundColor: spot.color + '18' }]}>
+    <Card style={styles.spotCard}>
+      <View style={[styles.spotIconWrap, { backgroundColor: spot.color + '10' }]}>
         <AppIcon name={spot.icon} size={18} color={spot.color} />
       </View>
       <Text style={styles.spotName} numberOfLines={1}>{spot.name}</Text>
@@ -104,7 +104,7 @@ export function CommunityCard({
     <Card style={styles.communityCard} accent={post.color}>
       <View style={styles.communityInner}>
         <View style={styles.communityHeader}>
-          <View style={[styles.avatar, { backgroundColor: post.color + '25', borderColor: post.color + '50' }]}>
+          <View style={[styles.avatar, { backgroundColor: post.color + '12', borderColor: post.color + '30' }]}>
             <Text style={[styles.avatarText, { color: post.color }]}>{post.initial}</Text>
           </View>
           <View style={styles.communityMeta}>

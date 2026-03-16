@@ -29,7 +29,7 @@ export function ExploreCategoryBar({
             active={active}
             label={category}
             accentColor="#7C6AF7"
-            textStyle={[styles.categoryPillText, { color: active ? '#FFFFFF' : 'rgba(240,246,252,0.38)' }] as any}
+            textStyle={[styles.categoryPillText, { color: active ? '#7C6AF7' : '#94A3B8' }] as any}
           />
         );
       })}
