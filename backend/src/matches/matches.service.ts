@@ -84,13 +84,20 @@ export class MatchesService {
         };
       });
   }
-  async getMessages(matchId: string, userId: string) {
+  async getMessages(matchId: string, userId: string, take = 50, skip = 0) {
     await this.assertMatchAccess(matchId, userId);
 
     const messages = await this.prisma.message.findMany({
       where: { matchId },
       orderBy: { createdAt: 'desc' },
-      take: 50,
+      take: Math.min(take, 100),
+      skip,
+      select: {
+        id: true,
+        body: true,
+        senderId: true,
+        createdAt: true,
+      },
     });
 
     return messages.reverse().map((msg) => ({
@@ -157,6 +164,13 @@ export class MatchesService {
   private async assertMatchAccess(matchId: string, userId: string) {
     const match = await this.prisma.match.findUnique({
       where: { id: matchId },
+      select: {
+        id: true,
+        userAId: true,
+        userBId: true,
+        isBlocked: true,
+        isArchived: true,
+      },
     });
 
     if (

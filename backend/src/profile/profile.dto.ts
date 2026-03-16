@@ -4,6 +4,9 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
+  MaxLength,
+  Min,
 } from 'class-validator';
 import { IntensityLevel } from '@prisma/client';
 
@@ -14,22 +17,29 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   bio?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   city?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   country?: string;
 
   @IsOptional()
   @IsNumber()
+  @Min(-90)
+  @Max(90)
   latitude?: number;
 
   @IsOptional()
   @IsNumber()
+  @Min(-180)
+  @Max(180)
   longitude?: number;
 
   @IsOptional()
@@ -58,18 +68,22 @@ export class UpdateFitnessProfileDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(50)
   weeklyFrequencyBand?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   primaryGoal?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   secondaryGoal?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   favoriteActivities?: string;
 
   @IsOptional()
@@ -92,5 +106,7 @@ export class UpdatePhotoDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(99)
   sortOrder?: number;
 }

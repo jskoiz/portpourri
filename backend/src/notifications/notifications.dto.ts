@@ -1,13 +1,20 @@
-import { IsObject, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsObject, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { NotificationType } from '../common/enums';
 
 export class EmitNotificationDto {
-  @IsString()
-  type: string;
+  @IsEnum(NotificationType, {
+    message: `type must be one of: ${Object.values(NotificationType).join(', ')}`,
+  })
+  type: NotificationType;
 
   @IsString()
+  @MinLength(1)
+  @MaxLength(200)
   title: string;
 
   @IsString()
+  @MinLength(1)
+  @MaxLength(1000)
   body: string;
 
   @IsOptional()

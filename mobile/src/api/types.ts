@@ -95,14 +95,18 @@ export interface AuthResponse {
 export interface Match {
   id: string;
   createdAt: string;
-  user: User;
-  lastMessage?: string;
+  user: {
+    id: string;
+    firstName: string;
+    photoUrl: string | null;
+  };
+  lastMessage: string | null;
 }
 
 export interface ChatMessage {
   id: string;
   text: string;
-  sender: string;
+  sender: 'me' | 'them';
   timestamp?: string;
 }
 
@@ -169,6 +173,7 @@ export interface AppNotification {
   title: string;
   body: string;
   data?: Record<string, unknown>;
+  read: boolean;
   readAt: string | null;
   createdAt: string;
 }

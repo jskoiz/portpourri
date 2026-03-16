@@ -1,7 +1,11 @@
-import type { User, UserPhoto } from '../api/types';
+import type { UserPhoto } from '../api/types';
 
 type UserPhotoLike = Pick<UserPhoto, 'storageKey' | 'isPrimary' | 'isHidden' | 'sortOrder'>;
-type UserLike = Pick<User, 'firstName' | 'photoUrl' | 'photos'>;
+export type UserLike = {
+  firstName?: string;
+  photoUrl?: string | null;
+  photos?: UserPhotoLike[] | null;
+};
 
 function sortVisiblePhotos(photos?: UserPhotoLike[] | null) {
   return (photos ?? [])

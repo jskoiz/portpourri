@@ -1,4 +1,4 @@
-import { IsEnum, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
 import { VerificationChannel } from '../common/enums';
 
 export class StartVerificationDto {
@@ -6,6 +6,8 @@ export class StartVerificationDto {
   channel: VerificationChannel;
 
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(254)
   target: string;
 }
 
@@ -14,5 +16,7 @@ export class ConfirmVerificationDto {
   channel: VerificationChannel;
 
   @IsString()
+  @MinLength(6)
+  @MaxLength(6)
   code: string;
 }

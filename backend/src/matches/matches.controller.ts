@@ -46,7 +46,7 @@ export class MatchesController {
 
     return this.matchesService.getMatches(
       req.user.id,
-      Number.isNaN(parsedTake) ? 20 : parsedTake,
+      Number.isNaN(parsedTake) ? 20 : Math.min(parsedTake, 100),
       Number.isNaN(parsedSkip) ? 0 : parsedSkip,
     );
   }
@@ -57,8 +57,18 @@ export class MatchesController {
   async getMessages(
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
   ) {
-    return this.matchesService.getMessages(id, req.user.id);
+    const parsedTake = take ? Number.parseInt(take, 10) : NaN;
+    const parsedSkip = skip ? Number.parseInt(skip, 10) : NaN;
+
+    return this.matchesService.getMessages(
+      id,
+      req.user.id,
+      Number.isNaN(parsedTake) ? 50 : Math.min(parsedTake, 100),
+      Number.isNaN(parsedSkip) ? 0 : parsedSkip,
+    );
   }
 
   @Sse(':id/messages/stream')

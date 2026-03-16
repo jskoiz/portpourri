@@ -1,8 +1,9 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { ReportCategory } from '@prisma/client';
 
 export class ReportUserDto {
   @IsString()
+  @IsNotEmpty()
   reportedUserId: string;
 
   @IsEnum(ReportCategory, {
@@ -12,6 +13,7 @@ export class ReportUserDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   description?: string;
 
   @IsOptional()
@@ -21,5 +23,6 @@ export class ReportUserDto {
 
 export class BlockUserDto {
   @IsString()
+  @IsNotEmpty()
   targetUserId: string;
 }

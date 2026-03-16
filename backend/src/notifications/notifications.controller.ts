@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -19,27 +20,9 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import {
-  NotificationsService,
-  NotificationType,
-} from './notifications.service';
+import { NotificationsService } from './notifications.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
 import { EmitNotificationDto } from './notifications.dto';
-
-const VALID_TYPES = new Set<NotificationType>([
-  'like_received',
-  'match_created',
-  'message_received',
-  'event_rsvp',
-  'event_reminder',
-  'system',
-]);
-
-function toNotificationType(raw: string): NotificationType {
-  return VALID_TYPES.has(raw as NotificationType)
-    ? (raw as NotificationType)
-    : 'system';
-}
 
 @Controller('notifications')
 @UseGuards(AuthGuard('jwt'))
@@ -52,8 +35,19 @@ export class NotificationsController {
   @Get()
   @ApiOperation({ summary: 'List notifications for the current user' })
   @ApiOkResponse({ description: 'Notifications returned successfully.' })
-  async list(@Request() req: AuthenticatedRequest) {
-    return this.notificationsService.list(req.user.id);
+  async list(
+    @Request() req: AuthenticatedRequest,
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    const parsedTake = take ? Number.parseInt(take, 10) : NaN;
+    const parsedSkip = skip ? Number.parseInt(skip, 10) : NaN;
+
+    return this.notificationsService.list(
+      req.user.id,
+      Number.isNaN(parsedTake) ? 50 : Math.min(parsedTake, 100),
+      Number.isNaN(parsedSkip) ? 0 : parsedSkip,
+    );
   }
 
   @Patch(':id/read')
@@ -87,7 +81,7 @@ export class NotificationsController {
     @Body() body: EmitNotificationDto,
   ) {
     return this.notificationsService.create(req.user.id, {
-      type: toNotificationType(body.type),
+      type: body.type,
       title: body.title,
       body: body.body,
       data: body.data,

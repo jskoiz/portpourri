@@ -12,6 +12,7 @@ export function makeNotification(
       overrides.body ??
       'Makapuu sunrise hike starts tomorrow at 6:00 AM.',
     data: overrides.data ?? { eventId: 'event-1' },
+    read: overrides.read ?? false,
     readAt: overrides.readAt ?? null,
     createdAt: overrides.createdAt ?? '2026-03-15T18:00:00.000Z',
   };

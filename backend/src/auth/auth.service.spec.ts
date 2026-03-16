@@ -7,6 +7,7 @@ import {
 import { AuthProvider, Gender } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { Gender as AppGender } from '../common/enums';
 import * as bcrypt from 'bcrypt';
 
 jest.mock('bcrypt', () => ({
@@ -122,7 +123,7 @@ describe('AuthService', () => {
       password: 'password123',
       firstName: 'Jordan',
       birthdate: '1995-02-03',
-      gender: 'non-binary',
+      gender: AppGender.NonBinary,
     });
 
     expect(prismaMock.user.findFirst).toHaveBeenCalledWith({
@@ -162,7 +163,7 @@ describe('AuthService', () => {
         password: 'password123',
         firstName: 'Jordan',
         birthdate: '1995-02-03',
-        gender: 'non-binary',
+        gender: AppGender.NonBinary,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
 
@@ -176,7 +177,7 @@ describe('AuthService', () => {
         password: 'password123',
         firstName: 'Jordan',
         birthdate: '1995-02-03',
-        gender: 'non-binary',
+        gender: AppGender.NonBinary,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
 
@@ -191,7 +192,7 @@ describe('AuthService', () => {
         password: '',
         firstName: 'Jordan',
         birthdate: '1995-02-03',
-        gender: 'non-binary',
+        gender: AppGender.NonBinary,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
 
@@ -206,7 +207,7 @@ describe('AuthService', () => {
         password: '   ',
         firstName: 'Jordan',
         birthdate: '1995-02-03',
-        gender: 'non-binary',
+        gender: AppGender.NonBinary,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
 
@@ -221,7 +222,7 @@ describe('AuthService', () => {
         password: 'password123',
         firstName: 'Jordan',
         birthdate: '1995-02-31',
-        gender: 'non-binary',
+        gender: AppGender.NonBinary,
       }),
     ).rejects.toThrow('Birthdate must be a real date');
 
@@ -244,7 +245,7 @@ describe('AuthService', () => {
       password: 'password123',
       firstName: 'Jordan',
       birthdate: '1995-02-03',
-      gender: ' Non-Binary ',
+      gender: ' Non-Binary ' as unknown as AppGender,
     });
 
     expect(prismaMock.user.create).toHaveBeenCalledWith({
@@ -263,7 +264,7 @@ describe('AuthService', () => {
         password: 'password123',
         firstName: 'Jordan',
         birthdate: '1995-02-31',
-        gender: 'non-binary',
+        gender: AppGender.NonBinary,
       }),
     ).rejects.toThrow('Birthdate must be a real date');
 
@@ -277,7 +278,7 @@ describe('AuthService', () => {
         password: 'password123',
         firstName: 'Jordan',
         birthdate: '1995-02-03',
-        gender: 'other',
+        gender: 'other' as unknown as AppGender,
       }),
     ).rejects.toThrow('Gender must be one of: woman, man, non-binary');
 
@@ -299,7 +300,7 @@ describe('AuthService', () => {
       password: 'pw',
       firstName: 'New',
       birthdate: '1996-02-03',
-      gender: 'woman',
+      gender: AppGender.Woman,
     });
 
     expect(jwtServiceMock.sign).toHaveBeenCalledWith({

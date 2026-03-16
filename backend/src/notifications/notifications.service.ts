@@ -40,11 +40,12 @@ export class NotificationsService {
     return notification;
   }
 
-  async list(userId: string): Promise<Notification[]> {
+  async list(userId: string, take = 50, skip = 0): Promise<Notification[]> {
     return this.prisma.notification.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      take: 50,
+      take: Math.min(take, 100),
+      skip,
     });
   }
 
