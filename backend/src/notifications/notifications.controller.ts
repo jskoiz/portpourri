@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -52,8 +53,17 @@ export class NotificationsController {
   @Get()
   @ApiOperation({ summary: 'List notifications for the current user' })
   @ApiOkResponse({ description: 'Notifications returned successfully.' })
-  async list(@Request() req: AuthenticatedRequest) {
-    return this.notificationsService.list(req.user.id);
+  async list(
+    @Request() req: AuthenticatedRequest,
+    @Query('take') take?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const parsedTake = take ? Number.parseInt(take, 10) : NaN;
+    return this.notificationsService.list(
+      req.user.id,
+      Number.isNaN(parsedTake) ? 50 : parsedTake,
+      cursor || undefined,
+    );
   }
 
   @Patch(':id/read')

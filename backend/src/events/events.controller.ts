@@ -43,8 +43,16 @@ export class EventsController {
   @ApiOperation({ summary: 'List events created by the current user' })
   @ApiOkResponse({ description: 'Current user events returned successfully.' })
   @ApiUnauthorizedResponse({ description: 'Authentication is required.' })
-  myEvents(@Request() req: AuthenticatedRequest) {
-    return this.eventsService.myEvents(req.user.id);
+  myEvents(
+    @Request() req: AuthenticatedRequest,
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.eventsService.myEvents(
+      req.user.id,
+      take ? parseInt(take, 10) : 20,
+      skip ? parseInt(skip, 10) : 0,
+    );
   }
 
   @Get(':id')

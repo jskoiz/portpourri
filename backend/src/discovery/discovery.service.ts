@@ -89,11 +89,33 @@ export class DiscoveryService {
           : {}),
       },
       include: {
-        fitnessProfile: true,
-        profile: true,
+        fitnessProfile: {
+          select: {
+            primaryGoal: true,
+            secondaryGoal: true,
+            intensityLevel: true,
+            prefersMorning: true,
+            prefersEvening: true,
+            favoriteActivities: true,
+          },
+        },
+        profile: {
+          select: {
+            city: true,
+            bio: true,
+            latitude: true,
+            longitude: true,
+          },
+        },
         photos: {
           where: { isHidden: false },
           orderBy: { sortOrder: 'asc' },
+          select: {
+            id: true,
+            storageKey: true,
+            isPrimary: true,
+            sortOrder: true,
+          },
         },
       },
       take: DISCOVERY_FEED_QUERY_LIMIT,

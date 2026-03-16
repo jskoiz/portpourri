@@ -1472,78 +1472,87 @@ async function main() {
 
   const createdUsers = new Map<string, { id: string; firstName: string }>();
 
-  for (const [index, user] of seedUsers.entries()) {
-    const photo = PHOTO_FILES[index % PHOTO_FILES.length];
-    const created = await prisma.user.create({
-      data: {
-        email: demoEmail(user.slug),
-        firstName: user.firstName,
-        birthdate: new Date(user.birthdate),
-        gender: user.gender,
-        authProvider: AuthProvider.EMAIL,
-        hasVerifiedEmail: true,
-        isOnboarded: true,
-        profile: {
-          create: {
-            city: user.city,
-            country: user.country,
-            latitude: user.latitude,
-            longitude: user.longitude,
-            bio: user.bio,
-            intentWorkout: user.intentWorkout,
-            intentDating: user.intentDating,
-            intentFriends: user.intentFriends,
-            showMeMen: true,
-            showMeWomen: true,
-            showMeOther: true,
-            maxDistanceKm: 50,
-          },
-        },
-        fitnessProfile: {
-          create: {
-            intensityLevel: user.fitness.intensityLevel,
-            weeklyFrequencyBand: user.fitness.weeklyFrequencyBand,
-            primaryGoal: user.fitness.primaryGoal,
-            secondaryGoal: user.fitness.secondaryGoal ?? null,
-            favoriteActivities: user.fitness.favoriteActivities,
-            trainingStyle: user.fitness.trainingStyle,
-            prefersMorning: user.fitness.prefersMorning ?? null,
-            prefersEvening: user.fitness.prefersEvening ?? null,
-          },
-        },
-        photos: {
-          create: [
-            {
-              storageKey: `${BASE_URL}/pfps/${photo}`,
-              isPrimary: true,
-              sortOrder: 0,
+  // Batch user creation in a single transaction for efficiency
+  const BATCH_SIZE = 10;
+  for (let i = 0; i < seedUsers.length; i += BATCH_SIZE) {
+    const batch = seedUsers.slice(i, i + BATCH_SIZE);
+    await prisma.$transaction(async (tx) => {
+      for (const [batchIndex, user] of batch.entries()) {
+        const index = i + batchIndex;
+        const photo = PHOTO_FILES[index % PHOTO_FILES.length];
+        const created = await tx.user.create({
+          data: {
+            email: demoEmail(user.slug),
+            firstName: user.firstName,
+            birthdate: new Date(user.birthdate),
+            gender: user.gender,
+            authProvider: AuthProvider.EMAIL,
+            hasVerifiedEmail: true,
+            isOnboarded: true,
+            profile: {
+              create: {
+                city: user.city,
+                country: user.country,
+                latitude: user.latitude,
+                longitude: user.longitude,
+                bio: user.bio,
+                intentWorkout: user.intentWorkout,
+                intentDating: user.intentDating,
+                intentFriends: user.intentFriends,
+                showMeMen: true,
+                showMeWomen: true,
+                showMeOther: true,
+                maxDistanceKm: 50,
+              },
             },
-          ],
-        },
-      },
+            fitnessProfile: {
+              create: {
+                intensityLevel: user.fitness.intensityLevel,
+                weeklyFrequencyBand: user.fitness.weeklyFrequencyBand,
+                primaryGoal: user.fitness.primaryGoal,
+                secondaryGoal: user.fitness.secondaryGoal ?? null,
+                favoriteActivities: user.fitness.favoriteActivities,
+                trainingStyle: user.fitness.trainingStyle,
+                prefersMorning: user.fitness.prefersMorning ?? null,
+                prefersEvening: user.fitness.prefersEvening ?? null,
+              },
+            },
+            photos: {
+              create: [
+                {
+                  storageKey: `${BASE_URL}/pfps/${photo}`,
+                  isPrimary: true,
+                  sortOrder: 0,
+                },
+              ],
+            },
+          },
+        });
+
+        createdUsers.set(user.slug, {
+          id: created.id,
+          firstName: created.firstName,
+        });
+
+        const activityRows = user.activities
+          .map((slug) => activityIdsBySlug.get(slug))
+          .filter((activityId): activityId is number => typeof activityId === 'number')
+          .map((activityId) => ({
+            userId: created.id,
+            activityId,
+          }));
+
+        if (activityRows.length) {
+          await tx.userFitnessActivity.createMany({
+            data: activityRows,
+            skipDuplicates: true,
+          });
+        }
+      }
     });
 
-    createdUsers.set(user.slug, {
-      id: created.id,
-      firstName: created.firstName,
-    });
-
-    const activityRows = user.activities
-      .map((slug) => activityIdsBySlug.get(slug))
-      .filter((activityId): activityId is number => typeof activityId === 'number')
-      .map((activityId) => ({
-        userId: created.id,
-        activityId,
-      }));
-
-    if (activityRows.length) {
-      await prisma.userFitnessActivity.createMany({
-        data: activityRows,
-        skipDuplicates: true,
-      });
-    }
-
-    console.log(`Created demo profile: ${created.firstName} (${user.city})`);
+    const names = batch.map((u) => u.firstName).join(', ');
+    console.log(`Created demo profiles batch: ${names}`);
   }
 
   let createdEventCount = 0;

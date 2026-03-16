@@ -56,9 +56,10 @@ export class EventsService {
   ) {}
 
   async list(userId?: string, take = 20, skip = 0) {
+    const safeTake = Math.min(Math.max(take, 1), 100);
     const events = await this.prisma.event.findMany({
       orderBy: { startsAt: 'asc' },
-      take,
+      take: safeTake,
       skip,
       include: {
         host: { select: { id: true, firstName: true } },
@@ -203,10 +204,12 @@ export class EventsService {
     return { status: 'joined', attendeesCount: total };
   }
 
-  async myEvents(userId: string) {
+  async myEvents(userId: string, take = 20, skip = 0) {
     const rows = await this.prisma.eventRsvp.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
+      take: Math.min(take, 100),
+      skip,
       include: {
         event: {
           include: {
