@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOBILE_DIR="$ROOT_DIR/mobile"
 MANIFEST_DIR="$MOBILE_DIR/build"
 MANIFEST_PATH="$MANIFEST_DIR/ios-release-manifest.json"
+IOS_DIR="$MOBILE_DIR/ios"
 
 MODE="eas"
 PROFILE="production"
@@ -33,6 +34,20 @@ run_git() {
 
 run_eas() {
   npx -y eas-cli "$@"
+}
+
+detect_xcode_container() {
+  if [[ -d "$IOS_DIR/mobile.xcworkspace" ]]; then
+    echo "workspace:$IOS_DIR/mobile.xcworkspace"
+    return
+  fi
+
+  if [[ -d "$IOS_DIR/mobile.xcodeproj" ]]; then
+    echo "project:$IOS_DIR/mobile.xcodeproj"
+    return
+  fi
+
+  fail "unable to locate Xcode project or workspace under $IOS_DIR"
 }
 
 load_env_file() {
@@ -144,15 +159,59 @@ case "$MODE" in
     )
     ;;
   xcode)
+    IFS=":" read -r XCODE_CONTAINER_KIND XCODE_CONTAINER_PATH <<<"$(detect_xcode_container)"
+    ARCHIVE_PATH="$MOBILE_DIR/build/BRDG.xcarchive"
+    EXPORT_PATH="$MOBILE_DIR/build/ios-export"
+    EXPORT_OPTIONS_PATH="$MOBILE_DIR/build/ios-export-options.plist"
+    XCODE_TARGET_ARGS=()
+
+    if [[ "$XCODE_CONTAINER_KIND" == "workspace" ]]; then
+      XCODE_TARGET_ARGS=(-workspace "$XCODE_CONTAINER_PATH")
+    else
+      XCODE_TARGET_ARGS=(-project "$XCODE_CONTAINER_PATH")
+    fi
+
+    mkdir -p "$EXPORT_PATH"
+    cat >"$EXPORT_OPTIONS_PATH" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>destination</key>
+  <string>upload</string>
+  <key>manageAppVersionAndBuildNumber</key>
+  <false/>
+  <key>method</key>
+  <string>app-store-connect</string>
+  <key>signingStyle</key>
+  <string>automatic</string>
+  <key>stripSwiftSymbols</key>
+  <true/>
+  <key>uploadSymbols</key>
+  <true/>
+</dict>
+</plist>
+EOF
+
     (
       cd "$MOBILE_DIR"
       xcodebuild \
-        -workspace ios/mobile.xcworkspace \
+        "${XCODE_TARGET_ARGS[@]}" \
         -scheme mobile \
         -configuration Release \
         -destination 'generic/platform=iOS' \
         archive \
-        -archivePath build/BRDG.xcarchive \
+        -archivePath "$ARCHIVE_PATH" \
+        PRODUCT_BUNDLE_IDENTIFIER="$IOS_BUNDLE_IDENTIFIER" \
+        MARKETING_VERSION="$APP_VERSION" \
+        CURRENT_PROJECT_VERSION="$IOS_BUILD_NUMBER" \
+        -allowProvisioningUpdates
+
+      xcodebuild \
+        -exportArchive \
+        -archivePath "$ARCHIVE_PATH" \
+        -exportPath "$EXPORT_PATH" \
+        -exportOptionsPlist "$EXPORT_OPTIONS_PATH" \
         -allowProvisioningUpdates
     )
     ;;
