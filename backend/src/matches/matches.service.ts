@@ -1,135 +1,18 @@
-import { ForbiddenException, Injectable, MessageEvent } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { ForbiddenException, Injectable, Logger, MessageEvent } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MatchesRealtimeService } from './matches-realtime.service';
 import { map, Observable } from 'rxjs';
 import { NotificationsService } from '../notifications/notifications.service';
-import { deriveMatchClassification } from './match-classification';
-
-function isUniqueConstraintError(error: unknown): boolean {
-  if (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === 'P2002'
-  ) {
-    return true;
-  }
-
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    error.code === 'P2002'
-  );
-}
 
 @Injectable()
 export class MatchesService {
+  private readonly logger = new Logger(MatchesService.name);
+
   constructor(
-    private prisma: PrismaService,
-    private realtime: MatchesRealtimeService,
+    private readonly prisma: PrismaService,
+    private readonly realtime: MatchesRealtimeService,
     private readonly notifications: NotificationsService,
   ) {}
-
-  async likeUser(fromUserId: string, toUserId: string) {
-    if (fromUserId === toUserId) {
-      return { isMatch: false };
-    }
-    // 1. Check if like already exists to prevent duplicates
-    const existingLike = await this.prisma.like.findUnique({
-      where: {
-        fromUserId_toUserId: {
-          fromUserId,
-          toUserId,
-        },
-      },
-    });
-
-    if (existingLike) {
-      return { isMatch: false, alreadyLiked: true };
-    }
-
-    // 2. Create the like
-    await this.prisma.like.create({
-      data: {
-        fromUserId,
-        toUserId,
-      },
-    });
-
-    // 3. Check for mutual like
-    const mutualLike = await this.prisma.like.findUnique({
-      where: {
-        fromUserId_toUserId: {
-          fromUserId: toUserId,
-          toUserId: fromUserId,
-        },
-      },
-    });
-
-    if (mutualLike) {
-      // 4. Create Match
-      // Ensure consistent ordering for unique constraint
-      const [userAId, userBId] = [fromUserId, toUserId].sort();
-
-      // Check if match already exists (edge case)
-      const existingMatch = await this.prisma.match.findUnique({
-        where: {
-          userAId_userBId: {
-            userAId,
-            userBId,
-          },
-        },
-      });
-
-      if (existingMatch) {
-        return { isMatch: true, matchId: existingMatch.id };
-      }
-
-      const classification = await deriveMatchClassification(this.prisma, [
-        fromUserId,
-        toUserId,
-      ]);
-
-      let match: { id: string };
-      try {
-        match = await this.prisma.match.create({
-          data: {
-            userAId,
-            userBId,
-            ...classification,
-          },
-        });
-      } catch (e) {
-        // Race condition: both users liked simultaneously; another request created the match first
-        if (isUniqueConstraintError(e)) {
-          const existing = await this.prisma.match.findUnique({
-            where: { userAId_userBId: { userAId, userBId } },
-          });
-          if (existing) {
-            return { isMatch: true, matchId: existing.id };
-          }
-        }
-        throw e;
-      }
-
-      this.notifications.create(fromUserId, {
-        type: 'match_created',
-        title: "It's a match!",
-        body: 'You both liked each other.',
-        data: { matchId: match.id },
-      });
-      this.notifications.create(toUserId, {
-        type: 'match_created',
-        title: "It's a match!",
-        body: 'You both liked each other.',
-        data: { matchId: match.id },
-      });
-
-      return { isMatch: true, matchId: match.id };
-    }
-
-    return { isMatch: false };
-  }
 
   async getMatches(userId: string) {
     const matches = await this.prisma.match.findMany({
@@ -240,7 +123,7 @@ export class MatchesService {
 
     const recipientId =
       match.userAId === userId ? match.userBId : match.userAId;
-    this.notifications.create(recipientId, {
+    void this.notifications.create(recipientId, {
       type: 'message_received',
       title: 'New message',
       body: content,
