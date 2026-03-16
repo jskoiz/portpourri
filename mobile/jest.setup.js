@@ -77,6 +77,16 @@ jest.mock('@gorhom/bottom-sheet', () => {
   };
 });
 
+jest.mock('@shopify/flash-list', () => {
+  const React = require('react');
+  const { FlatList } = require('react-native');
+
+  const FlashList = React.forwardRef((props, ref) => <FlatList ref={ref} {...props} />);
+  FlashList.displayName = 'FlashList';
+
+  return { FlashList };
+});
+
 jest.mock('@react-native-community/datetimepicker', () => {
   const React = require('react');
   const { Pressable, Text } = require('react-native');

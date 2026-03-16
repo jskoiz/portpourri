@@ -10,12 +10,12 @@
 
 ## Validation
 
-- [ ] `npm run check:changed`
+- [ ] `npm run pre-submit`
 - [ ] `npm run check`
 - [ ] `npm run smoke`
 - [ ] Other:
 
-List the commands you actually ran and any notable output.
+List the commands you actually ran, the selected `check:changed` commands if relevant, and any notable output.
 
 ## Visual Evidence
 

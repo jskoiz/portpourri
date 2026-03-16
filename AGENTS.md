@@ -11,6 +11,7 @@
 Run these from repo root unless a task is package-local.
 
 ```bash
+npm run pre-submit
 npm run check
 npm run check:changed
 npm run check:backend
@@ -18,6 +19,9 @@ npm run check:mobile
 npm run smoke
 npm run docs:check
 npm run harness:doctor
+npm run harness:ci-context -- --branch main
+npm run repo:index
+npm run hooks:install
 npm run storybook
 npm run dev:backend
 npm run dev:mobile
@@ -30,6 +34,7 @@ npm run release:ios:check
 
 - Keep product-facing backend and mobile contracts stable unless the task explicitly changes both sides.
 - Update docs when commands, workflows, environment expectations, or validation paths change.
+- Run `npm run pre-submit` before opening a PR. Use `npm run hooks:install` if you want the repo-managed pre-commit hook to enforce the same checklist on staged changes.
 - Visual-only mobile work should ship with a Storybook update in the same diff unless the PR explains why Storybook is the wrong surface.
 - Prefer Storybook for isolated UI work. Use the seeded `ui-preview` runtime only for integrated validation.
 - Use one Codex thread per task and one git worktree per active task. Prefer [`scripts/codex-worktree.sh`](scripts/codex-worktree.sh) for new worktrees.

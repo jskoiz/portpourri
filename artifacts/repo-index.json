@@ -1,0 +1,574 @@
+{
+  "schemaVersion": 1,
+  "rootScripts": [
+    "check",
+    "check:backend",
+    "check:changed",
+    "check:mobile",
+    "check:root",
+    "dev:backend",
+    "dev:mobile",
+    "dev:scenario",
+    "docs:check",
+    "harness:ci-context",
+    "harness:doctor",
+    "hooks:install",
+    "policy:check",
+    "pre-submit",
+    "release:ios",
+    "release:ios:check",
+    "repo:index",
+    "repo:index:check",
+    "scaffold:backend-module",
+    "scaffold:mobile-feature",
+    "smoke",
+    "storybook",
+    "test:backend",
+    "test:mobile",
+    "test:root"
+  ],
+  "layerModel": {
+    "backend": [
+      {
+        "id": "base",
+        "label": "config/base",
+        "description": "Environment parsing, shared enums, and cross-cutting backend contracts.",
+        "allowedImports": [
+          "base"
+        ]
+      },
+      {
+        "id": "persistence",
+        "label": "infra/persistence",
+        "description": "Database client and persistence wiring.",
+        "allowedImports": [
+          "base",
+          "persistence"
+        ]
+      },
+      {
+        "id": "contracts",
+        "label": "transport/contracts",
+        "description": "DTOs, typed request contracts, and backend module-local types.",
+        "allowedImports": [
+          "base",
+          "contracts"
+        ]
+      },
+      {
+        "id": "domain",
+        "label": "domain/service",
+        "description": "Business logic, strategies, and module-local service helpers.",
+        "allowedImports": [
+          "base",
+          "persistence",
+          "contracts",
+          "domain"
+        ]
+      },
+      {
+        "id": "transport",
+        "label": "transport",
+        "description": "Controllers, request/response filters, and route entrypoints.",
+        "allowedImports": [
+          "base",
+          "contracts",
+          "domain",
+          "transport"
+        ]
+      },
+      {
+        "id": "app",
+        "label": "app-shell",
+        "description": "Nest modules and application bootstrap wiring.",
+        "allowedImports": [
+          "base",
+          "persistence",
+          "contracts",
+          "domain",
+          "transport",
+          "app"
+        ]
+      }
+    ],
+    "mobile": [
+      {
+        "id": "foundation",
+        "label": "config/foundation",
+        "description": "Runtime env, shared constants, theme tokens, and navigation type contracts.",
+        "allowedImports": [
+          "foundation"
+        ]
+      },
+      {
+        "id": "data",
+        "label": "api/store",
+        "description": "HTTP adapters, service wrappers, auth state, and query-key plumbing.",
+        "allowedImports": [
+          "foundation",
+          "data"
+        ]
+      },
+      {
+        "id": "shared-ui",
+        "label": "shared-ui",
+        "description": "Reusable UI primitives, utility helpers, and shared interaction surfaces.",
+        "allowedImports": [
+          "foundation",
+          "data",
+          "shared-ui"
+        ]
+      },
+      {
+        "id": "feature",
+        "label": "feature",
+        "description": "Feature-owned hooks, feature state, and presentational modules.",
+        "allowedImports": [
+          "foundation",
+          "data",
+          "shared-ui",
+          "feature"
+        ]
+      },
+      {
+        "id": "screen",
+        "label": "screen",
+        "description": "Route entry surfaces that compose features and shared UI.",
+        "allowedImports": [
+          "foundation",
+          "data",
+          "shared-ui",
+          "feature",
+          "screen"
+        ]
+      },
+      {
+        "id": "app-shell",
+        "label": "app-shell",
+        "description": "Navigation containers and top-level provider wiring.",
+        "allowedImports": [
+          "foundation",
+          "data",
+          "shared-ui",
+          "feature",
+          "screen",
+          "app-shell"
+        ]
+      }
+    ]
+  },
+  "backend": {
+    "modules": [
+      "auth",
+      "common",
+      "config",
+      "discovery",
+      "events",
+      "matches",
+      "moderation",
+      "notifications",
+      "prisma",
+      "profile",
+      "verification"
+    ],
+    "layers": [
+      {
+        "id": "base",
+        "label": "config/base",
+        "description": "Environment parsing, shared enums, and cross-cutting backend contracts.",
+        "allowedImports": [
+          "base"
+        ],
+        "files": [
+          "backend/src/common/auth-request.interface.ts",
+          "backend/src/common/enums.ts",
+          "backend/src/common/filters/all-exceptions.filter.ts",
+          "backend/src/config/app.config.ts"
+        ]
+      },
+      {
+        "id": "persistence",
+        "label": "infra/persistence",
+        "description": "Database client and persistence wiring.",
+        "allowedImports": [
+          "base",
+          "persistence"
+        ],
+        "files": [
+          "backend/src/prisma/prisma.module.ts",
+          "backend/src/prisma/prisma.service.spec.ts",
+          "backend/src/prisma/prisma.service.ts"
+        ]
+      },
+      {
+        "id": "contracts",
+        "label": "transport/contracts",
+        "description": "DTOs, typed request contracts, and backend module-local types.",
+        "allowedImports": [
+          "base",
+          "contracts"
+        ],
+        "files": [
+          "backend/src/auth/auth.dto.ts",
+          "backend/src/events/create-event.dto.ts",
+          "backend/src/events/create-event.types.ts",
+          "backend/src/matches/matches.dto.ts",
+          "backend/src/moderation/moderation.dto.ts",
+          "backend/src/notifications/notifications.dto.ts",
+          "backend/src/profile/profile.dto.ts",
+          "backend/src/verification/verification.dto.ts"
+        ]
+      },
+      {
+        "id": "domain",
+        "label": "domain/service",
+        "description": "Business logic, strategies, and module-local service helpers.",
+        "allowedImports": [
+          "base",
+          "persistence",
+          "contracts",
+          "domain"
+        ],
+        "files": [
+          "backend/src/app.service.ts",
+          "backend/src/auth/auth.service.ts",
+          "backend/src/auth/jwt-auth.guard.ts",
+          "backend/src/auth/jwt.strategy.ts",
+          "backend/src/discovery/discovery.service.ts",
+          "backend/src/events/events.service.ts",
+          "backend/src/matches/match-classification.ts",
+          "backend/src/matches/matches-realtime.service.ts",
+          "backend/src/matches/matches.service.ts",
+          "backend/src/moderation/moderation.service.ts",
+          "backend/src/notifications/notifications.service.ts",
+          "backend/src/profile/photo-storage.service.ts",
+          "backend/src/profile/profile.service.ts",
+          "backend/src/verification/verification.service.ts"
+        ]
+      },
+      {
+        "id": "transport",
+        "label": "transport",
+        "description": "Controllers, request/response filters, and route entrypoints.",
+        "allowedImports": [
+          "base",
+          "contracts",
+          "domain",
+          "transport"
+        ],
+        "files": [
+          "backend/src/app.controller.ts",
+          "backend/src/auth/auth.controller.ts",
+          "backend/src/discovery/discovery.controller.ts",
+          "backend/src/events/events.controller.ts",
+          "backend/src/matches/matches.controller.ts",
+          "backend/src/moderation/moderation.controller.ts",
+          "backend/src/notifications/notifications.controller.ts",
+          "backend/src/profile/profile.controller.ts",
+          "backend/src/verification/verification.controller.ts"
+        ]
+      },
+      {
+        "id": "app",
+        "label": "app-shell",
+        "description": "Nest modules and application bootstrap wiring.",
+        "allowedImports": [
+          "base",
+          "persistence",
+          "contracts",
+          "domain",
+          "transport",
+          "app"
+        ],
+        "files": [
+          "backend/src/app.module.ts",
+          "backend/src/auth/auth.module.ts",
+          "backend/src/discovery/discovery.module.ts",
+          "backend/src/events/events.module.ts",
+          "backend/src/main.ts",
+          "backend/src/matches/matches.module.ts",
+          "backend/src/moderation/moderation.module.ts",
+          "backend/src/notifications/notifications.module.ts",
+          "backend/src/profile/profile.module.ts",
+          "backend/src/verification/verification.module.ts"
+        ]
+      }
+    ]
+  },
+  "mobile": {
+    "featureRoots": [
+      "auth",
+      "chat",
+      "discovery",
+      "events",
+      "locations",
+      "matches",
+      "notifications",
+      "onboarding",
+      "profile"
+    ],
+    "screens": [
+      "mobile/src/screens/ChatScreen.tsx",
+      "mobile/src/screens/CreateScreen.tsx",
+      "mobile/src/screens/EventDetailScreen.tsx",
+      "mobile/src/screens/ExploreScreen.tsx",
+      "mobile/src/screens/HomeScreen.tsx",
+      "mobile/src/screens/LoginScreen.tsx",
+      "mobile/src/screens/MatchesScreen.tsx",
+      "mobile/src/screens/MyEventsScreen.tsx",
+      "mobile/src/screens/NotificationsScreen.tsx",
+      "mobile/src/screens/OnboardingScreen.tsx",
+      "mobile/src/screens/ProfileDetailScreen.tsx",
+      "mobile/src/screens/ProfileScreen.tsx",
+      "mobile/src/screens/SignupScreen.tsx",
+      "mobile/src/screens/__tests__/ChatScreen.test.tsx",
+      "mobile/src/screens/__tests__/CreateScreen.test.tsx",
+      "mobile/src/screens/__tests__/ExploreScreen.test.tsx",
+      "mobile/src/screens/__tests__/HomeScreen.test.tsx",
+      "mobile/src/screens/__tests__/LoginScreen.test.tsx",
+      "mobile/src/screens/__tests__/MyEventsScreen.test.tsx",
+      "mobile/src/screens/__tests__/NotificationsScreen.test.tsx",
+      "mobile/src/screens/__tests__/OnboardingScreen.test.tsx",
+      "mobile/src/screens/__tests__/ProfileScreen.test.tsx",
+      "mobile/src/screens/__tests__/SignupScreen.test.tsx"
+    ],
+    "stories": [
+      "mobile/src/stories/AppUi.stories.tsx",
+      "mobile/src/stories/BottomSheet.stories.tsx",
+      "mobile/src/stories/Button.stories.tsx",
+      "mobile/src/stories/Card.stories.tsx",
+      "mobile/src/stories/ChatComposer.stories.tsx",
+      "mobile/src/stories/ChatQuickActionsSheet.stories.tsx",
+      "mobile/src/stories/ChatThread.stories.tsx",
+      "mobile/src/stories/Chip.stories.tsx",
+      "mobile/src/stories/CreatePlanSummaryCard.stories.tsx",
+      "mobile/src/stories/CreateTimingSection.stories.tsx",
+      "mobile/src/stories/DiscoveryFilterSheet.stories.tsx",
+      "mobile/src/stories/DiscoveryHero.stories.tsx",
+      "mobile/src/stories/DiscoverySwipeDeck.stories.tsx",
+      "mobile/src/stories/EventDetailScreen.stories.tsx",
+      "mobile/src/stories/ExploreEventCard.stories.tsx",
+      "mobile/src/stories/ExploreQuickActionsSheet.stories.tsx",
+      "mobile/src/stories/ExploreScreenContent.stories.tsx",
+      "mobile/src/stories/Feedback.stories.tsx",
+      "mobile/src/stories/FormFields.stories.tsx",
+      "mobile/src/stories/HomeScreenContent.stories.tsx",
+      "mobile/src/stories/Input.stories.tsx",
+      "mobile/src/stories/LoginScreen.stories.tsx",
+      "mobile/src/stories/Primitives.stories.tsx",
+      "mobile/src/stories/ProfileBuildInfo.stories.tsx",
+      "mobile/src/stories/ProfileScreenContent.stories.tsx",
+      "mobile/src/stories/ProfileSections.stories.tsx",
+      "mobile/src/stories/SignupScreen.stories.tsx",
+      "mobile/src/stories/StatePanel.stories.tsx"
+    ],
+    "layers": [
+      {
+        "id": "foundation",
+        "label": "config/foundation",
+        "description": "Runtime env, shared constants, theme tokens, and navigation type contracts.",
+        "allowedImports": [
+          "foundation"
+        ],
+        "files": [
+          "mobile/src/api/types.ts",
+          "mobile/src/config/__tests__/buildInfo.test.ts",
+          "mobile/src/config/buildInfo.ts",
+          "mobile/src/config/env.ts",
+          "mobile/src/constants/signup.ts",
+          "mobile/src/constants/storage.ts",
+          "mobile/src/core/navigation/types.ts",
+          "mobile/src/theme/tokens.ts",
+          "mobile/src/theme/useTheme.tsx",
+          "mobile/src/types/sessionIntent.ts"
+        ]
+      },
+      {
+        "id": "data",
+        "label": "api/store",
+        "description": "HTTP adapters, service wrappers, auth state, and query-key plumbing.",
+        "allowedImports": [
+          "foundation",
+          "data"
+        ],
+        "files": [
+          "mobile/src/api/__tests__/authSession.test.ts",
+          "mobile/src/api/__tests__/client.test.ts",
+          "mobile/src/api/authSession.ts",
+          "mobile/src/api/client.ts",
+          "mobile/src/api/errors.ts",
+          "mobile/src/api/observability.ts",
+          "mobile/src/lib/query/queryClient.ts",
+          "mobile/src/lib/query/queryKeys.ts",
+          "mobile/src/services/__tests__/api.test.ts",
+          "mobile/src/services/__tests__/matchRealtime.test.ts",
+          "mobile/src/services/api.ts",
+          "mobile/src/services/matchRealtime.ts",
+          "mobile/src/store/__tests__/authStore.test.ts",
+          "mobile/src/store/authStore.ts"
+        ]
+      },
+      {
+        "id": "shared-ui",
+        "label": "shared-ui",
+        "description": "Reusable UI primitives, utility helpers, and shared interaction surfaces.",
+        "allowedImports": [
+          "foundation",
+          "data",
+          "shared-ui"
+        ],
+        "files": [
+          "mobile/src/components/ErrorBoundary.tsx",
+          "mobile/src/components/LoadingState.tsx",
+          "mobile/src/components/MatchAnimation.tsx",
+          "mobile/src/components/SwipeDeck.tsx",
+          "mobile/src/components/__tests__/SwipeDeck.test.tsx",
+          "mobile/src/components/form/DateField.tsx",
+          "mobile/src/components/form/LocationField.tsx",
+          "mobile/src/components/form/SheetSelectField.tsx",
+          "mobile/src/components/form/StepperField.tsx",
+          "mobile/src/components/form/__tests__/DateField.test.tsx",
+          "mobile/src/components/form/__tests__/LocationField.test.tsx",
+          "mobile/src/components/form/__tests__/StepperField.test.tsx",
+          "mobile/src/components/form/fieldStyles.ts",
+          "mobile/src/components/ui/AppBackButton.tsx",
+          "mobile/src/components/ui/AppBackdrop.tsx",
+          "mobile/src/components/ui/AppIcon.tsx",
+          "mobile/src/components/ui/AppNotificationButton.tsx",
+          "mobile/src/components/ui/AppSelect.tsx",
+          "mobile/src/components/ui/__tests__/AppBackButton.test.tsx",
+          "mobile/src/core/observability/sentry.ts",
+          "mobile/src/design/__tests__/primitives.test.tsx",
+          "mobile/src/design/primitives/index.tsx",
+          "mobile/src/design/sheets/AppBottomSheet.tsx",
+          "mobile/src/design/sheets/useSheetController.ts",
+          "mobile/src/design/tamagui.config.ts",
+          "mobile/src/design/theme.tsx",
+          "mobile/src/lib/__tests__/profilePhotos.test.ts",
+          "mobile/src/lib/fonts.ts",
+          "mobile/src/lib/interaction/feedback.ts",
+          "mobile/src/lib/profilePhotos.ts"
+        ]
+      },
+      {
+        "id": "feature",
+        "label": "feature",
+        "description": "Feature-owned hooks, feature state, and presentational modules.",
+        "allowedImports": [
+          "foundation",
+          "data",
+          "shared-ui",
+          "feature"
+        ],
+        "files": [
+          "mobile/src/features/auth/schema.ts",
+          "mobile/src/features/chat/components/ChatComposer.tsx",
+          "mobile/src/features/chat/components/ChatHeader.tsx",
+          "mobile/src/features/chat/components/ChatMessageList.tsx",
+          "mobile/src/features/chat/components/ChatQuickActionsSheet.tsx",
+          "mobile/src/features/chat/components/chat.helpers.ts",
+          "mobile/src/features/chat/components/chat.styles.ts",
+          "mobile/src/features/chat/hooks/useChatThread.ts",
+          "mobile/src/features/discovery/components/DiscoveryFilterSheet.tsx",
+          "mobile/src/features/discovery/components/HomeHero.tsx",
+          "mobile/src/features/discovery/components/HomeQuickFilters.tsx",
+          "mobile/src/features/discovery/components/HomeScreenContent.tsx",
+          "mobile/src/features/discovery/components/discoveryFilters.ts",
+          "mobile/src/features/discovery/components/home.styles.ts",
+          "mobile/src/features/discovery/hooks/useDiscoveryFeed.ts",
+          "mobile/src/features/events/create/CreateActivityPicker.tsx",
+          "mobile/src/features/events/create/CreateDetailsSection.tsx",
+          "mobile/src/features/events/create/CreateHeader.tsx",
+          "mobile/src/features/events/create/CreatePlanSummaryCard.tsx",
+          "mobile/src/features/events/create/CreateScreenContent.tsx",
+          "mobile/src/features/events/create/CreateSuccessCard.tsx",
+          "mobile/src/features/events/create/CreateTimingSection.tsx",
+          "mobile/src/features/events/create/create.helpers.ts",
+          "mobile/src/features/events/create/create.styles.ts",
+          "mobile/src/features/events/explore/ExploreCards.tsx",
+          "mobile/src/features/events/explore/ExploreCategoryBar.tsx",
+          "mobile/src/features/events/explore/ExploreHero.tsx",
+          "mobile/src/features/events/explore/ExploreQuickActionsSheet.tsx",
+          "mobile/src/features/events/explore/ExploreScreenContent.tsx",
+          "mobile/src/features/events/explore/explore.data.ts",
+          "mobile/src/features/events/explore/explore.helpers.ts",
+          "mobile/src/features/events/explore/explore.styles.ts",
+          "mobile/src/features/events/hooks/useCreateEvent.ts",
+          "mobile/src/features/events/hooks/useEventDetail.ts",
+          "mobile/src/features/events/hooks/useExploreEvents.ts",
+          "mobile/src/features/events/hooks/useMyEvents.ts",
+          "mobile/src/features/events/schema.ts",
+          "mobile/src/features/locations/locationSuggestions.ts",
+          "mobile/src/features/locations/useKnownLocationSuggestions.ts",
+          "mobile/src/features/matches/hooks/useMatches.ts",
+          "mobile/src/features/notifications/hooks/useNotifications.ts",
+          "mobile/src/features/notifications/hooks/useUnreadNotificationCount.ts",
+          "mobile/src/features/onboarding/schema.ts",
+          "mobile/src/features/profile/components/ProfileScreenContent.tsx",
+          "mobile/src/features/profile/components/ProfileSections.tsx",
+          "mobile/src/features/profile/components/profile.helpers.ts",
+          "mobile/src/features/profile/components/profile.styles.ts",
+          "mobile/src/features/profile/hooks/__tests__/profilePhotoHelpers.test.ts",
+          "mobile/src/features/profile/hooks/profilePhotoHelpers.ts",
+          "mobile/src/features/profile/hooks/useProfile.ts",
+          "mobile/src/features/profile/hooks/useProfileEditor.ts"
+        ]
+      },
+      {
+        "id": "screen",
+        "label": "screen",
+        "description": "Route entry surfaces that compose features and shared UI.",
+        "allowedImports": [
+          "foundation",
+          "data",
+          "shared-ui",
+          "feature",
+          "screen"
+        ],
+        "files": [
+          "mobile/src/screens/ChatScreen.tsx",
+          "mobile/src/screens/CreateScreen.tsx",
+          "mobile/src/screens/EventDetailScreen.tsx",
+          "mobile/src/screens/ExploreScreen.tsx",
+          "mobile/src/screens/HomeScreen.tsx",
+          "mobile/src/screens/LoginScreen.tsx",
+          "mobile/src/screens/MatchesScreen.tsx",
+          "mobile/src/screens/MyEventsScreen.tsx",
+          "mobile/src/screens/NotificationsScreen.tsx",
+          "mobile/src/screens/OnboardingScreen.tsx",
+          "mobile/src/screens/ProfileDetailScreen.tsx",
+          "mobile/src/screens/ProfileScreen.tsx",
+          "mobile/src/screens/SignupScreen.tsx",
+          "mobile/src/screens/__tests__/ChatScreen.test.tsx",
+          "mobile/src/screens/__tests__/CreateScreen.test.tsx",
+          "mobile/src/screens/__tests__/ExploreScreen.test.tsx",
+          "mobile/src/screens/__tests__/HomeScreen.test.tsx",
+          "mobile/src/screens/__tests__/LoginScreen.test.tsx",
+          "mobile/src/screens/__tests__/MyEventsScreen.test.tsx",
+          "mobile/src/screens/__tests__/NotificationsScreen.test.tsx",
+          "mobile/src/screens/__tests__/OnboardingScreen.test.tsx",
+          "mobile/src/screens/__tests__/ProfileScreen.test.tsx",
+          "mobile/src/screens/__tests__/SignupScreen.test.tsx"
+        ]
+      },
+      {
+        "id": "app-shell",
+        "label": "app-shell",
+        "description": "Navigation containers and top-level provider wiring.",
+        "allowedImports": [
+          "foundation",
+          "data",
+          "shared-ui",
+          "feature",
+          "screen",
+          "app-shell"
+        ],
+        "files": [
+          "mobile/src/core/providers/AppProviders.tsx",
+          "mobile/src/navigation/AppNavigator.tsx",
+          "mobile/src/navigation/MainTabNavigator.tsx"
+        ]
+      }
+    ]
+  }
+}

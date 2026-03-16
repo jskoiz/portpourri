@@ -43,6 +43,8 @@ This verifies:
 3. The seeded `ui-preview` runtime resets cleanly against the running backend
 4. Mobile launch prerequisites (`expo-doctor` + `typecheck`)
 
+`npm run smoke` expects to own the local backend port for the duration of the run. Stop any existing backend listener on `3010` before invoking it.
+
 ## Validation commands used before ship
 
 ```bash

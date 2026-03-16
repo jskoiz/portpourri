@@ -30,7 +30,12 @@ jobs:
       - run: npm ci
         working-directory: mobile
       - run: git fetch origin "${GITHUB_BASE_REF}" --depth=1
-      - run: npm run check:changed -- --base "origin/${GITHUB_BASE_REF}" --head HEAD
+      - run: node ./scripts/run-harness-lane.mjs --lane pr-fast --artifacts-dir artifacts/harness/pr-fast --base "origin/${GITHUB_BASE_REF}" --head HEAD
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: harness-pr-fast
+          path: artifacts/harness/pr-fast
 
   full-main:
     name: Main full lane
@@ -51,5 +56,9 @@ jobs:
         working-directory: backend
       - run: npm ci
         working-directory: mobile
-      - run: npm run check
-      - run: npm run smoke
+      - run: node ./scripts/run-harness-lane.mjs --lane full-main --artifacts-dir artifacts/harness/full-main
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: harness-full-main
+          path: artifacts/harness/full-main

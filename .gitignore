@@ -17,6 +17,7 @@ pnpm-debug.log*
 build/
 dist/
 .next/
+artifacts/harness/
 
 # mobile
 *.apk

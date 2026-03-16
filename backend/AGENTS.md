@@ -5,6 +5,7 @@
 ## Canonical Commands
 
 ```bash
+npm run pre-submit
 npm run check
 npm run check:full
 npm run test:e2e
@@ -16,7 +17,7 @@ npm run dev:scenario -- ui-preview
 
 - Read runtime environment through [`src/config/app.config.ts`](src/config/app.config.ts); do not add new `process.env` reads in feature modules.
 - Preserve response shapes and seed/runtime assumptions used by the mobile app.
-- Keep domain boundaries explicit: `auth`, `profile`, `discovery`, `matches`, `events`, `notifications`, `moderation`, `verification`.
+- Keep domain boundaries explicit: `config/base -> persistence -> contracts -> domain/service -> transport -> app-shell`.
 - If a change touches bootstrap, migrations, seed data, scenario reset logic, or request wiring, validate it with `npm run smoke` from repo root.
 - Add or update controller/service specs when behavior changes.
 
