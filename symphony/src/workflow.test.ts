@@ -52,11 +52,28 @@ Hello {{ issue.identifier }}
 });
 
 test('renders prompt conditionals and substitutions', () => {
+  const filePath = writeTempWorkflow(`---
+tracker:
+  kind: linear
+  project_slug: $LINEAR_PROJECT_SLUG
+workspace:
+  root: .symphony/workspaces
+---
+
+placeholder
+`);
+  const document = loadWorkflowDocument(filePath);
+  const loaded = resolveWorkflowConfig(document, {
+    ...process.env,
+    LINEAR_API_KEY: 'token',
+    LINEAR_PROJECT_SLUG: 'project-slug',
+  }, fs.statSync(filePath).mtimeMs);
   const template = `
 {% if attempt %}
 Attempt {{ attempt }}
 {% endif %}
 Issue {{ issue.identifier }}
+Runtime {{ workflow.runtime_revision }}
 {% if issue.description %}
 {{ issue.description }}
 {% else %}
@@ -65,12 +82,13 @@ No description provided.
 Labels: {{ issue.labels }}
 `;
 
-  const first = renderPrompt(template, issue, 0);
+  const first = renderPrompt(template, loaded, issue, 0);
   assert.match(first, /Issue BRDG-1/);
   assert.match(first, /No description provided\./);
   assert.doesNotMatch(first, /Attempt/);
+  assert.match(first, /Runtime /);
 
-  const retried = renderPrompt(template, { ...issue, description: 'Needs work' }, 2);
+  const retried = renderPrompt(template, loaded, { ...issue, description: 'Needs work' }, 2);
   assert.match(retried, /Attempt 2/);
   assert.match(retried, /Needs work/);
   assert.match(retried, /Labels: mobile/);

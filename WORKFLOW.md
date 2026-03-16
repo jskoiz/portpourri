@@ -41,6 +41,7 @@ Issue context:
 - State: {{ issue.state }}
 - Labels: {{ issue.labels }}
 - URL: {{ issue.url }}
+- Symphony runtime revision: {{ workflow.runtime_revision }}
 
 Description:
 {% if issue.description %}
@@ -93,6 +94,7 @@ Maintain one persistent issue comment headed `## Codex Workpad`.
   - `Notes`
 - Update the workpad after each meaningful milestone.
 - Do not create separate summary comments when the workpad can be updated instead.
+- Record `Symphony runtime revision: {{ workflow.runtime_revision }}` in the `Notes` section so the run can be traced back to the exact orchestration build.
 
 ## State routing
 

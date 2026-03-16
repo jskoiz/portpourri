@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import YAML from 'yaml';
-import type { Issue, WorkflowDocument } from './types.js';
+import type { Issue, LoadedWorkflow, WorkflowDocument } from './types.js';
 import { WorkflowError } from './errors.js';
 
 const FRONTMATTER = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/;
@@ -25,9 +25,15 @@ export function loadWorkflowDocument(filePath: string): WorkflowDocument {
   };
 }
 
-function lookupValue(expression: string, issue: Issue, attempt: number): unknown {
+function lookupValue(expression: string, workflow: LoadedWorkflow, issue: Issue, attempt: number): unknown {
   if (expression === 'attempt') {
     return attempt > 0 ? attempt : null;
+  }
+  if (expression === 'workflow.runtime_revision') {
+    return workflow.runtimeRevision;
+  }
+  if (expression === 'workflow.source_path') {
+    return workflow.document.sourcePath;
   }
   if (!expression.startsWith('issue.')) {
     return null;
@@ -56,10 +62,10 @@ function renderIfBlocks(template: string, issue: Issue, attempt: number): string
     );
 }
 
-export function renderPrompt(template: string, issue: Issue, attempt: number): string {
+export function renderPrompt(template: string, workflow: LoadedWorkflow, issue: Issue, attempt: number): string {
   const conditioned = renderIfBlocks(template, issue, attempt);
   return conditioned.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, expression: string) => {
-    const value = lookupValue(expression.trim(), issue, attempt);
+    const value = lookupValue(expression.trim(), workflow, issue, attempt);
     if (value == null) {
       return '';
     }

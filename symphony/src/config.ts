@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { LoadedWorkflow, WorkflowConfig, WorkflowDocument } from './types.js';
 import { WorkflowError } from './errors.js';
-import { coerceStringArray, resolveMaybeEnv, resolvePathValue } from './utils.js';
+import { coerceStringArray, resolveGitRevision, resolveMaybeEnv, resolvePathValue } from './utils.js';
 
 function asObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -88,5 +88,6 @@ export function resolveWorkflowConfig(document: WorkflowDocument, env: NodeJS.Pr
     document,
     config,
     mtimeMs,
+    runtimeRevision: resolveGitRevision(workflowDir),
   };
 }

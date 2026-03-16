@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { setTimeout as sleepTimeout } from 'node:timers/promises';
 
 export function sleep(ms: number): Promise<void> {
@@ -71,4 +72,16 @@ export function shallowEqualStringArrays(a: string[], b: string[]): boolean {
     return false;
   }
   return a.every((value, index) => value === b[index]);
+}
+
+export function resolveGitRevision(cwd: string): string | null {
+  try {
+    const value = execFileSync('git', ['-C', cwd, 'rev-parse', 'HEAD'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    return value || null;
+  } catch {
+    return null;
+  }
 }

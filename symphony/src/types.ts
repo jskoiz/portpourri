@@ -63,6 +63,7 @@ export interface LoadedWorkflow {
   document: WorkflowDocument;
   config: WorkflowConfig;
   mtimeMs: number;
+  runtimeRevision: string | null;
 }
 
 export interface Workspace {

@@ -38,7 +38,7 @@ export class AgentRunner {
   ) {}
 
   async run(issue: Issue, workspace: Workspace, attempt: number, abortSignal?: AbortSignal): Promise<RunResult> {
-    const prompt = renderPrompt(this.workflow.document.promptTemplate, issue, attempt);
+    const prompt = renderPrompt(this.workflow.document.promptTemplate, this.workflow, issue, attempt);
     const turnSandboxPolicy = this.workflow.config.codex.turnSandboxPolicy
       ? {
           ...this.workflow.config.codex.turnSandboxPolicy,
