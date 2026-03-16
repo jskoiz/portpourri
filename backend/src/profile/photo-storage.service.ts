@@ -24,7 +24,11 @@ function profilePhotoFileNameFromStorageKey(storageKey: string) {
   }
 
   const encodedFileName = storageKey.slice(prefix.length);
-  if (!encodedFileName || encodedFileName.includes('/') || encodedFileName.includes('\\')) {
+  if (
+    !encodedFileName ||
+    encodedFileName.includes('/') ||
+    encodedFileName.includes('\\')
+  ) {
     throw new BadRequestException('Invalid profile photo storage key');
   }
 
@@ -71,7 +75,11 @@ export class PhotoStorageService {
     if (!storageKey) return;
 
     const fileName = profilePhotoFileNameFromStorageKey(storageKey);
-    const absolutePath = join(process.cwd(), appConfig.uploads.profileDir, fileName);
+    const absolutePath = join(
+      process.cwd(),
+      appConfig.uploads.profileDir,
+      fileName,
+    );
     await rm(absolutePath, { force: true });
   }
 }

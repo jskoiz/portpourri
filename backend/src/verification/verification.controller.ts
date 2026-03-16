@@ -47,7 +47,9 @@ export class VerificationController {
   @ApiCreatedResponse({
     description: 'Verification challenge started successfully.',
   })
-  @ApiTooManyRequestsResponse({ description: 'Verification rate limit exceeded.' })
+  @ApiTooManyRequestsResponse({
+    description: 'Verification rate limit exceeded.',
+  })
   start(
     @Request() req: AuthenticatedRequest,
     @Body() body: StartVerificationDto,
@@ -65,7 +67,9 @@ export class VerificationController {
   @ApiCreatedResponse({
     description: 'Verification challenge confirmed successfully.',
   })
-  @ApiTooManyRequestsResponse({ description: 'Verification rate limit exceeded.' })
+  @ApiTooManyRequestsResponse({
+    description: 'Verification rate limit exceeded.',
+  })
   confirm(
     @Request() req: AuthenticatedRequest,
     @Body() body: ConfirmVerificationDto,

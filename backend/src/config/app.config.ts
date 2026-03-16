@@ -4,14 +4,6 @@ const toNumber = (value: string | undefined, fallback: number): number => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const requireEnv = (value: string | undefined, key: string): string => {
-  if (!value) {
-    throw new Error(`${key} is required`);
-  }
-
-  return value;
-};
-
 const apiPort = toNumber(process.env.PORT, 3000);
 const localApiBaseUrl = `http://127.0.0.1:${apiPort}`;
 const apiBaseUrl = process.env.API_BASE_URL || localApiBaseUrl;
@@ -24,7 +16,7 @@ const jwtSecret = (() => {
   if (process.env.NODE_ENV === 'test') return 'test-jwt-secret';
   throw new Error(
     'JWT_SECRET environment variable is required in non-test environments. ' +
-    'Set a strong, random secret (e.g. 64+ hex chars) before starting the server.',
+      'Set a strong, random secret (e.g. 64+ hex chars) before starting the server.',
   );
 })();
 

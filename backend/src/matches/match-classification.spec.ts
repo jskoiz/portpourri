@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { deriveMatchClassification } from './match-classification';
 import { PrismaService } from '../prisma/prisma.service';
 

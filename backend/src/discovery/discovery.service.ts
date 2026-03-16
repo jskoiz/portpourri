@@ -184,7 +184,11 @@ export class DiscoveryService {
           distanceKm,
         );
         const { profile, ...userWithoutProfile } = user;
-        const { latitude, longitude, ...safeProfile } = profile ?? {};
+        const {
+          latitude: _lat,
+          longitude: _lon,
+          ...safeProfile
+        } = profile ?? {};
         return {
           ...userWithoutProfile,
           profile: safeProfile,
@@ -195,8 +199,7 @@ export class DiscoveryService {
       })
       .filter(Boolean)
       .sort(
-        (a, b) =>
-          (b?.recommendationScore || 0) - (a?.recommendationScore || 0),
+        (a, b) => (b?.recommendationScore || 0) - (a?.recommendationScore || 0),
       )
       .slice(0, DISCOVERY_FEED_RESULT_LIMIT);
 
@@ -379,12 +382,7 @@ export class DiscoveryService {
     toLat?: number | null,
     toLon?: number | null,
   ): number | null {
-    if (
-      fromLat == null ||
-      fromLon == null ||
-      toLat == null ||
-      toLon == null
-    )
+    if (fromLat == null || fromLon == null || toLat == null || toLon == null)
       return null;
 
     const toRad = (value: number) => (value * Math.PI) / 180;
@@ -579,7 +577,10 @@ export class DiscoveryService {
     });
 
     if (!user) {
-      return { score: 0, prompts: [PROFILE_COMPLETENESS_PROMPTS.missingProfile] };
+      return {
+        score: 0,
+        prompts: [PROFILE_COMPLETENESS_PROMPTS.missingProfile],
+      };
     }
 
     const checks = [

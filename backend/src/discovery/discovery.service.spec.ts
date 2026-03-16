@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 import { Test, TestingModule } from '@nestjs/testing';
 import { IntensityLevel } from '@prisma/client';
 import { DiscoveryService } from './discovery.service';
@@ -28,6 +27,7 @@ describe('DiscoveryService', () => {
     user: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
     },
     userProfile: {
       findMany: jest.fn(),
@@ -88,6 +88,9 @@ describe('DiscoveryService', () => {
     }).compile();
 
     service = module.get<DiscoveryService>(DiscoveryService);
+
+    // Default: target user exists (tests that need it missing will override)
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'user-2' });
   });
 
   it('should be defined', () => {

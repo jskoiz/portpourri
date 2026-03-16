@@ -19,7 +19,9 @@ describe('ModerationController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ModerationController],
-      providers: [{ provide: ModerationService, useValue: moderationServiceMock }],
+      providers: [
+        { provide: ModerationService, useValue: moderationServiceMock },
+      ],
     }).compile();
 
     controller = module.get<ModerationController>(ModerationController);
@@ -33,10 +35,17 @@ describe('ModerationController', () => {
     const report = { id: 'report-1', status: 'open' };
     moderationServiceMock.reportUser.mockResolvedValue(report);
 
-    const body = { reportedUserId: 'user-2', category: ReportCategory.SPAM, description: 'test' };
+    const body = {
+      reportedUserId: 'user-2',
+      category: ReportCategory.SPAM,
+      description: 'test',
+    };
     const result = await controller.report(req, body);
 
-    expect(moderationServiceMock.reportUser).toHaveBeenCalledWith('user-1', body);
+    expect(moderationServiceMock.reportUser).toHaveBeenCalledWith(
+      'user-1',
+      body,
+    );
     expect(result).toBe(report);
   });
 
@@ -46,7 +55,10 @@ describe('ModerationController', () => {
 
     const result = await controller.block(req, { targetUserId: 'user-2' });
 
-    expect(moderationServiceMock.blockUser).toHaveBeenCalledWith('user-1', 'user-2');
+    expect(moderationServiceMock.blockUser).toHaveBeenCalledWith(
+      'user-1',
+      'user-2',
+    );
     expect(result).toBe(blockResult);
   });
 });

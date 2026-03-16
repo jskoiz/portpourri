@@ -35,7 +35,7 @@ describe('profile-helpers', () => {
       getProfileChips({
         fitnessProfile: {
           prefersEvening: true,
-          weeklyFrequencyBand: 4,
+          weeklyFrequencyBand: '4',
         },
       }),
     ).toEqual(['Evenings']);
@@ -43,7 +43,7 @@ describe('profile-helpers', () => {
     expect(
       getProfileChips({
         fitnessProfile: {
-          weeklyFrequencyBand: 4,
+          weeklyFrequencyBand: '4',
         },
       }),
     ).toEqual(['4x/week']);
@@ -60,13 +60,13 @@ describe('profile-helpers', () => {
     expect(
       getTempoLabel({
         fitnessProfile: {
-          weeklyFrequencyBand: 3,
+          weeklyFrequencyBand: '3',
           intensityLevel: 'high_energy',
         },
       }),
     ).toBe('3x/week · High Energy');
 
-    expect(getTempoLabel({ fitnessProfile: { weeklyFrequencyBand: 2 } })).toBe('2x/week');
+    expect(getTempoLabel({ fitnessProfile: { weeklyFrequencyBand: '2' } })).toBe('2x/week');
     expect(getTempoLabel({ fitnessProfile: {} })).toBe('Intent-aware match');
   });
 });

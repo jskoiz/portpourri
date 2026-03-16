@@ -16,7 +16,8 @@ export function formatProfileLabel(value: string): string {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export function getActivityTag(user: Pick<User, 'fitnessProfile'> | null | undefined): string {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getActivityTag(user: Record<string, any> | null | undefined): string {
   const goal = user?.fitnessProfile?.primaryGoal;
   if (!goal) return '';
   return ACTIVITY_TAGS[goal] || goal;

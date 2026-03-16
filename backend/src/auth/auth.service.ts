@@ -101,7 +101,9 @@ export class AuthService {
     };
   }
 
-  private async findEmailAuthUser(email: string): Promise<EmailAuthUser | null> {
+  private async findEmailAuthUser(
+    email: string,
+  ): Promise<EmailAuthUser | null> {
     return this.prisma.user.findFirst({
       where: {
         ...this.buildEmailLookup(email),

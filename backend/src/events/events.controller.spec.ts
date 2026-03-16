@@ -93,7 +93,7 @@ describe('EventsController', () => {
     eventsServiceMock.myEvents.mockResolvedValue([]);
 
     await expect(controller.myEvents(req)).resolves.toEqual([]);
-    expect(eventsServiceMock.myEvents).toHaveBeenCalledWith('user-1');
+    expect(eventsServiceMock.myEvents).toHaveBeenCalledWith('user-1', 20, 0);
   });
 
   it('propagates NotFoundException from detail', async () => {

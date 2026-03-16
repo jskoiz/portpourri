@@ -134,9 +134,7 @@ const LIFECYCLE_ENABLED = process.env.E2E_LIFECYCLE === 'true';
     });
 
     it('Step 8: Events list returns array', async () => {
-      const res = await request(app.getHttpServer())
-        .get('/events')
-        .expect(200);
+      const res = await request(app.getHttpServer()).get('/events').expect(200);
 
       expect(Array.isArray(res.body)).toBe(true);
     });
@@ -166,9 +164,7 @@ const LIFECYCLE_ENABLED = process.env.E2E_LIFECYCLE === 'true';
     });
 
     it('Step 11: Unauthenticated requests are rejected', async () => {
-      await request(app.getHttpServer())
-        .get('/auth/me')
-        .expect(401);
+      await request(app.getHttpServer()).get('/auth/me').expect(401);
     });
 
     it('Step 12: Delete account succeeds', async () => {

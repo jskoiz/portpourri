@@ -110,7 +110,10 @@ describe('VerificationService', () => {
       let resolveFirst!: () => void;
       userUpdate
         .mockImplementationOnce(
-          () => new Promise<void>((res) => { resolveFirst = res; }),
+          () =>
+            new Promise<void>((res) => {
+              resolveFirst = res;
+            }),
         )
         .mockResolvedValueOnce({});
 

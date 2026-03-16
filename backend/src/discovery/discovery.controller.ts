@@ -57,7 +57,7 @@ const parseList = (value?: string | string[]): string[] | undefined => {
 
 const parseAvailability = (
   value?: string | string[],
-): DiscoveryFilters['availability'] | undefined => {
+): NonNullable<DiscoveryFilters['availability']> | undefined => {
   const items = parseList(value)?.filter(
     (entry): entry is NonNullable<DiscoveryFilters['availability']>[number] =>
       entry === 'morning' || entry === 'evening',

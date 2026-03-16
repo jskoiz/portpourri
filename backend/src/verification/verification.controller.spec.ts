@@ -20,7 +20,9 @@ describe('VerificationController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [VerificationController],
-      providers: [{ provide: VerificationService, useValue: verificationServiceMock }],
+      providers: [
+        { provide: VerificationService, useValue: verificationServiceMock },
+      ],
     }).compile();
 
     controller = module.get<VerificationController>(VerificationController);
@@ -39,21 +41,39 @@ describe('VerificationController', () => {
   });
 
   it('delegates start to verification service', () => {
-    const startResult = { started: true, channel: 'email', maskedTarget: 'a***@example.com' };
+    const startResult = {
+      started: true,
+      channel: 'email',
+      maskedTarget: 'a***@example.com',
+    };
     verificationServiceMock.start.mockReturnValue(startResult);
 
-    const result = controller.start(req, { channel: VerificationChannel.Email, target: 'alice@example.com' });
+    const result = controller.start(req, {
+      channel: VerificationChannel.Email,
+      target: 'alice@example.com',
+    });
 
-    expect(verificationServiceMock.start).toHaveBeenCalledWith('user-1', 'email', 'alice@example.com');
+    expect(verificationServiceMock.start).toHaveBeenCalledWith(
+      'user-1',
+      'email',
+      'alice@example.com',
+    );
     expect(result).toBe(startResult);
   });
 
   it('delegates confirm to verification service', async () => {
     verificationServiceMock.confirm.mockResolvedValue({ verified: true });
 
-    const result = await controller.confirm(req, { channel: VerificationChannel.Email, code: '123456' });
+    const result = await controller.confirm(req, {
+      channel: VerificationChannel.Email,
+      code: '123456',
+    });
 
-    expect(verificationServiceMock.confirm).toHaveBeenCalledWith('user-1', 'email', '123456');
+    expect(verificationServiceMock.confirm).toHaveBeenCalledWith(
+      'user-1',
+      'email',
+      '123456',
+    );
     expect(result).toEqual({ verified: true });
   });
 });

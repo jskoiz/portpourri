@@ -36,7 +36,9 @@ describe('NotificationsService', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    (prisma.notification.create as jest.Mock).mockResolvedValue(mockNotification);
+    (prisma.notification.create as jest.Mock).mockResolvedValue(
+      mockNotification,
+    );
 
     const n = await service.create('user-1', {
       type: 'system',
@@ -91,14 +93,18 @@ describe('NotificationsService', () => {
   });
 
   it('marks all unread notifications as read', async () => {
-    (prisma.notification.updateMany as jest.Mock).mockResolvedValue({ count: 2 });
+    (prisma.notification.updateMany as jest.Mock).mockResolvedValue({
+      count: 2,
+    });
 
     const { updated } = await service.markAllRead('user-1');
     expect(updated).toBe(2);
   });
 
   it('markAllRead returns 0 when all notifications are already read', async () => {
-    (prisma.notification.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
+    (prisma.notification.updateMany as jest.Mock).mockResolvedValue({
+      count: 0,
+    });
 
     const { updated } = await service.markAllRead('user-1');
     expect(updated).toBe(0);

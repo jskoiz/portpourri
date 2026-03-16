@@ -1,9 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
-import {
-  BadRequestException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { AuthProvider, Gender } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -67,7 +64,7 @@ describe('AuthService', () => {
       passwordHash: 'hashed-password',
       isOnboarded: true,
     });
-    mockedCompare.mockImplementation(async () => true);
+    mockedCompare.mockImplementation(() => Promise.resolve(true));
 
     const result = await service.login({
       email: 'test@example.com',
@@ -116,7 +113,7 @@ describe('AuthService', () => {
       isOnboarded: false,
     });
     jwtServiceMock.sign.mockReturnValue('signed-token');
-    mockedHash.mockImplementation(async () => 'hashed-password');
+    mockedHash.mockImplementation(() => Promise.resolve('hashed-password'));
 
     const result = await service.signup({
       email: ' Jordan@Example.com ',
@@ -238,7 +235,7 @@ describe('AuthService', () => {
       isOnboarded: false,
     });
     jwtServiceMock.sign.mockReturnValue('signed-token');
-    mockedHash.mockImplementation(async () => 'hashed-password');
+    mockedHash.mockImplementation(() => Promise.resolve('hashed-password'));
 
     await service.signup({
       email: 'jordan@example.com',
@@ -346,9 +343,9 @@ describe('AuthService', () => {
   });
 
   it('rejects login when credentials are incomplete', async () => {
-    await expect(service.login({ email: '   ', password: '' })).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      service.login({ email: '   ', password: '' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(jwtServiceMock.sign).not.toHaveBeenCalled();
     expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
   });
@@ -361,7 +358,7 @@ describe('AuthService', () => {
       isOnboarded: true,
     });
     jwtServiceMock.sign.mockReturnValue('signed-token');
-    mockedCompare.mockImplementation(async () => true);
+    mockedCompare.mockImplementation(() => Promise.resolve(true));
 
     const result = await service.login({
       email: ' Jordan@Example.com ',
@@ -416,7 +413,7 @@ describe('AuthService', () => {
       passwordHash: 'stored-hash',
       isOnboarded: true,
     });
-    mockedCompare.mockImplementation(async () => false);
+    mockedCompare.mockImplementation(() => Promise.resolve(false));
 
     await expect(
       service.login({ email: 'test@example.com', password: 'wrong' }),
@@ -455,9 +452,9 @@ describe('AuthService', () => {
   it('rejects getCurrentUser for deleted or unknown users', async () => {
     prismaMock.user.findFirst.mockResolvedValue(null);
 
-    await expect(
-      service.getCurrentUser('deleted-user'),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(service.getCurrentUser('deleted-user')).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 
   it('matches legacy mixed-case emails during login lookup', async () => {
@@ -468,7 +465,7 @@ describe('AuthService', () => {
       isOnboarded: true,
     });
     jwtServiceMock.sign.mockReturnValue('signed-token');
-    mockedCompare.mockImplementation(async () => true);
+    mockedCompare.mockImplementation(() => Promise.resolve(true));
 
     const result = await service.login({
       email: 'jordan@example.com',

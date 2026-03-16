@@ -22,7 +22,9 @@ describe('NotificationsController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [NotificationsController],
-      providers: [{ provide: NotificationsService, useValue: notificationsServiceMock }],
+      providers: [
+        { provide: NotificationsService, useValue: notificationsServiceMock },
+      ],
     }).compile();
 
     controller = module.get<NotificationsController>(NotificationsController);
@@ -35,7 +37,7 @@ describe('NotificationsController', () => {
   it('delegates list to notifications service', async () => {
     notificationsServiceMock.list.mockResolvedValue([]);
     const result = await controller.list(req);
-    expect(notificationsServiceMock.list).toHaveBeenCalledWith('user-1', 50, 0);
+    expect(notificationsServiceMock.list).toHaveBeenCalledWith('user-1', 50, undefined);
     expect(result).toEqual([]);
   });
 
@@ -43,13 +45,18 @@ describe('NotificationsController', () => {
     const notification = { id: 'n-1', readAt: new Date() };
     notificationsServiceMock.markRead.mockResolvedValue(notification);
     const result = await controller.markRead(req, 'n-1');
-    expect(notificationsServiceMock.markRead).toHaveBeenCalledWith('user-1', 'n-1');
+    expect(notificationsServiceMock.markRead).toHaveBeenCalledWith(
+      'user-1',
+      'n-1',
+    );
     expect(result).toBe(notification);
   });
 
   it('throws NotFoundException when markRead returns null (notification not found)', async () => {
     notificationsServiceMock.markRead.mockResolvedValue(null);
-    await expect(controller.markRead(req, 'non-existent-id')).rejects.toThrow(NotFoundException);
+    await expect(controller.markRead(req, 'non-existent-id')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('delegates markAllRead to notifications service', async () => {
@@ -63,7 +70,11 @@ describe('NotificationsController', () => {
     const notification = { id: 'n-2' };
     notificationsServiceMock.create.mockResolvedValue(notification);
 
-    const body = { type: NotificationType.MatchCreated, title: 'Match!', body: 'You matched' };
+    const body = {
+      type: NotificationType.MatchCreated,
+      title: 'Match!',
+      body: 'You matched',
+    };
     const result = await controller.emit(req, body);
 
     expect(notificationsServiceMock.create).toHaveBeenCalledWith('user-1', {
@@ -78,7 +89,11 @@ describe('NotificationsController', () => {
   it('passes the validated notification type directly to the service', async () => {
     notificationsServiceMock.create.mockResolvedValue({ id: 'n-3' });
 
-    await controller.emit(req, { type: NotificationType.System, title: 'Hey', body: 'test' });
+    await controller.emit(req, {
+      type: NotificationType.System,
+      title: 'Hey',
+      body: 'test',
+    });
 
     expect(notificationsServiceMock.create).toHaveBeenCalledWith(
       'user-1',

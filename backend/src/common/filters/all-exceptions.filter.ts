@@ -22,12 +22,18 @@ function isPrismaError(error: unknown): error is PrismaError {
   );
 }
 
-function prismaErrorToHttp(error: PrismaError): { status: number; message: string } {
+function prismaErrorToHttp(error: PrismaError): {
+  status: number;
+  message: string;
+} {
   switch (error.code) {
     case 'P2025':
       return { status: 404, message: 'Record not found' };
     case 'P2002':
-      return { status: 409, message: 'A record with this value already exists' };
+      return {
+        status: 409,
+        message: 'A record with this value already exists',
+      };
     case 'P2003':
       return { status: 400, message: 'Related record not found' };
     default:
@@ -67,10 +73,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : undefined,
     );
 
-    response.status(status).json(
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : { statusCode: status, message: 'Internal server error' },
-    );
+    response
+      .status(status)
+      .json(
+        exception instanceof HttpException
+          ? exception.getResponse()
+          : { statusCode: status, message: 'Internal server error' },
+      );
   }
 }

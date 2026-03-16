@@ -5,11 +5,11 @@ import {
   ImageBackground,
   type NativeSyntheticEvent,
   Pressable,
+  type TargetedEvent,
   type StyleProp,
   Text,
   TextInput,
   StyleSheet,
-  type TextInputFocusEventData,
   type TextInputProps,
   type TextStyle,
   View,
@@ -245,12 +245,12 @@ export function Input({
   const theme = useTheme();
   const focusAnim = useRef(new Animated.Value(0)).current;
 
-  const handleFocus = (event: NativeSyntheticEvent<TextInputFocusEventData>) => {
+  const handleFocus = (event: NativeSyntheticEvent<TargetedEvent>) => {
     Animated.timing(focusAnim, { toValue: 1, duration: 180, useNativeDriver: false }).start();
     onFocus?.(event);
   };
 
-  const handleBlur = (event: NativeSyntheticEvent<TextInputFocusEventData>) => {
+  const handleBlur = (event: NativeSyntheticEvent<TargetedEvent>) => {
     Animated.timing(focusAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
     onBlur?.(event);
   };

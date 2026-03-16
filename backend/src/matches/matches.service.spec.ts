@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-argument */
-import { ForbiddenException } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { MatchesService } from './matches.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MatchesRealtimeService } from './matches-realtime.service';
@@ -197,9 +197,9 @@ describe('MatchesService realtime', () => {
       isBlocked: false,
     } as any);
 
-    await expect(service.getMessages('match-1', 'user-3')).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      service.getMessages('match-1', 'user-3'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(jest.mocked(prisma.message.findMany)).not.toHaveBeenCalled();
   });
 
@@ -237,7 +237,9 @@ describe('MatchesService realtime', () => {
       userBId: 'user-2',
       isBlocked: false,
     } as any);
-    jest.mocked(prisma.message.findMany).mockResolvedValue([newer, older] as any);
+    jest
+      .mocked(prisma.message.findMany)
+      .mockResolvedValue([newer, older] as any);
 
     const messages = await service.getMessages('match-1', 'user-1');
 
@@ -246,12 +248,12 @@ describe('MatchesService realtime', () => {
     expect(messages[1].id).toBe('msg-2');
   });
 
-  it('rejects message sends for non-existent matches with a forbidden error', async () => {
+  it('rejects message sends for non-existent matches with a not-found error', async () => {
     jest.mocked(prisma.match.findUnique).mockResolvedValue(null);
 
     await expect(
       service.sendMessage('missing-match', 'user-1', 'hey'),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(jest.mocked(prisma.message.create)).not.toHaveBeenCalled();
   });
 

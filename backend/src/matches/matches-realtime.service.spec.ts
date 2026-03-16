@@ -21,7 +21,11 @@ describe('MatchesRealtimeService', () => {
     };
 
     obs.subscribe((event) => {
-      expect(event).toEqual({ type: 'message', matchId: 'match-1', message: msg });
+      expect(event).toEqual({
+        type: 'message',
+        matchId: 'match-1',
+        message: msg,
+      });
       done();
     });
 
@@ -50,8 +54,18 @@ describe('MatchesRealtimeService', () => {
   });
 
   it('publishes to different streams independently', (done) => {
-    const msgA: MatchMessagePayload = { id: 'a', text: 'A', sender: 'me', timestamp: new Date() };
-    const msgB: MatchMessagePayload = { id: 'b', text: 'B', sender: 'them', timestamp: new Date() };
+    const msgA: MatchMessagePayload = {
+      id: 'a',
+      text: 'A',
+      sender: 'me',
+      timestamp: new Date(),
+    };
+    const msgB: MatchMessagePayload = {
+      id: 'b',
+      text: 'B',
+      sender: 'them',
+      timestamp: new Date(),
+    };
 
     const received: string[] = [];
 

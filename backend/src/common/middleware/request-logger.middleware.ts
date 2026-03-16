@@ -10,7 +10,8 @@ export class RequestLoggerMiddleware implements NestMiddleware {
     const requestUrl = request.originalUrl || request.url;
 
     response.on('finish', () => {
-      const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+      const durationMs =
+        Number(process.hrtime.bigint() - startedAt) / 1_000_000;
 
       this.logger.log(
         `${request.method} ${requestUrl} ${response.statusCode} ${durationMs.toFixed(1)}ms`,
