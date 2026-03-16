@@ -38,6 +38,7 @@ Change mobile when the task touches app UX, feature modules, Storybook coverage,
 
 - [`HARNESS.md`](HARNESS.md): command selection, validation lanes, policy rules
 - [`../WORKFLOW.md`](../WORKFLOW.md): repo-owned Symphony orchestration contract
+- [`SYMPHONY_OVERVIEW.md`](SYMPHONY_OVERVIEW.md): high-level human guide to why Symphony exists and how to use it well
 - [`SYMPHONY.md`](SYMPHONY.md): BRDG Symphony service usage and runtime notes
 - [`SYMPHONY_SETUP.md`](SYMPHONY_SETUP.md): BRDG-specific Symphony setup notes
 - [`DEV_LOOP.md`](DEV_LOOP.md): day-to-day startup and troubleshooting
