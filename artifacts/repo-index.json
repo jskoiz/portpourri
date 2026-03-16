@@ -358,6 +358,7 @@
       "mobile/src/stories/ExploreScreenContent.stories.tsx",
       "mobile/src/stories/Feedback.stories.tsx",
       "mobile/src/stories/FormFields.stories.tsx",
+      "mobile/src/stories/GlassView.stories.tsx",
       "mobile/src/stories/HomeScreenContent.stories.tsx",
       "mobile/src/stories/Input.stories.tsx",
       "mobile/src/stories/LoginScreen.stories.tsx",
@@ -384,6 +385,7 @@
           "mobile/src/constants/signup.ts",
           "mobile/src/constants/storage.ts",
           "mobile/src/core/navigation/types.ts",
+          "mobile/src/theme/glass.ts",
           "mobile/src/theme/tokens.ts",
           "mobile/src/theme/useTheme.tsx",
           "mobile/src/types/sessionIntent.ts"
@@ -428,6 +430,8 @@
           "mobile/src/components/LoadingState.tsx",
           "mobile/src/components/MatchAnimation.tsx",
           "mobile/src/components/SwipeDeck.tsx",
+          "mobile/src/components/__tests__/ErrorBoundary.test.tsx",
+          "mobile/src/components/__tests__/MatchAnimation.test.tsx",
           "mobile/src/components/__tests__/SwipeDeck.test.tsx",
           "mobile/src/components/form/DateField.tsx",
           "mobile/src/components/form/LocationField.tsx",
@@ -447,6 +451,7 @@
           "mobile/src/components/ui/__tests__/AppSelect.test.tsx",
           "mobile/src/core/observability/sentry.ts",
           "mobile/src/design/__tests__/primitives.test.tsx",
+          "mobile/src/design/primitives/GlassView.tsx",
           "mobile/src/design/primitives/index.tsx",
           "mobile/src/design/sheets/AppBottomSheet.tsx",
           "mobile/src/design/sheets/useSheetController.ts",
@@ -485,6 +490,7 @@
           "mobile/src/features/discovery/components/HomeScreenContent.tsx",
           "mobile/src/features/discovery/components/discoveryFilters.ts",
           "mobile/src/features/discovery/components/home.styles.ts",
+          "mobile/src/features/discovery/hooks/__tests__/useDiscoveryFeed.test.ts",
           "mobile/src/features/discovery/hooks/useDiscoveryFeed.ts",
           "mobile/src/features/events/create/CreateActivityPicker.tsx",
           "mobile/src/features/events/create/CreateDetailsSection.tsx",
@@ -503,6 +509,8 @@
           "mobile/src/features/events/explore/explore.data.ts",
           "mobile/src/features/events/explore/explore.helpers.ts",
           "mobile/src/features/events/explore/explore.styles.ts",
+          "mobile/src/features/events/hooks/__tests__/useExploreEvents.test.ts",
+          "mobile/src/features/events/hooks/__tests__/useMyEvents.test.ts",
           "mobile/src/features/events/hooks/useCreateEvent.ts",
           "mobile/src/features/events/hooks/useEventDetail.ts",
           "mobile/src/features/events/hooks/useExploreEvents.ts",
@@ -510,7 +518,9 @@
           "mobile/src/features/events/schema.ts",
           "mobile/src/features/locations/locationSuggestions.ts",
           "mobile/src/features/locations/useKnownLocationSuggestions.ts",
+          "mobile/src/features/matches/hooks/__tests__/useMatches.test.ts",
           "mobile/src/features/matches/hooks/useMatches.ts",
+          "mobile/src/features/notifications/hooks/__tests__/useNotifications.test.ts",
           "mobile/src/features/notifications/hooks/useNotifications.ts",
           "mobile/src/features/notifications/hooks/useUnreadNotificationCount.ts",
           "mobile/src/features/onboarding/schema.ts",
@@ -519,6 +529,7 @@
           "mobile/src/features/profile/components/profile.helpers.ts",
           "mobile/src/features/profile/components/profile.styles.ts",
           "mobile/src/features/profile/hooks/__tests__/profilePhotoHelpers.test.ts",
+          "mobile/src/features/profile/hooks/__tests__/useProfile.test.ts",
           "mobile/src/features/profile/hooks/profilePhotoHelpers.ts",
           "mobile/src/features/profile/hooks/useProfile.ts",
           "mobile/src/features/profile/hooks/useProfileEditor.ts"
@@ -578,7 +589,8 @@
         "files": [
           "mobile/src/core/providers/AppProviders.tsx",
           "mobile/src/navigation/AppNavigator.tsx",
-          "mobile/src/navigation/MainTabNavigator.tsx"
+          "mobile/src/navigation/MainTabNavigator.tsx",
+          "mobile/src/navigation/TabBarVisibilityContext.tsx"
         ]
       }
     ]

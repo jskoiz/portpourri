@@ -4,6 +4,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import type { LoginDto } from './auth.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
+import { Gender } from '../common/enums';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -59,7 +60,7 @@ describe('AuthController', () => {
       password: 'pw123',
       firstName: 'New',
       birthdate: '1995-01-01',
-      gender: 'woman',
+      gender: Gender.Woman,
     };
     authServiceMock.signup.mockResolvedValue({
       access_token: 'token',
@@ -108,7 +109,7 @@ describe('AuthController', () => {
         password: 'pw',
         firstName: 'Dup',
         birthdate: '1995-01-01',
-        gender: 'man',
+        gender: Gender.Man,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });

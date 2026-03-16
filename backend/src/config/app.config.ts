@@ -20,11 +20,27 @@ const jwtSecret = (() => {
   );
 })();
 
+const isProduction = process.env.NODE_ENV === 'production';
+const databaseConnectionLimit = toNumber(
+  process.env.DATABASE_CONNECTION_LIMIT,
+  10,
+);
+const databaseConnectionTimeout = toNumber(
+  process.env.DATABASE_CONNECTION_TIMEOUT,
+  10,
+);
+
 export const appConfig = {
   apiPort,
   cors: {
     allowedOrigins,
   },
+  database: {
+    connectionLimit: databaseConnectionLimit,
+    connectionTimeout: databaseConnectionTimeout,
+    url: process.env.DATABASE_URL,
+  },
+  isProduction,
   docs: {
     swaggerEnabled: process.env.NODE_ENV !== 'production',
   },

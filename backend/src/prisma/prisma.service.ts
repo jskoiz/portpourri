@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { appConfig } from '../config/app.config';
 
 @Injectable()
 export class PrismaService
@@ -14,25 +15,17 @@ export class PrismaService
   private readonly logger = new Logger(PrismaService.name);
 
   constructor() {
-    const connectionLimit = parseInt(
-      process.env.DATABASE_CONNECTION_LIMIT || '10',
-      10,
-    );
-    const connectionTimeout = parseInt(
-      process.env.DATABASE_CONNECTION_TIMEOUT || '10',
-      10,
-    );
+    const { connectionLimit, connectionTimeout, url } = appConfig.database;
 
     super({
       datasources: {
         db: {
-          url: process.env.DATABASE_URL,
+          url,
         },
       },
-      log:
-        process.env.NODE_ENV === 'production'
-          ? ['error', 'warn']
-          : ['query', 'info', 'warn', 'error'],
+      log: appConfig.isProduction
+        ? ['error', 'warn']
+        : ['query', 'info', 'warn', 'error'],
     });
 
     // Note: Prisma connection pool is configured via DATABASE_URL query params:

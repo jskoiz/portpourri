@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { appConfig } from '../config/app.config';
 
 interface PendingVerification {
   userId: string;
@@ -28,7 +29,7 @@ export class VerificationService {
     });
 
     // In production, dispatch via real SMS/email provider and never return the code.
-    const isDev = process.env.NODE_ENV !== 'production';
+    const isDev = !appConfig.isProduction;
     return {
       started: true,
       channel,
