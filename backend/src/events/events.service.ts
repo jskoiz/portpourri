@@ -6,6 +6,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import {
+  buildEventReminderNotification,
+  buildEventRsvpNotification,
+} from '../notifications/notification.templates';
 import type { EventCategory } from '@prisma/client';
 import type { CreateEventDto } from './create-event.dto';
 
@@ -182,20 +186,16 @@ export class EventsService {
       });
 
       if (event.host.id !== userId) {
-        void this.notifications.create(event.host.id, {
-          type: 'event_rsvp',
-          title: 'New RSVP',
-          body: `Someone joined ${event.title}`,
-          data: { eventId, attendeeId: userId },
-        });
+        void this.notifications.create(
+          event.host.id,
+          buildEventRsvpNotification(eventId, userId, event.title),
+        );
       }
 
-      void this.notifications.create(userId, {
-        type: 'event_reminder',
-        title: 'Event joined',
-        body: `You are in for ${event.title}`,
-        data: { eventId },
-      });
+      void this.notifications.create(
+        userId,
+        buildEventReminderNotification(eventId, event.title),
+      );
     }
 
     const total = await this.prisma.eventRsvp.count({ where: { eventId } });
