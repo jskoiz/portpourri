@@ -54,8 +54,10 @@ model User {
 
   subscriptions Subscription[]
   purchases     Purchase[]
-  
+
   fitnessActivities UserFitnessActivity[]
+
+  notifications Notification[]
 
   @@index([phoneNumber])
   @@index([email])
@@ -327,4 +329,21 @@ model Purchase {
 
   @@index([userId, createdAt])
   @@map("purchases")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  data      Json?
+  read      Boolean  @default(false)
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([userId, read])
 }

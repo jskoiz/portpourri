@@ -37,13 +37,13 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
-  list(@Request() req: AuthenticatedRequest) {
+  async list(@Request() req: AuthenticatedRequest) {
     return this.notificationsService.list(req.user.id);
   }
 
   @Patch(':id/read')
-  markRead(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
-    const result = this.notificationsService.markRead(req.user.id, id);
+  async markRead(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
+    const result = await this.notificationsService.markRead(req.user.id, id);
     if (result === null) {
       throw new NotFoundException(`Notification ${id} not found`);
     }
@@ -51,13 +51,13 @@ export class NotificationsController {
   }
 
   @Post('mark-all-read')
-  markAllRead(@Request() req: AuthenticatedRequest) {
+  async markAllRead(@Request() req: AuthenticatedRequest) {
     return this.notificationsService.markAllRead(req.user.id);
   }
 
   // Seed endpoint for QA and future admin tooling
   @Post('emit')
-  emit(
+  async emit(
     @Request() req: AuthenticatedRequest,
     @Body()
     body: {

@@ -50,9 +50,11 @@ export class EventsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async list(userId?: string) {
+  async list(userId?: string, take = 20, skip = 0) {
     const events = await this.prisma.event.findMany({
       orderBy: { startsAt: 'asc' },
+      take,
+      skip,
       include: {
         host: { select: { id: true, firstName: true } },
         _count: { select: { rsvps: true } },

@@ -6,6 +6,7 @@ import {
   Request,
   Get,
   Param,
+  Query,
   Sse,
   MessageEvent,
 } from '@nestjs/common';
@@ -20,8 +21,16 @@ export class MatchesController {
   constructor(private readonly matchesService: MatchesService) {}
 
   @Get()
-  async getMatches(@Request() req: AuthenticatedRequest) {
-    return this.matchesService.getMatches(req.user.id);
+  async getMatches(
+    @Request() req: AuthenticatedRequest,
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.matchesService.getMatches(
+      req.user.id,
+      take ? parseInt(take, 10) : undefined,
+      skip ? parseInt(skip, 10) : undefined,
+    );
   }
 
   @Get(':id/messages')

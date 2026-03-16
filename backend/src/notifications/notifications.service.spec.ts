@@ -1,107 +1,116 @@
 import { NotificationsService } from './notifications.service';
+import { PrismaService } from '../prisma/prisma.service';
+
+function makeMockPrisma() {
+  return {
+    notification: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      count: jest.fn(),
+    },
+  } as unknown as PrismaService;
+}
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
+  let prisma: ReturnType<typeof makeMockPrisma>;
 
   beforeEach(() => {
-    service = new NotificationsService();
+    prisma = makeMockPrisma();
+    service = new NotificationsService(prisma);
   });
 
-  it('creates a notification and returns it', () => {
-    const n = service.create('user-1', {
-      type: 'system',
-      title: 'Hello',
-      body: 'World',
-    });
-
-    expect(n).toMatchObject({
+  it('creates a notification via prisma', async () => {
+    const mockNotification = {
+      id: 'uuid-1',
       userId: 'user-1',
       type: 'system',
       title: 'Hello',
       body: 'World',
+      data: null,
+      read: false,
       readAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    (prisma.notification.create as jest.Mock).mockResolvedValue(mockNotification);
+
+    const n = await service.create('user-1', {
+      type: 'system',
+      title: 'Hello',
+      body: 'World',
     });
+
     expect(n.id).toBeTruthy();
     expect(n.createdAt).toBeInstanceOf(Date);
-  });
-
-  it('lists notifications newest-first', () => {
-    service.create('user-1', { type: 'system', title: 'A', body: '' });
-    service.create('user-1', { type: 'system', title: 'B', body: '' });
-
-    const list = service.list('user-1');
-    expect(list[0].title).toBe('B');
-    expect(list[1].title).toBe('A');
-  });
-
-  it('returns empty list for unknown user', () => {
-    expect(service.list('nobody')).toEqual([]);
-  });
-
-  it('marks a single notification as read', () => {
-    const n = service.create('user-1', {
-      type: 'match_created',
-      title: 'Match!',
-      body: '',
+    expect(prisma.notification.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'user-1',
+        type: 'system',
+        title: 'Hello',
+        body: 'World',
+        data: undefined,
+      },
     });
-
-    const updated = service.markRead('user-1', n.id);
-    expect(updated?.readAt).toBeInstanceOf(Date);
   });
 
-  it('returns null when marking unknown notification as read', () => {
-    service.create('user-1', { type: 'system', title: 'X', body: '' });
-    expect(service.markRead('user-1', 'non-existent-id')).toBeNull();
+  it('lists notifications via prisma', async () => {
+    (prisma.notification.findMany as jest.Mock).mockResolvedValue([
+      { id: '1', title: 'B' },
+      { id: '2', title: 'A' },
+    ]);
+
+    const list = await service.list('user-1');
+    expect(list).toHaveLength(2);
+    expect(list[0].title).toBe('B');
+    expect(prisma.notification.findMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1' },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
   });
 
-  it('marks all unread notifications as read', () => {
-    service.create('user-1', { type: 'system', title: 'A', body: '' });
-    service.create('user-1', { type: 'system', title: 'B', body: '' });
+  it('marks a single notification as read', async () => {
+    const existing = { id: 'n-1', userId: 'user-1', read: false, readAt: null };
+    (prisma.notification.findFirst as jest.Mock).mockResolvedValue(existing);
+    const updated = { ...existing, read: true, readAt: new Date() };
+    (prisma.notification.update as jest.Mock).mockResolvedValue(updated);
 
-    const { updated } = service.markAllRead('user-1');
+    const result = await service.markRead('user-1', 'n-1');
+    expect(result?.readAt).toBeInstanceOf(Date);
+  });
+
+  it('returns null when marking unknown notification as read', async () => {
+    (prisma.notification.findFirst as jest.Mock).mockResolvedValue(null);
+
+    const result = await service.markRead('user-1', 'non-existent-id');
+    expect(result).toBeNull();
+  });
+
+  it('marks all unread notifications as read', async () => {
+    (prisma.notification.updateMany as jest.Mock).mockResolvedValue({ count: 2 });
+
+    const { updated } = await service.markAllRead('user-1');
     expect(updated).toBe(2);
-
-    const list = service.list('user-1');
-    expect(list.every((n) => n.readAt !== null)).toBe(true);
   });
 
-  it('markAllRead counts only previously-unread notifications', () => {
-    const n1 = service.create('user-1', { type: 'system', title: 'A', body: '' });
-    service.create('user-1', { type: 'system', title: 'B', body: '' });
+  it('markAllRead returns 0 when all notifications are already read', async () => {
+    (prisma.notification.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
 
-    // Pre-read one notification so only 1 is actually unread
-    service.markRead('user-1', n1.id);
-
-    const { updated } = service.markAllRead('user-1');
-    // Only the remaining unread notification should be counted, not the total
-    expect(updated).toBe(1);
-  });
-
-  it('markAllRead returns 0 when all notifications are already read', () => {
-    const n = service.create('user-1', { type: 'system', title: 'A', body: '' });
-    service.markRead('user-1', n.id);
-
-    const { updated } = service.markAllRead('user-1');
+    const { updated } = await service.markAllRead('user-1');
     expect(updated).toBe(0);
   });
 
-  it('isolates notifications per user', () => {
-    service.create('user-1', { type: 'system', title: 'U1', body: '' });
-    service.create('user-2', { type: 'system', title: 'U2', body: '' });
+  it('getUnreadCount returns count from prisma', async () => {
+    (prisma.notification.count as jest.Mock).mockResolvedValue(5);
 
-    expect(service.list('user-1')).toHaveLength(1);
-    expect(service.list('user-2')).toHaveLength(1);
-    expect(service.list('user-1')[0].title).toBe('U1');
-  });
-
-  it('caps stored notifications at 200', () => {
-    for (let i = 0; i < 205; i++) {
-      service.create('user-cap', {
-        type: 'system',
-        title: `n${i}`,
-        body: '',
-      });
-    }
-    expect(service.list('user-cap')).toHaveLength(200);
+    const count = await service.getUnreadCount('user-1');
+    expect(count).toBe(5);
+    expect(prisma.notification.count).toHaveBeenCalledWith({
+      where: { userId: 'user-1', read: false },
+    });
   });
 });

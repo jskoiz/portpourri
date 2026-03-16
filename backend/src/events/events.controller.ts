@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -17,8 +18,12 @@ export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
   @Get()
-  list() {
-    return this.eventsService.list();
+  list(@Query('take') take?: string, @Query('skip') skip?: string) {
+    return this.eventsService.list(
+      undefined,
+      take ? parseInt(take, 10) : undefined,
+      skip ? parseInt(skip, 10) : undefined,
+    );
   }
 
   @UseGuards(AuthGuard('jwt'))
