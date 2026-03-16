@@ -12,7 +12,7 @@ function ChatThreadStory() {
   const messages = [
     makeChatMessage({
       id: 'message-1',
-      sender: 'user-1',
+      sender: 'them',
       text: 'Want to do a sunrise run before work?',
     }),
     makeChatMessage({
@@ -22,7 +22,7 @@ function ChatThreadStory() {
     }),
     makeChatMessage({
       id: 'message-3',
-      sender: 'user-1',
+      sender: 'them',
       text: 'Perfect. I will bring coffee after.',
     }),
   ];

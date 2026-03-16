@@ -32,7 +32,7 @@ export class EventsController {
   list(@Query('take') take?: string, @Query('skip') skip?: string) {
     return this.eventsService.list(
       undefined,
-      take ? parseInt(take, 10) : 20,
+      take ? Math.min(parseInt(take, 10), 100) : 20,
       skip ? parseInt(skip, 10) : 0,
     );
   }

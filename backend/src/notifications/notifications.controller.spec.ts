@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
+import { NotificationType } from '../common/enums';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
 
 describe('NotificationsController', () => {
@@ -34,7 +35,7 @@ describe('NotificationsController', () => {
   it('delegates list to notifications service', async () => {
     notificationsServiceMock.list.mockResolvedValue([]);
     const result = await controller.list(req);
-    expect(notificationsServiceMock.list).toHaveBeenCalledWith('user-1');
+    expect(notificationsServiceMock.list).toHaveBeenCalledWith('user-1', 50, 0);
     expect(result).toEqual([]);
   });
 
@@ -62,7 +63,7 @@ describe('NotificationsController', () => {
     const notification = { id: 'n-2' };
     notificationsServiceMock.create.mockResolvedValue(notification);
 
-    const body = { type: 'match_created', title: 'Match!', body: 'You matched' };
+    const body = { type: NotificationType.MatchCreated, title: 'Match!', body: 'You matched' };
     const result = await controller.emit(req, body);
 
     expect(notificationsServiceMock.create).toHaveBeenCalledWith('user-1', {
@@ -74,14 +75,14 @@ describe('NotificationsController', () => {
     expect(result).toBe(notification);
   });
 
-  it('falls back to "system" type for an unknown notification type', async () => {
+  it('passes the validated notification type directly to the service', async () => {
     notificationsServiceMock.create.mockResolvedValue({ id: 'n-3' });
 
-    await controller.emit(req, { type: 'unknown_type', title: 'Hey', body: 'test' });
+    await controller.emit(req, { type: NotificationType.System, title: 'Hey', body: 'test' });
 
     expect(notificationsServiceMock.create).toHaveBeenCalledWith(
       'user-1',
-      expect.objectContaining({ type: 'system' }),
+      expect.objectContaining({ type: NotificationType.System }),
     );
   });
 });

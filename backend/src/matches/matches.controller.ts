@@ -46,7 +46,7 @@ export class MatchesController {
 
     return this.matchesService.getMatches(
       req.user.id,
-      Number.isNaN(parsedTake) ? 20 : parsedTake,
+      Number.isNaN(parsedTake) ? 20 : Math.min(parsedTake, 100),
       Number.isNaN(parsedSkip) ? 0 : parsedSkip,
     );
   }
@@ -64,7 +64,7 @@ export class MatchesController {
     return this.matchesService.getMessages(
       id,
       req.user.id,
-      Number.isNaN(parsedTake) ? 50 : parsedTake,
+      Number.isNaN(parsedTake) ? 50 : Math.min(parsedTake, 100),
       cursor || undefined,
     );
   }

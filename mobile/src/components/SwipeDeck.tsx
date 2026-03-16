@@ -33,7 +33,7 @@ const getAlignmentLabel = (score?: number) => {
   return `${percentage}% aligned`;
 };
 
-const formatDistanceLabel = (distanceKm?: number) => {
+const formatDistanceLabel = (distanceKm?: number | null) => {
   if (typeof distanceKm !== 'number' || Number.isNaN(distanceKm)) return '';
   return ` · ${Math.round(distanceKm)} km away`;
 };

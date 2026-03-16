@@ -88,7 +88,10 @@ export class DiscoveryService {
             }
           : {}),
       },
-      include: {
+      select: {
+        id: true,
+        firstName: true,
+        birthdate: true,
         fitnessProfile: {
           select: {
             primaryGoal: true,

@@ -4,7 +4,9 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 import { IntensityLevel } from '@prisma/client';
 
@@ -30,10 +32,14 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(-90)
+  @Max(90)
   latitude?: number;
 
   @IsOptional()
   @IsNumber()
+  @Min(-180)
+  @Max(180)
   longitude?: number;
 
   @IsOptional()
@@ -100,5 +106,7 @@ export class UpdatePhotoDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(99)
   sortOrder?: number;
 }
