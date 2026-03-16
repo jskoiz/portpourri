@@ -384,7 +384,7 @@ export function ProfileScreenContent({
             {showBuildInfo ? (
               <>
                 <View style={styles.fieldDivider} />
-                <Card testID="build-provenance-panel" style={styles.buildInfoCard as any}>
+                <Card testID="build-provenance-panel" style={styles.buildInfoCard}>
                   {buildRows.map((row, index) => (
                     <View key={row.label}>
                       <BuildInfoRow label={row.label} value={row.value} />

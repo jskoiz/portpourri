@@ -28,8 +28,8 @@ export function TagPill({
       active={selected}
       accentColor={color}
       interactive={interactive}
-      style={styles.tagPill as any}
-      textStyle={styles.tagPillText as any}
+      style={styles.tagPill}
+      textStyle={styles.tagPillText}
     />
   );
 }

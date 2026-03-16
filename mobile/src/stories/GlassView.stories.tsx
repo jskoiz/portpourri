@@ -2,9 +2,10 @@ import React from 'react';
 import { Text, View, StyleSheet, ImageBackground } from 'react-native';
 import type { Meta, StoryObj } from '@storybook/react-native';
 import { GlassView } from '../design/primitives/GlassView';
+import type { GlassTier } from '../theme/glass';
 import { withStorySurface } from './support';
 
-function GlassShowcase({ tier, label }: { tier: any; label: string }) {
+function GlassShowcase({ tier, label }: { tier: GlassTier; label: string }) {
   return (
     <View style={styles.showcase}>
       <ImageBackground

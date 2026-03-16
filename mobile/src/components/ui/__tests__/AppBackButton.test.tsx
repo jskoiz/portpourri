@@ -13,7 +13,7 @@ describe('AppBackButton', () => {
     const button = getByRole('button');
     // The base button style should not carry marginBottom, so it must be
     // absent or explicitly 0. Callers no longer need to override it.
-    const { marginBottom } = button.props.style?.find?.((s: any) => s && 'marginBottom' in s) ?? {};
+    const { marginBottom } = button.props.style?.find?.((s: Record<string, unknown>) => s && 'marginBottom' in s) ?? {};
     expect(marginBottom ?? 0).toBe(0);
   });
 

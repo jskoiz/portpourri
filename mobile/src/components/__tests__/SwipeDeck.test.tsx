@@ -10,12 +10,12 @@ jest.mock('react-native-deck-swiper', () => {
     cards,
     renderCard,
   }: {
-    cards: any[];
-    renderCard: (card: any) => React.ReactElement;
+    cards: unknown[];
+    renderCard: (card: unknown) => React.ReactElement;
   }) {
     return (
       <View>
-        {cards.map((card: any, i: number) => (
+        {cards.map((card: unknown, i: number) => (
           <View key={i}>{renderCard(card)}</View>
         ))}
       </View>

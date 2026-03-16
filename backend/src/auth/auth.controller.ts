@@ -20,7 +20,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { AuthService } from './auth.service';
+import { AuthService, type AuthResult } from './auth.service';
 import { SignupDto, LoginDto } from './auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
@@ -35,7 +35,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Create a new account' })
   @ApiCreatedResponse({ description: 'User account created successfully.' })
   @ApiTooManyRequestsResponse({ description: 'Signup rate limit exceeded.' })
-  async signup(@Body() signUpDto: SignupDto) {
+  async signup(@Body() signUpDto: SignupDto): Promise<AuthResult> {
     return this.authService.signup(signUpDto);
   }
 
@@ -45,7 +45,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Authenticate a user and return tokens' })
   @ApiOkResponse({ description: 'User logged in successfully.' })
   @ApiTooManyRequestsResponse({ description: 'Login rate limit exceeded.' })
-  async login(@Body() loginDto: LoginDto) {
+  async login(@Body() loginDto: LoginDto): Promise<AuthResult> {
     return this.authService.login(loginDto);
   }
 

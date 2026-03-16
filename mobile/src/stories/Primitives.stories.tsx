@@ -7,7 +7,7 @@ import { withStorySurface } from './support';
 const meta = {
   title: 'Design/Primitives',
   decorators: [withStorySurface({ centered: false })],
-} satisfies Meta<any>;
+} satisfies Meta<typeof View>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

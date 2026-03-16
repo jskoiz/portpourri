@@ -30,8 +30,8 @@ function ModalFilterPill({
       label={label}
       active={active}
       accentColor="#C4A882"
-      style={[styles.filterPill, active ? styles.filterPillActive : styles.filterPillInactive] as any}
-      textStyle={[styles.filterPillText, { textTransform: 'capitalize' }] as any}
+      style={[styles.filterPill, active ? styles.filterPillActive : styles.filterPillInactive]}
+      textStyle={[styles.filterPillText, { textTransform: 'capitalize' as const }]}
     />
   );
 }
