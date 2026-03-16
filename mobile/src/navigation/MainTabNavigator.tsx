@@ -5,7 +5,7 @@ import ExploreScreen from '../screens/ExploreScreen';
 import CreateScreen from '../screens/CreateScreen';
 import MatchesScreen from '../screens/MatchesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import { Text, View, Platform } from 'react-native';
+import { StyleSheet, Text, View, Platform } from 'react-native';
 import { useTheme } from '../theme/useTheme';
 import AppIcon from '../components/ui/AppIcon';
 import type { MainTabParamList } from '../core/navigation/types';
@@ -40,12 +40,12 @@ function TabIcon({
         borderRadius: 15,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: focused ? 'rgba(138,120,255,0.18)' : 'transparent',
+        backgroundColor: focused ? 'rgba(124,106,247,0.08)' : 'transparent',
       }}
     >
       <AppIcon
         name={icon}
-        size={17}
+        size={19}
         color={focused ? theme.primary : theme.textMuted}
       />
       {routeName === 'Inbox' && unreadCount > 0 ? (
@@ -67,7 +67,7 @@ function TabIcon({
             style={{
               fontSize: 9,
               fontWeight: '800',
-              color: theme.textInverse,
+              color: '#FFFFFF',
             }}
           >
             {unreadCount > 99 ? '99+' : unreadCount}
@@ -103,16 +103,17 @@ export default function MainTabNavigator() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: 'rgba(25,32,51,0.92)',
-          borderTopWidth: 0,
+          backgroundColor: 'rgba(255,255,255,0.95)',
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: 'rgba(0,0,0,0.06)',
           height: Platform.OS === 'ios' ? 90 : 68,
           paddingTop: 6,
           paddingBottom: Platform.OS === 'ios' ? 28 : 10,
-          shadowColor: '#000000',
-          shadowOpacity: 0.10,
-          shadowRadius: 10,
+          shadowColor: '#000',
+          shadowOpacity: 0.04,
+          shadowRadius: 8,
           shadowOffset: { width: 0, height: -2 },
-          elevation: 10,
+          elevation: 8,
         },
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.textMuted,
