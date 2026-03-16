@@ -15,6 +15,7 @@
     "hooks:install": "node ./scripts/install-hooks.mjs",
     "repo:index": "node ./scripts/generate-repo-index.mjs",
     "repo:index:check": "node ./scripts/generate-repo-index.mjs --check",
+    "symphony": "./scripts/start-symphony.sh",
     "dev:symphony": "npm --prefix symphony run dev --",
     "check:symphony": "npm --prefix symphony run check",
     "smoke": "./scripts/smoke-e2e.sh",
