@@ -104,8 +104,49 @@ describe('SwipeDeck', () => {
       id: 'u4',
       firstName: 'Jordan',
       recommendationScore: 82,
+      profile: {
+        city: 'Manoa',
+      },
       fitnessProfile: {
         favoriteActivities: 'yoga',
+      },
+    };
+
+    const { getByText, queryByText } = render(
+      <SwipeDeck data={[user]} onSwipeLeft={noop} onSwipeRight={noop} />,
+    );
+
+    expect(getByText('82% aligned')).toBeTruthy();
+    expect(queryByText('Available tonight')).toBeNull();
+  });
+
+  it('limits profile chips to the two highest-priority labels', () => {
+    const user = {
+      id: 'u5',
+      firstName: 'Kai',
+      fitnessProfile: {
+        favoriteActivities: 'surfing',
+        primaryGoal: 'endurance',
+        prefersMorning: true,
+      },
+    };
+
+    const { getByText, queryByText } = render(
+      <SwipeDeck data={[user]} onSwipeLeft={noop} onSwipeRight={noop} />,
+    );
+
+    expect(getByText('Surfing')).toBeTruthy();
+    expect(getByText('Endurance')).toBeTruthy();
+    expect(queryByText('Mornings')).toBeNull();
+  });
+
+  it('derives the intent badge from discovery profile flags', () => {
+    const user = {
+      id: 'u6',
+      firstName: 'Rae',
+      profile: {
+        intentDating: false,
+        intentWorkout: true,
       },
     };
 
@@ -113,6 +154,6 @@ describe('SwipeDeck', () => {
       <SwipeDeck data={[user]} onSwipeLeft={noop} onSwipeRight={noop} />,
     );
 
-    expect(getByText('82% aligned')).toBeTruthy();
+    expect(getByText('Training')).toBeTruthy();
   });
 });

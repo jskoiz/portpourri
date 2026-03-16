@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Swiper from 'react-native-deck-swiper';
@@ -7,26 +7,25 @@ import { radii, shadows, spacing, typography } from '../theme/tokens';
 import AppIcon from './ui/AppIcon';
 import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
 
-const SCREEN_HEIGHT = Dimensions.get('window').height;
-const CARD_HEIGHT = Math.floor(SCREEN_HEIGHT * 0.68);
+const DEFAULT_CARD_HEIGHT = 520;
+const MIN_CARD_HEIGHT = 360;
+const MAX_CARD_HEIGHT = 680;
 
 const DARK = {
   background: '#0D1117',
   surface: '#161B22',
-  surfaceElevated: '#1C2330',
   border: 'rgba(255,255,255,0.08)',
-  borderStrong: 'rgba(255,255,255,0.14)',
   accent: '#34D399',
   danger: '#F87171',
-  primary: '#7C6AF7',
   textPrimary: '#F0F6FF',
-  textSecondary: 'rgba(240,246,255,0.72)',
-  textMuted: 'rgba(240,246,255,0.48)',
+  textSecondary: 'rgba(240,246,255,0.76)',
+  textMuted: 'rgba(240,246,255,0.54)',
 };
 
-interface CardProps {
-  user: any;
+interface SwipeDeckCardProps {
+  cardHeight: number;
   onPress?: () => void;
+  user: any;
 }
 
 const formatLabel = (value: string) =>
@@ -46,13 +45,17 @@ const profileChips = (user: any) => {
   if (user.fitnessProfile?.primaryGoal) chips.push(formatLabel(user.fitnessProfile.primaryGoal));
   if (user.fitnessProfile?.prefersMorning) chips.push('Mornings');
   else if (user.fitnessProfile?.prefersEvening) chips.push('Evenings');
-  else if (user.fitnessProfile?.weeklyFrequencyBand) chips.push(`${user.fitnessProfile.weeklyFrequencyBand}x/week`);
-  return chips.slice(0, 3);
+  else if (user.fitnessProfile?.weeklyFrequencyBand) {
+    chips.push(`${user.fitnessProfile.weeklyFrequencyBand}x/week`);
+  }
+
+  return chips.slice(0, 2);
 };
 
-const getIntentLabel = (intent?: string) => {
-  if (intent === 'dating') return 'Dating';
-  if (intent === 'workout') return 'Training';
+const getIntentLabel = (user: any) => {
+  if (user?.profile?.intentDating && user?.profile?.intentWorkout) return 'Open to both';
+  if (user?.profile?.intentDating) return 'Dating';
+  if (user?.profile?.intentWorkout) return 'Training';
   return 'Open to both';
 };
 
@@ -71,27 +74,47 @@ const getAlignmentLabel = (score?: number) => {
 const getTempoLabel = (user: any) => {
   const frequency = user?.fitnessProfile?.weeklyFrequencyBand;
   const intensity = user?.fitnessProfile?.intensityLevel;
+  const frequencyLabel = frequency ? `${frequency}x/week` : null;
+  const intensityLabel = intensity ? formatLabel(String(intensity).toLowerCase()) : null;
 
-  if (frequency && intensity) return `${frequency}x week / ${intensity}`;
-  if (frequency) return `${frequency}x week`;
-  if (intensity) return intensity;
+  if (frequencyLabel && intensityLabel) return `${frequencyLabel} • ${intensityLabel}`;
+  if (frequencyLabel) return frequencyLabel;
+  if (intensityLabel) return intensityLabel;
   return 'Intent-aware match';
 };
 
-const Card = ({ user, onPress }: CardProps) => {
+const clampCardHeight = (value?: number) => {
+  if (typeof value !== 'number' || Number.isNaN(value)) return DEFAULT_CARD_HEIGHT;
+  return Math.min(MAX_CARD_HEIGHT, Math.max(MIN_CARD_HEIGHT, Math.round(value)));
+};
+
+const SwipeDeckCard = ({ cardHeight, onPress, user }: SwipeDeckCardProps) => {
   const primaryPhoto = getPrimaryPhotoUri(user);
   const chips = profileChips(user);
-  const intentLabel = getIntentLabel(user.profile?.intent);
+  const compact = cardHeight < 390;
+  const ultraCompact = cardHeight < 350;
+  const visibleChips = ultraCompact ? [] : compact ? chips.slice(0, 1) : chips;
+  const intentLabel = getIntentLabel(user);
   const presenceLabel = getPresenceLabel(user);
   const alignmentLabel = getAlignmentLabel(user.recommendationScore);
   const tempoLabel = getTempoLabel(user);
   const activityLabel = user.fitnessProfile?.favoriteActivities?.split(',')[0]?.trim() || 'Movement';
 
   return (
-    <TouchableOpacity activeOpacity={0.98} onPress={onPress} style={[styles.card, shadows.card]}>
+    <TouchableOpacity
+      activeOpacity={0.96}
+      onPress={onPress}
+      style={[styles.card, shadows.card, { height: cardHeight }]}
+    >
       <View style={styles.imageContainer}>
         {primaryPhoto ? (
-          <Image source={{ uri: primaryPhoto }} style={styles.image} contentFit="cover" transition={200} />
+          <Image
+            source={{ uri: primaryPhoto }}
+            style={styles.image}
+            contentFit="cover"
+            contentPosition={{ left: '48%', top: compact ? '38%' : '41%' }}
+            transition={180}
+          />
         ) : (
           <LinearGradient
             colors={['#1E293B', '#111827']}
@@ -103,44 +126,43 @@ const Card = ({ user, onPress }: CardProps) => {
           </LinearGradient>
         )}
 
-        <View style={styles.cardFrame} pointerEvents="none" />
         <LinearGradient
-          colors={['rgba(9,12,20,0.04)', 'rgba(9,12,20,0.18)', 'rgba(9,12,20,0.92)']}
-          locations={[0, 0.42, 1]}
+          colors={['rgba(9,12,20,0.02)', 'rgba(9,12,20,0.14)', 'rgba(9,12,20,0.76)']}
+          locations={[0, 0.48, 1]}
           style={styles.imageGradient}
           pointerEvents="none"
         />
 
-        <View style={styles.topChrome}>
-          <View style={styles.cardHandle} />
+        <View style={[styles.topChrome, compact && styles.topChromeCompact]}>
           <View style={styles.badgeRow}>
-            <View style={styles.intentBadge}>
+            <View style={[styles.intentBadge, compact && styles.intentBadgeCompact]}>
               <Text style={styles.intentBadgeText}>{intentLabel}</Text>
             </View>
-            <View style={alignmentLabel ? styles.matchBadge : styles.presenceBadge}>
-              {alignmentLabel ? (
-                <>
-                  <AppIcon name="star" size={12} color={DARK.background} />
-                  <Text style={styles.matchBadgeText}>{alignmentLabel}</Text>
-                </>
-              ) : (
-                <Text style={styles.presenceBadgeText}>{presenceLabel}</Text>
-              )}
-            </View>
-          </View>
 
-          {alignmentLabel ? (
-            <View style={styles.presenceRow}>
-              <View style={styles.presenceBadge}>
+            {alignmentLabel ? (
+              <View style={[styles.matchBadge, compact && styles.matchBadgeCompact]}>
+                <AppIcon name="star" size={12} color={DARK.background} />
+                <Text style={styles.matchBadgeText}>{alignmentLabel}</Text>
+              </View>
+            ) : (
+              <View style={[styles.presenceBadge, compact && styles.presenceBadgeCompact]}>
                 <Text style={styles.presenceBadgeText}>{presenceLabel}</Text>
               </View>
-            </View>
-          ) : null}
+            )}
+          </View>
         </View>
 
-        <View style={styles.bottomShell}>
-          <Text style={styles.eyebrow}>{activityLabel.toUpperCase()} / CURATED MATCH</Text>
-          <Text style={styles.name}>
+        <View
+          style={[
+            styles.bottomShell,
+            compact && styles.bottomShellCompact,
+            ultraCompact && styles.bottomShellUltraCompact,
+          ]}
+        >
+          {!ultraCompact ? (
+            <Text style={styles.eyebrow}>{activityLabel.toUpperCase()} / CURATED MATCH</Text>
+          ) : null}
+          <Text style={[styles.name, compact && styles.nameCompact]}>
             {user.firstName || 'Someone'}
             {user.age ? `, ${user.age}` : ''}
           </Text>
@@ -148,27 +170,17 @@ const Card = ({ user, onPress }: CardProps) => {
             {user.profile?.city || 'Nearby'}
             {user.distanceKm ? ` · ${Math.round(user.distanceKm)} km away` : ''}
           </Text>
-          <Text style={styles.bio} numberOfLines={2}>
+          <Text style={[styles.bio, compact && styles.bioCompact]} numberOfLines={ultraCompact ? 1 : 2}>
             {user.profile?.bio || 'Aligned on rhythm, intent, and the kind of plans that actually happen.'}
           </Text>
+          <Text style={[styles.tempoLine, compact && styles.tempoLineCompact]}>{tempoLabel}</Text>
 
-          <View style={styles.infoPanel}>
-            <Text style={styles.infoPanelLabel}>PACE</Text>
-            <Text style={styles.infoPanelValue}>{tempoLabel}</Text>
-          </View>
-
-          <View style={styles.chipRow}>
-            {chips.length > 0 ? (
-              chips.map((chip, index) => (
-                <View key={`${chip}-${index}`} style={styles.chip}>
-                  <Text style={styles.chipText}>{chip}</Text>
-                </View>
-              ))
-            ) : (
-              <View style={styles.chip}>
-                <Text style={styles.chipText}>Nearby</Text>
+          <View style={[styles.chipRow, compact && styles.chipRowCompact]}>
+            {(visibleChips.length > 0 ? visibleChips : ultraCompact ? [] : ['Nearby']).map((chip, index) => (
+              <View key={`${chip}-${index}`} style={styles.chip}>
+                <Text style={styles.chipText}>{chip}</Text>
               </View>
-            )}
+            ))}
           </View>
         </View>
       </View>
@@ -177,20 +189,40 @@ const Card = ({ user, onPress }: CardProps) => {
 };
 
 interface SwipeDeckProps {
+  cardHeight?: number;
   data: any[];
+  onPress?: (user: any) => void;
   onSwipeLeft: (user: any) => void;
   onSwipeRight: (user: any) => void;
-  onPress?: (user: any) => void;
 }
 
-export default function SwipeDeck({ data, onSwipeLeft, onSwipeRight, onPress }: SwipeDeckProps) {
+export default function SwipeDeck({
+  cardHeight,
+  data,
+  onSwipeLeft,
+  onSwipeRight,
+  onPress,
+}: SwipeDeckProps) {
   const swiperRef = useRef<Swiper<any>>(null);
+  const resolvedCardHeight = clampCardHeight(cardHeight);
+  const resolvedCardFrameStyle = React.useMemo(
+    () => ({
+      top: 0,
+      left: 0,
+      right: 0,
+      width: '100%',
+      height: resolvedCardHeight,
+    }),
+    [resolvedCardHeight],
+  );
 
   if (!data || data.length === 0) {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyTitle}>No new profiles tonight</Text>
-        <Text style={styles.emptyText}>You have seen everyone nearby. Check back later for fresh momentum.</Text>
+        <Text style={styles.emptyText}>
+          You have seen everyone nearby. Check back later for fresh momentum.
+        </Text>
       </View>
     );
   }
@@ -199,22 +231,19 @@ export default function SwipeDeck({ data, onSwipeLeft, onSwipeRight, onPress }: 
     <View style={styles.container}>
       <Swiper
         ref={swiperRef}
+        animateCardOpacity
+        animateOverlayLabelsOpacity
+        backgroundColor="transparent"
+        cardHorizontalMargin={0}
+        cardIndex={0}
+        cardVerticalMargin={0}
+        cardStyle={resolvedCardFrameStyle}
         cards={data}
-        renderCard={(card) => <Card user={card} onPress={() => onPress && onPress(card)} />}
+        containerStyle={styles.swiperContainer}
+        disableBottomSwipe
+        disableTopSwipe
         onSwipedLeft={(index) => onSwipeLeft(data[index])}
         onSwipedRight={(index) => onSwipeRight(data[index])}
-        cardIndex={0}
-        backgroundColor="transparent"
-        stackSize={3}
-        stackSeparation={18}
-        cardVerticalMargin={8}
-        cardHorizontalMargin={20}
-        containerStyle={styles.swiperContainer}
-        animateOverlayLabelsOpacity
-        animateCardOpacity
-        disableTopSwipe
-        disableBottomSwipe
-        swipeBackCard
         overlayLabels={{
           left: {
             title: 'PASS',
@@ -231,6 +260,16 @@ export default function SwipeDeck({ data, onSwipeLeft, onSwipeRight, onPress }: 
             },
           },
         }}
+        renderCard={(card) => (
+          <SwipeDeckCard
+            cardHeight={resolvedCardHeight}
+            onPress={() => onPress && onPress(card)}
+            user={card}
+          />
+        )}
+        stackSeparation={14}
+        stackSize={2}
+        swipeBackCard
       />
     </View>
   );
@@ -244,14 +283,13 @@ const styles = StyleSheet.create({
   swiperContainer: {
     flex: 1,
     backgroundColor: 'transparent',
-    paddingBottom: spacing.xxxl,
+    overflow: 'visible',
   },
   card: {
-    borderRadius: 30,
+    width: '100%',
+    borderRadius: 28,
     backgroundColor: DARK.surface,
     overflow: 'hidden',
-    height: CARD_HEIGHT,
-    width: '100%',
     borderWidth: 1,
     borderColor: DARK.border,
   },
@@ -274,51 +312,42 @@ const styles = StyleSheet.create({
     color: DARK.textPrimary,
     fontWeight: '800',
   },
-  cardFrame: {
-    position: 'absolute',
-    top: 14,
-    left: 14,
-    right: 14,
-    bottom: 14,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: DARK.borderStrong,
-  },
   imageGradient: {
     position: 'absolute',
     top: 0,
-    left: 0,
     right: 0,
     bottom: 0,
+    left: 0,
   },
   topChrome: {
     position: 'absolute',
     top: spacing.xl,
-    left: spacing.xl,
-    right: spacing.xl,
+    left: spacing.lg,
+    right: spacing.lg,
   },
-  cardHandle: {
-    alignSelf: 'center',
-    width: 132,
-    height: 18,
-    borderRadius: radii.pill,
-    backgroundColor: 'rgba(30,39,58,0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    marginBottom: spacing.lg,
+  topChromeCompact: {
+    top: spacing.lg,
+    left: spacing.md,
+    right: spacing.md,
   },
   badgeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.sm,
   },
   intentBadge: {
-    backgroundColor: 'rgba(13,17,23,0.64)',
+    maxWidth: '58%',
+    backgroundColor: 'rgba(13,17,23,0.58)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  intentBadgeCompact: {
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 6,
   },
   intentBadgeText: {
     color: DARK.textPrimary,
@@ -327,21 +356,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   presenceBadge: {
-    backgroundColor: 'rgba(13,17,23,0.48)',
+    backgroundColor: 'rgba(13,17,23,0.44)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
+  },
+  presenceBadgeCompact: {
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 6,
   },
   presenceBadgeText: {
     color: DARK.textSecondary,
     fontSize: typography.caption,
     fontWeight: '700',
-  },
-  presenceRow: {
-    marginTop: spacing.sm,
-    alignItems: 'flex-end',
   },
   matchBadge: {
     flexDirection: 'row',
@@ -350,9 +379,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2E58E',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
+  },
+  matchBadgeCompact: {
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 6,
   },
   matchBadgeText: {
     color: DARK.background,
@@ -365,23 +398,36 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: spacing.xxxl,
-    paddingTop: spacing.xxxxl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.xxxl + spacing.md,
+  },
+  bottomShellCompact: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.xxxl,
+  },
+  bottomShellUltraCompact: {
+    paddingBottom: spacing.sm,
+    paddingTop: spacing.xxl + spacing.md,
   },
   eyebrow: {
     fontSize: 10,
     color: DARK.textMuted,
     fontWeight: '800',
-    letterSpacing: 3,
+    letterSpacing: 2.8,
     marginBottom: spacing.sm,
   },
   name: {
-    fontSize: 40,
+    fontSize: 32,
     fontWeight: '800',
     color: DARK.textPrimary,
-    letterSpacing: -1.2,
-    lineHeight: 44,
+    letterSpacing: -1.1,
+    lineHeight: 34,
+  },
+  nameCompact: {
+    fontSize: 28,
+    lineHeight: 30,
   },
   metaLine: {
     fontSize: typography.bodySmall,
@@ -390,47 +436,42 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   bio: {
-    fontSize: typography.body,
+    fontSize: 14,
     color: 'rgba(255,255,255,0.88)',
-    lineHeight: 24,
-    marginTop: spacing.md,
-    maxWidth: '90%',
+    lineHeight: 19,
+    marginTop: spacing.sm,
+    maxWidth: '92%',
   },
-  infoPanel: {
-    marginTop: spacing.lg,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(18,24,36,0.56)',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+  bioCompact: {
+    marginTop: spacing.xs,
+    maxWidth: '96%',
   },
-  infoPanelLabel: {
-    color: DARK.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.8,
-    marginBottom: spacing.xs,
-  },
-  infoPanelValue: {
-    color: DARK.textPrimary,
-    fontSize: typography.body,
+  tempoLine: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.72)',
     fontWeight: '700',
-    textTransform: 'capitalize',
+    letterSpacing: 0.3,
+    marginTop: spacing.sm,
+  },
+  tempoLineCompact: {
+    marginTop: spacing.xs,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-    marginTop: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  chipRowCompact: {
+    marginTop: spacing.xs,
   },
   chip: {
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.16)',
-    backgroundColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    paddingVertical: 5,
   },
   chipText: {
     color: DARK.textPrimary,
@@ -463,7 +504,7 @@ const styles = StyleSheet.create({
     borderColor: DARK.danger,
     color: DARK.danger,
     borderWidth: 2,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '900',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
@@ -474,7 +515,7 @@ const styles = StyleSheet.create({
     borderColor: DARK.accent,
     color: DARK.accent,
     borderWidth: 2,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '900',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
@@ -485,14 +526,14 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'flex-end',
     justifyContent: 'flex-start',
-    marginTop: 48,
-    marginLeft: -12,
+    marginTop: 40,
+    marginLeft: -10,
   },
   overlayWrapperRight: {
     flexDirection: 'column',
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
-    marginTop: 48,
-    marginLeft: 12,
+    marginTop: 40,
+    marginLeft: 10,
   },
 });

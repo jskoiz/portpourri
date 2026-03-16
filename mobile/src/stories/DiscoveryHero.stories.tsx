@@ -6,7 +6,13 @@ import { HomeHero } from '../features/discovery/components/HomeHero';
 const meta = {
   title: 'Discovery/HomeHero',
   component: HomeHero,
-  decorators: [(Story) => <View style={{ flex: 1, padding: 24 }}><Story /></View>],
+  decorators: [
+    (Story) => (
+      <View style={{ flex: 1, padding: 24, backgroundColor: '#0D1117' }}>
+        <Story />
+      </View>
+    ),
+  ],
 } satisfies Meta<typeof HomeHero>;
 
 export default meta;
@@ -22,4 +28,3 @@ export const Default: Story = {
     unreadCount: 3,
   },
 };
-

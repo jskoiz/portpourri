@@ -21,6 +21,7 @@ const SCENARIOS = {
         key: "lana",
         email: "preview.lana@brdg.local",
         firstName: "Lana",
+        photoFile: "uifaces-popular-avatar.jpg",
         birthdate: "1996-04-14",
         gender: "woman",
         profile: {
@@ -50,6 +51,7 @@ const SCENARIOS = {
         key: "mason",
         email: "preview.mason@brdg.local",
         firstName: "Mason",
+        photoFile: "uifaces-popular-avatar (1).jpg",
         birthdate: "1993-11-02",
         gender: "man",
         profile: {
@@ -79,6 +81,7 @@ const SCENARIOS = {
         key: "niko",
         email: "preview.niko@brdg.local",
         firstName: "Niko",
+        photoFile: "uifaces-human-avatar.jpg",
         birthdate: "1995-07-22",
         gender: "man",
         profile: {
@@ -187,7 +190,7 @@ async function createUser(definition, password, index) {
   await prisma.userPhoto.create({
     data: {
       userId,
-      storageKey: `${ASSET_BASE_URL}/pfps/${PHOTO_FILES[index % PHOTO_FILES.length]}`,
+      storageKey: `${ASSET_BASE_URL}/pfps/${definition.photoFile || PHOTO_FILES[index % PHOTO_FILES.length]}`,
       isPrimary: true,
       sortOrder: 0,
     },

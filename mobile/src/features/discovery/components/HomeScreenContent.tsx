@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { User } from '../../../api/types';
 import SwipeDeck from '../../../components/SwipeDeck';
@@ -7,11 +7,20 @@ import MatchAnimation from '../../../components/MatchAnimation';
 import AppBackdrop from '../../../components/ui/AppBackdrop';
 import { StatePanel } from '../../../design/primitives';
 import type { AppBottomSheetProps } from '../../../design/sheets/AppBottomSheet';
+import { spacing } from '../../../theme/tokens';
 import { HomeHero } from './HomeHero';
 import { HomeQuickFilters } from './HomeQuickFilters';
 import { DiscoveryFilterSheet } from './DiscoveryFilterSheet';
 import { homeStyles as styles } from './home.styles';
 import type { FilterModalState, QuickFilterKey } from './discoveryFilters';
+
+const DEFAULT_CARD_HEIGHT = 520;
+const MIN_CARD_HEIGHT = 360;
+const MAX_CARD_HEIGHT = 680;
+
+function clampCardHeight(value: number) {
+  return Math.min(MAX_CARD_HEIGHT, Math.max(MIN_CARD_HEIGHT, Math.round(value)));
+}
 
 export function HomeScreenContent({
   activeFilterCount,
@@ -69,8 +78,10 @@ export function HomeScreenContent({
   showMatch: boolean;
   unreadCount: number;
 }) {
+  const [cardHeight, setCardHeight] = React.useState(DEFAULT_CARD_HEIGHT);
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <AppBackdrop />
 
       <HomeHero
@@ -89,26 +100,31 @@ export function HomeScreenContent({
         onPressRefine={onOpenFilters}
       />
 
-      <View style={styles.deckHeader}>
-        <Text style={styles.deckHeaderLabel}>Featured profile</Text>
-      </View>
-
       <View style={styles.deckArea}>
-        {feed.length === 0 ? (
-          <StatePanel
-            title="You're all caught up"
-            description="Pull again in a bit or explore events nearby."
-            actionLabel="Refresh"
-            onAction={onRefetch}
-          />
-        ) : (
-          <SwipeDeck
-            data={feed}
-            onSwipeLeft={onSwipeLeft}
-            onSwipeRight={onSwipeRight}
-            onPress={onPressProfile}
-          />
-        )}
+        <View
+          style={styles.deckAreaInner}
+          onLayout={(event) => {
+            const nextHeight = clampCardHeight(event.nativeEvent.layout.height - 2);
+            setCardHeight((current) => (Math.abs(current - nextHeight) > 1 ? nextHeight : current));
+          }}
+        >
+          {feed.length === 0 ? (
+            <StatePanel
+              title="You're all caught up"
+              description="Pull again in a bit or explore events nearby."
+              actionLabel="Refresh"
+              onAction={onRefetch}
+            />
+          ) : (
+            <SwipeDeck
+              cardHeight={cardHeight}
+              data={feed}
+              onSwipeLeft={onSwipeLeft}
+              onSwipeRight={onSwipeRight}
+              onPress={onPressProfile}
+            />
+          )}
+        </View>
       </View>
 
       <MatchAnimation visible={showMatch} onFinish={onMatchAnimationFinish} />
