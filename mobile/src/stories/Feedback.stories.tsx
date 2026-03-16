@@ -13,9 +13,11 @@ function CrashOnRender(): React.JSX.Element {
 function FeedbackStory({
   showBoundaryError = true,
   showMatch = true,
+  useCustomFallback = false,
 }: {
   showBoundaryError?: boolean;
   showMatch?: boolean;
+  useCustomFallback?: boolean;
 }) {
   return (
     <View style={{ flex: 1, gap: 24, padding: 24 }}>
@@ -32,7 +34,16 @@ function FeedbackStory({
           backgroundColor: '#F7F4F0',
         }}
       >
-        <ErrorBoundary>
+        <ErrorBoundary
+          fallback={
+            useCustomFallback ? (
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#1F160F' }}>Custom fallback</Text>
+                <Text style={{ color: '#64584F' }}>Alternate recovery UI rendered by the boundary.</Text>
+              </View>
+            ) : undefined
+          }
+        >
           {showBoundaryError ? <CrashOnRender /> : <Text>No error state triggered.</Text>}
         </ErrorBoundary>
       </View>
@@ -60,5 +71,13 @@ export const StaticBoundary: Story = {
   args: {
     showBoundaryError: false,
     showMatch: false,
+  },
+};
+
+export const CustomBoundaryFallback: Story = {
+  args: {
+    showBoundaryError: true,
+    showMatch: false,
+    useCustomFallback: true,
   },
 };

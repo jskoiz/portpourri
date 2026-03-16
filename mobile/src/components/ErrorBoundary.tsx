@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { captureException, logDevOnly } from '../core/observability/sentry';
 
 interface Props { children: ReactNode; fallback?: ReactNode; }
 interface State { hasError: boolean; error?: Error; }
@@ -12,8 +13,13 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught:', error, errorInfo);
-    // TODO: Send to Sentry when configured
+    captureException(error, {
+      tags: { source: 'error-boundary' },
+      extra: {
+        componentStack: errorInfo.componentStack,
+      },
+    });
+    logDevOnly('error', 'ErrorBoundary caught:', { error, errorInfo });
   }
 
   handleRetry = () => { this.setState({ hasError: false, error: undefined }); };

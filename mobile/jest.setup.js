@@ -1,5 +1,17 @@
 require('@testing-library/jest-native/extend-expect');
 
+jest.mock('@sentry/react-native', () => ({
+  init: jest.fn(),
+  withScope: jest.fn((callback) =>
+    callback({
+      setTag: jest.fn(),
+      setExtra: jest.fn(),
+    }),
+  ),
+  captureException: jest.fn(),
+  addBreadcrumb: jest.fn(),
+}));
+
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
