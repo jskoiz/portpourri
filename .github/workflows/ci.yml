@@ -6,37 +6,50 @@ on:
     branches:
       - main
 
-jobs:
-  backend:
-    name: Backend checks
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run test
+permissions:
+  contents: read
 
-  mobile:
-    name: Mobile checks
+jobs:
+  fast-pr:
+    name: PR fast lane
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mobile
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: |
+            backend/package-lock.json
+            mobile/package-lock.json
       - run: npm ci
-      - run: npm run typecheck
-      - run: npm run test
+        working-directory: backend
+      - run: npm ci
+        working-directory: mobile
+      - run: git fetch origin "${GITHUB_BASE_REF}" --depth=1
+      - run: npm run check:changed -- --base "origin/${GITHUB_BASE_REF}" --head HEAD
+
+  full-main:
+    name: Main full lane
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            mobile/package-lock.json
+      - run: npm ci
+        working-directory: backend
+      - run: npm ci
+        working-directory: mobile
+      - run: npm run check
+      - run: npm run smoke

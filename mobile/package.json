@@ -9,8 +9,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "npm run typecheck && npm run check:boundaries",
-    "check:boundaries": "node ./scripts/check-screen-boundaries.js",
-    "feature:new": "hygen feature new",
+    "check:boundaries": "node ../scripts/check-repo-policies.mjs --scope mobile",
+    "feature:new": "node ./scripts/scaffold-feature.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --max-old-space-size=8192 ./node_modules/jest/bin/jest.js --runInBand",
     "check": "npm run lint && npm run test"

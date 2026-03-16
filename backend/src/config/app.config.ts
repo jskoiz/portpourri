@@ -16,6 +16,9 @@ const apiPort = toNumber(process.env.PORT, 3000);
 const localApiBaseUrl = `http://127.0.0.1:${apiPort}`;
 const apiBaseUrl = process.env.API_BASE_URL || localApiBaseUrl;
 const assetBaseUrl = process.env.BASE_URL || apiBaseUrl;
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean) || ['http://localhost:3000'];
 const jwtSecret = (() => {
   if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
   if (process.env.NODE_ENV === 'test') return 'test-jwt-secret';
@@ -27,6 +30,9 @@ const jwtSecret = (() => {
 
 export const appConfig = {
   apiPort,
+  cors: {
+    allowedOrigins,
+  },
   jwt: {
     secret: jwtSecret,
     expiresIn: '60m' as const,

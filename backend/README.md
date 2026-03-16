@@ -4,7 +4,7 @@ NestJS API for authentication, discovery, matches, chat, events, profile data, n
 
 ## Local Setup
 
-From [`backend`](/Users/jerry/Desktop/brdg/backend):
+From [`backend`](.):
 
 ```bash
 npm ci
@@ -81,6 +81,7 @@ Use this path for current release/readiness QA when validating:
 
 ## References
 
-- Dev loop: [`docs/DEV_LOOP.md`](/Users/jerry/Desktop/brdg/docs/DEV_LOOP.md)
-- Architecture: [`docs/ARCHITECTURE.md`](/Users/jerry/Desktop/brdg/docs/ARCHITECTURE.md)
-- Functional matrix: [`docs/FUNCTIONAL_MATRIX.md`](/Users/jerry/Desktop/brdg/docs/FUNCTIONAL_MATRIX.md)
+- Harness: [`../docs/HARNESS.md`](../docs/HARNESS.md)
+- Dev loop: [`../docs/DEV_LOOP.md`](../docs/DEV_LOOP.md)
+- Architecture: [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md)
+- Functional matrix: [`../docs/FUNCTIONAL_MATRIX.md`](../docs/FUNCTIONAL_MATRIX.md)

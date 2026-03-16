@@ -63,6 +63,7 @@ The seeded `ui-preview` runtime remains the canonical place to validate that the
 ## PR Expectations
 
 - Visual-only mobile changes should add or update a Storybook story in the same task.
+- Reusable UI changes under `mobile/src/components`, `mobile/src/design`, or `mobile/src/features/**/components` should update Storybook in the same diff unless the PR template explains why Storybook is not the right surface.
 - If a visual change also affects behavior or contracts, add the story and then validate the integrated flow in the app runtime.
 - If behavior changes are not covered by existing tests, add tests or document why tests were not added.
 

@@ -25,9 +25,11 @@
     "dev:bootstrap": "npm run db:up && npm run db:wait && npm run db:migrate && npm run db:seed",
     "dev:setup": "npm run dev:bootstrap && npm run start:dev",
     "dev:scenario": "node scripts/reset-dev-scenario.js",
+    "module:new": "node ./scripts/scaffold-module.mjs",
     "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm run test",
+    "check:boundaries": "node ../scripts/check-repo-policies.mjs --scope backend",
+    "check": "npm run typecheck && npm run check:boundaries && npm run test",
     "check:full": "npm run lint && npm run check"
   },
   "dependencies": {

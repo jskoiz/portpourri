@@ -68,6 +68,47 @@ jest.mock("../../features/locations/useKnownLocationSuggestions", () => ({
   useKnownLocationSuggestions: () => [],
 }));
 
+jest.mock("../../components/form/LocationField", () => {
+  const React = require("react");
+  const { Pressable, Text, TextInput, View } = require("react-native");
+
+  type MockLocationFieldProps = {
+    kind?: "place" | "city";
+    onChangeText: (value: string) => void;
+    placeholder: string;
+    value?: string;
+  };
+
+  return {
+    LocationField: ({
+      kind = "place",
+      onChangeText,
+      placeholder,
+      value = "",
+    }: MockLocationFieldProps) => {
+      const [draft, setDraft] = React.useState(value);
+
+      return (
+        <View>
+          <TextInput
+            placeholder={placeholder}
+            value={draft}
+            onChangeText={(next: string) => {
+              setDraft(next);
+              onChangeText(next);
+            }}
+          />
+          {kind === "city" ? (
+            <Pressable accessibilityRole="button" onPress={() => onChangeText("Kailua")}>
+              <Text>Windward Oahu</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      );
+    },
+  };
+});
+
 describe("ProfileScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();

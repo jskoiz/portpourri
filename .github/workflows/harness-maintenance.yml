@@ -1,0 +1,116 @@
+name: Harness Maintenance
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 16 * * 1'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            mobile/package-lock.json
+      - run: npm ci
+        working-directory: backend
+      - run: npm ci
+        working-directory: mobile
+      - name: Build maintenance report
+        id: report
+        shell: bash
+        run: |
+          set +e
+          report_path="harness-maintenance-report.md"
+          failures=0
+
+          run_required() {
+            local title="$1"
+            shift
+            echo "## ${title}" >> "$report_path"
+            echo '```text' >> "$report_path"
+            "$@" >> "$report_path" 2>&1
+            local status=$?
+            echo '```' >> "$report_path"
+            echo "" >> "$report_path"
+            if [ "$status" -ne 0 ]; then
+              failures=1
+            fi
+          }
+
+          run_info() {
+            local title="$1"
+            shift
+            echo "## ${title}" >> "$report_path"
+            echo '```text' >> "$report_path"
+            "$@" >> "$report_path" 2>&1 || true
+            echo '```' >> "$report_path"
+            echo "" >> "$report_path"
+          }
+
+          {
+            echo "# Harness maintenance report"
+            echo ""
+            echo "- Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            echo "- Ref: ${GITHUB_SHA}"
+            echo ""
+          } > "$report_path"
+
+          run_required "Full check" npm run check
+          run_required "Smoke" npm run smoke
+          run_required "Docs check" npm run docs:check
+          run_required "Policy audit" node ./scripts/check-repo-policies.mjs --audit
+          run_info "TODO scan" bash -lc "rg -n 'TODO|FIXME|HACK' AGENTS.md backend mobile docs scripts .github || true"
+          run_info "Backend outdated" bash -lc "npm --prefix backend outdated || true"
+          run_info "Mobile outdated" bash -lc "npm --prefix mobile outdated || true"
+
+          echo "report_path=$report_path" >> "$GITHUB_OUTPUT"
+          echo "failures=$failures" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: harness-maintenance-report
+          path: ${{ steps.report.outputs.report_path }}
+      - uses: actions/github-script@v7
+        env:
+          REPORT_PATH: ${{ steps.report.outputs.report_path }}
+          FAILURE_STATE: ${{ steps.report.outputs.failures }}
+        with:
+          script: |
+            const fs = require('fs');
+            const title = 'Harness maintenance report';
+            const body = fs.readFileSync(process.env.REPORT_PATH, 'utf8')
+              + `\nCurrent failure state: ${process.env.FAILURE_STATE === '1' ? 'attention needed' : 'clean'}\n`;
+            const { owner, repo } = context.repo;
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'open',
+            });
+            const existing = issues.find((issue) => issue.title === title);
+            if (existing) {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                title,
+                body,
+              });
+              return;
+            }
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title,
+              body,
+            });

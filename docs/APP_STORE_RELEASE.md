@@ -4,7 +4,7 @@ BRDG uses Expo for app development and native config, but the canonical internal
 
 ## Engineering baseline
 
-- Mobile app config is driven by [`mobile/app.config.ts`](/Users/jerry/Desktop/brdg/mobile/app.config.ts) instead of placeholder identifiers in `app.json`.
+- Mobile app config is driven by [`mobile/app.config.ts`](../mobile/app.config.ts) instead of placeholder identifiers in `app.json`.
 - Release builds require `EXPO_PUBLIC_API_URL`, which prevents shipping a binary that points at localhost.
 - The app now exposes authenticated in-app account deletion, which is required by Apple when account creation is supported.
 - `mobile/eas.json` includes `development`, `preview`, and `production` build profiles, but those profiles are not the default BRDG TestFlight path.
@@ -12,13 +12,13 @@ BRDG uses Expo for app development and native config, but the canonical internal
 ## Expo vs Xcode
 
 - Expo is part of the app stack here: config, modules, and local native generation still come from the Expo-based mobile project.
-- TestFlight/App Store delivery for BRDG currently goes through local Xcode via [`scripts/release-ios.sh`](/Users/jerry/Desktop/brdg/scripts/release-ios.sh).
+- TestFlight/App Store delivery for BRDG currently goes through local Xcode via [`scripts/release-ios.sh`](../scripts/release-ios.sh).
 - EAS is opt-in for this repo. Use it only when the release explicitly requires Expo-hosted builds or submission.
 - If a machine is not logged into Expo, that is not a blocker for the normal BRDG TestFlight flow.
 
 ## Required environment values
 
-Copy [`mobile/.env.example`](/Users/jerry/Desktop/brdg/mobile/.env.example) into your local env and replace:
+Copy [`mobile/.env.example`](../mobile/.env.example) into your local env or EAS secrets and replace:
 
 - `EXPO_PUBLIC_API_URL` with the production backend origin
 - `IOS_BUNDLE_IDENTIFIER` with the App Store bundle ID reserved in Apple Developer
@@ -31,7 +31,7 @@ Current production values prepared in this workspace:
 - `IOS_BUNDLE_IDENTIFIER=com.avmillabs.brdg`
 - `ANDROID_PACKAGE=com.avmillabs.brdg`
 
-For local release builds, [`mobile/.env.production`](/Users/jerry/Desktop/brdg/mobile/.env.production) is ready to use.
+For local release builds, start from `mobile/.env.example` and provide production values before running the release wrapper.
 
 ## Recommended release flow
 
@@ -42,7 +42,7 @@ npm run release:ios:check
 npm run release:ios
 ```
 
-This is the normal BRDG TestFlight/App Store path. The root scripts pin `--mode xcode`, and [`scripts/release-ios.sh`](/Users/jerry/Desktop/brdg/scripts/release-ios.sh) enforces branch cleanliness, upstream sync, backend/mobile validation, writes a manifest to [`mobile/build/ios-release-manifest.json`](/Users/jerry/Desktop/brdg/mobile/build/ios-release-manifest.json), then archives and uploads through Xcode.
+This is the normal BRDG TestFlight/App Store path. The root scripts pin `--mode xcode`, and [`scripts/release-ios.sh`](../scripts/release-ios.sh) enforces branch cleanliness, upstream sync, backend/mobile validation, writes a manifest to `mobile/build/ios-release-manifest.json`, then archives and uploads through Xcode.
 
 Use `npm run release:ios:check` when you want the preflight and manifest generation without starting the Xcode archive/upload.
 
@@ -85,8 +85,8 @@ If the build is intended for App Store review, use the uploaded Xcode build in A
 
 ## Release validation before submission
 
-- `npm run check` in [`mobile`](/Users/jerry/Desktop/brdg/mobile)
-- `npm run check:full` in [`backend`](/Users/jerry/Desktop/brdg/backend)
+- `npm run check` in [`mobile`](../mobile)
+- `npm run check:full` in [`backend`](../backend)
 - `npm run smoke` from repo root so the backend bootstrap, `ui-preview` scenario reset, and mobile launch prerequisites all pass together
 - Confirm the wrapper manifest reports `mode: "xcode"` for the canonical BRDG TestFlight/App Store path unless the release intentionally used EAS
 - Verify signup, login, onboarding, profile load, discovery feed, chat, event creation, RSVP, notifications, logout, and account deletion against the production API

@@ -26,6 +26,41 @@ jest.mock('../../components/ui/AppIcon', () => {
   return () => <Text>icon</Text>;
 });
 
+jest.mock('../../components/form/LocationField', () => {
+  const React = require('react');
+  const { Pressable, Text, TextInput, View } = require('react-native');
+
+  type MockLocationFieldProps = {
+    onChangeText: (value: string) => void;
+    placeholder: string;
+    value?: string;
+  };
+
+  return {
+    LocationField: ({ onChangeText, placeholder, value = '' }: MockLocationFieldProps) => {
+      const [draft, setDraft] = React.useState(value);
+
+      return (
+        <View>
+          <TextInput
+            placeholder={placeholder}
+            value={draft}
+            onChangeText={(next: string) => {
+              setDraft(next);
+              onChangeText(next);
+            }}
+          />
+          {draft ? (
+            <Pressable accessibilityRole="button" onPress={() => onChangeText(draft)}>
+              <Text>{`Use "${draft}"`}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      );
+    },
+  };
+});
+
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
   const { View } = require('react-native');

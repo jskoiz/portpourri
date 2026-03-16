@@ -13,6 +13,25 @@ jest.mock('expo-image', () => {
   };
 });
 
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  const createIcon = (displayName) => {
+    const Icon = ({ name, testID, ...props }) => (
+      <Text accessibilityLabel={name || displayName} testID={testID} {...props}>
+        {String(name || displayName)}
+      </Text>
+    );
+    Icon.displayName = displayName;
+    return Icon;
+  };
+
+  return {
+    Feather: createIcon('Feather'),
+  };
+});
+
 jest.mock('expo-haptics', () => ({
   selectionAsync: jest.fn(),
   impactAsync: jest.fn(),
@@ -72,4 +91,37 @@ jest.mock('@react-native-community/datetimepicker', () => {
       </Pressable>
     );
   };
+});
+
+function formatConsoleArgs(args) {
+  return args
+    .map((value) => {
+      if (typeof value === 'string') return value;
+      if (value instanceof Error) return value.stack || value.message;
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return String(value);
+      }
+    })
+    .join(' ');
+}
+
+function createConsoleGuard(method) {
+  return jest.spyOn(console, method).mockImplementation((...args) => {
+    throw new Error(`Unexpected console.${method}: ${formatConsoleArgs(args)}`);
+  });
+}
+
+let consoleErrorGuard;
+let consoleWarnGuard;
+
+beforeEach(() => {
+  consoleErrorGuard = createConsoleGuard('error');
+  consoleWarnGuard = createConsoleGuard('warn');
+});
+
+afterEach(() => {
+  consoleErrorGuard.mockRestore();
+  consoleWarnGuard.mockRestore();
 });
