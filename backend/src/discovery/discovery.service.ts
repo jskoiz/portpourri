@@ -2,7 +2,21 @@ import { Injectable, Logger } from '@nestjs/common';
 import { IntensityLevel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import {
+  buildLikeReceivedNotification,
+  buildMatchCreatedNotification,
+} from '../notifications/notification.templates';
 import { deriveMatchClassification } from '../matches/match-classification';
+import {
+  DISCOVERY_DISTANCE_SCORE_TIERS,
+  DISCOVERY_FEED_QUERY_LIMIT,
+  DISCOVERY_FEED_RESULT_LIMIT,
+  DISCOVERY_SCORE_WEIGHTS,
+  EARTH_RADIUS_KM,
+  PROFILE_COMPLETENESS_BIO_MIN_CHARS,
+  PROFILE_COMPLETENESS_PHOTO_MIN_COUNT,
+  PROFILE_COMPLETENESS_PROMPTS,
+} from './discovery.constants';
 
 export interface DiscoveryFilters {
   distanceKm?: number;
@@ -82,7 +96,7 @@ export class DiscoveryService {
           orderBy: { sortOrder: 'asc' },
         },
       },
-      take: 100,
+      take: DISCOVERY_FEED_QUERY_LIMIT,
     });
 
     let maxDistanceKm: number | null = null;
@@ -150,7 +164,7 @@ export class DiscoveryService {
         (a, b) =>
           (b?.recommendationScore || 0) - (a?.recommendationScore || 0),
       )
-      .slice(0, 20);
+      .slice(0, DISCOVERY_FEED_RESULT_LIMIT);
 
     return scored;
   }
@@ -277,7 +291,7 @@ export class DiscoveryService {
     const sharedGoals = candidateGoals.filter((goal) =>
       myGoals.includes(goal),
     ).length;
-    score += sharedGoals * 28;
+    score += sharedGoals * DISCOVERY_SCORE_WEIGHTS.sharedGoal;
 
     if (
       me?.fitnessProfile?.intensityLevel &&
@@ -285,27 +299,32 @@ export class DiscoveryService {
       me.fitnessProfile.intensityLevel ===
         candidate.fitnessProfile.intensityLevel
     ) {
-      score += 20;
+      score += DISCOVERY_SCORE_WEIGHTS.matchingIntensity;
     }
 
     if (distanceKm !== null) {
-      if (distanceKm <= 5) score += 25;
-      else if (distanceKm <= 15) score += 18;
-      else if (distanceKm <= 30) score += 10;
-      else if (distanceKm <= 50) score += 4;
+      const distanceTier = DISCOVERY_DISTANCE_SCORE_TIERS.find(
+        ({ maxDistanceKm }) => distanceKm <= maxDistanceKm,
+      );
+      if (distanceTier) {
+        score += distanceTier.score;
+      }
     } else {
-      score += 3;
+      score += DISCOVERY_SCORE_WEIGHTS.unknownDistance;
     }
 
-    // Soft age preference around the center of common 24-35 bracket for active users.
-    const ageDelta = Math.abs(age - 29);
-    score += Math.max(0, 12 - ageDelta);
+    const ageDelta = Math.abs(age - DISCOVERY_SCORE_WEIGHTS.ageCenter);
+    score += Math.max(0, DISCOVERY_SCORE_WEIGHTS.maxAgeBonus - ageDelta);
 
-    if (candidate.fitnessProfile?.prefersMorning) score += 5;
-    if (candidate.fitnessProfile?.prefersEvening) score += 5;
+    if (candidate.fitnessProfile?.prefersMorning) {
+      score += DISCOVERY_SCORE_WEIGHTS.availability;
+    }
+    if (candidate.fitnessProfile?.prefersEvening) {
+      score += DISCOVERY_SCORE_WEIGHTS.availability;
+    }
 
-    if (candidate.photos?.length) score += 4;
-    if (candidate.profile?.bio) score += 3;
+    if (candidate.photos?.length) score += DISCOVERY_SCORE_WEIGHTS.photo;
+    if (candidate.profile?.bio) score += DISCOVERY_SCORE_WEIGHTS.bio;
 
     return score;
   }
@@ -343,7 +362,7 @@ export class DiscoveryService {
         Math.sin(dLon / 2) *
         Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return 6371 * c;
+    return EARTH_RADIUS_KM * c;
   }
 
   async likeUser(userId: string, targetUserId: string) {
@@ -369,12 +388,10 @@ export class DiscoveryService {
       },
     });
 
-    void this.notifications.create(targetUserId, {
-      type: 'like_received',
-      title: 'New like',
-      body: 'Someone liked your profile.',
-      data: { fromUserId: userId },
-    });
+    void this.notifications.create(
+      targetUserId,
+      buildLikeReceivedNotification(userId),
+    );
 
     const mutualLike = await this.prisma.like.findUnique({
       where: {
@@ -413,18 +430,14 @@ export class DiscoveryService {
         },
       });
 
-      void this.notifications.create(userId, {
-        type: 'match_created',
-        title: "It's a match!",
-        body: 'You can start chatting now.',
-        data: { matchId: match.id, withUserId: targetUserId },
-      });
-      void this.notifications.create(targetUserId, {
-        type: 'match_created',
-        title: "It's a match!",
-        body: 'You can start chatting now.',
-        data: { matchId: match.id, withUserId: userId },
-      });
+      void this.notifications.create(
+        userId,
+        buildMatchCreatedNotification(match.id, targetUserId),
+      );
+      void this.notifications.create(
+        targetUserId,
+        buildMatchCreatedNotification(match.id, userId),
+      );
 
       return { status: 'match', match };
     }
@@ -506,37 +519,41 @@ export class DiscoveryService {
       },
     });
 
-    if (!user) return { score: 0, prompts: ['Complete your profile setup.'] };
+    if (!user) {
+      return { score: 0, prompts: [PROFILE_COMPLETENESS_PROMPTS.missingProfile] };
+    }
 
     const checks = [
-      { ok: !!user.firstName, prompt: 'Add your first name.' },
-      { ok: !!user.birthdate, prompt: 'Add your birthday.' },
+      { ok: !!user.firstName, prompt: PROFILE_COMPLETENESS_PROMPTS.firstName },
+      { ok: !!user.birthdate, prompt: PROFILE_COMPLETENESS_PROMPTS.birthdate },
       {
-        ok: !!user.profile?.bio && user.profile.bio.length >= 20,
-        prompt: 'Write a bio (20+ chars) so people know your vibe.',
+        ok:
+          !!user.profile?.bio &&
+          user.profile.bio.length >= PROFILE_COMPLETENESS_BIO_MIN_CHARS,
+        prompt: PROFILE_COMPLETENESS_PROMPTS.bio,
       },
       {
         ok: !!user.profile?.city,
-        prompt: 'Add your city for better nearby matches.',
+        prompt: PROFILE_COMPLETENESS_PROMPTS.city,
       },
       {
-        ok: user.photos.length >= 2,
-        prompt: 'Upload at least 2 profile photos.',
+        ok: user.photos.length >= PROFILE_COMPLETENESS_PHOTO_MIN_COUNT,
+        prompt: PROFILE_COMPLETENESS_PROMPTS.photos,
       },
       {
         ok: !!user.fitnessProfile?.primaryGoal,
-        prompt: 'Set a primary fitness goal.',
+        prompt: PROFILE_COMPLETENESS_PROMPTS.primaryGoal,
       },
       {
         ok: !!user.fitnessProfile?.intensityLevel,
-        prompt: 'Choose your training intensity.',
+        prompt: PROFILE_COMPLETENESS_PROMPTS.intensity,
       },
       {
         ok: !!(
           user.fitnessProfile?.prefersMorning ||
           user.fitnessProfile?.prefersEvening
         ),
-        prompt: 'Set your availability (morning/evening).',
+        prompt: PROFILE_COMPLETENESS_PROMPTS.availability,
       },
     ];
 
