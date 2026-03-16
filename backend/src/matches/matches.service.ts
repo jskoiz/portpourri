@@ -14,27 +14,46 @@ export class MatchesService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async getMatches(userId: string, take = 20, skip = 0) {
+  async getMatches(userId: string, take: number, skip: number) {
     const matches = await this.prisma.match.findMany({
       where: {
         OR: [{ userAId: userId }, { userBId: userId }],
         isBlocked: false,
         isArchived: false,
       },
-      include: {
+      select: {
+        id: true,
+        createdAt: true,
+        userAId: true,
+        userBId: true,
         userA: {
-          include: {
-            profile: true,
-            photos: { where: { isPrimary: true } },
+          select: {
+            id: true,
+            firstName: true,
+            isDeleted: true,
+            isBanned: true,
+            photos: {
+              where: { isPrimary: true },
+              select: { storageKey: true },
+              take: 1,
+            },
           },
         },
         userB: {
-          include: {
-            profile: true,
-            photos: { where: { isPrimary: true } },
+          select: {
+            id: true,
+            firstName: true,
+            isDeleted: true,
+            isBanned: true,
+            photos: {
+              where: { isPrimary: true },
+              select: { storageKey: true },
+              take: 1,
+            },
           },
         },
         messages: {
+          select: { body: true },
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
@@ -51,19 +70,19 @@ export class MatchesService {
         return !otherUser.isDeleted && !otherUser.isBanned;
       })
       .map((match) => {
-      const isUserA = match.userAId === userId;
-      const otherUser = isUserA ? match.userB : match.userA;
-      return {
-        id: match.id,
-        createdAt: match.createdAt,
-        user: {
-          id: otherUser.id,
-          firstName: otherUser.firstName,
-          photoUrl: otherUser.photos[0]?.storageKey,
-        },
-        lastMessage: match.messages[0]?.body,
-      };
-    });
+        const isUserA = match.userAId === userId;
+        const otherUser = isUserA ? match.userB : match.userA;
+        return {
+          id: match.id,
+          createdAt: match.createdAt,
+          user: {
+            id: otherUser.id,
+            firstName: otherUser.firstName,
+            photoUrl: otherUser.photos[0]?.storageKey ?? null,
+          },
+          lastMessage: match.messages[0]?.body ?? null,
+        };
+      });
   }
   async getMessages(matchId: string, userId: string) {
     await this.assertMatchAccess(matchId, userId);
