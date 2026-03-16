@@ -18,6 +18,7 @@ npm run check:backend
 npm run check:mobile
 npm run smoke
 npm run docs:check
+npm run symphony
 npm run harness:doctor
 npm run harness:ci-context -- --branch main
 npm run repo:index
@@ -38,6 +39,7 @@ npm run release:ios:check
 - Visual-only mobile work should ship with a Storybook update in the same diff unless the PR explains why Storybook is the wrong surface.
 - Prefer Storybook for isolated UI work. Use the seeded `ui-preview` runtime only for integrated validation.
 - Use one Codex thread per task and one git worktree per active task. Prefer [`scripts/codex-worktree.sh`](scripts/codex-worktree.sh) for new worktrees.
+- Use `npm run symphony` from repo root for the repo-owned Linear orchestration flow. Keep it running as a long-lived operator process rather than starting a fresh manual Codex session per issue.
 
 ## Release Provenance
 

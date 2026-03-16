@@ -19,9 +19,12 @@ BRDG includes an in-repo TypeScript Symphony service under [`../symphony`](../sy
 From repo root:
 
 ```bash
+npm run symphony
 npm run dev:symphony -- ./WORKFLOW.md
 npm run check:symphony
 ```
+
+`npm run symphony` is the normal operator entrypoint. It wraps the repo-owned workflow and default BRDG Linear project slug.
 
 ## Required Environment
 
@@ -50,6 +53,27 @@ The default Codex runtime is configured for full GitHub interactivity:
 
 That setup allows spawned issue sessions to inherit your shell environment, use existing Git or `gh` auth, push branches, and create or update pull requests directly.
 
+## Operator Flow
+
+1. Export `LINEAR_API_KEY`.
+2. Start the long-lived worker with `npm run symphony`.
+3. Move a Linear issue into `Todo`.
+4. Symphony picks it up, moves it to `In Progress`, creates or updates the `## Codex Workpad` comment, and starts a Codex run in `.symphony/workspaces/<ISSUE>`.
+5. When the run is healthy, expect the workpad to show a `Symphony runtime revision: ...` note, local validation, branch creation, push, PR attachment, and a state move toward review.
+
+## State Behavior
+
+- Symphony polls only the configured active states from [`../WORKFLOW.md`](../WORKFLOW.md).
+- Any issue left in an active state such as `Todo` or `In Progress` remains eligible for pickup on later polls.
+- If you do not want an issue to keep getting picked up, move it out of the active set.
+- Existing runs are not retrofitted when you change the workflow or runner; restart `npm run symphony` to guarantee new runs use the latest configuration.
+
+## Workpad Expectations
+
+- The agent keeps a single `## Codex Workpad` comment per issue.
+- The workpad should include `Plan`, `Acceptance Criteria`, `Validation`, and `Notes`.
+- `Notes` should include the `Symphony runtime revision` so you can tell which orchestration build produced that run.
+
 ## Current Scope
 
 This build covers the core Symphony runner/orchestrator contract and injects a client-side `linear_graphql` tool into Codex sessions for raw Linear GraphQL operations.
@@ -57,6 +81,7 @@ This build covers the core Symphony runner/orchestrator contract and injects a c
 ## Notes
 
 - If Codex trust is path-sensitive on your machine, trust the workspace root you intend Symphony to use.
+- Per-workspace trust warnings are non-fatal today. They disable project-local `config.toml` loading for that workspace path, but skills and exec policies still load.
 - The current default workflow assumes these Linear states exist: `Todo`, `In Progress`, `Human Review`, `Merging`, `Rework`, and `Done`.
 - If your team uses different state names, update [`../WORKFLOW.md`](../WORKFLOW.md) accordingly.
 - If you want a more restrictive runtime, override the `codex` block in [`../WORKFLOW.md`](../WORKFLOW.md) and accept that GitHub push/PR automation may stop working.
