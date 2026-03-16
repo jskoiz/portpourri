@@ -67,7 +67,7 @@ export default function ProfileScreen() {
       isRefetching={isRefetching && !isLoading}
       isSavingProfile={isSavingProfile}
       isSavingFitness={isSavingFitness}
-      navigation={navigation as any}
+      navigation={navigation}
       onCancelEdit={editor.cancelEdit}
       onConfirmDeleteAccount={() => {
         if (deletingAccount) return;

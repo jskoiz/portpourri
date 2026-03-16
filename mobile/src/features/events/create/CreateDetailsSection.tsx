@@ -1,5 +1,5 @@
 import React from 'react';
-import { Controller, type Control } from 'react-hook-form';
+import { Controller, type Control, type FieldErrors } from 'react-hook-form';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Input } from '../../../design/primitives';
 import type { CreateEventFormValues } from '../schema';
@@ -20,7 +20,7 @@ export function CreateDetailsSection({
   hideSpots = false,
 }: {
   control: Control<CreateEventFormValues>;
-  errors: Partial<Record<keyof CreateEventFormValues, { message?: string }>>;
+  errors: FieldErrors<CreateEventFormValues>;
   isSubmitting: boolean;
   noteInputFocus: () => void;
   onChangeSpots: (value: number) => void;

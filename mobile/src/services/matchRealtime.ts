@@ -15,6 +15,13 @@ type MessageEventPayload = {
   };
 };
 
+const MAX_RETRIES = 5;
+const MAX_BACKOFF_MS = 30_000;
+
+function getBackoffMs(attempt: number): number {
+  return Math.min(1_000 * Math.pow(2, attempt), MAX_BACKOFF_MS);
+}
+
 export async function connectMatchMessageStream(
   matchId: string,
   handlers: {
@@ -23,7 +30,7 @@ export async function connectMatchMessageStream(
     onError?: (error: unknown) => void;
   },
 ): Promise<() => void> {
-  const EventSourceCtor = (globalThis as { EventSource?: any }).EventSource;
+  const EventSourceCtor = (globalThis as { EventSource?: typeof EventSource }).EventSource;
   if (!EventSourceCtor) {
     handlers.onStatus('fallback');
     return () => undefined;
@@ -35,31 +42,61 @@ export async function connectMatchMessageStream(
     return () => undefined;
   }
 
-  handlers.onStatus('connecting');
+  let retryCount = 0;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let closed = false;
+  let source: EventSource | null = null;
 
-  const streamUrl = `${env.apiUrl}/matches/${matchId}/messages/stream`;
-  const source = new EventSourceCtor(streamUrl, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  function connect() {
+    if (closed) return;
 
-  source.onopen = () => handlers.onStatus('connected');
+    handlers.onStatus('connecting');
 
-  source.addEventListener('message', (event: MessageEvent) => {
-    try {
-      const payload = JSON.parse((event as any).data) as MessageEventPayload;
-      handlers.onMessage(payload);
-    } catch (error) {
+    const streamUrl = `${env.apiUrl}/matches/${matchId}/messages/stream`;
+    source = new EventSourceCtor!(streamUrl, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    } as EventSourceInit);
+
+    source!.onopen = () => {
+      retryCount = 0;
+      handlers.onStatus('connected');
+    };
+
+    source!.addEventListener('message', (event: MessageEvent) => {
+      try {
+        const payload = JSON.parse(event.data as string) as MessageEventPayload;
+        handlers.onMessage(payload);
+      } catch (error) {
+        handlers.onError?.(error);
+      }
+    });
+
+    source!.onerror = (error: Event) => {
       handlers.onError?.(error);
-    }
-  });
+      source?.close();
+      source = null;
 
-  source.onerror = (error: unknown) => {
-    handlers.onError?.(error);
-    handlers.onStatus('fallback');
-    source.close();
+      if (closed) return;
+
+      retryCount += 1;
+      if (retryCount > MAX_RETRIES) {
+        handlers.onStatus('fallback');
+        return;
+      }
+
+      const delay = getBackoffMs(retryCount - 1);
+      retryTimer = setTimeout(connect, delay);
+    };
+  }
+
+  connect();
+
+  return () => {
+    closed = true;
+    if (retryTimer) clearTimeout(retryTimer);
+    source?.close();
+    source = null;
   };
-
-  return () => source.close();
 }
