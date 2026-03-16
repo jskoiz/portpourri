@@ -133,6 +133,7 @@ export default function OnboardingScreen({
 
   // Pulse animation for holy sh*t step
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pulseLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
   const progress = (step + 1) / TOTAL_STEPS;
 
@@ -174,19 +175,33 @@ export default function OnboardingScreen({
     }
   });
 
-  const startPulse = () => {
-    Animated.loop(
+  React.useEffect(() => {
+    pulseLoopRef.current?.stop();
+    pulseLoopRef.current = null;
+    pulseAnim.setValue(1);
+
+    if (step !== 8) {
+      return undefined;
+    }
+
+    const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.05, duration: 800, useNativeDriver: true }),
         Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
       ])
-    ).start();
-  };
+    );
 
-  React.useEffect(() => {
-    if (step === 8) startPulse();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
+    pulseLoopRef.current = pulseLoop;
+    pulseLoop.start();
+
+    return () => {
+      pulseLoop.stop();
+      if (pulseLoopRef.current === pulseLoop) {
+        pulseLoopRef.current = null;
+      }
+      pulseAnim.setValue(1);
+    };
+  }, [pulseAnim, step]);
 
   const renderStep = () => {
     switch (step) {

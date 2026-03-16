@@ -47,36 +47,56 @@ export async function connectMatchMessageStream(
   let closed = false;
   let source: EventSource | null = null;
 
+  function clearRetryTimer() {
+    if (!retryTimer) return;
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+
+  const handleMessage = (event: Event) => {
+    try {
+      const payload = JSON.parse((event as MessageEvent).data as string) as MessageEventPayload;
+      handlers.onMessage(payload);
+    } catch (error) {
+      handlers.onError?.(error);
+    }
+  };
+
+  function closeSource(target: EventSource | null) {
+    if (!target) return;
+
+    target.removeEventListener?.('message', handleMessage);
+    target.close();
+
+    if (source === target) {
+      source = null;
+    }
+  }
+
   function connect() {
     if (closed) return;
+    clearRetryTimer();
 
     handlers.onStatus('connecting');
 
     const streamUrl = `${env.apiUrl}/matches/${matchId}/messages/stream`;
-    source = new EventSourceCtor!(streamUrl, {
+    const nextSource = new EventSourceCtor!(streamUrl, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     } as EventSourceInit);
+    source = nextSource;
 
-    source!.onopen = () => {
+    nextSource.onopen = () => {
       retryCount = 0;
       handlers.onStatus('connected');
     };
 
-    source!.addEventListener('message', (event: MessageEvent) => {
-      try {
-        const payload = JSON.parse(event.data as string) as MessageEventPayload;
-        handlers.onMessage(payload);
-      } catch (error) {
-        handlers.onError?.(error);
-      }
-    });
+    nextSource.addEventListener('message', handleMessage);
 
-    source!.onerror = (error: Event) => {
+    nextSource.onerror = (error: Event) => {
       handlers.onError?.(error);
-      source?.close();
-      source = null;
+      closeSource(nextSource);
 
       if (closed) return;
 
@@ -86,6 +106,7 @@ export async function connectMatchMessageStream(
         return;
       }
 
+      clearRetryTimer();
       const delay = getBackoffMs(retryCount - 1);
       retryTimer = setTimeout(connect, delay);
     };
@@ -95,8 +116,7 @@ export async function connectMatchMessageStream(
 
   return () => {
     closed = true;
-    if (retryTimer) clearTimeout(retryTimer);
-    source?.close();
-    source = null;
+    clearRetryTimer();
+    closeSource(source);
   };
 }
