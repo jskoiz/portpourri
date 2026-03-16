@@ -202,13 +202,24 @@ describe('DiscoveryService', () => {
     const result = await service.getFeed('me', { distanceKm: 10 });
 
     expect(result).toHaveLength(1);
+    expect(result.map((candidate) => candidate!.id)).toEqual(['nearby-match']);
     expect(result[0]).toEqual(
       expect.objectContaining({
         id: 'nearby-match',
+        age: expect.any(Number),
         distanceKm: expect.any(Number),
         recommendationScore: expect.any(Number),
+        profile: {
+          city: 'Honolulu',
+          bio: 'Close by',
+        },
       }),
     );
+    expect(result[0]?.distanceKm).toBeLessThan(10);
+    expect(result[0]?.distanceKm).not.toBeNull();
+    expect(result[0]?.recommendationScore).toBeGreaterThan(0);
+    expect(result[0]?.profile).not.toHaveProperty('latitude');
+    expect(result[0]?.profile).not.toHaveProperty('longitude');
   });
 
   it('excludes candidates with unknown coordinates when distance filtering is enabled', async () => {
@@ -289,6 +300,106 @@ describe('DiscoveryService', () => {
     expect(result.map((candidate) => candidate?.id)).toEqual(
       expect.arrayContaining(['known-location', 'unknown-location']),
     );
+  });
+
+  it('returns an empty feed when no candidates match the query', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'me',
+      profile: {
+        latitude: 21.3069,
+        longitude: -157.8583,
+      },
+      fitnessProfile: {
+        intensityLevel: IntensityLevel.INTERMEDIATE,
+        primaryGoal: 'strength',
+        secondaryGoal: 'mobility',
+      },
+    });
+    prismaMock.user.findMany.mockResolvedValue([]);
+
+    const result = await service.getFeed('me', { distanceKm: 10 });
+
+    expect(result).toEqual([]);
+    expect(prismaMock.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: 100,
+      }),
+    );
+  });
+
+  it('returns feed entries sorted by recommendation score and strips coordinates', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'me',
+      profile: {
+        latitude: 21.3069,
+        longitude: -157.8583,
+      },
+      fitnessProfile: {
+        intensityLevel: IntensityLevel.INTERMEDIATE,
+        primaryGoal: 'strength',
+        secondaryGoal: 'mobility',
+      },
+    });
+    prismaMock.user.findMany.mockResolvedValue([
+      makeCandidate({
+        id: 'lower-score',
+        birthdate: new Date('1990-01-01T00:00:00.000Z'),
+        profile: {
+          city: 'Honolulu',
+          bio: null,
+          latitude: 21.45,
+          longitude: -157.95,
+        },
+        fitnessProfile: {
+          primaryGoal: 'strength',
+          secondaryGoal: 'flexibility',
+          intensityLevel: IntensityLevel.BEGINNER,
+          prefersMorning: false,
+          prefersEvening: false,
+          favoriteActivities: null,
+        },
+      }),
+      makeCandidate({
+        id: 'higher-score',
+        birthdate: new Date('1997-05-01T00:00:00.000Z'),
+        profile: {
+          city: 'Honolulu',
+          bio: 'Close by',
+          latitude: 21.307,
+          longitude: -157.8584,
+        },
+        fitnessProfile: {
+          primaryGoal: 'strength',
+          secondaryGoal: 'mobility',
+          intensityLevel: IntensityLevel.INTERMEDIATE,
+          prefersMorning: true,
+          prefersEvening: false,
+          favoriteActivities: null,
+        },
+      }),
+    ]);
+
+    const result = await service.getFeed('me');
+
+    expect(result.map((candidate) => candidate!.id)).toEqual([
+      'higher-score',
+      'lower-score',
+    ]);
+    expect(result[0]?.recommendationScore).toBeGreaterThan(
+      result[1]?.recommendationScore ?? 0,
+    );
+    expect(result[0]?.profile).toEqual({
+      city: 'Honolulu',
+      bio: 'Close by',
+    });
+    expect(result[1]?.profile).toEqual({
+      city: 'Honolulu',
+      bio: null,
+    });
+    expect(result[0]?.profile).not.toHaveProperty('latitude');
+    expect(result[0]?.profile).not.toHaveProperty('longitude');
+    expect(result[1]?.profile).not.toHaveProperty('latitude');
+    expect(result[1]?.profile).not.toHaveProperty('longitude');
   });
 
   it('derives mutual match classification from shared intents', async () => {

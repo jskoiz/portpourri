@@ -157,48 +157,38 @@ describe('MatchesService realtime', () => {
     expect(messages[1].id).toBe('msg-2');
   });
 
-  it('rejects message access for archived matches with a forbidden error', async () => {
-    jest.mocked(prisma.match.findUnique).mockResolvedValue({
-      id: 'match-1',
-      userAId: 'user-1',
-      userBId: 'user-2',
-      isBlocked: false,
-      isArchived: true,
-    } as any);
+  it.each([
+    {
+      label: 'message reads',
+      call: () => service.getMessages('match-1', 'user-1'),
+      assertNoSideEffect: () =>
+        expect(jest.mocked(prisma.message.findMany)).not.toHaveBeenCalled(),
+    },
+    {
+      label: 'message streaming',
+      call: () => service.streamMessages('match-1', 'user-1'),
+      assertNoSideEffect: () =>
+        expect(jest.mocked(realtime.stream)).not.toHaveBeenCalled(),
+    },
+    {
+      label: 'message sends',
+      call: () => service.sendMessage('match-1', 'user-1', 'hey'),
+      assertNoSideEffect: () =>
+        expect(jest.mocked(prisma.message.create)).not.toHaveBeenCalled(),
+    },
+  ])(
+    'rejects $label for archived matches with a forbidden error',
+    async ({ call, assertNoSideEffect }) => {
+      jest.mocked(prisma.match.findUnique).mockResolvedValue({
+        id: 'match-1',
+        userAId: 'user-1',
+        userBId: 'user-2',
+        isBlocked: false,
+        isArchived: true,
+      } as any);
 
-    await expect(service.getMessages('match-1', 'user-1')).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
-    expect(jest.mocked(prisma.message.findMany)).not.toHaveBeenCalled();
-  });
-
-  it('rejects message reads for archived matches with a forbidden error', async () => {
-    jest.mocked(prisma.match.findUnique).mockResolvedValue({
-      id: 'match-1',
-      userAId: 'user-1',
-      userBId: 'user-2',
-      isBlocked: false,
-      isArchived: true,
-    } as any);
-
-    await expect(service.getMessages('match-1', 'user-1')).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
-    expect(jest.mocked(prisma.message.findMany)).not.toHaveBeenCalled();
-  });
-
-  it('rejects message sends for archived matches with a forbidden error', async () => {
-    jest.mocked(prisma.match.findUnique).mockResolvedValue({
-      id: 'match-1',
-      userAId: 'user-1',
-      userBId: 'user-2',
-      isBlocked: false,
-      isArchived: true,
-    } as any);
-
-    await expect(
-      service.sendMessage('match-1', 'user-1', 'hey'),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(jest.mocked(prisma.message.create)).not.toHaveBeenCalled();
-  });
+      await expect(call()).rejects.toBeInstanceOf(ForbiddenException);
+      assertNoSideEffect();
+    },
+  );
 });
