@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { StatePanel } from '../design/primitives';
+import { useSheetController } from '../design/sheets/useSheetController';
 import { normalizeApiError } from '../api/errors';
 import type { User } from '../api/types';
 import { useAuthStore } from '../store/authStore';
@@ -8,8 +9,8 @@ import { useDiscoveryFeed } from '../features/discovery/hooks/useDiscoveryFeed';
 import type { MainTabScreenProps } from '../core/navigation/types';
 import { HomeScreenContent } from '../features/discovery/components/HomeScreenContent';
 import {
-  triggerImpactHaptic,
   triggerSelectionHaptic,
+  triggerSheetCommitHaptic,
   triggerSuccessHaptic,
 } from '../lib/interaction/feedback';
 import {
@@ -41,9 +42,9 @@ export default function HomeScreen({ navigation }: MainTabScreenProps<'Discover'
   const [showMatch, setShowMatch] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<User | null>(null);
   const [matchId, setMatchId] = useState<string | null>(null);
-  const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [activeQuickFilter, setActiveQuickFilter] = useState<QuickFilterKey>('all');
   const [filterState, setFilterState] = useState<FilterModalState>(DEFAULT_FILTER_STATE);
+  const filtersSheet = useSheetController();
 
   const currentFilters = useMemo(
     () => buildDiscoveryFilters(activeQuickFilter, filterState),
@@ -85,18 +86,16 @@ export default function HomeScreen({ navigation }: MainTabScreenProps<'Discover'
       activeFilterCount={activeFilterCount}
       activeQuickFilter={activeQuickFilter}
       feed={feed}
+      filtersSheet={filtersSheet.sheetProps}
       filterState={filterState}
       greeting={getGreeting(user?.firstName)}
       intentOption={intentOption}
       onApplyFilters={() => {
-        void triggerSelectionHaptic();
+        void triggerSheetCommitHaptic();
         void refetch();
-        setShowFiltersModal(false);
+        filtersSheet.close();
       }}
-      onOpenFilters={() => {
-        void triggerImpactHaptic();
-        setShowFiltersModal(true);
-      }}
+      onOpenFilters={filtersSheet.open}
       onMatchAnimationFinish={() => {
         setShowMatch(false);
         if (matchedProfile && matchId) {
@@ -147,19 +146,17 @@ export default function HomeScreen({ navigation }: MainTabScreenProps<'Discover'
         }))
       }
       onUndoAndClose={() => {
-        void triggerImpactHaptic();
+        void triggerSheetCommitHaptic();
         void undoSwipe().then((response) => {
           if (response.status === 'undone') {
             void refetch();
           }
         });
-        setShowFiltersModal(false);
+        filtersSheet.close();
       }}
       onUpdateDistanceKm={(value) => setFilterState((current) => ({ ...current, distanceKm: value }))}
       onUpdateMaxAge={(value) => setFilterState((current) => ({ ...current, maxAge: value }))}
       onUpdateMinAge={(value) => setFilterState((current) => ({ ...current, minAge: value }))}
-      setFiltersVisible={setShowFiltersModal}
-      showFilters={showFiltersModal}
       showMatch={showMatch}
       unreadCount={unreadCount}
     />

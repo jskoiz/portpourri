@@ -1,36 +1,39 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { Button, Chip } from '../../../design/primitives';
-import { AppBottomSheet } from '../../../design/sheets/AppBottomSheet';
+import {
+  AppBottomSheet,
+  APP_BOTTOM_SHEET_SNAP_POINTS,
+  type AppBottomSheetProps,
+} from '../../../design/sheets/AppBottomSheet';
 import type { ExploreCategory } from './explore.data';
 import { CATEGORIES } from './explore.data';
 import { exploreStyles as styles } from './explore.styles';
 
 export function ExploreQuickActionsSheet({
   activeCategory,
+  controller,
   onClose,
   onOpenCreate,
   onOpenMyEvents,
   onSelectCategory,
-  refObject,
-  visible,
 }: {
   activeCategory: ExploreCategory;
+  controller: Pick<
+    AppBottomSheetProps,
+    'onChangeIndex' | 'onDismiss' | 'onRequestClose' | 'refObject' | 'visible'
+  >;
   onClose: () => void;
   onOpenCreate: () => void;
   onOpenMyEvents: () => void;
   onSelectCategory: (category: ExploreCategory) => void;
-  refObject: React.RefObject<any>;
-  visible: boolean;
 }) {
   return (
     <AppBottomSheet
-      refObject={refObject}
-      visible={visible}
-      onClose={onClose}
+      {...controller}
       title="Explore actions"
       subtitle="Jump between browse modes and event actions."
-      snapPoints={['58%']}
+      snapPoints={APP_BOTTOM_SHEET_SNAP_POINTS.standard}
     >
       <View>
         <Text style={styles.sheetSectionLabel}>Category</Text>
@@ -47,8 +50,22 @@ export function ExploreQuickActionsSheet({
         </View>
       </View>
       <View style={styles.sheetActionStack}>
-        <Button label="Create event" onPress={onOpenCreate} variant="accent" />
-        <Button label="My events" onPress={onOpenMyEvents} variant="secondary" />
+        <Button
+          label="Create event"
+          onPress={() => {
+            onClose();
+            onOpenCreate();
+          }}
+          variant="accent"
+        />
+        <Button
+          label="My events"
+          onPress={() => {
+            onClose();
+            onOpenMyEvents();
+          }}
+          variant="secondary"
+        />
       </View>
     </AppBottomSheet>
   );

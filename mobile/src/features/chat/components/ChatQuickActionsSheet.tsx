@@ -1,7 +1,11 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { Button, Card } from '../../../design/primitives';
-import { AppBottomSheet } from '../../../design/sheets/AppBottomSheet';
+import {
+  AppBottomSheet,
+  APP_BOTTOM_SHEET_SNAP_POINTS,
+  type AppBottomSheetProps,
+} from '../../../design/sheets/AppBottomSheet';
 import { chatStyles as styles } from './chat.styles';
 
 const QUICK_ACTIONS = [
@@ -23,31 +27,38 @@ const QUICK_ACTIONS = [
 ] as const;
 
 export function ChatQuickActionsSheet({
+  controller,
   onClose,
   onSelectMessage,
-  refObject,
-  visible,
 }: {
+  controller: Pick<
+    AppBottomSheetProps,
+    'onChangeIndex' | 'onDismiss' | 'onRequestClose' | 'refObject' | 'visible'
+  >;
   onClose: () => void;
   onSelectMessage: (message: string) => void;
-  refObject: React.RefObject<any>;
-  visible: boolean;
 }) {
   return (
     <AppBottomSheet
-      refObject={refObject}
-      visible={visible}
-      onClose={onClose}
+      {...controller}
       title="Quick actions"
       subtitle="Keep momentum without typing every opener from scratch."
-      snapPoints={['46%']}
+      snapPoints={APP_BOTTOM_SHEET_SNAP_POINTS.compact}
     >
+      <Text style={styles.quickActionSectionLabel}>Suggested openers</Text>
       {QUICK_ACTIONS.map((action) => (
         <Card key={action.key} style={styles.quickActionCard}>
           <View style={styles.quickActionBody}>
             <Text style={styles.quickActionTitle}>{action.label}</Text>
             <Text style={styles.quickActionCopy}>{action.message}</Text>
-            <Button label="Use message" onPress={() => onSelectMessage(action.message)} variant="secondary" />
+            <Button
+              label="Use message"
+              onPress={() => {
+                onClose();
+                onSelectMessage(action.message);
+              }}
+              variant="secondary"
+            />
           </View>
         </Card>
       ))}

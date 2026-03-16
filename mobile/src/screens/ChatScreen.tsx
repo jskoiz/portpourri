@@ -13,7 +13,10 @@ import { ChatMessageList } from '../features/chat/components/ChatMessageList';
 import { getActivityTag } from '../features/chat/components/chat.helpers';
 import { chatStyles as styles } from '../features/chat/components/chat.styles';
 import { useSheetController } from '../design/sheets/useSheetController';
-import { triggerImpactHaptic, triggerSelectionHaptic, triggerWarningHaptic } from '../lib/interaction/feedback';
+import {
+  triggerSheetCommitHaptic,
+  triggerWarningHaptic,
+} from '../lib/interaction/feedback';
 import { useTheme } from '../theme/useTheme';
 import type { RootStackScreenProps } from '../core/navigation/types';
 
@@ -55,10 +58,7 @@ export default function ChatScreen() {
       <ChatHeader
         activityTag={getActivityTag(user)}
         onBack={() => navigation.goBack()}
-        onOpenQuickActions={() => {
-          void triggerImpactHaptic();
-          quickActionsSheet.open();
-        }}
+        onOpenQuickActions={quickActionsSheet.open}
         photoUrl={photoUrl}
         theme={theme}
         user={user}
@@ -96,14 +96,12 @@ export default function ChatScreen() {
         />
       </KeyboardAvoidingView>
       <ChatQuickActionsSheet
-        onClose={quickActionsSheet.handleDismiss}
+        controller={quickActionsSheet.sheetProps}
+        onClose={quickActionsSheet.close}
         onSelectMessage={(nextMessage) => {
-          void triggerSelectionHaptic();
+          void triggerSheetCommitHaptic();
           setMessage(nextMessage);
-          quickActionsSheet.close();
         }}
-        refObject={quickActionsSheet.ref}
-        visible={quickActionsSheet.visible}
       />
     </SafeAreaView>
   );

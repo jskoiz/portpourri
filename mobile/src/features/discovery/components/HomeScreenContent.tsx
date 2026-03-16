@@ -6,6 +6,7 @@ import SwipeDeck from '../../../components/SwipeDeck';
 import MatchAnimation from '../../../components/MatchAnimation';
 import AppBackdrop from '../../../components/ui/AppBackdrop';
 import { StatePanel } from '../../../design/primitives';
+import type { AppBottomSheetProps } from '../../../design/sheets/AppBottomSheet';
 import { HomeHero } from './HomeHero';
 import { HomeQuickFilters } from './HomeQuickFilters';
 import { DiscoveryFilterSheet } from './DiscoveryFilterSheet';
@@ -15,6 +16,7 @@ import type { FilterModalState, QuickFilterKey } from './discoveryFilters';
 export function HomeScreenContent({
   activeFilterCount,
   activeQuickFilter,
+  filtersSheet,
   filterState,
   feed,
   greeting,
@@ -35,13 +37,15 @@ export function HomeScreenContent({
   onUpdateDistanceKm,
   onUpdateMaxAge,
   onUpdateMinAge,
-  setFiltersVisible,
-  showFilters,
   showMatch,
   unreadCount,
 }: {
   activeFilterCount: number;
   activeQuickFilter: QuickFilterKey;
+  filtersSheet: Pick<
+    AppBottomSheetProps,
+    'onChangeIndex' | 'onDismiss' | 'onRequestClose' | 'refObject' | 'visible'
+  >;
   filterState: FilterModalState;
   feed: User[];
   greeting: string;
@@ -62,8 +66,6 @@ export function HomeScreenContent({
   onUpdateDistanceKm: (value: string) => void;
   onUpdateMaxAge: (value: string) => void;
   onUpdateMinAge: (value: string) => void;
-  setFiltersVisible: (visible: boolean) => void;
-  showFilters: boolean;
   showMatch: boolean;
   unreadCount: number;
 }) {
@@ -112,7 +114,7 @@ export function HomeScreenContent({
       <MatchAnimation visible={showMatch} onFinish={onMatchAnimationFinish} />
 
       <DiscoveryFilterSheet
-        visible={showFilters}
+        controller={filtersSheet}
         state={filterState}
         onApply={onApplyFilters}
         onChangeAvailability={onToggleAvailability}
@@ -121,7 +123,6 @@ export function HomeScreenContent({
         onChangeIntensity={onToggleIntensity}
         onChangeMaxAge={onUpdateMaxAge}
         onChangeMinAge={onUpdateMinAge}
-        onClose={() => setFiltersVisible(false)}
         onUndoSwipe={onUndoAndClose}
       />
     </SafeAreaView>

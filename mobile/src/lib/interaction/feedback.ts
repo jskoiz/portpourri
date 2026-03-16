@@ -29,3 +29,15 @@ export function triggerImpactHaptic(
 ) {
   return run(() => Haptics.impactAsync(style));
 }
+
+export function triggerSheetOpenHaptic() {
+  return triggerImpactHaptic(Haptics.ImpactFeedbackStyle.Light);
+}
+
+export function triggerSheetDismissHaptic() {
+  return triggerImpactHaptic(Haptics.ImpactFeedbackStyle.Light);
+}
+
+export function triggerSheetCommitHaptic() {
+  return triggerSelectionHaptic();
+}

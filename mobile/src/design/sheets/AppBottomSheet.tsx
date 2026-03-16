@@ -1,5 +1,6 @@
 import React, { PropsWithChildren, useEffect, useMemo } from 'react';
 import {
+  Platform,
   Pressable,
   StyleProp,
   StyleSheet,
@@ -23,23 +24,16 @@ import { radii, spacing, typography } from '../../theme/tokens';
 export function AppBottomSheet({
   children,
   contentContainerStyle,
-  onClose,
+  onChangeIndex,
+  onDismiss,
+  onRequestClose,
   refObject,
   scrollable = true,
-  snapPoints = ['70%'],
+  snapPoints = APP_BOTTOM_SHEET_SNAP_POINTS.standard,
   subtitle,
   title,
   visible,
-}: PropsWithChildren<{
-  contentContainerStyle?: StyleProp<ViewStyle>;
-  onClose: () => void;
-  refObject: RefObject<BottomSheetModalType | null>;
-  scrollable?: boolean;
-  snapPoints?: Array<string | number>;
-  subtitle?: string;
-  title: string;
-  visible: boolean;
-}>) {
+}: AppBottomSheetProps) {
   let insets = { top: 0, right: 0, bottom: 0, left: 0 };
   try {
     insets = useSafeAreaInsets();
@@ -47,16 +41,17 @@ export function AppBottomSheet({
     // Tests may render sheets without a SafeAreaProvider.
   }
   const theme = useTheme();
-  const resolvedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
+  const resolvedSnapPoints = useMemo(() => [...snapPoints], [snapPoints]);
   const resolvedContentContainerStyle = useMemo(
     () =>
       StyleSheet.flatten([
         styles.contentContainer,
-        { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.lg },
+        { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.xl },
         contentContainerStyle,
       ]),
     [contentContainerStyle, insets.bottom],
   );
+  const handleRequestClose = onRequestClose ?? onDismiss;
 
   useEffect(() => {
     const modal = refObject.current;
@@ -73,15 +68,25 @@ export function AppBottomSheet({
     <BottomSheetModal
       ref={refObject}
       index={0}
-      onDismiss={onClose}
+      onChange={onChangeIndex}
+      onDismiss={onDismiss}
       snapPoints={resolvedSnapPoints}
+      enableDismissOnClose
       enablePanDownToClose
+      android_keyboardInputMode="adjustResize"
       backgroundStyle={[styles.sheetBackground, { backgroundColor: theme.surface }]}
       handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: theme.borderSoft }]}
-      keyboardBehavior="interactive"
+      keyboardBehavior={Platform.OS === 'ios' ? 'interactive' : 'fillParent'}
       keyboardBlurBehavior="restore"
       backdropComponent={(props) => (
-        <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.55} />
+        <BottomSheetBackdrop
+          {...props}
+          appearsOnIndex={0}
+          disappearsOnIndex={-1}
+          opacity={0.55}
+          pressBehavior="close"
+          onPress={handleRequestClose}
+        />
       )}
     >
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
@@ -90,7 +95,9 @@ export function AppBottomSheet({
           {subtitle ? <Text style={[styles.subtitle, { color: theme.textMuted }]}>{subtitle}</Text> : null}
         </View>
         <Pressable
-          onPress={onClose}
+          accessibilityLabel={`Close ${title}`}
+          onPress={handleRequestClose}
+          hitSlop={8}
           style={({ pressed }) => [
             styles.closeButton,
             {
@@ -107,6 +114,7 @@ export function AppBottomSheet({
         <BottomSheetScrollView
           style={styles.content}
           contentContainerStyle={resolvedContentContainerStyle}
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           {children}
@@ -119,6 +127,26 @@ export function AppBottomSheet({
     </BottomSheetModal>
   );
 }
+
+export const APP_BOTTOM_SHEET_SNAP_POINTS = {
+  compact: ['50%'],
+  standard: ['62%'],
+  form: ['72%'],
+  tall: ['82%'],
+} as const;
+
+export type AppBottomSheetProps = PropsWithChildren<{
+  contentContainerStyle?: StyleProp<ViewStyle>;
+  onChangeIndex?: (index: number) => void;
+  onDismiss: () => void;
+  onRequestClose?: () => void;
+  refObject: RefObject<BottomSheetModalType | null>;
+  scrollable?: boolean;
+  snapPoints?: ReadonlyArray<string | number>;
+  subtitle?: string;
+  title: string;
+  visible: boolean;
+}>;
 
 const styles = StyleSheet.create({
   sheetBackground: {

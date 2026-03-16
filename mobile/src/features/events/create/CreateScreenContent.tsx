@@ -4,7 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Control, FieldErrors } from 'react-hook-form';
 import type { EventSummary } from '../../../api/types';
 import { Button, Card } from '../../../design/primitives';
-import { AppBottomSheet } from '../../../design/sheets/AppBottomSheet';
+import {
+  AppBottomSheet,
+  APP_BOTTOM_SHEET_SNAP_POINTS,
+} from '../../../design/sheets/AppBottomSheet';
 import { useSheetController } from '../../../design/sheets/useSheetController';
 import type { CreateEventFormValues } from '../schema';
 import { CreateActivityPicker } from './CreateActivityPicker';
@@ -14,7 +17,10 @@ import { CreatePlanSummaryCard } from './CreatePlanSummaryCard';
 import { CreateSuccessCard } from './CreateSuccessCard';
 import { CreateTimingSection } from './CreateTimingSection';
 import { createStyles as styles } from './create.styles';
-import { triggerImpactHaptic, triggerSelectionHaptic } from '../../../lib/interaction/feedback';
+import {
+  triggerSelectionHaptic,
+  triggerSheetCommitHaptic,
+} from '../../../lib/interaction/feedback';
 
 export function CreateScreenContent({
   canPost,
@@ -104,10 +110,7 @@ export function CreateScreenContent({
             <Text style={styles.selectionValue}>{selectedActivity || 'Choose the anchor activity'}</Text>
             <Button
               label={selectedActivity ? 'Change activity' : 'Choose activity'}
-              onPress={() => {
-                void triggerImpactHaptic();
-                activitySheet.open();
-              }}
+              onPress={activitySheet.open}
               variant="secondary"
             />
           </Card>
@@ -120,10 +123,7 @@ export function CreateScreenContent({
             </Text>
             <Button
               label="Edit plan details"
-              onPress={() => {
-                void triggerImpactHaptic();
-                timingSheet.open();
-              }}
+              onPress={timingSheet.open}
               variant="secondary"
             />
           </Card>
@@ -166,12 +166,10 @@ export function CreateScreenContent({
         </ScrollView>
       </KeyboardAvoidingView>
       <AppBottomSheet
-        refObject={activitySheet.ref}
-        visible={activitySheet.visible}
-        onClose={activitySheet.handleDismiss}
+        {...activitySheet.sheetProps}
         title="Choose activity"
         subtitle="Set the movement anchor before you post."
-        snapPoints={['56%']}
+        snapPoints={APP_BOTTOM_SHEET_SNAP_POINTS.standard}
       >
         <CreateActivityPicker
           selectedActivity={selectedActivity}
@@ -183,12 +181,10 @@ export function CreateScreenContent({
         />
       </AppBottomSheet>
       <AppBottomSheet
-        refObject={timingSheet.ref}
-        visible={timingSheet.visible}
-        onClose={timingSheet.handleDismiss}
+        {...timingSheet.sheetProps}
         title="Plan details"
         subtitle="Shape the timing, pace, and capacity."
-        snapPoints={['68%']}
+        snapPoints={APP_BOTTOM_SHEET_SNAP_POINTS.form}
       >
         <CreateTimingSection
           selectedWhen={selectedWhen}
@@ -213,7 +209,14 @@ export function CreateScreenContent({
             onSelectWhen(value);
           }}
         />
-        <Button label="Done" onPress={timingSheet.close} variant="primary" />
+        <Button
+          label="Done"
+          onPress={() => {
+            void triggerSheetCommitHaptic();
+            timingSheet.close();
+          }}
+          variant="primary"
+        />
       </AppBottomSheet>
     </SafeAreaView>
   );

@@ -140,12 +140,11 @@ export function ExploreScreenContent({
       </ScrollView>
       <ExploreQuickActionsSheet
         activeCategory={activeCategory}
-        onClose={quickActionsSheet.handleDismiss}
+        controller={quickActionsSheet.sheetProps}
+        onClose={quickActionsSheet.close}
         onOpenCreate={onOpenCreate}
         onOpenMyEvents={onOpenMyEvents}
         onSelectCategory={onSelectCategory}
-        refObject={quickActionsSheet.ref}
-        visible={quickActionsSheet.visible}
       />
     </SafeAreaView>
   );

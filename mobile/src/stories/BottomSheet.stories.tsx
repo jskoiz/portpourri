@@ -1,7 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
 import React from 'react';
 import { Text, View } from 'react-native';
-import { AppBottomSheet } from '../design/sheets/AppBottomSheet';
+import {
+  AppBottomSheet,
+  APP_BOTTOM_SHEET_SNAP_POINTS,
+} from '../design/sheets/AppBottomSheet';
 import { useSheetController } from '../design/sheets/useSheetController';
 import { Button, Card } from '../design/primitives';
 
@@ -10,18 +13,16 @@ function BottomSheetStory() {
 
   React.useEffect(() => {
     sheet.open();
-  }, [sheet]);
+  }, [sheet.open]);
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
       <Button label="Open sheet" onPress={sheet.open} />
       <AppBottomSheet
-        refObject={sheet.ref}
-        visible={sheet.visible}
-        onClose={sheet.handleDismiss}
+        {...sheet.sheetProps}
         title="Interaction sheet"
         subtitle="Shared shell for layered BRDG flows."
-        snapPoints={['55%']}
+        snapPoints={APP_BOTTOM_SHEET_SNAP_POINTS.standard}
       >
         <Card>
           <Text style={{ color: '#F0F6FC', fontSize: 18, fontWeight: '800' }}>Reusable content</Text>

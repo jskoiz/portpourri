@@ -73,6 +73,13 @@ export const chatStyles = StyleSheet.create({
   quickActionCard: {
     borderRadius: 18,
   },
+  quickActionSectionLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    color: 'rgba(240,246,252,0.38)',
+  },
   quickActionBody: {
     gap: spacing.sm,
   },
