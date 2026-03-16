@@ -35,7 +35,7 @@ function ChatThreadStory() {
         onOpenQuickActions={() => undefined}
         photoUrl="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80"
         theme={theme}
-        user={{ firstName: 'Lana' }}
+        user={{ id: 'user-1', firstName: 'Lana' }}
       />
       <ChatMessageList
         messages={messages}

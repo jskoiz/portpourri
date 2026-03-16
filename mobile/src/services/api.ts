@@ -22,6 +22,14 @@ import type {
 import { logApiFailure } from "../api/observability";
 
 type ApiDomain = Parameters<typeof logApiFailure>[0];
+type ReactNativeFormDataFile = {
+  uri: string;
+  name?: string;
+  type?: string;
+};
+type ReactNativeFormData = FormData & {
+  append(name: string, value: ReactNativeFormDataFile): void;
+};
 
 async function withErrorLogging<T>(
   domain: ApiDomain,
@@ -87,12 +95,13 @@ export const profileApi = {
       client.put<User>("/profile", payload),
     ),
   uploadPhoto: async (payload: UploadPhotoPayload) => {
-    const formData = new FormData();
-    formData.append('file', {
+    const formData = new FormData() as ReactNativeFormData;
+    const file: ReactNativeFormDataFile = {
       uri: payload.uri,
       name: payload.fileName ?? `profile-${Date.now()}.jpg`,
       type: payload.mimeType ?? 'image/jpeg',
-    } as any);
+    };
+    formData.append('file', file);
 
     return withErrorLogging("profile", "uploadPhoto", () =>
       client.post<UserPhoto>('/profile/photos', formData, {

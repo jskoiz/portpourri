@@ -54,7 +54,7 @@ describe('SwipeDeck', () => {
       fitnessProfile: {
         favoriteActivities: 'cardio',
         primaryGoal: 'cardio',
-        weeklyFrequencyBand: 3,
+        weeklyFrequencyBand: '3',
       },
     };
 
@@ -72,7 +72,7 @@ describe('SwipeDeck', () => {
       fitnessProfile: {
         favoriteActivities: 'trail_run',
         primaryGoal: 'trail_run',
-        weeklyFrequencyBand: 3,
+        weeklyFrequencyBand: '3',
       },
     };
 

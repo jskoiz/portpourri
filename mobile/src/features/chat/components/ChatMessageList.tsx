@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import type { ChatMessage } from '../../../api/types';
+import type { Theme } from '../../../theme/tokens';
 import { chatStyles as styles } from './chat.styles';
 
-function ChatBubble({ item, theme }: { item: ChatMessage; theme: any }) {
+function ChatBubble({ item, theme }: { item: ChatMessage; theme: Theme }) {
   const isMe = item.sender === 'me';
 
   return (
@@ -28,7 +29,7 @@ export function ChatMessageList({
   messages: ChatMessage[];
   onRefresh: () => void;
   refreshing: boolean;
-  theme: any;
+  theme: Theme;
 }) {
   const orderedMessages = useMemo(() => [...messages].reverse(), [messages]);
 

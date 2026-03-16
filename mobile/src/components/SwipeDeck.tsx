@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Swiper from 'react-native-deck-swiper';
+import type { DiscoveryUser, User } from '../api/types';
 import { radii, spacing, typography } from '../theme/tokens';
 import { fontFamily } from '../lib/fonts';
 import AppIcon from './ui/AppIcon';
@@ -11,6 +12,7 @@ import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
 const DEFAULT_CARD_HEIGHT = 520;
 const MIN_CARD_HEIGHT = 360;
 const MAX_CARD_HEIGHT = 680;
+type SwipeDeckUser = User & Pick<Partial<DiscoveryUser>, 'distanceKm' | 'recommendationScore'>;
 
 // Editorial warm palette
 const EDITORIAL = {
@@ -31,7 +33,7 @@ const EDITORIAL = {
 interface SwipeDeckCardProps {
   cardHeight: number;
   onPress?: () => void;
-  user: any;
+  user: SwipeDeckUser;
 }
 
 const formatLabel = (value: string) =>
@@ -39,7 +41,7 @@ const formatLabel = (value: string) =>
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
-const profileChips = (user: any) => {
+const profileChips = (user: SwipeDeckUser) => {
   const chips: string[] = [];
 
   const favoriteActivity = user.fitnessProfile?.favoriteActivities
@@ -58,14 +60,14 @@ const profileChips = (user: any) => {
   return chips.slice(0, 2);
 };
 
-const getIntentLabel = (user: any) => {
+const getIntentLabel = (user: SwipeDeckUser) => {
   if (user?.profile?.intentDating && user?.profile?.intentWorkout) return 'Open to both';
   if (user?.profile?.intentDating) return 'Dating';
   if (user?.profile?.intentWorkout) return 'Training';
   return 'Open to both';
 };
 
-const getPresenceLabel = (user: any) => {
+const getPresenceLabel = (user: SwipeDeckUser) => {
   if (user?.profile?.city) return 'Available tonight';
   return 'Nearby now';
 };
@@ -77,7 +79,7 @@ const getAlignmentLabel = (score?: number) => {
   return `${percentage}% aligned`;
 };
 
-const getTempoLabel = (user: any) => {
+const getTempoLabel = (user: SwipeDeckUser) => {
   const frequency = user?.fitnessProfile?.weeklyFrequencyBand;
   const intensity = user?.fitnessProfile?.intensityLevel;
   const frequencyLabel = frequency ? `${frequency}x/week` : null;
@@ -197,10 +199,10 @@ const SwipeDeckCard = ({ cardHeight, onPress, user }: SwipeDeckCardProps) => {
 
 interface SwipeDeckProps {
   cardHeight?: number;
-  data: any[];
-  onPress?: (user: any) => void;
-  onSwipeLeft: (user: any) => void;
-  onSwipeRight: (user: any) => void;
+  data: SwipeDeckUser[];
+  onPress?: (user: SwipeDeckUser) => void;
+  onSwipeLeft: (user: SwipeDeckUser) => void;
+  onSwipeRight: (user: SwipeDeckUser) => void;
 }
 
 export default function SwipeDeck({
@@ -210,7 +212,7 @@ export default function SwipeDeck({
   onSwipeRight,
   onPress,
 }: SwipeDeckProps) {
-  const swiperRef = useRef<Swiper<any>>(null);
+  const swiperRef = useRef<Swiper<SwipeDeckUser>>(null);
   const resolvedCardHeight = clampCardHeight(cardHeight);
   const resolvedCardFrameStyle = React.useMemo(
     () => ({
