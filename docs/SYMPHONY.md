@@ -43,6 +43,13 @@ The default workflow clones BRDG into each issue workspace and then runs [`../.c
 2. installs mobile dependencies
 3. refreshes the repo index used by harness tooling
 
+The default Codex runtime is configured for full GitHub interactivity:
+
+- `codex app-server -c shell_environment_policy.inherit=all`
+- `thread_sandbox: danger-full-access`
+
+That setup allows spawned issue sessions to inherit your shell environment, use existing Git or `gh` auth, push branches, and create or update pull requests directly.
+
 ## Current Scope
 
 This build covers the core Symphony runner/orchestrator contract and injects a client-side `linear_graphql` tool into Codex sessions for raw Linear GraphQL operations.
@@ -52,3 +59,4 @@ This build covers the core Symphony runner/orchestrator contract and injects a c
 - If Codex trust is path-sensitive on your machine, trust the workspace root you intend Symphony to use.
 - The current default workflow assumes these Linear states exist: `Todo`, `In Progress`, `Human Review`, `Merging`, `Rework`, and `Done`.
 - If your team uses different state names, update [`../WORKFLOW.md`](../WORKFLOW.md) accordingly.
+- If you want a more restrictive runtime, override the `codex` block in [`../WORKFLOW.md`](../WORKFLOW.md) and accept that GitHub push/PR automation may stop working.

@@ -28,11 +28,9 @@ agent:
   max_concurrent_agents: 4
   max_turns: 20
 codex:
-  command: codex app-server
+  command: codex app-server -c shell_environment_policy.inherit=all
   approval_policy: never
-  thread_sandbox: workspace-write
-  turn_sandbox_policy:
-    type: workspaceWrite
+  thread_sandbox: danger-full-access
 ---
 
 You are working on a BRDG Linear issue: `{{ issue.identifier }}`.
