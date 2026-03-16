@@ -6,7 +6,7 @@ import { CreatePlanSummaryCard } from '../features/events/create/CreatePlanSumma
 const meta = {
   title: 'Events/CreatePlanSummaryCard',
   component: CreatePlanSummaryCard,
-  decorators: [(Story) => <View style={{ flex: 1, padding: 24 }}><Story /></View>],
+  decorators: [(Story) => <View style={{ flex: 1, padding: 24, backgroundColor: '#F8F7F4' }}><Story /></View>],
 } satisfies Meta<typeof CreatePlanSummaryCard>;
 
 export default meta;

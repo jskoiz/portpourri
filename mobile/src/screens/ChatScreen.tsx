@@ -54,7 +54,7 @@ export default function ChatScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#0D1117' }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       <AppBackdrop />
       <ChatHeader
         activityTag={getActivityTag(user)}

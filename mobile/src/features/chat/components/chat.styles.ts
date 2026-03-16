@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { radii, spacing, typography } from '../../../theme/tokens';
+import { lightTheme, radii, spacing, typography } from '../../../theme/tokens';
 
 export const chatStyles = StyleSheet.create({
   container: { flex: 1 },
@@ -78,7 +78,7 @@ export const chatStyles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 2,
     textTransform: 'uppercase',
-    color: 'rgba(240,246,252,0.38)',
+    color: lightTheme.textMuted,
   },
   quickActionBody: {
     gap: spacing.sm,
@@ -86,11 +86,11 @@ export const chatStyles = StyleSheet.create({
   quickActionTitle: {
     fontSize: typography.body,
     fontWeight: '800',
-    color: '#F0F6FC',
+    color: lightTheme.textPrimary,
   },
   quickActionCopy: {
     fontSize: typography.bodySmall,
-    color: 'rgba(240,246,252,0.68)',
+    color: lightTheme.textSecondary,
     lineHeight: 20,
   },
 });

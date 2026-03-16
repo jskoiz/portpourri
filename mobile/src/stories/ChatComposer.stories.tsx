@@ -2,12 +2,12 @@ import type { Meta, StoryObj } from '@storybook/react-native';
 import React from 'react';
 import { View } from 'react-native';
 import { ChatComposer } from '../features/chat/components/ChatComposer';
-import { darkTheme } from '../theme/tokens';
+import { lightTheme } from '../theme/tokens';
 
 const meta = {
   title: 'Chat/Composer',
   component: ChatComposer,
-  decorators: [(Story) => <View style={{ flex: 1, justifyContent: 'flex-end', padding: 24 }}><Story /></View>],
+  decorators: [(Story) => <View style={{ flex: 1, justifyContent: 'flex-end', padding: 24, backgroundColor: '#F8F7F4' }}><Story /></View>],
 } satisfies Meta<typeof ChatComposer>;
 
 export default meta;
@@ -19,7 +19,7 @@ export const Prefilled: Story = {
     onChangeMessage: () => undefined,
     onSend: () => undefined,
     sending: false,
-    theme: darkTheme,
+    theme: lightTheme,
   },
 };
 
