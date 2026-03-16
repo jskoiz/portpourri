@@ -1,4 +1,4 @@
-import { matchesApi, notificationsApi } from '../api';
+import { matchesApi, notificationsApi, profileApi } from '../api';
 import client from '../../api/client';
 import * as observability from '../../api/observability';
 
@@ -6,6 +6,7 @@ jest.mock('../../api/client', () => ({
   get: jest.fn(),
   post: jest.fn(),
   patch: jest.fn(),
+  delete: jest.fn(),
 }));
 
 jest.mock('../../api/observability', () => ({
@@ -159,6 +160,40 @@ describe('notificationsApi', () => {
 
       await expect(notificationsApi.markAllRead()).rejects.toThrow('Network Error');
       expect(mockLogApiFailure).toHaveBeenCalledWith('notifications', 'markAllRead', networkError);
+    });
+  });
+});
+
+describe('profileApi', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('uploadPhoto', () => {
+    it('passes multipart payload and forwards upload progress', async () => {
+      const onProgress = jest.fn();
+      mockClient.post.mockImplementationOnce(async (_url, _body, config) => {
+        config?.onUploadProgress?.({ loaded: 45, total: 90 } as any);
+        return { data: { id: 'photo-1' } };
+      });
+
+      await profileApi.uploadPhoto({
+        uri: 'file:///tmp/photo.jpg',
+        mimeType: 'image/jpeg',
+        fileName: 'photo.jpg',
+        onProgress,
+      });
+
+      expect(mockClient.post).toHaveBeenCalledWith(
+        '/profile/photos',
+        expect.any(FormData),
+        expect.objectContaining({
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: expect.any(Function),
+        }),
+      );
+      expect(onProgress).toHaveBeenCalledWith(50);
+      expect(mockLogApiFailure).not.toHaveBeenCalled();
     });
   });
 });

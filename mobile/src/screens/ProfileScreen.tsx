@@ -55,7 +55,7 @@ export default function ProfileScreen() {
   return (
     <ProfileScreenContent
       deletingAccount={deletingAccount}
-      editingPhotos={isUploadingPhoto || isUpdatingPhoto || isDeletingPhoto}
+      editingPhotos={editor.isEditingPhotos || isUploadingPhoto || isUpdatingPhoto || isDeletingPhoto}
       bio={editor.bio}
       city={editor.city}
       editMode={editor.editMode}
@@ -116,6 +116,7 @@ export default function ProfileScreen() {
       onSetWeeklyFrequencyBand={editor.setWeeklyFrequencyBand}
       onToggleBuildInfo={() => editor.setShowBuildInfo((current) => !current)}
       onUploadPhoto={() => { void editor.uploadPhoto(); }}
+      photoOperation={editor.photoOperation}
       primaryGoal={editor.primaryGoal}
       profile={profile}
       selectedActivities={editor.selectedActivities}

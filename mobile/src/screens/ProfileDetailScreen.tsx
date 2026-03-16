@@ -21,6 +21,7 @@ import { Button } from '../design/primitives';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
 import { type SessionIntent } from '../types/sessionIntent';
+import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const HERO_HEIGHT = 420;
@@ -42,7 +43,7 @@ export default function ProfileDetailScreen() {
 
   if (!user) return null;
 
-  const primaryPhoto = user.photos?.find((p: any) => p.isPrimary)?.storageKey || user.photoUrl;
+  const primaryPhoto = getPrimaryPhotoUri(user);
   const activityTags: string[] = (user.fitnessProfile?.favoriteActivities || '')
     .split(',')
     .map((s: string) => s.trim())
@@ -131,15 +132,18 @@ export default function ProfileDetailScreen() {
       <AppBackdrop />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.heroContainer}>
-          <Image
-            source={
-              primaryPhoto
-                ? { uri: primaryPhoto }
-                : require('../../assets/icon.png')
-            }
-            style={styles.heroImage}
-            contentFit="cover"
-          />
+          {primaryPhoto ? (
+            <Image source={{ uri: primaryPhoto }} style={styles.heroImage} contentFit="cover" />
+          ) : (
+            <LinearGradient
+              colors={['#1F2937', '#111827']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.heroFallback}
+            >
+              <Text style={styles.heroFallbackText}>{getAvatarInitial(user.firstName)}</Text>
+            </LinearGradient>
+          )}
 
           <LinearGradient
             colors={['transparent', 'rgba(13,17,23,0.7)', 'rgba(13,17,23,0.98)']}
@@ -302,6 +306,18 @@ const styles = StyleSheet.create({
   heroImage: {
     width: '100%',
     height: '100%',
+  },
+  heroFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroFallbackText: {
+    fontSize: 96,
+    fontWeight: '900',
+    color: 'rgba(240,246,252,0.92)',
+    letterSpacing: -4,
   },
   heroGradient: {
     position: 'absolute',

@@ -1,9 +1,11 @@
 import React from 'react';
-import { Image, Pressable, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Image, Pressable, Text, TextInput, View } from 'react-native';
 import type { UserPhoto } from '../../../api/types';
+import AppIcon from '../../../components/ui/AppIcon';
 import { Button, Card, Chip } from '../../../design/primitives';
 import { profileStyles as styles } from './profile.styles';
+import type { PhotoOperationState } from '../hooks/useProfileEditor';
+import { getVisibleOrderedPhotos } from '../hooks/profilePhotoHelpers';
 
 export function TagPill({
   color = '#7C6AF7',
@@ -77,6 +79,7 @@ export function PhotoManager({
   onMoveLeft,
   onMoveRight,
   onUpload,
+  operation,
   photos,
 }: {
   canEdit: boolean;
@@ -86,32 +89,75 @@ export function PhotoManager({
   onMoveLeft: (photoId: string) => void;
   onMoveRight: (photoId: string) => void;
   onUpload: () => void;
+  operation: PhotoOperationState;
   photos: UserPhoto[];
 }) {
-  const visiblePhotos = photos.filter((photo) => !photo.isHidden);
+  const visiblePhotos = getVisibleOrderedPhotos(photos);
+  const uploadLabel = operation?.type === 'upload'
+    ? operation.label
+    : 'Upload a square photo. You can crop before it uploads.';
 
   return (
     <View style={styles.photoManager}>
+      <View style={styles.photoIntro}>
+        <Text style={styles.photoIntroTitle}>Lead with a clear first photo</Text>
+        <Text style={styles.photoIntroBody}>{uploadLabel}</Text>
+        {operation?.type === 'upload' ? (
+          <View style={styles.photoProgressTrack}>
+            <View style={[styles.photoProgressFill, { width: `${Math.max(operation.progress, 6)}%` }]} />
+          </View>
+        ) : null}
+      </View>
       <View style={styles.photoGrid}>
+        {visiblePhotos.length === 0 ? (
+          <Card style={styles.photoEmptyCard}>
+            <Text style={styles.photoEmptyTitle}>No photos yet</Text>
+            <Text style={styles.photoEmptyBody}>Add one strong headshot first, then use the rest to show movement and context.</Text>
+          </Card>
+        ) : null}
         {visiblePhotos.map((photo, index) => (
-          <Card key={photo.id} style={styles.photoCard}>
+          <Card key={photo.id} style={[styles.photoCard, operation?.photoId === photo.id ? styles.photoCardActive : null]}>
             <Image source={{ uri: photo.storageKey }} style={styles.photoImage} />
             <View style={styles.photoMeta}>
-              <Text style={styles.photoLabel}>{photo.isPrimary ? 'Primary photo' : `Photo ${index + 1}`}</Text>
+              <View style={styles.photoHeader}>
+                <View style={styles.photoHeaderMeta}>
+                  <Text style={styles.photoLabel}>{photo.isPrimary ? 'Primary photo' : `Photo ${index + 1}`}</Text>
+                  <Text style={styles.photoSlotText}>{index === 0 ? 'Shows first in your profile' : 'Reorder to control what shows next'}</Text>
+                </View>
+                <View style={[styles.photoSlotPill, photo.isPrimary ? styles.photoPrimaryPill : null]}>
+                  <Text style={[styles.photoSlotPillText, photo.isPrimary ? styles.photoPrimaryPillText : null]}>
+                    {photo.isPrimary ? 'Primary' : `#${index + 1}`}
+                  </Text>
+                </View>
+              </View>
+              {operation?.photoId === photo.id ? (
+                <View style={styles.photoInlineStatus}>
+                  <AppIcon
+                    name={operation.type === 'delete' ? 'trash-2' : operation.type === 'reorder' ? 'move' : 'star'}
+                    size={14}
+                    color="#7C6AF7"
+                  />
+                  <Text style={styles.photoInlineStatusText}>{operation.label}</Text>
+                </View>
+              ) : null}
               {canEdit ? (
                 <View style={styles.photoActions}>
                   <Pressable disabled={isBusy || index === 0} onPress={() => onMoveLeft(photo.id)} style={styles.photoActionChip}>
-                    <Text style={styles.photoActionText}>Left</Text>
+                    <AppIcon name="arrow-left" size={14} color={isBusy || index === 0 ? 'rgba(240,246,252,0.24)' : '#9FB0C4'} />
+                    <Text style={[styles.photoActionText, isBusy || index === 0 ? styles.photoActionTextDisabled : null]}>Earlier</Text>
                   </Pressable>
                   <Pressable disabled={isBusy || index === visiblePhotos.length - 1} onPress={() => onMoveRight(photo.id)} style={styles.photoActionChip}>
-                    <Text style={styles.photoActionText}>Right</Text>
+                    <AppIcon name="arrow-right" size={14} color={isBusy || index === visiblePhotos.length - 1 ? 'rgba(240,246,252,0.24)' : '#9FB0C4'} />
+                    <Text style={[styles.photoActionText, isBusy || index === visiblePhotos.length - 1 ? styles.photoActionTextDisabled : null]}>Later</Text>
                   </Pressable>
                   {!photo.isPrimary ? (
                     <Pressable disabled={isBusy} onPress={() => onMakePrimary(photo.id)} style={styles.photoActionChip}>
-                      <Text style={styles.photoActionText}>Primary</Text>
+                      <AppIcon name="star" size={14} color={isBusy ? 'rgba(240,246,252,0.24)' : '#9FB0C4'} />
+                      <Text style={[styles.photoActionText, isBusy ? styles.photoActionTextDisabled : null]}>Make primary</Text>
                     </Pressable>
                   ) : null}
                   <Pressable disabled={isBusy} onPress={() => onDelete(photo.id)} style={[styles.photoActionChip, styles.photoDeleteChip]}>
+                    <AppIcon name="trash-2" size={14} color={isBusy ? 'rgba(248,113,113,0.34)' : '#F87171'} />
                     <Text style={styles.photoDeleteText}>Remove</Text>
                   </Pressable>
                 </View>
@@ -121,7 +167,12 @@ export function PhotoManager({
         ))}
       </View>
       {canEdit ? (
-        <Button label={isBusy ? 'Working…' : 'Upload photo'} onPress={onUpload} disabled={isBusy} variant="secondary" />
+        <Button
+          label={operation?.type === 'upload' ? operation.label : isBusy ? 'Working…' : 'Add photo'}
+          onPress={onUpload}
+          disabled={isBusy}
+          variant="secondary"
+        />
       ) : null}
     </View>
   );

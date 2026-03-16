@@ -47,6 +47,7 @@ export const Expanded: Story = {
     onSetWeeklyFrequencyBand: () => undefined,
     onToggleBuildInfo: () => undefined,
     onUploadPhoto: () => undefined,
+    photoOperation: null,
     primaryGoal: 'connection',
     profile: {
       id: 'user-1',

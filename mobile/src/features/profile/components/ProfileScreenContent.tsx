@@ -8,6 +8,8 @@ import { Button, Card } from '../../../design/primitives';
 import { profileStyles as styles } from './profile.styles';
 import { ACTIVITY_OPTIONS, ENVIRONMENT_OPTIONS, SCHEDULE_OPTIONS } from './profile.helpers';
 import { EditableField, PhotoManager, TagPill } from './ProfileSections';
+import type { PhotoOperationState } from '../hooks/useProfileEditor';
+import { getAvatarInitial, getPrimaryPhotoUri } from '../../../lib/profilePhotos';
 
 function SettingsRow({
   accessory = '›',
@@ -76,6 +78,7 @@ export function ProfileScreenContent({
   onSetWeeklyFrequencyBand,
   onToggleBuildInfo,
   onUploadPhoto,
+  photoOperation,
   primaryGoal,
   profile,
   selectedActivities,
@@ -118,6 +121,7 @@ export function ProfileScreenContent({
   onSetWeeklyFrequencyBand: (value: string) => void;
   onToggleBuildInfo: () => void;
   onUploadPhoto: () => void;
+  photoOperation: PhotoOperationState;
   primaryGoal: string;
   profile: User;
   selectedActivities: string[];
@@ -125,7 +129,7 @@ export function ProfileScreenContent({
   showBuildInfo: boolean;
   weeklyFrequencyBand: string;
 }) {
-  const primaryPhoto = profile.photos?.find((photo) => photo.isPrimary)?.storageKey || profile.photoUrl;
+  const primaryPhoto = getPrimaryPhotoUri(profile);
   const buildRows = [
     { label: 'App env', value: buildInfo.appEnv },
     { label: 'Version', value: `${buildInfo.version} (${buildInfo.iosBuildNumber})` },
@@ -148,10 +152,13 @@ export function ProfileScreenContent({
           <View style={styles.avatarGlowWrap}>
             <LinearGradient colors={['#7C6AF7', '#34D399']} style={styles.avatarGlowRing}>
               <View style={styles.avatarInnerWrap}>
-                <Image
-                  source={primaryPhoto ? { uri: primaryPhoto } : require('../../../../assets/icon.png')}
-                  style={styles.avatar}
-                />
+                {primaryPhoto ? (
+                  <Image source={{ uri: primaryPhoto }} style={styles.avatar} />
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <Text style={styles.avatarFallbackText}>{getAvatarInitial(profile.firstName)}</Text>
+                  </View>
+                )}
               </View>
             </LinearGradient>
           </View>
@@ -233,6 +240,7 @@ export function ProfileScreenContent({
             onMoveLeft={onMovePhotoLeft}
             onMoveRight={onMovePhotoRight}
             onUpload={onUploadPhoto}
+            operation={photoOperation}
             photos={profile.photos ?? []}
           />
         </View>

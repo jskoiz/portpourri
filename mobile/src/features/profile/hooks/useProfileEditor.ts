@@ -4,12 +4,18 @@ import type { User } from '../../../api/types';
 import { normalizeApiError } from '../../../api/errors';
 import { triggerErrorHaptic, triggerSelectionHaptic, triggerSuccessHaptic } from '../../../lib/interaction/feedback';
 import { buildSchedulePreferences, parseFavoriteActivities } from '../components/profile.helpers';
+import { buildPhotoReorderPlan } from './profilePhotoHelpers';
 
 function toggleValue(values: string[], nextValue: string) {
   return values.includes(nextValue)
     ? values.filter((value) => value !== nextValue)
     : [...values, nextValue];
 }
+
+export type PhotoOperationState =
+  | { type: 'upload'; label: string; progress: number; photoId?: undefined }
+  | { type: 'primary' | 'delete' | 'reorder'; label: string; photoId: string; progress?: undefined }
+  | null;
 
 export function useProfileEditor({
   profile,
@@ -41,6 +47,7 @@ export function useProfileEditor({
     uri: string;
     mimeType?: string | null;
     fileName?: string | null;
+    onProgress?: (progress: number) => void;
   }) => Promise<unknown>;
   updatePhoto: (payload: { photoId: string; payload: { isPrimary?: boolean; sortOrder?: number } }) => Promise<unknown>;
   deletePhoto: (photoId: string) => Promise<unknown>;
@@ -58,6 +65,7 @@ export function useProfileEditor({
   const [primaryGoal, setPrimaryGoal] = useState('');
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<string[]>([]);
+  const [photoOperation, setPhotoOperation] = useState<PhotoOperationState>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -129,38 +137,50 @@ export function useProfileEditor({
       }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.8,
         allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.72,
       });
       if (result.canceled || !result.assets.length) return;
       const asset = result.assets[0];
+      setPhotoOperation({ type: 'upload', label: 'Uploading photo…', progress: 5 });
       await uploadPhoto({
         uri: asset.uri,
         mimeType: asset.mimeType,
         fileName: asset.fileName,
+        onProgress: (progress) => {
+          setPhotoOperation({
+            type: 'upload',
+            label: progress >= 100 ? 'Finalizing photo…' : `Uploading photo… ${progress}%`,
+            progress,
+          });
+        },
       });
       void triggerSuccessHaptic();
       await refetch();
+      setPhotoOperation(null);
     } catch (err) {
+      setPhotoOperation(null);
       void triggerErrorHaptic();
       setError(normalizeApiError(err).message);
     }
   };
 
   const updatePhotoOrder = async (photoId: string, direction: 'left' | 'right') => {
-    const photos = (profile?.photos ?? []).filter((photo) => !photo.isHidden);
-    const index = photos.findIndex((photo) => photo.id === photoId);
-    const target = direction === 'left' ? photos[index - 1] : photos[index + 1];
-    if (index === -1 || !target) return;
+    const reorderPlan = buildPhotoReorderPlan(profile?.photos, photoId, direction);
+    if (!reorderPlan) return;
 
     try {
+      setPhotoOperation({ type: 'reorder', photoId, label: 'Reordering photos…' });
       await Promise.all([
-        updatePhoto({ photoId, payload: { sortOrder: target.sortOrder } }),
-        updatePhoto({ photoId: target.id, payload: { sortOrder: photos[index].sortOrder } }),
+        updatePhoto({ photoId: reorderPlan.currentPhotoId, payload: { sortOrder: reorderPlan.targetSortOrder } }),
+        updatePhoto({ photoId: reorderPlan.targetPhotoId, payload: { sortOrder: reorderPlan.currentSortOrder } }),
       ]);
       void triggerSelectionHaptic();
       await refetch();
+      setPhotoOperation(null);
     } catch (err) {
+      setPhotoOperation(null);
       void triggerErrorHaptic();
       setError(normalizeApiError(err).message);
     }
@@ -192,6 +212,8 @@ export function useProfileEditor({
     setShowBuildInfo,
     toggleActivity: (value: string) => setSelectedActivities((current) => toggleValue(current, value)),
     toggleSchedule: (value: string) => setSelectedSchedule((current) => toggleValue(current, value)),
+    photoOperation,
+    isEditingPhotos: photoOperation !== null,
     cancelEdit: () => {
       resetFromProfile();
       setEditMode(false);
@@ -201,10 +223,13 @@ export function useProfileEditor({
     uploadPhoto: pickAndUploadPhoto,
     makePrimaryPhoto: async (photoId: string) => {
       try {
+        setPhotoOperation({ type: 'primary', photoId, label: 'Setting primary photo…' });
         await updatePhoto({ photoId, payload: { isPrimary: true } });
         void triggerSelectionHaptic();
         await refetch();
+        setPhotoOperation(null);
       } catch (err) {
+        setPhotoOperation(null);
         void triggerErrorHaptic();
         setError(normalizeApiError(err).message);
       }
@@ -213,10 +238,13 @@ export function useProfileEditor({
     movePhotoRight: async (photoId: string) => updatePhotoOrder(photoId, 'right'),
     removePhoto: async (photoId: string) => {
       try {
+        setPhotoOperation({ type: 'delete', photoId, label: 'Removing photo…' });
         await deletePhoto(photoId);
         void triggerSuccessHaptic();
         await refetch();
+        setPhotoOperation(null);
       } catch (err) {
+        setPhotoOperation(null);
         void triggerErrorHaptic();
         setError(normalizeApiError(err).message);
       }

@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Swiper from 'react-native-deck-swiper';
 import { radii, shadows, spacing, typography } from '../theme/tokens';
 import AppIcon from './ui/AppIcon';
+import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const CARD_HEIGHT = Math.floor(SCREEN_HEIGHT * 0.68);
@@ -77,7 +78,7 @@ const getTempoLabel = (user: any) => {
 };
 
 const Card = ({ user, onPress }: CardProps) => {
-  const primaryPhoto = user.photos?.find((p: any) => p.isPrimary)?.storageKey || user.photoUrl;
+  const primaryPhoto = getPrimaryPhotoUri(user);
   const chips = profileChips(user);
   const intentLabel = getIntentLabel(user.profile?.intent);
   const presenceLabel = getPresenceLabel(user);
@@ -97,7 +98,7 @@ const Card = ({ user, onPress }: CardProps) => {
             end={{ x: 1, y: 1 }}
             style={styles.placeholderImage}
           >
-            <Text style={styles.initials}>{user.firstName?.[0] || '?'}</Text>
+            <Text style={styles.initials}>{getAvatarInitial(user.firstName)}</Text>
           </LinearGradient>
         )}
 

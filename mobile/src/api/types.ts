@@ -67,6 +67,7 @@ export interface UploadPhotoPayload {
   uri: string;
   mimeType?: string | null;
   fileName?: string | null;
+  onProgress?: (progress: number) => void;
 }
 
 export interface UpdatePhotoPayload {

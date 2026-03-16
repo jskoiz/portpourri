@@ -17,6 +17,7 @@ import {
   triggerSheetCommitHaptic,
   triggerWarningHaptic,
 } from '../lib/interaction/feedback';
+import { getPrimaryPhotoUri } from '../lib/profilePhotos';
 import { useTheme } from '../theme/useTheme';
 import type { RootStackScreenProps } from '../core/navigation/types';
 
@@ -30,7 +31,7 @@ export default function ChatScreen() {
   const quickActionsSheet = useSheetController();
   const { connectionStatus, error, loading, messages, refresh, refreshing, sendMessage, sending } = useChatThread(matchId);
   const errorMessage = error ? normalizeApiError(error).message : null;
-  const photoUrl = user?.photoUrl || user?.photos?.find?.((photo: any) => photo.isPrimary)?.storageKey || user?.photos?.[0]?.storageKey;
+  const photoUrl = getPrimaryPhotoUri(user);
 
   useEffect(() => {
     if (prefillMessage?.trim()) {

@@ -107,6 +107,10 @@ export const profileApi = {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        onUploadProgress: (event) => {
+          if (!payload.onProgress || !event.total) return;
+          payload.onProgress(Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100))));
+        },
       });
     } catch (error) {
       logApiFailure('profile', 'uploadPhoto', error);

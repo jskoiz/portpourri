@@ -12,6 +12,7 @@ import { StatePanel } from '../design/primitives';
 import { radii, spacing, typography } from '../theme/tokens';
 import { useMatches } from '../features/matches/hooks/useMatches';
 import type { MainTabScreenProps } from '../core/navigation/types';
+import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const BASE = '#0D1117';
@@ -61,6 +62,7 @@ function MatchRow({ item, onPress }: { item: Match; onPress: () => void }) {
   const hasUnread = !!item.lastMessage;
   const activityTag = getActivityTag(item.user);
   const accent = getUserAccent(item.user.firstName);
+  const photoUrl = getPrimaryPhotoUri(item.user);
 
   return (
     <Pressable
@@ -69,9 +71,9 @@ function MatchRow({ item, onPress }: { item: Match; onPress: () => void }) {
     >
       {/* Avatar */}
       <View style={styles.avatarWrapper}>
-        {item.user.photoUrl ? (
+        {photoUrl ? (
           <Image
-            source={{ uri: item.user.photoUrl }}
+            source={{ uri: photoUrl }}
             style={[styles.avatar, { borderColor: hasUnread ? accent : BORDER }]}
             contentFit="cover"
           />
@@ -84,7 +86,7 @@ function MatchRow({ item, onPress }: { item: Match; onPress: () => void }) {
             ]}
           >
             <Text style={[styles.avatarInitial, { color: accent }]}>
-              {item.user.firstName?.[0] || '?'}
+              {getAvatarInitial(item.user.firstName)}
             </Text>
           </View>
         )}
