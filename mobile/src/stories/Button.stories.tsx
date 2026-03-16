@@ -50,3 +50,19 @@ export const Danger: Story = {
     variant: 'danger',
   },
 };
+
+export const Glass: Story = {
+  args: {
+    label: 'Glass Button',
+    onPress: () => undefined,
+    variant: 'glass',
+  },
+};
+
+export const GlassProminent: Story = {
+  args: {
+    label: 'Glass Prominent',
+    onPress: () => undefined,
+    variant: 'glassProminent',
+  },
+};

@@ -11,9 +11,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthStore } from '../store/authStore';
 import { normalizeApiError } from '../api/errors';
 import AppBackdrop from '../components/ui/AppBackdrop';
-import { Button, Input } from '../design/primitives';
+import { Button, GlassView, Input } from '../design/primitives';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
+// radii is used in JSX
 import { loginSchema, type LoginFormValues } from '../features/auth/schema';
 import type { RootStackScreenProps } from '../core/navigation/types';
 
@@ -49,9 +50,9 @@ export function LoginScreenView({
           <AppBackdrop />
 
           <View style={styles.hero}>
-            <View style={[styles.wordmarkPill, { backgroundColor: theme.surfaceGlass }]}>
+            <GlassView tier="light" tint={theme.accentSubtle} borderRadius={999} style={styles.wordmarkPill}>
               <Text style={[styles.eyebrow, { color: theme.accent }]}>PRIVATE SOCIAL / MOVEMENT</Text>
-            </View>
+            </GlassView>
             <Text style={styles.wordmark}>BRDG</Text>
             <Text style={[styles.headline, { color: theme.textPrimary }]}>
               Meet people through the way they actually move.
@@ -60,18 +61,18 @@ export function LoginScreenView({
               Dating energy, training energy, and social momentum stay in one refined flow.
             </Text>
             <View style={styles.heroMetaRow}>
-              <View style={[styles.heroMetaCard, { backgroundColor: theme.surfaceGlass }]}>
+              <GlassView tier="light" borderRadius={radii.lg} style={styles.heroMetaCard}>
                 <Text style={styles.heroMetaLabel}>Curation</Text>
                 <Text style={[styles.heroMetaValue, { color: theme.textPrimary }]}>Intent-aware discovery</Text>
-              </View>
-              <View style={[styles.heroMetaCard, { backgroundColor: theme.surfaceGlass }]}>
+              </GlassView>
+              <GlassView tier="light" borderRadius={radii.lg} style={styles.heroMetaCard}>
                 <Text style={styles.heroMetaLabel}>Pace</Text>
                 <Text style={[styles.heroMetaValue, { color: theme.textPrimary }]}>Quieter, more selective</Text>
-              </View>
+              </GlassView>
             </View>
           </View>
 
-          <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <GlassView tier="frosted" borderRadius={radii.xxl} specularHighlight style={styles.formCard}>
             <Text style={[styles.formEyebrow, { color: theme.textMuted }]}>SIGN IN</Text>
             <Text style={[styles.formTitle, { color: theme.textPrimary }]}>Welcome back.</Text>
             <Controller
@@ -136,7 +137,7 @@ export function LoginScreenView({
               loading={isSubmitting}
               style={styles.ctaButton}
             />
-          </View>
+          </GlassView>
 
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: theme.textMuted }]}>Don't have an account? </Text>
@@ -264,14 +265,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   formCard: {
-    borderRadius: 28,
-    borderWidth: 0,
     padding: spacing.xxl,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
   },
   formEyebrow: {
     fontSize: 10,

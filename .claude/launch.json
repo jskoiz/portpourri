@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "expo-web",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd mobile && npx expo start --web --port $PORT"],
+      "port": 8082,
+      "autoPort": true
+    },
+    {
+      "name": "storybook-web",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd mobile && EXPO_PUBLIC_STORYBOOK_ENABLED=true npx expo start --web --port $PORT"],
+      "port": 8083,
+      "autoPort": true
+    }
+  ]
+}

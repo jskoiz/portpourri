@@ -14,7 +14,7 @@ import { DateField } from '../components/form/DateField';
 import { SheetSelectField } from '../components/form/SheetSelectField';
 import AppBackButton from '../components/ui/AppBackButton';
 import AppBackdrop from '../components/ui/AppBackdrop';
-import { Button, Input } from '../design/primitives';
+import { Button, GlassView, Input } from '../design/primitives';
 import { GENDER_OPTIONS } from '../constants/signup';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
@@ -72,9 +72,9 @@ export function SignupScreenView({
             disabled={isSubmitting}
           />
 
-          <View style={[styles.brandStrip, { backgroundColor: theme.surfaceGlass, borderColor: theme.border }]}>
+          <GlassView tier="light" tint={theme.accentSubtle} borderRadius={999} style={styles.brandStrip}>
             <Text style={[styles.brandStripText, { color: theme.accent }]}>JOIN BRDG / SELECTIVE ENTRY</Text>
-          </View>
+          </GlassView>
 
           <View style={styles.progressRow}>
             {Array.from({ length: STEPS }).map((_, i) => (
@@ -112,7 +112,7 @@ export function SignupScreenView({
             <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{STEP_SUBTITLES[step]}</Text>
           </View>
 
-          <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <GlassView tier="frosted" borderRadius={radii.xxl} specularHighlight style={styles.formCard}>
             <Text style={[styles.formKicker, { color: theme.textMuted }]}>{STEP_LABELS[step].toUpperCase()}</Text>
             {step === 0 && (
               <Controller
@@ -241,7 +241,7 @@ export function SignupScreenView({
               disabled={!canProceed || isSubmitting}
               style={styles.ctaButton}
             />
-          </View>
+          </GlassView>
 
           {step === 0 && (
             <View style={styles.footer}>
@@ -345,8 +345,6 @@ const styles = StyleSheet.create({
   },
   brandStrip: {
     alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     marginTop: spacing.md,
@@ -398,14 +396,7 @@ const styles = StyleSheet.create({
     maxWidth: 300,
   },
   formCard: {
-    borderRadius: 28,
-    borderWidth: 0,
     padding: spacing.xxl,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
   },
   formKicker: {
     fontSize: 10,

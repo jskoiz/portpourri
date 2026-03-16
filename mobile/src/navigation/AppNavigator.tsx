@@ -16,6 +16,7 @@ import NotificationsScreen from "../screens/NotificationsScreen";
 import MainTabNavigator from "./MainTabNavigator";
 import { setUnauthorizedHandler } from "../api/authSession";
 import { useTheme } from "../theme/useTheme";
+import { TabBarVisibilityProvider } from "./TabBarVisibilityContext";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -62,6 +63,7 @@ export default function AppNavigator() {
   }
 
   return (
+    <TabBarVisibilityProvider>
     <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator
         screenOptions={{
@@ -94,5 +96,6 @@ export default function AppNavigator() {
         )}
       </Stack.Navigator>
     </NavigationContainer>
+    </TabBarVisibilityProvider>
   );
 }

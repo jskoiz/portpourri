@@ -18,6 +18,7 @@ import type { BottomSheetModal as BottomSheetModalType } from '@gorhom/bottom-sh
 import type { RefObject } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '../../components/ui/AppIcon';
+import { GlassView } from '../primitives/GlassView';
 import { useTheme } from '../../theme/useTheme';
 import { radii, spacing, typography } from '../../theme/tokens';
 
@@ -75,9 +76,10 @@ export function AppBottomSheet({
       enablePanDownToClose
       android_keyboardInputMode="adjustResize"
       backgroundStyle={[styles.sheetBackground, { backgroundColor: theme.surface }]}
-      handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: theme.borderSoft }]}
+      handleIndicatorStyle={[styles.handleIndicator, { backgroundColor: theme.primary + '30' }]}
       keyboardBehavior={Platform.OS === 'ios' ? 'interactive' : 'fillParent'}
       keyboardBlurBehavior="restore"
+      style={styles.sheetOuter}
       backdropComponent={(props) => (
         <BottomSheetBackdrop
           {...props}
@@ -89,7 +91,7 @@ export function AppBottomSheet({
         />
       )}
     >
-      <View style={[styles.header, { borderBottomColor: theme.border }]}>
+      <View style={[styles.header, { borderBottomColor: theme.borderSoft }]}>
         <View style={styles.headerCopy}>
           <Text style={[styles.title, { color: theme.textPrimary }]}>{title}</Text>
           {subtitle ? <Text style={[styles.subtitle, { color: theme.textMuted }]}>{subtitle}</Text> : null}
@@ -98,15 +100,11 @@ export function AppBottomSheet({
           accessibilityLabel={`Close ${title}`}
           onPress={handleRequestClose}
           hitSlop={8}
-          style={({ pressed }) => [
-            styles.closeButton,
-            {
-              backgroundColor: theme.surfaceElevated,
-              opacity: pressed ? 0.76 : 1,
-            },
-          ]}
+          style={({ pressed }) => [{ opacity: pressed ? 0.76 : 1 }]}
         >
-          <AppIcon name="x" size={16} color={theme.textPrimary} />
+          <GlassView tier="thin" borderRadius={18} style={styles.closeButton}>
+            <AppIcon name="x" size={16} color={theme.textPrimary} />
+          </GlassView>
         </Pressable>
       </View>
       {scrollable ? (
@@ -148,17 +146,20 @@ export type AppBottomSheetProps = PropsWithChildren<{
 }>;
 
 const styles = StyleSheet.create({
+  sheetOuter: {
+    marginHorizontal: 8,
+  },
   sheetBackground: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: radii.sheet,
+    borderTopRightRadius: radii.sheet,
     shadowColor: '#000000',
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: -4 },
-    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: -6 },
+    elevation: 10,
   },
   handleIndicator: {
-    width: 46,
+    width: 48,
     height: 5,
     borderRadius: radii.pill,
   },
@@ -169,7 +170,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxl,
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     gap: spacing.md,
   },
   headerCopy: {
@@ -188,14 +189,8 @@ const styles = StyleSheet.create({
   closeButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
   },
   content: {
     flex: 1,
