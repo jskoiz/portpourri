@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 import { IntensityLevel } from '@prisma/client';
 
@@ -14,14 +15,17 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   bio?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   city?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   country?: string;
 
   @IsOptional()
@@ -58,18 +62,22 @@ export class UpdateFitnessProfileDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(50)
   weeklyFrequencyBand?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   primaryGoal?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   secondaryGoal?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   favoriteActivities?: string;
 
   @IsOptional()

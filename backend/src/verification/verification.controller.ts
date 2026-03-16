@@ -7,12 +7,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { VerificationService } from './verification.service';
@@ -39,11 +41,13 @@ export class VerificationController {
     return this.verificationService.status(req.user.id);
   }
 
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @Post('start')
   @ApiOperation({ summary: 'Start a verification challenge' })
   @ApiCreatedResponse({
     description: 'Verification challenge started successfully.',
   })
+  @ApiTooManyRequestsResponse({ description: 'Verification rate limit exceeded.' })
   start(
     @Request() req: AuthenticatedRequest,
     @Body() body: StartVerificationDto,
@@ -55,11 +59,13 @@ export class VerificationController {
     );
   }
 
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('confirm')
   @ApiOperation({ summary: 'Confirm a verification challenge' })
   @ApiCreatedResponse({
     description: 'Verification challenge confirmed successfully.',
   })
+  @ApiTooManyRequestsResponse({ description: 'Verification rate limit exceeded.' })
   confirm(
     @Request() req: AuthenticatedRequest,
     @Body() body: ConfirmVerificationDto,

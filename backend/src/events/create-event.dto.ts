@@ -1,15 +1,18 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { EventCategory } from '@prisma/client';
 
 export class CreateEventDto {
   @IsString()
+  @MaxLength(200)
   title: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   description?: string;
 
   @IsString()
+  @MaxLength(300)
   location: string;
 
   @IsOptional()
