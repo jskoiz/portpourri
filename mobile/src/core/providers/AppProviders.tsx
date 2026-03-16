@@ -8,24 +8,27 @@ import { ThemeProvider } from '../../theme/useTheme';
 import { colors } from '../../theme/tokens';
 import { queryClient } from '../../lib/query/queryClient';
 import tamaguiConfig from '../../design/tamagui.config';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { initSentry } from '../observability/sentry';
 
 initSentry();
 
 export function AppProviders({ children }: PropsWithChildren) {
   return (
-    <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
-      <SafeAreaProvider>
-        <GestureHandlerRootView
-          style={{ flex: 1, backgroundColor: colors.background }}
-        >
-          <QueryClientProvider client={queryClient}>
-            <BottomSheetModalProvider>
-              <ThemeProvider>{children}</ThemeProvider>
-            </BottomSheetModalProvider>
-          </QueryClientProvider>
-        </GestureHandlerRootView>
-      </SafeAreaProvider>
-    </TamaguiProvider>
+    <ErrorBoundary>
+      <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
+        <SafeAreaProvider>
+          <GestureHandlerRootView
+            style={{ flex: 1, backgroundColor: colors.background }}
+          >
+            <QueryClientProvider client={queryClient}>
+              <BottomSheetModalProvider>
+                <ThemeProvider>{children}</ThemeProvider>
+              </BottomSheetModalProvider>
+            </QueryClientProvider>
+          </GestureHandlerRootView>
+        </SafeAreaProvider>
+      </TamaguiProvider>
+    </ErrorBoundary>
   );
 }
