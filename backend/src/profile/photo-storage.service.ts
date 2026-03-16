@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { mkdir, rm, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
@@ -15,6 +15,39 @@ function extensionForMimeType(mimeType: string) {
     default:
       return 'bin';
   }
+}
+
+function profilePhotoFileNameFromStorageKey(storageKey: string) {
+  const prefix = `${appConfig.uploads.profilePublicBaseUrl}/`;
+  if (!storageKey.startsWith(prefix)) {
+    throw new BadRequestException('Invalid profile photo storage key');
+  }
+
+  const encodedFileName = storageKey.slice(prefix.length);
+  if (!encodedFileName || encodedFileName.includes('/') || encodedFileName.includes('\\')) {
+    throw new BadRequestException('Invalid profile photo storage key');
+  }
+
+  let fileName: string;
+  try {
+    fileName = decodeURIComponent(encodedFileName);
+  } catch {
+    throw new BadRequestException('Invalid profile photo storage key');
+  }
+
+  if (
+    !fileName ||
+    fileName === '.' ||
+    fileName === '..' ||
+    fileName.includes('/') ||
+    fileName.includes('\\') ||
+    fileName.includes('..') ||
+    !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(fileName)
+  ) {
+    throw new BadRequestException('Invalid profile photo storage key');
+  }
+
+  return fileName;
 }
 
 @Injectable()
@@ -37,9 +70,7 @@ export class PhotoStorageService {
   async removeProfilePhoto(storageKey?: string | null) {
     if (!storageKey) return;
 
-    const fileName = storageKey.split('/').pop();
-    if (!fileName) return;
-
+    const fileName = profilePhotoFileNameFromStorageKey(storageKey);
     const absolutePath = join(process.cwd(), appConfig.uploads.profileDir, fileName);
     await rm(absolutePath, { force: true });
   }
