@@ -10,10 +10,12 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Image } from 'expo-image';
 import { normalizeApiError } from '../api/errors';
 import { discoveryApi, matchesApi } from '../services/api';
+import type { RootStackParamList } from '../core/navigation/types';
 import AppBackButton from '../components/ui/AppBackButton';
 import AppIcon from '../components/ui/AppIcon';
 import AppBackdrop from '../components/ui/AppBackdrop';
@@ -36,9 +38,9 @@ const TEXT_MUTED = 'rgba(240,246,252,0.45)';
 
 export default function ProfileDetailScreen() {
   const theme = useTheme();
-  const navigation = useNavigation<any>();
-  const route = useRoute();
-  const { user } = route.params as any;
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'ProfileDetail'>>();
+  const { user } = route.params;
   const [submitting, setSubmitting] = useState(false);
 
   if (!user) return null;

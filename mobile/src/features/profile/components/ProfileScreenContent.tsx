@@ -99,7 +99,7 @@ export function ProfileScreenContent({
   isRefetching: boolean;
   isSavingProfile: boolean;
   isSavingFitness: boolean;
-  navigation: { navigate: (screen: string) => void };
+  navigation: { navigate: (screen: string, params?: Record<string, unknown>) => void };
   onCancelEdit: () => void;
   onConfirmDeleteAccount: () => void;
   onDeletePhoto: (photoId: string) => void;
