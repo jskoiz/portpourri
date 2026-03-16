@@ -27,10 +27,13 @@ export class MatchesController {
     @Query('take') take?: string,
     @Query('skip') skip?: string,
   ) {
+    const parsedTake = take ? Number.parseInt(take, 10) : NaN;
+    const parsedSkip = skip ? Number.parseInt(skip, 10) : NaN;
+
     return this.matchesService.getMatches(
       req.user.id,
-      take ? parseInt(take, 10) : undefined,
-      skip ? parseInt(skip, 10) : undefined,
+      Number.isNaN(parsedTake) ? 20 : parsedTake,
+      Number.isNaN(parsedSkip) ? 0 : parsedSkip,
     );
   }
 

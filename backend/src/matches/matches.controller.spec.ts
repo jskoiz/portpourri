@@ -33,7 +33,14 @@ describe('MatchesController', () => {
   it('delegates getMatches to service', async () => {
     matchesServiceMock.getMatches.mockResolvedValue([]);
     const result = await controller.getMatches(req);
-    expect(matchesServiceMock.getMatches).toHaveBeenCalledWith('user-1', undefined, undefined);
+    expect(matchesServiceMock.getMatches).toHaveBeenCalledWith('user-1', 20, 0);
+    expect(result).toEqual([]);
+  });
+
+  it('parses pagination query params before delegating getMatches', async () => {
+    matchesServiceMock.getMatches.mockResolvedValue([]);
+    const result = await controller.getMatches(req, '5', '10');
+    expect(matchesServiceMock.getMatches).toHaveBeenCalledWith('user-1', 5, 10);
     expect(result).toEqual([]);
   });
 
