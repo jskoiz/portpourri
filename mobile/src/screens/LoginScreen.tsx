@@ -43,7 +43,7 @@ export default function LoginScreen({
   });
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#0D1117' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={styles.content}
@@ -229,13 +229,13 @@ const styles = StyleSheet.create({
   },
   formCard: {
     borderRadius: 28,
-    borderWidth: 1,
+    borderWidth: 0,
     padding: spacing.xxl,
     shadowColor: '#000',
-    shadowOpacity: 0.30,
+    shadowOpacity: 0.08,
     shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   formEyebrow: {
     fontSize: 10,

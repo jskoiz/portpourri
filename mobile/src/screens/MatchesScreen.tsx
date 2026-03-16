@@ -15,14 +15,16 @@ import type { MainTabScreenProps } from '../core/navigation/types';
 import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
-const BASE = '#0D1117';
-const SURFACE = '#161B22';
-const BORDER = 'rgba(255,255,255,0.07)';
-const PRIMARY = '#7C6AF7';
-const ACCENT = '#34D399';
-const TEXT_PRIMARY = '#F0F6FC';
-const TEXT_SECONDARY = 'rgba(240,246,252,0.6)';
-const TEXT_MUTED = 'rgba(240,246,252,0.38)';
+import { lightTheme } from '../theme/tokens';
+
+const BASE = lightTheme.background;
+const SURFACE = lightTheme.surface;
+const BORDER = lightTheme.border;
+const PRIMARY = lightTheme.primary;
+const ACCENT = lightTheme.accent;
+const TEXT_PRIMARY = lightTheme.textPrimary;
+const TEXT_SECONDARY = lightTheme.textSecondary;
+const TEXT_MUTED = lightTheme.textMuted;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function timeAgo(timestamp?: string) {
@@ -204,7 +206,7 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 110,
     backgroundColor: PRIMARY,
-    opacity: 0.07,
+    opacity: 0.04,
   },
   header: {
     paddingHorizontal: spacing.xxl,
@@ -251,9 +253,13 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: 10,
     borderRadius: 22,
-    borderWidth: 1,
-    borderColor: BORDER,
+    borderWidth: 0,
     gap: spacing.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   avatarWrapper: {
     position: 'relative',

@@ -1,16 +1,16 @@
 import { StyleSheet } from 'react-native';
-import { radii, spacing, typography } from '../../../theme/tokens';
+import { lightTheme, radii, spacing, typography } from '../../../theme/tokens';
 
-const BASE = '#0D1117';
-const SURFACE = '#161B22';
-const SURFACE_ELEVATED = '#1C2128';
-const BORDER = 'rgba(255,255,255,0.07)';
-const PRIMARY = '#7C6AF7';
-const ACCENT = '#34D399';
-const TEXT_PRIMARY = '#F0F6FC';
-const TEXT_SECONDARY = 'rgba(240,246,252,0.6)';
-const TEXT_MUTED = 'rgba(240,246,252,0.38)';
-const ERROR = '#F87171';
+const BASE = lightTheme.background;
+const SURFACE = lightTheme.surface;
+const SURFACE_ELEVATED = lightTheme.surfaceElevated;
+const BORDER = lightTheme.border;
+const PRIMARY = lightTheme.primary;
+const ACCENT = lightTheme.accent;
+const TEXT_PRIMARY = lightTheme.textPrimary;
+const TEXT_SECONDARY = lightTheme.textSecondary;
+const TEXT_MUTED = lightTheme.textMuted;
+const ERROR = lightTheme.danger;
 
 export const createStyles = StyleSheet.create({
   container: {
@@ -66,7 +66,7 @@ export const createStyles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: BORDER,
-    backgroundColor: 'rgba(28,35,48,0.68)',
+    backgroundColor: 'rgba(255,255,255,0.75)',
     padding: spacing.md,
   },
   planHeader: {
@@ -95,7 +95,7 @@ export const createStyles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: BORDER,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: 'rgba(0,0,0,0.03)',
   },
   planPillActive: {
     borderColor: 'rgba(124,106,247,0.32)',
@@ -115,7 +115,7 @@ export const createStyles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: BORDER,
-    backgroundColor: 'rgba(28,35,48,0.68)',
+    backgroundColor: 'rgba(255,255,255,0.75)',
     gap: spacing.sm,
   },
   selectionEyebrow: {
@@ -239,7 +239,7 @@ export const createStyles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: BORDER,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(0,0,0,0.03)',
   },
   pillTextInactive: {
     fontSize: typography.bodySmall,
@@ -320,7 +320,7 @@ export const createStyles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radii.xl,
     borderWidth: 1,
-    borderColor: 'rgba(52,211,153,0.32)',
+    borderColor: 'rgba(16,185,129,0.20)',
     backgroundColor: SURFACE_ELEVATED,
     gap: spacing.md,
   },
@@ -333,7 +333,7 @@ export const createStyles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(52,211,153,0.18)',
+    backgroundColor: 'rgba(16,185,129,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
