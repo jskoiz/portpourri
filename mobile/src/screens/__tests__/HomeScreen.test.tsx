@@ -90,4 +90,25 @@ describe('HomeScreen', () => {
       );
     });
   });
+
+  it('applies bounded discovery filter values without free-typed inputs', async () => {
+    render(<HomeScreen navigation={navigation} route={route} />);
+
+    expect(await screen.findByText('Swipe deck')).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText('Increase Distance'));
+    fireEvent.press(screen.getByLabelText('Increase Min age'));
+    fireEvent.press(screen.getByLabelText('Decrease Max age'));
+    fireEvent.press(screen.getByText('Apply'));
+
+    await waitFor(() => {
+      expect(mockUseDiscoveryFeed).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          distanceKm: 51,
+          minAge: 22,
+          maxAge: 44,
+        }),
+      );
+    });
+  });
 });

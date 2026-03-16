@@ -10,6 +10,22 @@ jest.mock('../../store/authStore', () => ({
     selector({ signup: mockSignup }),
 }));
 
+jest.mock('../../components/form/DateField', () => {
+  const React = require('react');
+  const { Pressable, Text, View } = require('react-native');
+
+  return {
+    DateField: ({ label, onChange, placeholder, value }: any) => (
+      <View>
+        <Text>{label}</Text>
+        <Pressable onPress={() => onChange('1995-02-03')}>
+          <Text>{value || placeholder}</Text>
+        </Pressable>
+      </View>
+    ),
+  };
+});
+
 describe('SignupScreen', () => {
   const navigation = {
     goBack: jest.fn(),
@@ -43,18 +59,8 @@ describe('SignupScreen', () => {
     fireEvent.press(screen.getByText('Continue'));
 
     expect(await screen.findByText('One last thing.')).toBeTruthy();
-
-    fireEvent.press(screen.getByText('Month'));
-    fireEvent.press(screen.getByText('February'));
-    fireEvent.press(screen.getByText('Day'));
-    fireEvent.press(screen.getByText('31'));
-    fireEvent.press(screen.getByText('Year'));
-    fireEvent.press(screen.getByText('1995'));
-    fireEvent.press(screen.getByText('Choose a gender'));
-    fireEvent.press(screen.getByText('Non-binary'));
-    fireEvent.press(screen.getByText('Create my account'));
-
-    expect(await screen.findByText('Choose a real birthdate.')).toBeTruthy();
+    expect(screen.getAllByText('Choose your birthdate')[0]).toBeTruthy();
+    expect(screen.getAllByText('Choose a gender')[0]).toBeTruthy();
     expect(mockSignup).not.toHaveBeenCalled();
   });
 
@@ -72,14 +78,11 @@ describe('SignupScreen', () => {
     fireEvent.press(screen.getByText('Continue'));
     expect(await screen.findByText('One last thing.')).toBeTruthy();
 
-    fireEvent.press(screen.getByText('Month'));
-    fireEvent.press(screen.getByText('February'));
-    fireEvent.press(screen.getByText('Day'));
-    fireEvent.press(screen.getByText('3'));
-    fireEvent.press(screen.getByText('Year'));
-    fireEvent.press(screen.getByText('1995'));
-    fireEvent.press(screen.getByText('Choose a gender'));
+    fireEvent.press(screen.getAllByText('Choose your birthdate')[0]);
     fireEvent.press(screen.getByText('Non-binary'));
+    await waitFor(() => {
+      expect(screen.getAllByText('Non-binary')[0]).toBeTruthy();
+    });
     fireEvent.press(screen.getByText('Create my account'));
 
     await waitFor(() => {
@@ -106,14 +109,11 @@ describe('SignupScreen', () => {
     fireEvent.changeText(screen.getByPlaceholderText('At least 8 characters'), 'password123');
     fireEvent.press(screen.getByText('Continue'));
     expect(await screen.findByText('One last thing.')).toBeTruthy();
-    fireEvent.press(screen.getByText('Month'));
-    fireEvent.press(screen.getByText('February'));
-    fireEvent.press(screen.getByText('Day'));
-    fireEvent.press(screen.getByText('3'));
-    fireEvent.press(screen.getByText('Year'));
-    fireEvent.press(screen.getByText('1995'));
-    fireEvent.press(screen.getByText('Choose a gender'));
+    fireEvent.press(screen.getAllByText('Choose your birthdate')[0]);
     fireEvent.press(screen.getByText('Non-binary'));
+    await waitFor(() => {
+      expect(screen.getAllByText('Non-binary')[0]).toBeTruthy();
+    });
     fireEvent.press(screen.getByText('Create my account'));
 
     await waitFor(() => {

@@ -253,24 +253,13 @@ export function Input({
         ]}
       >
         <TextInput
-          value={props.value as string | undefined}
-          onChangeText={props.onChangeText}
-          placeholder={props.placeholder}
-          autoCapitalize={props.autoCapitalize}
-          keyboardType={props.keyboardType}
-          editable={props.editable}
-          autoFocus={props.autoFocus}
-          secureTextEntry={props.secureTextEntry}
-          returnKeyType={props.returnKeyType}
-          placeholderTextColor={theme.textMuted}
-          selectionColor={theme.primary}
+          {...props}
+          placeholderTextColor={props.placeholderTextColor ?? theme.textMuted}
+          selectionColor={props.selectionColor ?? theme.primary}
           multiline={multiline}
           textAlignVertical={multiline ? 'top' : 'center'}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          blurOnSubmit={props.blurOnSubmit}
-          numberOfLines={props.numberOfLines}
-          onSubmitEditing={props.onSubmitEditing}
           style={[
             primitiveStyles.input,
             { color: theme.textPrimary },

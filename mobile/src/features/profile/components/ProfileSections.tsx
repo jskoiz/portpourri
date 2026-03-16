@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, Pressable, Text, TextInput, View } from 'react-native';
+import type { TextInputProps } from 'react-native';
 import type { UserPhoto } from '../../../api/types';
 import AppIcon from '../../../components/ui/AppIcon';
 import { Button, Card, Chip } from '../../../design/primitives';
@@ -35,6 +36,7 @@ export function TagPill({
 
 export function EditableField({
   editMode,
+  inputProps,
   label,
   multiline = false,
   onChangeText,
@@ -42,6 +44,7 @@ export function EditableField({
   value,
 }: {
   editMode: boolean;
+  inputProps?: TextInputProps;
   label: string;
   multiline?: boolean;
   onChangeText: (value: string) => void;
@@ -58,9 +61,10 @@ export function EditableField({
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor="rgba(240,246,252,0.35)"
-          autoCapitalize="none"
+          autoCapitalize={multiline ? 'sentences' : 'none'}
           multiline={multiline}
           textAlignVertical={multiline ? 'top' : 'center'}
+          {...inputProps}
         />
       ) : (
         <Text style={[styles.fieldValue, { color: value ? '#F0F6FC' : 'rgba(240,246,252,0.35)' }]}>

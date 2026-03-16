@@ -4,12 +4,22 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { buildInfo } from '../../../config/buildInfo';
 import type { User } from '../../../api/types';
+import { LocationField } from '../../../components/form/LocationField';
+import { SheetSelectField } from '../../../components/form/SheetSelectField';
 import { Button, Card } from '../../../design/primitives';
 import { profileStyles as styles } from './profile.styles';
-import { ACTIVITY_OPTIONS, ENVIRONMENT_OPTIONS, SCHEDULE_OPTIONS } from './profile.helpers';
+import {
+  ACTIVITY_OPTIONS,
+  ENVIRONMENT_OPTIONS,
+  INTENSITY_OPTIONS,
+  PRIMARY_GOAL_OPTIONS,
+  SCHEDULE_OPTIONS,
+  WEEKLY_FREQUENCY_OPTIONS,
+} from './profile.helpers';
 import { EditableField, PhotoManager, TagPill } from './ProfileSections';
 import type { PhotoOperationState } from '../hooks/useProfileEditor';
 import { getAvatarInitial, getPrimaryPhotoUri } from '../../../lib/profilePhotos';
+import type { LocationSuggestion } from '../../locations/locationSuggestions';
 
 function SettingsRow({
   accessory = '›',
@@ -68,6 +78,7 @@ export function ProfileScreenContent({
   onSave,
   onSetBio,
   onSetCity,
+  onSelectCitySuggestion,
   onSetIntensityLevel,
   onSetIntentDating,
   onSetIntentFriends,
@@ -111,6 +122,7 @@ export function ProfileScreenContent({
   onSave: () => void;
   onSetBio: (value: string) => void;
   onSetCity: (value: string) => void;
+  onSelectCitySuggestion: (suggestion: LocationSuggestion) => void;
   onSetIntensityLevel: (value: string) => void;
   onSetIntentDating: (value: boolean) => void;
   onSetIntentFriends: (value: boolean) => void;
@@ -215,9 +227,35 @@ export function ProfileScreenContent({
         <View style={styles.section}>
           <Text style={styles.sectionEyebrow}>Profile basics</Text>
           <Card style={styles.fieldsCard}>
-            <EditableField label="City" value={city} onChangeText={onSetCity} placeholder="Honolulu" editMode={editMode} />
+            {editMode ? (
+              <LocationField
+                kind="city"
+                label="City"
+                value={city}
+                onChangeText={onSetCity}
+                onSelectSuggestion={onSelectCitySuggestion}
+                placeholder="Honolulu"
+                sheetTitle="Choose your city"
+                sheetSubtitle="Use recent places, known BRDG spots, or curated city suggestions."
+              />
+            ) : (
+              <EditableField label="City" value={city} onChangeText={onSetCity} placeholder="Honolulu" editMode={false} />
+            )}
             <View style={styles.fieldDivider} />
-            <EditableField label="Bio" value={bio} onChangeText={onSetBio} placeholder="Tell people what kind of movement and company you want." editMode={editMode} multiline />
+            <EditableField
+              label="Bio"
+              value={bio}
+              onChangeText={onSetBio}
+              placeholder="Tell people what kind of movement and company you want."
+              editMode={editMode}
+              multiline
+              inputProps={{
+                autoCorrect: true,
+                maxLength: 280,
+                returnKeyType: 'done',
+                scrollEnabled: false,
+              }}
+            />
           </Card>
         </View>
 
@@ -264,11 +302,44 @@ export function ProfileScreenContent({
         <View style={styles.section}>
           <Text style={styles.sectionEyebrow}>Fitness Profile</Text>
           <Card style={styles.fieldsCard}>
-            <EditableField label="Intensity" value={intensityLevel} onChangeText={onSetIntensityLevel} placeholder="moderate" editMode={editMode} />
+            {editMode ? (
+              <SheetSelectField
+                label="Intensity"
+                placeholder="Choose an intensity"
+                options={INTENSITY_OPTIONS}
+                value={intensityLevel}
+                onSelect={onSetIntensityLevel}
+                sheetTitle="Choose your training intensity"
+              />
+            ) : (
+              <EditableField label="Intensity" value={intensityLevel} onChangeText={onSetIntensityLevel} placeholder="moderate" editMode={false} />
+            )}
             <View style={styles.fieldDivider} />
-            <EditableField label="Days / week" value={weeklyFrequencyBand} onChangeText={onSetWeeklyFrequencyBand} placeholder="3-4" editMode={editMode} />
+            {editMode ? (
+              <SheetSelectField
+                label="Days / week"
+                placeholder="Choose your weekly rhythm"
+                options={WEEKLY_FREQUENCY_OPTIONS}
+                value={weeklyFrequencyBand}
+                onSelect={onSetWeeklyFrequencyBand}
+                sheetTitle="How often do you move?"
+              />
+            ) : (
+              <EditableField label="Days / week" value={weeklyFrequencyBand} onChangeText={onSetWeeklyFrequencyBand} placeholder="3-4" editMode={false} />
+            )}
             <View style={styles.fieldDivider} />
-            <EditableField label="Primary goal" value={primaryGoal} onChangeText={onSetPrimaryGoal} placeholder="health" editMode={editMode} />
+            {editMode ? (
+              <SheetSelectField
+                label="Primary goal"
+                placeholder="Choose your primary goal"
+                options={PRIMARY_GOAL_OPTIONS}
+                value={primaryGoal}
+                onSelect={onSetPrimaryGoal}
+                sheetTitle="Choose your primary goal"
+              />
+            ) : (
+              <EditableField label="Primary goal" value={primaryGoal} onChangeText={onSetPrimaryGoal} placeholder="health" editMode={false} />
+            )}
           </Card>
         </View>
 

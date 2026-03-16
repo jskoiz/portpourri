@@ -30,7 +30,10 @@ export function ChatComposer({
         onChangeText={onChangeMessage}
         placeholder="Say something…"
         editable={!sending}
+        autoCapitalize="sentences"
+        autoCorrect
         returnKeyType="send"
+        submitBehavior="submit"
         onSubmitEditing={onSend}
         blurOnSubmit={false}
       />

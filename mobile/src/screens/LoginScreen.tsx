@@ -92,9 +92,13 @@ export default function LoginScreen({
                     onChange(nextValue);
                   }}
                   autoCapitalize="none"
+                  autoComplete="email"
                   keyboardType="email-address"
+                  textContentType="emailAddress"
                   editable={!isSubmitting}
                   error={errors.email?.message}
+                  returnKeyType="next"
+                  submitBehavior="submit"
                 />
               )}
             />
@@ -112,8 +116,14 @@ export default function LoginScreen({
                     onChange(nextValue);
                   }}
                   secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="current-password"
+                  textContentType="password"
                   editable={!isSubmitting}
                   error={errors.password?.message}
+                  returnKeyType="done"
+                  submitBehavior="submit"
+                  onSubmitEditing={handleLogin}
                 />
               )}
             />

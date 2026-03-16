@@ -5,15 +5,15 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthStore } from '../store/authStore';
 import { normalizeApiError } from '../api/errors';
+import { DateField } from '../components/form/DateField';
+import { SheetSelectField } from '../components/form/SheetSelectField';
 import AppBackButton from '../components/ui/AppBackButton';
 import AppBackdrop from '../components/ui/AppBackdrop';
-import AppSelect from '../components/ui/AppSelect';
 import { Button, Input } from '../design/primitives';
 import { GENDER_OPTIONS } from '../constants/signup';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
 import {
-  buildBirthdate,
   signupSchema,
   type SignupFormValues,
 } from '../features/auth/schema';
@@ -21,28 +21,6 @@ import type { RootStackScreenProps } from '../core/navigation/types';
 
 const STEPS = 3;
 const STEP_LABELS = ['Account', 'Profile', 'Done'];
-const MONTH_OPTIONS = [
-  { label: 'January', value: '01' },
-  { label: 'February', value: '02' },
-  { label: 'March', value: '03' },
-  { label: 'April', value: '04' },
-  { label: 'May', value: '05' },
-  { label: 'June', value: '06' },
-  { label: 'July', value: '07' },
-  { label: 'August', value: '08' },
-  { label: 'September', value: '09' },
-  { label: 'October', value: '10' },
-  { label: 'November', value: '11' },
-  { label: 'December', value: '12' },
-];
-const DAY_OPTIONS = Array.from({ length: 31 }, (_, index) => ({
-  label: `${index + 1}`,
-  value: `${index + 1}`.padStart(2, '0'),
-}));
-const YEAR_OPTIONS = Array.from({ length: 101 }, (_, index) => {
-  const year = `${new Date().getFullYear() - index}`;
-  return { label: year, value: year };
-});
 
 export default function SignupScreen({
   navigation,
@@ -59,9 +37,6 @@ export default function SignupScreen({
   } = useForm<SignupFormValues>({
     defaultValues: {
       birthdate: '',
-      birthDay: '',
-      birthMonth: '',
-      birthYear: '',
       email: '',
       firstName: '',
       gender: '',
@@ -72,9 +47,7 @@ export default function SignupScreen({
   const firstName = watch('firstName');
   const email = watch('email');
   const password = watch('password');
-  const birthMonth = watch('birthMonth');
-  const birthDay = watch('birthDay');
-  const birthYear = watch('birthYear');
+  const birthdate = watch('birthdate');
   const gender = watch('gender');
 
   const stepTitles = ["Let's start with you.", 'Secure your account.', 'One last thing.'];
@@ -86,7 +59,7 @@ export default function SignupScreen({
   const fieldsByStep: Array<Array<keyof SignupFormValues>> = [
     ['firstName'],
     ['email', 'password'],
-    ['birthMonth', 'birthDay', 'birthYear', 'gender', 'birthdate'],
+    ['birthdate', 'gender'],
   ];
 
   const handleNext = async () => {
@@ -101,7 +74,7 @@ export default function SignupScreen({
             email: values.email.trim().toLowerCase(),
             password: values.password,
             firstName: values.firstName.trim(),
-            birthdate: buildBirthdate(values.birthYear, values.birthMonth, values.birthDay),
+            birthdate: values.birthdate,
             gender: values.gender,
           });
         } catch (error) {
@@ -115,10 +88,10 @@ export default function SignupScreen({
     if (step === 0) return !!firstName.trim();
     if (step === 1) return !!email.trim() && !!password.trim();
     if (step === 2) {
-      return !!birthMonth && !!birthDay && !!birthYear && !!gender.trim();
+      return !!birthdate && !!gender.trim();
     }
     return false;
-  }, [step, firstName, email, password, birthMonth, birthDay, birthYear, gender]);
+  }, [step, firstName, email, password, birthdate, gender]);
   const birthdateError = errors.birthdate?.message;
 
   return (
@@ -192,6 +165,14 @@ export default function SignupScreen({
                     editable={!isSubmitting}
                     error={errors.firstName?.message}
                     autoFocus
+                    autoCapitalize="words"
+                    autoComplete="given-name"
+                    textContentType="givenName"
+                    returnKeyType="next"
+                    submitBehavior="submit"
+                    onSubmitEditing={() => {
+                      void handleNext();
+                    }}
                   />
                 )}
               />
@@ -209,10 +190,17 @@ export default function SignupScreen({
                       onBlur={onBlur}
                       onChangeText={onChange}
                       autoCapitalize="none"
+                      autoComplete="email"
                       keyboardType="email-address"
+                      textContentType="emailAddress"
                       editable={!isSubmitting}
                       error={errors.email?.message}
                       autoFocus
+                      returnKeyType="next"
+                      submitBehavior="submit"
+                      onSubmitEditing={() => {
+                        void handleNext();
+                      }}
                     />
                   )}
                 />
@@ -229,6 +217,14 @@ export default function SignupScreen({
                       secureTextEntry
                       editable={!isSubmitting}
                       error={errors.password?.message}
+                      autoCapitalize="none"
+                      autoComplete="new-password"
+                      textContentType="newPassword"
+                      returnKeyType="done"
+                      submitBehavior="submit"
+                      onSubmitEditing={() => {
+                        void handleNext();
+                      }}
                     />
                   )}
                 />
@@ -236,64 +232,28 @@ export default function SignupScreen({
             )}
             {step === 2 && (
               <>
-                <Text style={[styles.selectGroupLabel, { color: theme.textMuted }]}>Birthday</Text>
-                <View style={styles.birthdateRow}>
-                  <Controller
-                    control={control}
-                    name="birthMonth"
-                    render={({ field: { onChange, value } }) => (
-                      <AppSelect
-                        placeholder="Month"
-                        options={MONTH_OPTIONS}
-                        value={value}
-                        onSelect={onChange}
-                        disabled={isSubmitting}
-                        wrapperStyle={styles.birthdateMonthField}
-                        triggerStyle={styles.birthdateTrigger}
-                      />
-                    )}
-                  />
-                  <Controller
-                    control={control}
-                    name="birthDay"
-                    render={({ field: { onChange, value } }) => (
-                      <AppSelect
-                        placeholder="Day"
-                        options={DAY_OPTIONS}
-                        value={value}
-                        onSelect={onChange}
-                        disabled={isSubmitting}
-                        wrapperStyle={styles.birthdateField}
-                        triggerStyle={styles.birthdateTrigger}
-                      />
-                    )}
-                  />
-                  <Controller
-                    control={control}
-                    name="birthYear"
-                    render={({ field: { onChange, value } }) => (
-                      <AppSelect
-                        placeholder="Year"
-                        options={YEAR_OPTIONS}
-                        value={value}
-                        onSelect={onChange}
-                        disabled={isSubmitting}
-                        wrapperStyle={styles.birthdateField}
-                        triggerStyle={styles.birthdateTrigger}
-                      />
-                    )}
-                  />
-                </View>
-                {birthdateError ? (
-                  <Text style={[styles.inlineErrorText, { color: theme.danger }]}>
-                    {birthdateError}
-                  </Text>
-                ) : null}
+                <Controller
+                  control={control}
+                  name="birthdate"
+                  render={({ field: { onChange, value } }) => (
+                    <DateField
+                      label="Birthday"
+                      placeholder="Choose your birthdate"
+                      value={value}
+                      onChange={onChange}
+                      error={birthdateError}
+                      disabled={isSubmitting}
+                      maximumDate={new Date()}
+                      sheetTitle="Choose your birthdate"
+                      sheetSubtitle="Use the date picker instead of typing month, day, and year separately."
+                    />
+                  )}
+                />
                 <Controller
                   control={control}
                   name="gender"
                   render={({ field: { onChange, value } }) => (
-                    <AppSelect
+                    <SheetSelectField
                       label="I identify as"
                       placeholder="Choose a gender"
                       options={[...GENDER_OPTIONS]}
@@ -301,6 +261,8 @@ export default function SignupScreen({
                       onSelect={onChange}
                       disabled={isSubmitting}
                       error={errors.gender?.message}
+                      sheetTitle="Choose a gender"
+                      sheetSubtitle="Use the option that best fits how you identify."
                     />
                   )}
                 />

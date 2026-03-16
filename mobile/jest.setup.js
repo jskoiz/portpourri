@@ -1,5 +1,9 @@
 require('@testing-library/jest-native/extend-expect');
 
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
 jest.mock('expo-image', () => {
   const React = require('react');
   const { Image } = require('react-native');
@@ -51,5 +55,21 @@ jest.mock('@gorhom/bottom-sheet', () => {
     BottomSheetBackdrop: () => null,
     BottomSheetScrollView: ({ children, ...props }) => <ScrollView {...props}>{children}</ScrollView>,
     BottomSheetView: ({ children, ...props }) => <View {...props}>{children}</View>,
+  };
+});
+
+jest.mock('@react-native-community/datetimepicker', () => {
+  const React = require('react');
+  const { Pressable, Text } = require('react-native');
+
+  return function MockDateTimePicker(props) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => props.onChange?.({ type: 'set' }, new Date('1995-02-03T00:00:00.000Z'))}
+      >
+        <Text>{props.testID || 'mock-date-picker'}</Text>
+      </Pressable>
+    );
   };
 });

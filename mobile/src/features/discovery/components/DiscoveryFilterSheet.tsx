@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { StepperField } from '../../../components/form/StepperField';
 import {
   AppBottomSheet,
   APP_BOTTOM_SHEET_SNAP_POINTS,
@@ -71,29 +72,27 @@ export function DiscoveryFilterSheet({
       <View style={styles.modalContent}>
         <Text style={styles.filterSectionLabel}>Distance & Age</Text>
         <View style={styles.filterInputRow}>
-          <TextInput
-            style={styles.miniInput}
-            value={state.distanceKm}
-            onChangeText={onChangeDistanceKm}
-            placeholder="km"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            keyboardType="numeric"
+          <StepperField
+            label="Distance"
+            min={1}
+            max={100}
+            value={Number(state.distanceKm) || 1}
+            onChange={(value) => onChangeDistanceKm(String(value))}
+            helperText="km"
           />
-          <TextInput
-            style={styles.miniInput}
-            value={state.minAge}
-            onChangeText={onChangeMinAge}
-            placeholder="Min age"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            keyboardType="numeric"
+          <StepperField
+            label="Min age"
+            min={18}
+            max={80}
+            value={Number(state.minAge) || 18}
+            onChange={(value) => onChangeMinAge(String(value))}
           />
-          <TextInput
-            style={styles.miniInput}
-            value={state.maxAge}
-            onChangeText={onChangeMaxAge}
-            placeholder="Max age"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            keyboardType="numeric"
+          <StepperField
+            label="Max age"
+            min={18}
+            max={80}
+            value={Number(state.maxAge) || 18}
+            onChange={(value) => onChangeMaxAge(String(value))}
           />
         </View>
 

@@ -37,6 +37,7 @@ export const Expanded: Story = {
     onSave: () => undefined,
     onSetBio: () => undefined,
     onSetCity: () => undefined,
+    onSelectCitySuggestion: () => undefined,
     onSetIntensityLevel: () => undefined,
     onSetIntentDating: () => undefined,
     onSetIntentFriends: () => undefined,

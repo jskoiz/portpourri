@@ -211,8 +211,7 @@ export const homeStyles = StyleSheet.create({
     marginTop: spacing.md,
   },
   filterInputRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.xs,
     marginBottom: spacing.xs,
   },
   miniInput: {
@@ -238,4 +237,3 @@ export const homeStyles = StyleSheet.create({
     marginTop: spacing.xxl,
   },
 });
-

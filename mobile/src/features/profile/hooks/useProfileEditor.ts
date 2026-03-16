@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import type { User } from '../../../api/types';
 import { normalizeApiError } from '../../../api/errors';
+import type { LocationSuggestion } from '../../locations/locationSuggestions';
 import { triggerErrorHaptic, triggerSelectionHaptic, triggerSuccessHaptic } from '../../../lib/interaction/feedback';
 import { buildSchedulePreferences, parseFavoriteActivities } from '../components/profile.helpers';
 import { buildPhotoReorderPlan } from './profilePhotoHelpers';
@@ -39,6 +40,8 @@ export function useProfileEditor({
   updateProfile: (payload: {
     bio?: string;
     city?: string;
+    latitude?: number;
+    longitude?: number;
     intentDating?: boolean;
     intentWorkout?: boolean;
     intentFriends?: boolean;
@@ -57,6 +60,7 @@ export function useProfileEditor({
   const [showBuildInfo, setShowBuildInfo] = useState(false);
   const [bio, setBio] = useState('');
   const [city, setCity] = useState('');
+  const [citySelection, setCitySelection] = useState<Pick<LocationSuggestion, 'latitude' | 'longitude'> | null>(null);
   const [intensityLevel, setIntensityLevel] = useState('');
   const [intentDating, setIntentDating] = useState(false);
   const [intentWorkout, setIntentWorkout] = useState(false);
@@ -71,6 +75,10 @@ export function useProfileEditor({
     if (!profile) return;
     setBio(profile.profile?.bio || '');
     setCity(profile.profile?.city || '');
+    setCitySelection({
+      latitude: profile.profile?.latitude,
+      longitude: profile.profile?.longitude,
+    });
     setIntensityLevel(profile.fitnessProfile?.intensityLevel || '');
     setIntentDating(Boolean(profile.profile?.intentDating));
     setIntentWorkout(Boolean(profile.profile?.intentWorkout));
@@ -85,6 +93,10 @@ export function useProfileEditor({
     if (!profile) return;
     setBio(profile.profile?.bio || '');
     setCity(profile.profile?.city || '');
+    setCitySelection({
+      latitude: profile.profile?.latitude,
+      longitude: profile.profile?.longitude,
+    });
     setIntensityLevel(profile.fitnessProfile?.intensityLevel || '');
     setIntentDating(Boolean(profile.profile?.intentDating));
     setIntentWorkout(Boolean(profile.profile?.intentWorkout));
@@ -106,6 +118,8 @@ export function useProfileEditor({
       await updateProfile({
         bio: bio.trim(),
         city: city.trim(),
+        latitude: citySelection?.latitude,
+        longitude: citySelection?.longitude,
         intentDating,
         intentWorkout,
         intentFriends,
@@ -210,6 +224,17 @@ export function useProfileEditor({
     setWeeklyFrequencyBand,
     setPrimaryGoal,
     setShowBuildInfo,
+    selectCitySuggestion: (suggestion: LocationSuggestion) => {
+      setCity(suggestion.value);
+      setCitySelection({
+        latitude: suggestion.latitude,
+        longitude: suggestion.longitude,
+      });
+    },
+    updateCity: (value: string) => {
+      setCity(value);
+      setCitySelection(null);
+    },
     toggleActivity: (value: string) => setSelectedActivities((current) => toggleValue(current, value)),
     toggleSchedule: (value: string) => setSelectedSchedule((current) => toggleValue(current, value)),
     photoOperation,

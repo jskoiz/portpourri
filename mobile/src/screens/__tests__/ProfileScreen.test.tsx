@@ -103,4 +103,22 @@ describe("ProfileScreen", () => {
     expect(screen.getByText("Gym")).toBeTruthy();
     expect(screen.getByText("Pool")).toBeTruthy();
   });
+
+  it("uses the structured city picker when saving profile basics", async () => {
+    render(<ProfileScreen />);
+
+    expect(await screen.findByText("Jordan, 29")).toBeTruthy();
+    fireEvent.press(screen.getByText(/Edit Profile/));
+    fireEvent.changeText(screen.getByPlaceholderText("Honolulu"), "Kailua");
+    fireEvent.press(screen.getByText("Windward Oahu"));
+    fireEvent.press(screen.getByText(/Save Changes/));
+
+    await waitFor(() => {
+      expect(mockUpdateProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          city: "Kailua",
+        }),
+      );
+    });
+  });
 });

@@ -105,7 +105,8 @@ export default function ProfileScreen() {
       }}
       onSave={() => { void editor.save(); }}
       onSetBio={editor.setBio}
-      onSetCity={editor.setCity}
+      onSetCity={editor.updateCity}
+      onSelectCitySuggestion={editor.selectCitySuggestion}
       onSetIntensityLevel={editor.setIntensityLevel}
       onSetIntentDating={editor.setIntentDating}
       onSetIntentFriends={editor.setIntentFriends}

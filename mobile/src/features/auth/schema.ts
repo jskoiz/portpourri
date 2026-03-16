@@ -37,23 +37,21 @@ export const signupSchema = z
       .trim()
       .min(1, 'Password is required.')
       .min(8, 'Use at least 8 characters.'),
-    birthMonth: z.string(),
-    birthDay: z.string(),
-    birthYear: z.string(),
     birthdate: z.string(),
     gender: z.string().trim().min(1, 'Choose one of the listed gender options.'),
   })
   .superRefine((values, ctx) => {
-    if (!values.birthMonth || !values.birthDay || !values.birthYear) {
+    if (!values.birthdate) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Choose your birth month, day, and year.',
+        message: 'Choose your birthdate.',
         path: ['birthdate'],
       });
       return;
     }
 
-    if (!buildBirthdate(values.birthYear, values.birthMonth, values.birthDay)) {
+    const [year = '', month = '', day = ''] = values.birthdate.split('-');
+    if (!buildBirthdate(year, month, day)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Choose a real birthdate.',
