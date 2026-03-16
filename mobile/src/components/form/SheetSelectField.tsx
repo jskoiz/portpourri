@@ -47,11 +47,15 @@ export function SheetSelectField({
     () => options.find((option) => option.value === value),
     [options, value],
   );
+  const triggerAccessibilityLabel = label
+    ? `${label}: ${selectedOption?.label ?? placeholder}`
+    : selectedOption?.label ?? placeholder;
 
   return (
     <View style={fieldStyles.wrapper}>
       {label ? <Text style={[fieldStyles.label, { color: theme.textMuted }]}>{label}</Text> : null}
       <Pressable
+        accessibilityLabel={triggerAccessibilityLabel}
         accessibilityRole="button"
         disabled={disabled}
         onPress={sheet.open}
@@ -95,6 +99,7 @@ export function SheetSelectField({
           const selected = option.value === value;
           return (
             <Pressable
+              accessibilityLabel={option.label}
               accessibilityRole="button"
               key={option.value}
               onPress={() => {

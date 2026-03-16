@@ -46,6 +46,9 @@ export default function AppSelect({
     () => options.find((option) => option.value === value),
     [options, value],
   );
+  const triggerAccessibilityLabel = label
+    ? `${label}: ${selectedOption?.label ?? placeholder}`
+    : selectedOption?.label ?? placeholder;
 
   return (
     <View style={[styles.wrapper, wrapperStyle]}>
@@ -53,6 +56,7 @@ export default function AppSelect({
         <Text style={[styles.label, { color: '#7A7068' }]}>{label}</Text>
       ) : null}
       <Pressable
+        accessibilityLabel={triggerAccessibilityLabel}
         accessibilityRole="button"
         disabled={disabled}
         onPress={() => setOpen((current) => !current)}
@@ -87,6 +91,7 @@ export default function AppSelect({
               return (
                 <Pressable
                   key={option.value}
+                  accessibilityLabel={option.label}
                   accessibilityRole="button"
                   onPress={() => {
                     onSelect(option.value);

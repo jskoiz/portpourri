@@ -25,6 +25,7 @@
     "scaffold:mobile-feature",
     "smoke",
     "storybook",
+    "symphony",
     "test:backend",
     "test:mobile",
     "test:root"
@@ -431,6 +432,7 @@
           "mobile/src/components/form/StepperField.tsx",
           "mobile/src/components/form/__tests__/DateField.test.tsx",
           "mobile/src/components/form/__tests__/LocationField.test.tsx",
+          "mobile/src/components/form/__tests__/SheetSelectField.test.tsx",
           "mobile/src/components/form/__tests__/StepperField.test.tsx",
           "mobile/src/components/form/fieldStyles.ts",
           "mobile/src/components/ui/AppBackButton.tsx",
@@ -439,6 +441,7 @@
           "mobile/src/components/ui/AppNotificationButton.tsx",
           "mobile/src/components/ui/AppSelect.tsx",
           "mobile/src/components/ui/__tests__/AppBackButton.test.tsx",
+          "mobile/src/components/ui/__tests__/AppSelect.test.tsx",
           "mobile/src/core/observability/sentry.ts",
           "mobile/src/design/__tests__/primitives.test.tsx",
           "mobile/src/design/primitives/index.tsx",

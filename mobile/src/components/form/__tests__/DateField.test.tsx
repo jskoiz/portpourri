@@ -3,6 +3,32 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { DateField } from '../DateField';
 
 describe('DateField', () => {
+  it('provides an explicit accessibility label for the trigger', () => {
+    const { rerender } = render(
+      <DateField
+        label="Birthday"
+        placeholder="Choose your birthdate"
+        sheetTitle="Choose your birthdate"
+        value=""
+        onChange={() => undefined}
+      />,
+    );
+
+    expect(screen.getByLabelText('Birthday: Choose your birthdate')).toBeTruthy();
+
+    rerender(
+      <DateField
+        label="Birthday"
+        placeholder="Choose your birthdate"
+        sheetTitle="Choose your birthdate"
+        value="1995-02-03"
+        onChange={() => undefined}
+      />,
+    );
+
+    expect(screen.getByLabelText('Birthday: February 3, 1995')).toBeTruthy();
+  });
+
   it('commits a canonical date string and formats the display label', () => {
     const onChange = jest.fn();
     const { rerender } = render(

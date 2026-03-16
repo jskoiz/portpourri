@@ -46,6 +46,26 @@ function AppUiStory() {
   );
 }
 
+function AppUiPlaceholderSelectStory() {
+  const [value, setValue] = React.useState('');
+
+  return (
+    <View style={{ gap: 20, padding: 24 }}>
+      <AppSelect
+        label="Intensity"
+        onSelect={setValue}
+        options={[
+          { label: 'Easy', value: 'easy' },
+          { label: 'Moderate', value: 'moderate' },
+          { label: 'Hard', value: 'hard' },
+        ]}
+        placeholder="Choose intensity"
+        value={value}
+      />
+    </View>
+  );
+}
+
 const meta = {
   title: 'Components/AppUi',
   component: AppUiStory,
@@ -57,3 +77,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+export const PlaceholderSelect: Story = {
+  render: () => <AppUiPlaceholderSelectStory />,
+};

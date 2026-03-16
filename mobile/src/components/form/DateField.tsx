@@ -74,6 +74,9 @@ export function DateField({
   const [draftDate, setDraftDate] = useState<Date>(parseDateValue(value) ?? getDefaultDate());
 
   const displayValue = useMemo(() => formatDateLabel(value), [value]);
+  const triggerAccessibilityLabel = label
+    ? `${label}: ${displayValue || placeholder}`
+    : displayValue || placeholder;
 
   const openPicker = () => {
     setDraftDate(parseDateValue(value) ?? getDefaultDate());
@@ -84,6 +87,7 @@ export function DateField({
     <View style={fieldStyles.wrapper}>
       {label ? <Text style={[fieldStyles.label, { color: theme.textMuted }]}>{label}</Text> : null}
       <Pressable
+        accessibilityLabel={triggerAccessibilityLabel}
         accessibilityRole="button"
         disabled={disabled}
         onPress={openPicker}
