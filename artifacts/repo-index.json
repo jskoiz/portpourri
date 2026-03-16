@@ -25,6 +25,7 @@
     "scaffold:mobile-feature",
     "smoke",
     "storybook",
+    "symphony",
     "test:backend",
     "test:mobile",
     "test:root"
