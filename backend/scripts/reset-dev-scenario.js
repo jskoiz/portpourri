@@ -38,7 +38,7 @@ const SCENARIOS = {
           maxDistanceKm: 50,
         },
         fitness: {
-          intensityLevel: "moderate",
+          intensityLevel: "INTERMEDIATE",
           weeklyFrequencyBand: "3-4",
           primaryGoal: "endurance",
           favoriteActivities: "Running, Yoga, Beach",
@@ -67,7 +67,7 @@ const SCENARIOS = {
           maxDistanceKm: 50,
         },
         fitness: {
-          intensityLevel: "high",
+          intensityLevel: "ADVANCED",
           weeklyFrequencyBand: "4-5",
           primaryGoal: "strength",
           favoriteActivities: "Beach, Running, Boxing",
@@ -96,7 +96,7 @@ const SCENARIOS = {
           maxDistanceKm: 50,
         },
         fitness: {
-          intensityLevel: "moderate",
+          intensityLevel: "INTERMEDIATE",
           weeklyFrequencyBand: "3-4",
           primaryGoal: "mobility",
           favoriteActivities: "Hiking, Running, Climbing",
@@ -249,7 +249,7 @@ async function prepareUiPreviewScenario() {
       title: "Preview Beach Workout",
       description: "Low-pressure bodyweight session by the water.",
       location: "Magic Island",
-      category: "Beach",
+      category: "FITNESS",
       startsAt: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(),
       endsAt: new Date(Date.now() + 38 * 60 * 60 * 1000).toISOString(),
     },

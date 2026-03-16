@@ -1,4 +1,4 @@
-const { Client } = require('pg');
+const net = require('net');
 
 const connectionString =
   process.env.DATABASE_URL ||
@@ -7,24 +7,37 @@ const connectionString =
 const timeoutMs = Number(process.env.DB_WAIT_TIMEOUT_MS || 30000);
 const intervalMs = Number(process.env.DB_WAIT_INTERVAL_MS || 1000);
 
-async function canConnect() {
-  const client = new Client({ connectionString });
-  try {
-    await client.connect();
-    await client.query('SELECT 1');
-    return true;
-  } catch {
-    return false;
-  } finally {
-    await client.end().catch(() => undefined);
-  }
+function getTarget(connectionUrl) {
+  const url = new URL(connectionUrl);
+  return {
+    host: url.hostname || 'localhost',
+    port: Number(url.port || 5432),
+  };
+}
+
+function canConnect({ host, port }) {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host, port });
+
+    const finish = (ready) => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(ready);
+    };
+
+    socket.setTimeout(intervalMs);
+    socket.once('connect', () => finish(true));
+    socket.once('timeout', () => finish(false));
+    socket.once('error', () => finish(false));
+  });
 }
 
 async function main() {
   const start = Date.now();
+  const target = getTarget(connectionString);
 
   while (Date.now() - start < timeoutMs) {
-    if (await canConnect()) {
+    if (await canConnect(target)) {
       console.log('Database is ready.');
       return;
     }
