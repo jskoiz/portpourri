@@ -16,7 +16,7 @@ function BottomSheetStory() {
   }, [sheet.open]);
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
+    <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#F8F7F4' }}>
       <Button label="Open sheet" onPress={sheet.open} />
       <AppBottomSheet
         {...sheet.sheetProps}
@@ -25,8 +25,8 @@ function BottomSheetStory() {
         snapPoints={APP_BOTTOM_SHEET_SNAP_POINTS.standard}
       >
         <Card>
-          <Text style={{ color: '#F0F6FC', fontSize: 18, fontWeight: '800' }}>Reusable content</Text>
-          <Text style={{ color: 'rgba(240,246,252,0.68)', marginTop: 8 }}>
+          <Text style={{ color: '#1A1A1A', fontSize: 18, fontWeight: '800' }}>Reusable content</Text>
+          <Text style={{ color: '#64748B', marginTop: 8 }}>
             Discovery, create, explore, and chat can all compose this shell.
           </Text>
         </Card>

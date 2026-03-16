@@ -48,6 +48,56 @@ export const darkTheme = {
   shadowColorDark: '#000000',
 };
 
+export const lightTheme: Theme = {
+  // Backgrounds
+  background: '#F8F7F4',
+  backgroundSoft: '#F5F3EF',
+
+  // Surfaces
+  surface: '#FFFFFF',
+  surfaceElevated: '#F5F3EF',
+  surfaceGlass: 'rgba(255,255,255,0.92)',
+
+  // Borders
+  border: 'rgba(0,0,0,0.06)',
+  borderSoft: 'rgba(0,0,0,0.12)',
+  borderFocus: '#7C6AF7',
+
+  // Text
+  textPrimary: '#1A1A1A',
+  textSecondary: '#64748B',
+  textMuted: '#94A3B8',
+  textInverse: '#FFFFFF',
+
+  // Primary — electric violet
+  primary: '#7C6AF7',
+  primaryPressed: '#6B5CE7',
+  primarySubtle: 'rgba(124,106,247,0.10)',
+
+  // Accent — emerald
+  accent: '#10B981',
+  accentSoft: '#6EE7B7',
+  accentSubtle: 'rgba(16,185,129,0.10)',
+
+  // Energy — amber warmth
+  energy: '#F59E0B',
+  energySubtle: 'rgba(245,158,11,0.10)',
+
+  // Semantic
+  danger: '#EF4444',
+  dangerSubtle: 'rgba(239,68,68,0.08)',
+  success: '#10B981',
+  warning: '#F59E0B',
+
+  // Fixed
+  white: '#FFFFFF',
+  black: '#000000',
+
+  // Shadows
+  shadowColor: '#000000',
+  shadowColorDark: '#000000',
+};
+
 export type Theme = typeof darkTheme;
 
 // Legacy flat colors export (dark values for backward compat)
