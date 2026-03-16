@@ -39,6 +39,10 @@ export function ChatMessageList({
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.listContent}
       showsVerticalScrollIndicator={false}
+      windowSize={10}
+      maxToRenderPerBatch={15}
+      removeClippedSubviews={true}
+      initialNumToRender={20}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
     />
   );

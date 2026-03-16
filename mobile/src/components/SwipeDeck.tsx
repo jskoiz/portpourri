@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Swiper from 'react-native-deck-swiper';
 import { radii, shadows, spacing, typography } from '../theme/tokens';
@@ -90,7 +91,7 @@ const Card = ({ user, onPress }: CardProps) => {
     <TouchableOpacity activeOpacity={0.98} onPress={onPress} style={[styles.card, shadows.card]}>
       <View style={styles.imageContainer}>
         {primaryPhoto ? (
-          <Image source={{ uri: primaryPhoto }} style={styles.image} resizeMode="cover" />
+          <Image source={{ uri: primaryPhoto }} style={styles.image} contentFit="cover" transition={200} />
         ) : (
           <LinearGradient
             colors={['#1E293B', '#111827']}
