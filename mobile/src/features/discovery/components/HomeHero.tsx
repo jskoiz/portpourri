@@ -46,7 +46,7 @@ export function HomeHero({
       <View style={styles.heroSummaryRow}>
         <View style={styles.intentBadgeWrap}>
           <LinearGradient
-            colors={[intentOption.color + '40', intentOption.color + '16']}
+            colors={[intentOption.color + '14', intentOption.color + '08']}
             style={styles.intentBadge}
           >
             <Text style={[styles.intentBadgeText, { color: intentOption.color }]}>

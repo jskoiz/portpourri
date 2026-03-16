@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Swiper from 'react-native-deck-swiper';
-import { radii, shadows, spacing, typography } from '../theme/tokens';
+import { radii, spacing, typography } from '../theme/tokens';
 import AppIcon from './ui/AppIcon';
 import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
 
@@ -11,15 +11,15 @@ const DEFAULT_CARD_HEIGHT = 520;
 const MIN_CARD_HEIGHT = 360;
 const MAX_CARD_HEIGHT = 680;
 
-const DARK = {
-  background: '#0D1117',
-  surface: '#161B22',
-  border: 'rgba(255,255,255,0.08)',
-  accent: '#34D399',
-  danger: '#F87171',
-  textPrimary: '#F0F6FF',
-  textSecondary: 'rgba(240,246,255,0.76)',
-  textMuted: 'rgba(240,246,255,0.54)',
+const LIGHT = {
+  background: '#F8F7F4',
+  surface: '#FFFFFF',
+  border: 'rgba(0,0,0,0.06)',
+  accent: '#10B981',
+  danger: '#EF4444',
+  textPrimary: '#1A1A1A',
+  textSecondary: '#64748B',
+  textMuted: '#94A3B8',
 };
 
 interface SwipeDeckCardProps {
@@ -104,7 +104,7 @@ const SwipeDeckCard = ({ cardHeight, onPress, user }: SwipeDeckCardProps) => {
     <TouchableOpacity
       activeOpacity={0.96}
       onPress={onPress}
-      style={[styles.card, shadows.card, { height: cardHeight }]}
+      style={[styles.card, { height: cardHeight }]}
     >
       <View style={styles.imageContainer}>
         {primaryPhoto ? (
@@ -117,7 +117,7 @@ const SwipeDeckCard = ({ cardHeight, onPress, user }: SwipeDeckCardProps) => {
           />
         ) : (
           <LinearGradient
-            colors={['#1E293B', '#111827']}
+            colors={['#E8E6E1', '#D9D6CF']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.placeholderImage}
@@ -141,7 +141,7 @@ const SwipeDeckCard = ({ cardHeight, onPress, user }: SwipeDeckCardProps) => {
 
             {alignmentLabel ? (
               <View style={[styles.matchBadge, compact && styles.matchBadgeCompact]}>
-                <AppIcon name="star" size={12} color={DARK.background} />
+                <AppIcon name="star" size={12} color={LIGHT.textPrimary} />
                 <Text style={styles.matchBadgeText}>{alignmentLabel}</Text>
               </View>
             ) : (
@@ -288,14 +288,17 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     borderRadius: 28,
-    backgroundColor: DARK.surface,
+    backgroundColor: LIGHT.surface,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: DARK.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   imageContainer: {
     flex: 1,
-    backgroundColor: DARK.surface,
+    backgroundColor: LIGHT.surface,
   },
   image: {
     width: '100%',
@@ -309,7 +312,7 @@ const styles = StyleSheet.create({
   },
   initials: {
     fontSize: 84,
-    color: DARK.textPrimary,
+    color: LIGHT.textPrimary,
     fontWeight: '800',
   },
   imageGradient: {
@@ -338,37 +341,37 @@ const styles = StyleSheet.create({
   },
   intentBadge: {
     maxWidth: '58%',
-    backgroundColor: 'rgba(13,17,23,0.58)',
+    backgroundColor: 'rgba(255,255,255,0.85)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(0,0,0,0.08)',
   },
   intentBadgeCompact: {
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: 6,
   },
   intentBadgeText: {
-    color: DARK.textPrimary,
+    color: LIGHT.textPrimary,
     fontSize: typography.caption,
     fontWeight: '800',
     letterSpacing: 0.3,
   },
   presenceBadge: {
-    backgroundColor: 'rgba(13,17,23,0.44)',
+    backgroundColor: 'rgba(255,255,255,0.75)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(0,0,0,0.06)',
   },
   presenceBadgeCompact: {
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: 6,
   },
   presenceBadgeText: {
-    color: DARK.textSecondary,
+    color: LIGHT.textSecondary,
     fontSize: typography.caption,
     fontWeight: '700',
   },
@@ -381,14 +384,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(0,0,0,0.08)',
   },
   matchBadgeCompact: {
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: 6,
   },
   matchBadgeText: {
-    color: DARK.background,
+    color: LIGHT.textPrimary,
     fontSize: typography.caption,
     fontWeight: '800',
     letterSpacing: 0.2,
@@ -413,7 +416,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 10,
-    color: DARK.textMuted,
+    color: LIGHT.textMuted,
     fontWeight: '800',
     letterSpacing: 2.8,
     marginBottom: spacing.sm,
@@ -421,7 +424,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 32,
     fontWeight: '800',
-    color: DARK.textPrimary,
+    color: LIGHT.textPrimary,
     letterSpacing: -1.1,
     lineHeight: 34,
   },
@@ -431,13 +434,13 @@ const styles = StyleSheet.create({
   },
   metaLine: {
     fontSize: typography.bodySmall,
-    color: DARK.textSecondary,
+    color: LIGHT.textSecondary,
     fontWeight: '600',
     marginTop: spacing.xs,
   },
   bio: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.88)',
+    color: 'rgba(255,255,255,0.92)',
     lineHeight: 19,
     marginTop: spacing.sm,
     maxWidth: '92%',
@@ -468,13 +471,13 @@ const styles = StyleSheet.create({
   chip: {
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(0,0,0,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.70)',
     paddingHorizontal: spacing.md,
     paddingVertical: 5,
   },
   chipText: {
-    color: DARK.textPrimary,
+    color: LIGHT.textPrimary,
     fontSize: typography.caption,
     fontWeight: '700',
     textTransform: 'capitalize',
@@ -487,40 +490,40 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   emptyTitle: {
-    color: DARK.textPrimary,
+    color: LIGHT.textPrimary,
     fontSize: typography.h2,
     fontWeight: '800',
     textAlign: 'center',
     letterSpacing: -0.3,
   },
   emptyText: {
-    color: DARK.textSecondary,
+    color: LIGHT.textSecondary,
     textAlign: 'center',
     marginTop: spacing.sm,
     lineHeight: 22,
     fontSize: typography.body,
   },
   overlayReject: {
-    borderColor: DARK.danger,
-    color: DARK.danger,
+    borderColor: LIGHT.danger,
+    color: LIGHT.danger,
     borderWidth: 2,
     fontSize: 24,
     fontWeight: '900',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.md,
-    backgroundColor: 'rgba(13,17,23,0.70)',
+    backgroundColor: 'rgba(255,255,255,0.85)',
   },
   overlayLike: {
-    borderColor: DARK.accent,
-    color: DARK.accent,
+    borderColor: LIGHT.accent,
+    color: LIGHT.accent,
     borderWidth: 2,
     fontSize: 24,
     fontWeight: '900',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.md,
-    backgroundColor: 'rgba(13,17,23,0.70)',
+    backgroundColor: 'rgba(255,255,255,0.85)',
   },
   overlayWrapperLeft: {
     flexDirection: 'column',

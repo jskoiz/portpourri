@@ -1,12 +1,12 @@
 import { StyleSheet } from 'react-native';
 import { radii, spacing, typography } from '../../../theme/tokens';
 
-const BASE = '#0D1117';
-const SURFACE_ELEVATED = '#1C2128';
-const BORDER = 'rgba(255,255,255,0.08)';
-const ACCENT = '#34D399';
-const TEXT_PRIMARY = '#F0F6FC';
-const TEXT_MUTED = 'rgba(240,246,252,0.45)';
+const BASE = '#F8F7F4';
+const SURFACE_ELEVATED = '#F5F3EF';
+const BORDER = 'rgba(0,0,0,0.06)';
+const ACCENT = '#10B981';
+const TEXT_PRIMARY = '#1A1A1A';
+const TEXT_MUTED = '#94A3B8';
 
 export const homeStyles = StyleSheet.create({
   container: {
@@ -67,7 +67,7 @@ export const homeStyles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radii.pill,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(0,0,0,0.08)',
   },
   intentBadgeText: {
     fontSize: 11,
@@ -91,7 +91,7 @@ export const homeStyles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: BORDER,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.03)',
   },
   refineTriggerText: {
     fontSize: 11,
@@ -112,18 +112,18 @@ export const homeStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   filterPillActive: {
-    backgroundColor: 'rgba(124,106,247,0.18)',
-    borderColor: 'rgba(124,106,247,0.34)',
+    backgroundColor: 'rgba(124,106,247,0.08)',
+    borderColor: 'rgba(124,106,247,0.20)',
   },
   filterPillInactive: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: 'rgba(0,0,0,0.03)',
     borderColor: BORDER,
   },
   filterPillText: {
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.2,
-    color: 'rgba(240,246,252,0.54)',
+    color: TEXT_MUTED,
   },
   filterPillTextActive: {
     color: '#7C6AF7',
@@ -147,7 +147,7 @@ export const homeStyles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(0,0,0,0.12)',
     alignSelf: 'center',
     marginBottom: spacing.lg,
   },
