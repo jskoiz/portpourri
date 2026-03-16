@@ -75,3 +75,16 @@ export const ExpandedSelections: Story = {
     },
   },
 };
+
+export const MinimumSelections: Story = {
+  args: {
+    state: {
+      availability: [],
+      distanceKm: '1',
+      goals: [],
+      intensity: [],
+      maxAge: '18',
+      minAge: '18',
+    },
+  },
+};

@@ -23,3 +23,22 @@ export const Prefilled: Story = {
   },
 };
 
+export const EmptyDraft: Story = {
+  args: {
+    message: '   ',
+    onChangeMessage: () => undefined,
+    onSend: () => undefined,
+    sending: false,
+    theme: lightTheme,
+  },
+};
+
+export const Sending: Story = {
+  args: {
+    message: 'On my way.',
+    onChangeMessage: () => undefined,
+    onSend: () => undefined,
+    sending: true,
+    theme: lightTheme,
+  },
+};

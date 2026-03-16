@@ -109,3 +109,9 @@ export const MatchMoment: Story = {
     showMatch: true,
   },
 };
+
+export const SingleCard: Story = {
+  args: {
+    feedCount: 1,
+  },
+};

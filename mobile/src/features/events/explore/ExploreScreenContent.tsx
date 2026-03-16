@@ -57,6 +57,28 @@ export function ExploreScreenContent({
   unreadCount: number;
 }) {
   const quickActionsSheet = useSheetController();
+  const visibleEvents = React.useMemo(() => events.slice(0, 6), [events]);
+  const visibleCommunityPosts = React.useMemo(() => COMMUNITY_POSTS.slice(0, 2), []);
+  const eventCards = React.useMemo(
+    () =>
+      visibleEvents.map((event) => (
+        <EventCard
+          key={event.id}
+          event={event}
+          currentUserId={currentUserId}
+          onOpen={() => onOpenEvent(event.id)}
+          onInvite={() => onInvite(event)}
+        />
+      )),
+    [currentUserId, onInvite, onOpenEvent, visibleEvents]
+  );
+  const communityCards = React.useMemo(
+    () =>
+      visibleCommunityPosts.map((post) => (
+        <CommunityCard key={post.id} post={post} onInvite={() => onInvite()} />
+      )),
+    [onInvite, visibleCommunityPosts]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -97,15 +119,7 @@ export function ExploreScreenContent({
                 onAction={onOpenCreate}
               />
             ) : (
-              events.slice(0, 6).map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  currentUserId={currentUserId}
-                  onOpen={() => onOpenEvent(event.id)}
-                  onInvite={() => onInvite(event)}
-                />
-              ))
+              eventCards
             )}
           </View>
         )}
@@ -132,9 +146,7 @@ export function ExploreScreenContent({
                 <Text style={[styles.seeAll, { color: '#8BAA7A' }]}>+ Post →</Text>
               </TouchableOpacity>
             </View>
-            {COMMUNITY_POSTS.slice(0, 2).map((post) => (
-              <CommunityCard key={post.id} post={post} onInvite={() => onInvite()} />
-            ))}
+            {communityCards}
           </View>
         )}
       </ScrollView>

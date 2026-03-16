@@ -79,6 +79,10 @@ export function HomeScreenContent({
   unreadCount: number;
 }) {
   const [cardHeight, setCardHeight] = React.useState(DEFAULT_CARD_HEIGHT);
+  const handleDeckAreaLayout = React.useCallback((event: { nativeEvent: { layout: { height: number } } }) => {
+    const nextHeight = clampCardHeight(event.nativeEvent.layout.height - 2);
+    setCardHeight((current) => (Math.abs(current - nextHeight) > 1 ? nextHeight : current));
+  }, []);
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
@@ -103,10 +107,7 @@ export function HomeScreenContent({
       <View style={styles.deckArea}>
         <View
           style={styles.deckAreaInner}
-          onLayout={(event) => {
-            const nextHeight = clampCardHeight(event.nativeEvent.layout.height - 2);
-            setCardHeight((current) => (Math.abs(current - nextHeight) > 1 ? nextHeight : current));
-          }}
+          onLayout={handleDeckAreaLayout}
         >
           {feed.length === 0 ? (
             <StatePanel

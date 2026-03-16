@@ -17,6 +17,8 @@ export function ChatComposer({
   sending: boolean;
   theme: any;
 }) {
+  const canSend = message.trim().length > 0;
+
   return (
     <View style={[styles.inputBar, { backgroundColor: theme.surfaceGlass, borderTopColor: theme.border }]}>
       <Input
@@ -39,19 +41,19 @@ export function ChatComposer({
       />
       <Pressable
         onPress={onSend}
-        disabled={sending || !message.trim()}
+        disabled={sending || !canSend}
         style={[
           styles.sendBtn,
           {
-            backgroundColor: message.trim() ? theme.primary : theme.surfaceElevated,
-            shadowColor: message.trim() ? theme.primary : 'transparent',
-            shadowOpacity: message.trim() ? 0.4 : 0,
+            backgroundColor: canSend ? theme.primary : theme.surfaceElevated,
+            shadowColor: canSend ? theme.primary : 'transparent',
+            shadowOpacity: canSend ? 0.4 : 0,
             shadowRadius: 8,
             shadowOffset: { width: 0, height: 2 },
           },
         ]}
       >
-        <AppIcon name="arrow-up" size={16} color={message.trim() ? theme.white : theme.textMuted} />
+        <AppIcon name="arrow-up" size={16} color={canSend ? theme.white : theme.textMuted} />
       </Pressable>
     </View>
   );
