@@ -19,5 +19,6 @@ Use this skill to drive BRDG iOS release work from the repo docs instead of re-d
 
 - Treat uncommitted env files and Apple credentials as external prerequisites; do not invent them.
 - Prefer repo-documented commands over generic Expo or Xcode advice when the docs already cover the step.
+- Treat BRDG as an Expo-based app with a local Xcode TestFlight/App Store release path by default; do not infer that Expo login or EAS is required unless the user explicitly asks for EAS.
 - When release state depends on App Store Connect or EAS, say what must be checked live versus what is confirmed from the repo.
 - Update the release docs if you materially change the release workflow.

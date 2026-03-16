@@ -22,6 +22,7 @@ npm run test:mobile
 npm run dev:backend
 npm run dev:mobile
 npm run dev:scenario -- ui-preview
+npm run release:ios
 npm run release:ios:check
 ```
 
@@ -49,7 +50,9 @@ npm run release:ios:check
 - Treat `main` as the source of truth for shippable mobile code unless the user explicitly designates a release branch.
 - Never produce a TestFlight or App Store build from a dirty working tree, a detached `HEAD`, or an unpushed local-only commit.
 - Require a clean `main` or `release/*` branch plus passing backend and mobile checks before recommending or cutting a release build.
-- Prefer [`scripts/release-ios.sh`](/Users/jerry/Desktop/brdg/scripts/release-ios.sh) or `npm run release:ios` over ad hoc release commands.
+- BRDG ships to TestFlight/App Store through local Xcode by default, even though the mobile app uses Expo and the repo contains `eas.json`.
+- Prefer [`scripts/release-ios.sh`](/Users/jerry/Desktop/brdg/scripts/release-ios.sh) or `npm run release:ios` over ad hoc release commands, and assume `xcode` mode unless the user explicitly asks for `eas`.
+- Do not treat missing Expo auth as a blocker for the normal BRDG release path.
 - If local dev output and a shipped build disagree, inspect source and shipped artifacts before proposing fixes.
 - Preserve current bug fixes and API contracts when reapplying older UI states. Restore deltas selectively instead of blanket cherry-picks.
 

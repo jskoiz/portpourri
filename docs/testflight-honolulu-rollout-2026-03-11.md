@@ -29,6 +29,7 @@ Date: 2026-03-11
   - `React.framework`
   - `ReactNativeDependencies.framework`
   - `hermes.framework`
+- The TestFlight upload path for this rollout was local Xcode archive/upload, not Expo/EAS.
 
 ## Build History
 

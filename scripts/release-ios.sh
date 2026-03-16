@@ -7,7 +7,7 @@ MANIFEST_DIR="$MOBILE_DIR/build"
 MANIFEST_PATH="$MANIFEST_DIR/ios-release-manifest.json"
 IOS_DIR="$MOBILE_DIR/ios"
 
-MODE="eas"
+MODE="xcode"
 PROFILE="production"
 CHECK_ONLY=0
 
@@ -17,7 +17,7 @@ Usage: ./scripts/release-ios.sh [--check-only] [--mode eas|xcode] [--profile <na
 
 Options:
   --check-only      Run release preflight and write the manifest, but do not start a build.
-  --mode            Build path to use. Defaults to "eas". Use "xcode" only as fallback.
+  --mode            Build path to use. Defaults to "xcode". Use "eas" only when an Expo/EAS build is explicitly required.
   --profile         EAS profile to use when mode is "eas". Defaults to "production".
   -h, --help        Show this help message.
 EOF

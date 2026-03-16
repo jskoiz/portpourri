@@ -10,8 +10,8 @@
     "dev:backend": "npm --prefix backend run start:dev",
     "dev:mobile": "npm --prefix mobile run start",
     "dev:scenario": "npm --prefix backend run dev:scenario --",
-    "release:ios": "./scripts/release-ios.sh",
-    "release:ios:check": "./scripts/release-ios.sh --check-only",
+    "release:ios": "./scripts/release-ios.sh --mode xcode",
+    "release:ios:check": "./scripts/release-ios.sh --check-only --mode xcode",
     "test:backend": "npm --prefix backend run test",
     "test:mobile": "npm --prefix mobile run test"
   }
