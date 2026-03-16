@@ -15,6 +15,7 @@ export class MatchesService {
   ) {}
 
   async getMatches(userId: string, take: number, skip: number) {
+    const safeTake = Math.min(Math.max(take, 1), 100);
     const matches = await this.prisma.match.findMany({
       where: {
         OR: [{ userAId: userId }, { userBId: userId }],
@@ -59,7 +60,7 @@ export class MatchesService {
         },
       },
       orderBy: { updatedAt: 'desc' },
-      take,
+      take: safeTake,
       skip,
     });
 
@@ -84,13 +85,30 @@ export class MatchesService {
         };
       });
   }
-  async getMessages(matchId: string, userId: string) {
+  async getMessages(
+    matchId: string,
+    userId: string,
+    take = 50,
+    cursor?: string,
+  ) {
     await this.assertMatchAccess(matchId, userId);
 
     const messages = await this.prisma.message.findMany({
       where: { matchId },
+      select: {
+        id: true,
+        body: true,
+        senderId: true,
+        createdAt: true,
+      },
       orderBy: { createdAt: 'desc' },
-      take: 50,
+      take: Math.min(take, 100),
+      ...(cursor
+        ? {
+            skip: 1,
+            cursor: { id: cursor },
+          }
+        : {}),
     });
 
     return messages.reverse().map((msg) => ({
@@ -125,6 +143,11 @@ export class MatchesService {
         senderId: userId,
         body: content,
       },
+      select: {
+        id: true,
+        body: true,
+        createdAt: true,
+      },
     });
 
     // Update match timestamp
@@ -157,6 +180,13 @@ export class MatchesService {
   private async assertMatchAccess(matchId: string, userId: string) {
     const match = await this.prisma.match.findUnique({
       where: { id: matchId },
+      select: {
+        id: true,
+        userAId: true,
+        userBId: true,
+        isBlocked: true,
+        isArchived: true,
+      },
     });
 
     if (

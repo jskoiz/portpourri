@@ -57,6 +57,13 @@ export class ProfileService {
         photos: {
           where: { isHidden: false },
           orderBy: { sortOrder: 'asc' },
+          select: {
+            id: true,
+            storageKey: true,
+            isPrimary: true,
+            sortOrder: true,
+            createdAt: true,
+          },
         },
       },
     });

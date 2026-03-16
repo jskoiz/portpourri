@@ -57,8 +57,16 @@ export class MatchesController {
   async getMessages(
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
+    @Query('take') take?: string,
+    @Query('cursor') cursor?: string,
   ) {
-    return this.matchesService.getMessages(id, req.user.id);
+    const parsedTake = take ? Number.parseInt(take, 10) : NaN;
+    return this.matchesService.getMessages(
+      id,
+      req.user.id,
+      Number.isNaN(parsedTake) ? 50 : parsedTake,
+      cursor || undefined,
+    );
   }
 
   @Sse(':id/messages/stream')
