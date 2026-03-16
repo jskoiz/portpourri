@@ -1,4 +1,5 @@
 import { Controller, Get, Post, UseGuards, Request, Param, Query } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { DiscoveryService, type DiscoveryFilters } from './discovery.service';
 import { AuthGuard } from '@nestjs/passport';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
@@ -75,6 +76,7 @@ export class DiscoveryController {
     );
   }
 
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @Post('like/:id')
   async likeUser(
     @Request() req: AuthenticatedRequest,
@@ -83,6 +85,7 @@ export class DiscoveryController {
     return this.discoveryService.likeUser(req.user.id, id);
   }
 
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @Post('pass/:id')
   async passUser(
     @Request() req: AuthenticatedRequest,
