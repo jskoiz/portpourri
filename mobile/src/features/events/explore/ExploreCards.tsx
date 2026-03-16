@@ -40,10 +40,10 @@ export function EventCard({
           {(event.category || statusLabel) && (
             <View style={styles.bannerBadgeRow}>
               {!!event.category && (
-                <Chip label={event.category.toUpperCase()} active interactive={false} style={styles.categoryBadge as any} textStyle={styles.categoryBadgeText as any} />
+                <Chip label={event.category.toUpperCase()} active interactive={false} style={styles.categoryBadge} textStyle={styles.categoryBadgeText} />
               )}
               {statusLabel ? (
-                <Chip label={statusLabel.toUpperCase()} active interactive={false} style={[styles.categoryBadge, styles.stateBadge] as any} textStyle={styles.categoryBadgeText as any} />
+                <Chip label={statusLabel.toUpperCase()} active interactive={false} style={[styles.categoryBadge, styles.stateBadge]} textStyle={styles.categoryBadgeText} />
               ) : null}
             </View>
           )}
@@ -109,7 +109,7 @@ export function CommunityCard({
           </View>
           <View style={styles.communityMeta}>
             <Text style={styles.communityUser}>{post.user}</Text>
-            <Chip label={post.activity} active interactive={false} accentColor={post.color} style={[styles.activityPill, { backgroundColor: post.color + '18', borderColor: post.color + '40' }] as any} textStyle={[styles.activityPillText, { color: post.color }] as any} />
+            <Chip label={post.activity} active interactive={false} accentColor={post.color} style={[styles.activityPill, { backgroundColor: post.color + '18', borderColor: post.color + '40' }]} textStyle={[styles.activityPillText, { color: post.color }]} />
           </View>
           <View style={styles.spotsBadge}>
             <Text style={styles.spotsBadgeText}>{post.spots} open</Text>

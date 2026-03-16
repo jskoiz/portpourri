@@ -18,7 +18,7 @@ import { STORAGE_KEYS } from '../../constants/storage';
 
 const mockSecureStore = SecureStore as jest.Mocked<typeof SecureStore>;
 
-async function requestInterceptor(config: any): Promise<any> {
+async function requestInterceptor(config: { headers: Record<string, string> }): Promise<{ headers: Record<string, string> }> {
   if (!config.headers.Authorization) {
     const token = await SecureStore.getItemAsync(STORAGE_KEYS.accessToken);
     if (token) {

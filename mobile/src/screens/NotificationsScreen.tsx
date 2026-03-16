@@ -16,6 +16,7 @@ import AppBackdrop from '../components/ui/AppBackdrop';
 import AppIcon from '../components/ui/AppIcon';
 import { StatePanel } from '../design/primitives';
 import { useTheme } from '../theme/useTheme';
+import type { Theme } from '../theme/tokens';
 import { radii, spacing, typography } from '../theme/tokens';
 import { useNotifications } from '../features/notifications/hooks/useNotifications';
 import type { RootStackScreenProps } from '../core/navigation/types';
@@ -55,7 +56,7 @@ function NotifRow({
   onMarkRead,
 }: {
   notif: AppNotification;
-  theme: any;
+  theme: Theme;
   onMarkRead: (id: string) => void;
 }) {
   const { color, icon } = getNotificationMeta(notif.type);

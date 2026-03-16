@@ -3,12 +3,15 @@ import {
   ActivityIndicator,
   Animated,
   ImageBackground,
+  type NativeSyntheticEvent,
   Pressable,
   type StyleProp,
   Text,
   TextInput,
   StyleSheet,
+  type TextInputFocusEventData,
   type TextInputProps,
+  type TextStyle,
   View,
   type ViewStyle,
 } from 'react-native';
@@ -20,15 +23,15 @@ import { GlassView } from './GlassView';
 export { GlassView } from './GlassView';
 export type { GlassViewProps } from './GlassView';
 
-const StackPrimitive = View as React.ComponentType<any>;
-const InlinePrimitive = View as React.ComponentType<any>;
-const TextPrimitive = Text as React.ComponentType<any>;
+const StackPrimitive = View;
+const InlinePrimitive = View;
+const TextPrimitive = Text;
 
 export function Screen({
   children,
   padding = 16,
 }: PropsWithChildren<{ padding?: number }>) {
-  return <StackPrimitive flex={1} style={{ padding }}>{children}</StackPrimitive>;
+  return <StackPrimitive style={{ flex: 1, padding }}>{children}</StackPrimitive>;
 }
 
 export const AppStack = StackPrimitive;
@@ -236,12 +239,12 @@ export function Input({
   const theme = useTheme();
   const focusAnim = useRef(new Animated.Value(0)).current;
 
-  const handleFocus = (event: any) => {
+  const handleFocus = (event: NativeSyntheticEvent<TextInputFocusEventData>) => {
     Animated.timing(focusAnim, { toValue: 1, duration: 180, useNativeDriver: false }).start();
     onFocus?.(event);
   };
 
-  const handleBlur = (event: any) => {
+  const handleBlur = (event: NativeSyntheticEvent<TextInputFocusEventData>) => {
     Animated.timing(focusAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
     onBlur?.(event);
   };
@@ -315,8 +318,8 @@ export function Chip({
   interactive?: boolean;
   label: string;
   onPress?: () => void;
-  style?: ViewStyle;
-  textStyle?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
 }) {
   const theme = useTheme();
   const color = accentColor ?? theme.primary;
@@ -332,7 +335,7 @@ export function Chip({
         style,
       ]}
     >
-      <Text style={[primitiveStyles.chipText, { color: active ? color : theme.textMuted }, textStyle as any]}>{label}</Text>
+      <Text style={[primitiveStyles.chipText, { color: active ? color : theme.textMuted }, textStyle]}>{label}</Text>
     </Pressable>
   );
 }

@@ -199,7 +199,17 @@ export class AuthService {
     };
   }
 
-  async getCurrentUser(userId: string) {
+  async getCurrentUser(userId: string): Promise<{
+    id: string;
+    email: string | null;
+    firstName: string;
+    birthdate: Date | null;
+    gender: Gender;
+    pronouns: string | null;
+    isOnboarded: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, isDeleted: false, isBanned: false },
       select: {

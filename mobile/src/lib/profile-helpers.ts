@@ -1,3 +1,5 @@
+import type { User } from '../api/types';
+
 const ACTIVITY_TAGS: Record<string, string> = {
   strength: 'Strength',
   weight_loss: 'Conditioning',
@@ -14,13 +16,13 @@ export function formatProfileLabel(value: string): string {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export function getActivityTag(user: any): string {
+export function getActivityTag(user: Pick<User, 'fitnessProfile'> | null | undefined): string {
   const goal = user?.fitnessProfile?.primaryGoal;
   if (!goal) return '';
   return ACTIVITY_TAGS[goal] || goal;
 }
 
-export function getProfileChips(user: any): string[] {
+export function getProfileChips(user: Pick<User, 'fitnessProfile'> | null | undefined): string[] {
   const chips: string[] = [];
 
   const favoriteActivity = user?.fitnessProfile?.favoriteActivities
@@ -41,19 +43,19 @@ export function getProfileChips(user: any): string[] {
   return chips.slice(0, 2);
 }
 
-export function getIntentLabel(user: any): string {
+export function getIntentLabel(user: Pick<User, 'profile'> | null | undefined): string {
   if (user?.profile?.intentDating && user?.profile?.intentWorkout) return 'Open to both';
   if (user?.profile?.intentDating) return 'Dating';
   if (user?.profile?.intentWorkout) return 'Training';
   return 'Open to both';
 }
 
-export function getPresenceLabel(user: any): string {
+export function getPresenceLabel(user: Pick<User, 'profile'> | null | undefined): string {
   if (user?.profile?.city) return 'Available tonight';
   return 'Nearby now';
 }
 
-export function getTempoLabel(user: any): string {
+export function getTempoLabel(user: Pick<User, 'fitnessProfile'> | null | undefined): string {
   const frequency = user?.fitnessProfile?.weeklyFrequencyBand;
   const intensity = user?.fitnessProfile?.intensityLevel;
   const frequencyLabel = frequency ? `${frequency}x/week` : null;

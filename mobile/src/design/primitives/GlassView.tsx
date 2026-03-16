@@ -18,7 +18,7 @@ import {
 
 // Detect if expo-blur native module is available at runtime.
 // In Expo Go or certain builds, the native view may not be registered.
-let BlurViewComponent: React.ComponentType<any> | null = null;
+let BlurViewComponent: React.ComponentType<{ intensity: number; tint: string; style: StyleProp<ViewStyle> }> | null = null;
 try {
   const hasNativeModule =
     Platform.OS === 'ios' &&

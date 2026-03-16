@@ -36,7 +36,7 @@ describe('connectMatchMessageStream', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     MockEventSource.instances = [];
-    (globalThis as any).EventSource = MockEventSource;
+    (globalThis as unknown as { EventSource: typeof MockEventSource }).EventSource = MockEventSource;
   });
 
   it('uses the secure-store token when opening the realtime stream', async () => {

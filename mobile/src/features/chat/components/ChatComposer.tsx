@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, View } from 'react-native';
 import AppIcon from '../../../components/ui/AppIcon';
 import { GlassView, Input } from '../../../design/primitives';
+import type { Theme } from '../../../theme/tokens';
 import { chatStyles as styles } from './chat.styles';
 
 export function ChatComposer({
@@ -15,7 +16,7 @@ export function ChatComposer({
   onChangeMessage: (value: string) => void;
   onSend: () => void;
   sending: boolean;
-  theme: any;
+  theme: Theme;
 }) {
   const canSend = message.trim().length > 0;
 

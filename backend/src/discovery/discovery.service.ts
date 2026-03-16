@@ -346,19 +346,20 @@ export class DiscoveryService {
     toLon?: number | null,
   ): number | null {
     if (
-      [fromLat, fromLon, toLat, toLon].some(
-        (value) => value === null || value === undefined,
-      )
+      fromLat == null ||
+      fromLon == null ||
+      toLat == null ||
+      toLon == null
     )
       return null;
 
     const toRad = (value: number) => (value * Math.PI) / 180;
-    const dLat = toRad((toLat as number) - (fromLat as number));
-    const dLon = toRad((toLon as number) - (fromLon as number));
+    const dLat = toRad(toLat - fromLat);
+    const dLon = toRad(toLon - fromLon);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(fromLat as number)) *
-        Math.cos(toRad(toLat as number)) *
+      Math.cos(toRad(fromLat)) *
+        Math.cos(toRad(toLat)) *
         Math.sin(dLon / 2) *
         Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));

@@ -15,7 +15,7 @@ jest.mock('../../components/form/DateField', () => {
   const { Pressable, Text, View } = require('react-native');
 
   return {
-    DateField: ({ label, onChange, placeholder, value }: any) => (
+    DateField: ({ label, onChange, placeholder, value }: { label: string; onChange: (v: string) => void; placeholder: string; value: string }) => (
       <View>
         <Text>{label}</Text>
         <Pressable onPress={() => onChange('1995-02-03')}>
