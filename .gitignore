@@ -18,6 +18,8 @@ build/
 dist/
 .next/
 artifacts/harness/
+.symphony/
+symphony/dist/
 
 # mobile
 *.apk

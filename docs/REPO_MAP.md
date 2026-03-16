@@ -37,6 +37,9 @@ Change mobile when the task touches app UX, feature modules, Storybook coverage,
 ## Harness Surfaces
 
 - [`HARNESS.md`](HARNESS.md): command selection, validation lanes, policy rules
+- [`../WORKFLOW.md`](../WORKFLOW.md): repo-owned Symphony orchestration contract
+- [`SYMPHONY.md`](SYMPHONY.md): BRDG Symphony service usage and runtime notes
+- [`SYMPHONY_SETUP.md`](SYMPHONY_SETUP.md): BRDG-specific Symphony setup notes
 - [`DEV_LOOP.md`](DEV_LOOP.md): day-to-day startup and troubleshooting
 - [`STORYBOOK_WORKFLOW.md`](STORYBOOK_WORKFLOW.md): isolated mobile visual workflow
 - [`APP_STORE_RELEASE.md`](APP_STORE_RELEASE.md): mobile release provenance and submission checklist

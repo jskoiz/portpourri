@@ -7,6 +7,7 @@ Start with [`REPO_MAP.md`](./REPO_MAP.md) for fast navigation and [`HARNESS.md`]
 - `mobile/` — Expo React Native client
 - `backend/` — NestJS API + Prisma
 - `docs/` — project documentation and conventions
+- `symphony/` — TypeScript issue-orchestration service for Linear -> workspace -> Codex runs
 
 ## Mobile Architecture (`mobile/src`)
 
