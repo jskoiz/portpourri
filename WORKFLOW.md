@@ -23,7 +23,7 @@ hooks:
     SOURCE_REPO_URL="${SOURCE_REPO_URL:-https://github.com/jskoiz/brdg.git}"
     git clone --origin origin --depth 1 "$SOURCE_REPO_URL" .
     git fetch origin main --depth 1
-    ./.codex/worktree_init.sh
+    bash ./.codex/worktree_init.sh
 agent:
   max_concurrent_agents: 4
   max_turns: 20
