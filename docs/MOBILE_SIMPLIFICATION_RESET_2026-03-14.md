@@ -2,6 +2,8 @@
 
 Date: 2026-03-14
 
+> Historical snapshot: Phase 3 shipped after this reset and completed the profile editing, photo-management, and shared bottom-sheet rollout work that was still listed as pending here on March 14, 2026.
+
 ## Goal
 
 This pass implemented the agreed simplification baseline for BRDG:

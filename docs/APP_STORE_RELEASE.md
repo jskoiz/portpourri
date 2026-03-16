@@ -48,6 +48,7 @@ Before any production or TestFlight archive:
 - Do not build from a detached `HEAD`.
 - Do not build from local-only, unpushed commits.
 - Record the exact branch, full git SHA, app version, iOS build number, API URL, and build date in the release notes or handoff.
+- Keep the release notes tied to the exact attached TestFlight/App Store artifact; do not reuse notes from an older build after Phase 3 profile/photo changes land.
 
 The script blocks release if any of these conditions fail:
 
@@ -79,6 +80,33 @@ If building locally with Xcode instead of EAS, treat it as a fallback path only 
 
 - `npm run check` in [`mobile`](/Users/jerry/Desktop/brdg/mobile)
 - `npm run check:full` in [`backend`](/Users/jerry/Desktop/brdg/backend)
+- `npm run smoke` from repo root so the backend bootstrap, `ui-preview` scenario reset, and mobile launch prerequisites all pass together
 - Verify signup, login, onboarding, profile load, discovery feed, chat, event creation, RSVP, notifications, logout, and account deletion against the production API
 - Verify the authenticated runtime surfaces for Discover, Explore, Create, Inbox, and You. Preview routes are useful, but they do not replace runtime verification.
-- Open the in-app build provenance panel in the You/Profile screen and confirm branch, git SHA, version/build number, API URL, and build date match the release manifest.
+- Open the in-app build provenance panel in the You/Profile screen and confirm branch, git SHA, version/build number, API URL, and build date match both the release manifest and the build being attached in App Store Connect/TestFlight.
+
+## Phase 3 release QA focus
+
+Run this against a clean release candidate after the automated checks pass:
+
+1. Seed a known-good local runtime with `npm run dev:scenario -- ui-preview` when validating against local services, or use the intended production/staging account path when validating a release candidate against a hosted backend.
+2. Sign in and validate the full You/Profile editing path:
+   - enter edit mode
+   - change city, bio, and intent toggles
+   - save
+   - force a refresh or re-open the screen and confirm the saved values persist
+3. Validate profile photo management:
+   - upload a new photo
+   - set a new primary photo
+   - reorder photos left/right
+   - delete a non-primary photo
+   - confirm the final photo order and primary image survive refresh
+4. Confirm downstream propagation after profile edits:
+   - updated primary photo appears in profile, matches/chat surfaces, and discovery/detail cards where applicable
+   - updated city/bio values appear anywhere the app renders the signed-in user summary
+5. Validate every shared bottom-sheet interaction changed in Phase 3:
+   - discovery filters
+   - explore quick actions
+   - create activity/timing substeps
+   - chat quick-action suggestions
+6. Re-open the build provenance panel before handoff and confirm the metadata still matches the release manifest after the final build command.

@@ -12,6 +12,10 @@ Current suite focus:
 - profile save flow
 - shared primitive regression coverage
 
+Release/readiness note:
+- the Jest suite does not replace the seeded runtime QA path for Phase 3 profile photo management or bottom-sheet interactions
+- use repo-root `npm run smoke` plus `npm run dev:scenario -- ui-preview` when validating release candidates locally
+
 ## Run locally
 
 From `mobile/`:
@@ -39,5 +43,5 @@ npm run storybook:start
 
 1. profile photo-management edge cases and failure states
 2. bottom-sheet module stories for explore/chat/create
-3. integrated seeded QA passes against the running backend
+3. stronger assertions around build provenance rendering in the profile screen
 4. auth store persistence behavior (`loadToken`, invalid token fallback)

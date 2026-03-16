@@ -30,3 +30,5 @@ This matrix tracks the visible MVP surfaces and whether each user-facing action 
 - No visible CTA should point to mock-only behavior without being labeled as editorial.
 - Storybook is valid for component verification, but runtime claims still need authenticated app checks.
 - `npm run smoke` is the minimum local regression gate before release or TestFlight promotion.
+- Release QA must explicitly cover Phase 3 profile edits, profile photo mutations, and the sheet-driven discovery/explore/create/chat flows before submission.
+- The seeded `ui-preview` scenario is the canonical local runtime for deterministic release/readiness checks; rerun it after backend restarts.

@@ -20,6 +20,7 @@ npm run dev:backend
 ```
 
 `dev:bootstrap` starts local Postgres and Redis, waits for the database, runs migrations, and seeds the baseline dataset.
+It reuses the canonical BRDG Docker project so dedicated worktrees can share the same local infra containers cleanly.
 
 ## Common Commands
 
@@ -66,6 +67,17 @@ npm run dev:scenario -- ui-preview
 ```
 
 This script assumes the backend is already running. It recreates fixed preview users, a match, chat history, notifications, and an event RSVP flow. Because notifications are stored in-memory today, rerun the scenario after restarting the backend.
+Seeded credentials:
+
+- `preview.lana@brdg.local` / `PreviewPass123!`
+- `preview.mason@brdg.local` / `PreviewPass123!`
+- `preview.niko@brdg.local` / `PreviewPass123!`
+
+Use this path for current release/readiness QA when validating:
+
+- profile field edits (`PUT /profile`, `PUT /profile/fitness`)
+- photo upload, reorder, primary selection, and delete flows
+- downstream refresh behavior in discovery, matches, and chat after profile mutations
 
 ## References
 

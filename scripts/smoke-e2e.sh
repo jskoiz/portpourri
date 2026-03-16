@@ -29,20 +29,20 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "[1/5] Backend bootstrap (db up/wait/migrate/seed)"
+echo "[1/6] Backend bootstrap (db up/wait/migrate/seed)"
 (
   cd "$BACKEND_DIR"
   npm run dev:bootstrap
 )
 
-echo "[2/5] Start backend"
+echo "[2/6] Start backend"
 (
   cd "$BACKEND_DIR"
   npm run start:dev >"$BACKEND_LOG" 2>&1
 ) &
 BACKEND_PID=$!
 
-echo "[3/5] Wait for backend @ $API_BASE_URL"
+echo "[3/6] Wait for backend @ $API_BASE_URL"
 for _ in {1..45}; do
   if curl -fsS "$API_BASE_URL" >/dev/null 2>&1; then
     break
@@ -56,12 +56,18 @@ if ! curl -fsS "$API_BASE_URL" >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "[4/5] Mobile launch prerequisites"
+echo "[4/6] Reset seeded UI preview scenario"
+(
+  cd "$BACKEND_DIR"
+  npm run dev:scenario -- ui-preview
+)
+
+echo "[5/6] Mobile launch prerequisites"
 (
   cd "$MOBILE_DIR"
   npx expo-doctor
   npm run typecheck
 )
 
-echo "[5/5] Smoke complete"
+echo "[6/6] Smoke complete"
 echo "Backend log: $BACKEND_LOG"

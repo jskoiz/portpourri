@@ -2,6 +2,7 @@
 
 > Historical snapshot from the March 12, 2026 App Store Connect sync.
 > Verify live App Store Connect values before shipping. The attached-build details below do not automatically reflect the current TestFlight build.
+> Before the next submission, re-check that screenshots and review notes still match the post-Phase-3 profile editing, photo-management, and bottom-sheet behavior.
 
 Last updated: March 12, 2026
 
