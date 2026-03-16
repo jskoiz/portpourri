@@ -28,7 +28,7 @@ describe('authStore', () => {
   });
 
   describe('deleteAccount', () => {
-    it('clears token from AsyncStorage and clears in-memory session on success', async () => {
+    it('clears token from secure storage and clears in-memory session on success', async () => {
       mockAuthApi.deleteAccount.mockResolvedValueOnce({ data: undefined } as any);
       mockSecureStore.deleteItemAsync.mockResolvedValueOnce(undefined);
 
@@ -58,7 +58,7 @@ describe('authStore', () => {
       expect(mockSecureStore.deleteItemAsync).not.toHaveBeenCalled();
     });
 
-    it('still clears in-memory session even when AsyncStorage.removeItem throws', async () => {
+    it('still clears in-memory session even when secure storage deletion throws', async () => {
       mockAuthApi.deleteAccount.mockResolvedValueOnce({ data: undefined } as any);
       mockSecureStore.deleteItemAsync.mockRejectedValueOnce(new Error('Storage unavailable'));
 
@@ -75,7 +75,7 @@ describe('authStore', () => {
   });
 
   describe('logout', () => {
-    it('removes token from AsyncStorage and clears session', async () => {
+    it('removes token from secure storage and clears session', async () => {
       mockSecureStore.deleteItemAsync.mockResolvedValueOnce(undefined);
 
       useAuthStore.setState({ token: 'tok', user: { id: 'u1' } });

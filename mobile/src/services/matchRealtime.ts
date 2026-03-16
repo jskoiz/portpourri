@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { env } from '../config/env';
 import { STORAGE_KEYS } from '../constants/storage';
 
@@ -36,7 +36,7 @@ export async function connectMatchMessageStream(
     return () => undefined;
   }
 
-  const token = await AsyncStorage.getItem(STORAGE_KEYS.accessToken);
+  const token = await SecureStore.getItemAsync(STORAGE_KEYS.accessToken);
   if (!token) {
     handlers.onStatus('fallback');
     return () => undefined;
