@@ -457,6 +457,53 @@ describe('DiscoveryService', () => {
     expect(prismaMock.like.create).not.toHaveBeenCalled();
   });
 
+  it('creates a pass record and clears any existing like', async () => {
+    prismaMock.pass.findUnique.mockResolvedValue(null);
+    prismaMock.like.deleteMany.mockResolvedValue({ count: 0 });
+    prismaMock.pass.create.mockResolvedValue({ id: 'pass-1' });
+
+    const result = await service.passUser('user-1', 'user-2');
+
+    expect(result).toEqual({ status: 'passed' });
+    expect(prismaMock.like.deleteMany).toHaveBeenCalledWith({
+      where: { fromUserId: 'user-1', toUserId: 'user-2' },
+    });
+    expect(prismaMock.pass.create).toHaveBeenCalledWith({
+      data: { fromUserId: 'user-1', toUserId: 'user-2' },
+    });
+  });
+
+  it('returns already_passed status when pass exists', async () => {
+    prismaMock.pass.findUnique.mockResolvedValue({ id: 'existing-pass' });
+
+    const result = await service.passUser('user-1', 'user-2');
+
+    expect(result).toEqual({ status: 'already_passed' });
+    expect(prismaMock.pass.create).not.toHaveBeenCalled();
+  });
+
+  it('returns nothing_to_undo when no swipes exist', async () => {
+    prismaMock.like.findFirst.mockResolvedValue(null);
+    prismaMock.pass.findFirst.mockResolvedValue(null);
+
+    const result = await service.undoLastSwipe('user-1');
+
+    expect(result).toEqual({ status: 'nothing_to_undo' });
+  });
+
+  it('returns liked status when no mutual like exists', async () => {
+    prismaMock.like.findUnique
+      .mockResolvedValueOnce(null) // no existing like from user-1 to user-2
+      .mockResolvedValueOnce(null); // no mutual like from user-2 to user-1
+    prismaMock.pass.deleteMany.mockResolvedValue({ count: 0 });
+    prismaMock.like.create.mockResolvedValue({ id: 'like-1' });
+
+    const result = await service.likeUser('user-1', 'user-2');
+
+    expect(result).toEqual({ status: 'liked' });
+    expect(prismaMock.match.upsert).not.toHaveBeenCalled();
+  });
+
   it('undoes most recent pass swipe', async () => {
     prismaMock.like.findFirst.mockResolvedValue(null);
     prismaMock.pass.findFirst.mockResolvedValue({

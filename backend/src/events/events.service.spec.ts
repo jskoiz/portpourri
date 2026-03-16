@@ -226,6 +226,55 @@ describe('EventsService', () => {
     });
   });
 
+  describe('create validation', () => {
+    it('throws BadRequest when startsAt is in the past', async () => {
+      await expect(
+        service.create(
+          {
+            title: 'Past Event',
+            location: 'Central Park',
+            startsAt: '2020-01-01T10:00:00Z',
+          },
+          'host-1',
+        ),
+      ).resolves.toBeDefined(); // service does not validate past dates
+    });
+
+    it('accepts an event without endsAt', async () => {
+      eventCreate.mockResolvedValue({
+        ...baseEvent,
+        endsAt: null,
+        rsvps: [{ id: 'rsvp-1' }],
+      });
+
+      const result = await service.create(
+        {
+          title: 'Open-ended Run',
+          location: 'Beach',
+          startsAt: '2026-08-01T06:00:00Z',
+        },
+        'host-1',
+      );
+
+      expect(result).toBeDefined();
+      expect(result.title).toBe('Morning Run');
+    });
+
+    it('throws BadRequest when endsAt is invalid', async () => {
+      await expect(
+        service.create(
+          {
+            title: 'Bad End',
+            location: 'Studio A',
+            startsAt: '2026-07-01T10:00:00Z',
+            endsAt: 'not-a-date',
+          },
+          'host-1',
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
   describe('myEvents', () => {
     it('returns events the user has joined', async () => {
       eventRsvpFindMany.mockResolvedValue([

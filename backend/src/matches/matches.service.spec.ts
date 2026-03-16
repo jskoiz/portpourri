@@ -246,6 +246,59 @@ describe('MatchesService realtime', () => {
     expect(messages[1].id).toBe('msg-2');
   });
 
+  it('rejects message sends for non-existent matches with a forbidden error', async () => {
+    jest.mocked(prisma.match.findUnique).mockResolvedValue(null);
+
+    await expect(
+      service.sendMessage('missing-match', 'user-1', 'hey'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(jest.mocked(prisma.message.create)).not.toHaveBeenCalled();
+  });
+
+  it('rejects message sends from non-participant users', async () => {
+    jest.mocked(prisma.match.findUnique).mockResolvedValue({
+      id: 'match-1',
+      userAId: 'user-1',
+      userBId: 'user-2',
+      isBlocked: false,
+    } as any);
+
+    await expect(
+      service.sendMessage('match-1', 'user-3', 'hey'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(jest.mocked(prisma.message.create)).not.toHaveBeenCalled();
+  });
+
+  it('filters out deleted/banned users from getMatches', async () => {
+    jest.mocked(prisma.match.findMany).mockResolvedValue([
+      {
+        id: 'match-1',
+        createdAt: new Date('2026-03-01T00:00:00.000Z'),
+        userAId: 'user-1',
+        userBId: 'user-2',
+        userA: {
+          id: 'user-1',
+          firstName: 'Self',
+          isDeleted: false,
+          isBanned: false,
+          photos: [],
+        },
+        userB: {
+          id: 'user-2',
+          firstName: 'Deleted',
+          isDeleted: true,
+          isBanned: false,
+          photos: [],
+        },
+        messages: [],
+      },
+    ] as any);
+
+    const result = await service.getMatches('user-1', 20, 0);
+
+    expect(result).toHaveLength(0);
+  });
+
   it.each([
     {
       label: 'message reads',

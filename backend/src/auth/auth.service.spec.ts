@@ -398,6 +398,67 @@ describe('AuthService', () => {
     });
   });
 
+  it('rejects login when the user is not found', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.login({ email: 'nobody@example.com', password: 'password123' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(jwtServiceMock.sign).not.toHaveBeenCalled();
+  });
+
+  it('rejects login when the password does not match', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'user-1',
+      email: 'test@example.com',
+      passwordHash: 'stored-hash',
+      isOnboarded: true,
+    });
+    mockedCompare.mockImplementation(async () => false);
+
+    await expect(
+      service.login({ email: 'test@example.com', password: 'wrong' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(jwtServiceMock.sign).not.toHaveBeenCalled();
+  });
+
+  it('rejects login when passwordHash is null (social-only account)', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'user-1',
+      email: 'social@example.com',
+      passwordHash: null,
+      isOnboarded: true,
+    });
+
+    await expect(
+      service.login({ email: 'social@example.com', password: 'password123' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(mockedCompare).not.toHaveBeenCalled();
+  });
+
+  it('returns the current user when found', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'user-1',
+      email: 'test@example.com',
+      firstName: 'Test',
+      isOnboarded: true,
+    });
+
+    const result = await service.getCurrentUser('user-1');
+    expect(result).toMatchObject({ id: 'user-1', email: 'test@example.com' });
+  });
+
+  it('rejects getCurrentUser for deleted or unknown users', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.getCurrentUser('deleted-user'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
   it('matches legacy mixed-case emails during login lookup', async () => {
     prismaMock.user.findFirst.mockResolvedValue({
       id: 'user-1',

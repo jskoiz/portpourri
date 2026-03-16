@@ -121,6 +121,32 @@ describe('DiscoveryController', () => {
     expect(discoveryServiceMock.undoLastSwipe).toHaveBeenCalledWith('user-1');
   });
 
+  it('delegates pass action to discovery service', async () => {
+    const req = {
+      user: { id: 'user-1', email: 'u@example.com' },
+    } as AuthenticatedRequest;
+    discoveryServiceMock.passUser.mockResolvedValue({ status: 'passed' });
+
+    await expect(controller.passUser(req, 'user-2')).resolves.toEqual({
+      status: 'passed',
+    });
+    expect(discoveryServiceMock.passUser).toHaveBeenCalledWith(
+      'user-1',
+      'user-2',
+    );
+  });
+
+  it('propagates service errors from like action', async () => {
+    const req = {
+      user: { id: 'user-1', email: 'u@example.com' },
+    } as AuthenticatedRequest;
+    discoveryServiceMock.likeUser.mockRejectedValue(new Error('DB error'));
+
+    await expect(controller.likeUser(req, 'user-2')).rejects.toThrow(
+      'DB error',
+    );
+  });
+
   it('delegates profile completeness lookup to discovery service', async () => {
     const req = {
       user: { id: 'user-1', email: 'u@example.com' },

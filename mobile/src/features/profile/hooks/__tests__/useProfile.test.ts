@@ -1,0 +1,91 @@
+import { renderHook, waitFor } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import React from 'react';
+import { useProfile } from '../useProfile';
+
+const mockGetProfile = jest.fn();
+const mockUpdateFitness = jest.fn();
+const mockUpdateProfile = jest.fn();
+const mockUploadPhoto = jest.fn();
+const mockUpdatePhoto = jest.fn();
+const mockDeletePhoto = jest.fn();
+
+jest.mock('../../../../services/api', () => ({
+  profileApi: {
+    getProfile: (...args: unknown[]) => mockGetProfile(...args),
+    updateFitness: (...args: unknown[]) => mockUpdateFitness(...args),
+    updateProfile: (...args: unknown[]) => mockUpdateProfile(...args),
+    uploadPhoto: (...args: unknown[]) => mockUploadPhoto(...args),
+    updatePhoto: (...args: unknown[]) => mockUpdatePhoto(...args),
+    deletePhoto: (...args: unknown[]) => mockDeletePhoto(...args),
+  },
+}));
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  return ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children);
+}
+
+describe('useProfile', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('returns profile data on success', async () => {
+    const profile = { id: 'u1', firstName: 'Alice', age: 28 };
+    mockGetProfile.mockResolvedValue({ data: profile });
+
+    const { result } = renderHook(() => useProfile(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.profile).toEqual(profile);
+  });
+
+  it('returns null profile on API failure', async () => {
+    mockGetProfile.mockRejectedValue(new Error('Network error'));
+
+    const { result } = renderHook(() => useProfile(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.profile).toBeNull();
+  });
+
+  it('starts in loading state', () => {
+    mockGetProfile.mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderHook(() => useProfile(), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.profile).toBeNull();
+  });
+
+  it('exposes mutation helpers', async () => {
+    mockGetProfile.mockResolvedValue({ data: { id: 'u1' } });
+
+    const { result } = renderHook(() => useProfile(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(typeof result.current.updateFitness).toBe('function');
+    expect(typeof result.current.updateProfile).toBe('function');
+    expect(typeof result.current.uploadPhoto).toBe('function');
+    expect(typeof result.current.updatePhoto).toBe('function');
+    expect(typeof result.current.deletePhoto).toBe('function');
+  });
+});
