@@ -28,8 +28,8 @@ export function ExploreCategoryBar({
             onPress={() => onSelectCategory(category)}
             active={active}
             label={category}
-            accentColor="#7C6AF7"
-            textStyle={[styles.categoryPillText, { color: active ? '#7C6AF7' : '#94A3B8' }] as any}
+            accentColor="#C4A882"
+            textStyle={[styles.categoryPillText, { color: active ? '#C4A882' : '#B0A89E' }] as any}
           />
         );
       })}

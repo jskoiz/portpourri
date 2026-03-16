@@ -67,7 +67,7 @@ export function ExploreScreenContent({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing && !isLoading} onRefresh={onRefresh} tintColor="#7C6AF7" />
+          <RefreshControl refreshing={isRefreshing && !isLoading} onRefresh={onRefresh} tintColor="#C4A882" />
         }
       >
         <ExploreHero
@@ -129,7 +129,7 @@ export function ExploreScreenContent({
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Community</Text>
               <TouchableOpacity onPress={onOpenCreate}>
-                <Text style={[styles.seeAll, { color: '#34D399' }]}>+ Post →</Text>
+                <Text style={[styles.seeAll, { color: '#8BAA7A' }]}>+ Post →</Text>
               </TouchableOpacity>
             </View>
             {COMMUNITY_POSTS.slice(0, 2).map((post) => (

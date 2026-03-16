@@ -50,7 +50,7 @@ export default function AppSelect({
   return (
     <View style={[styles.wrapper, wrapperStyle]}>
       {label ? (
-        <Text style={[styles.label, { color: '#64748B' }]}>{label}</Text>
+        <Text style={[styles.label, { color: '#7A7068' }]}>{label}</Text>
       ) : null}
       <Pressable
         accessibilityRole="button"
@@ -68,13 +68,13 @@ export default function AppSelect({
         <Text
           style={[
             styles.triggerText,
-            { color: selectedOption ? '#1A1A1A' : '#94A3B8' },
+            { color: selectedOption ? '#2C2420' : '#B0A89E' },
           ]}
           numberOfLines={1}
         >
           {selectedOption?.label ?? placeholder}
         </Text>
-        <Text style={[styles.chevron, { color: '#94A3B8' }]}>
+        <Text style={[styles.chevron, { color: '#B0A89E' }]}>
           {open ? '▲' : '▼'}
         </Text>
       </Pressable>
@@ -94,13 +94,13 @@ export default function AppSelect({
                   }}
                   style={[
                     styles.option,
-                    selected && { backgroundColor: 'rgba(124,106,247,0.08)' },
+                    selected && { backgroundColor: 'rgba(196,168,130,0.10)' },
                   ]}
                 >
                   <Text
                     style={[
                       styles.optionText,
-                      { color: selected ? theme.primary : '#1A1A1A' },
+                      { color: selected ? theme.primary : '#2C2420' },
                     ]}
                   >
                     {option.label}

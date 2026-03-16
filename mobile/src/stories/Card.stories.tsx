@@ -8,7 +8,7 @@ const meta = {
   component: Card,
   decorators: [
     (Story) => (
-      <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#F8F7F4' }}>
+      <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#FDFBF8' }}>
         <Story />
       </View>
     ),
@@ -22,8 +22,8 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   render: () => (
     <Card>
-      <Text style={{ color: '#1A1A1A', fontSize: 18, fontWeight: '700' }}>Default surface</Text>
-      <Text style={{ color: '#64748B', marginTop: 8 }}>Use for primary content blocks.</Text>
+      <Text style={{ color: '#2C2420', fontSize: 18, fontWeight: '700' }}>Default surface</Text>
+      <Text style={{ color: '#7A7068', marginTop: 8 }}>Use for primary content blocks.</Text>
     </Card>
   ),
 };
@@ -31,17 +31,17 @@ export const Default: Story = {
 export const Glass: Story = {
   render: () => (
     <Card variant="glass">
-      <Text style={{ color: '#1A1A1A', fontSize: 18, fontWeight: '700' }}>Glass surface</Text>
-      <Text style={{ color: '#64748B', marginTop: 8 }}>Use for lighter hero overlays.</Text>
+      <Text style={{ color: '#2C2420', fontSize: 18, fontWeight: '700' }}>Glass surface</Text>
+      <Text style={{ color: '#7A7068', marginTop: 8 }}>Use for lighter hero overlays.</Text>
     </Card>
   ),
 };
 
 export const Accented: Story = {
   render: () => (
-    <Card accent="#10B981">
-      <Text style={{ color: '#1A1A1A', fontSize: 18, fontWeight: '700' }}>Accented card</Text>
-      <Text style={{ color: '#64748B', marginTop: 8 }}>Use when the section needs a color cue.</Text>
+    <Card accent="#8BAA7A">
+      <Text style={{ color: '#2C2420', fontSize: 18, fontWeight: '700' }}>Accented card</Text>
+      <Text style={{ color: '#7A7068', marginTop: 8 }}>Use when the section needs a color cue.</Text>
     </Card>
   ),
 };

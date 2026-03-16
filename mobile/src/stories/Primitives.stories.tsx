@@ -7,7 +7,7 @@ const meta = {
   title: 'Design/Primitives',
   decorators: [
     (Story) => (
-      <View style={{ flex: 1, justifyContent: 'center', padding: 24, gap: 16, backgroundColor: '#F8F7F4' }}>
+      <View style={{ flex: 1, justifyContent: 'center', padding: 24, gap: 16, backgroundColor: '#FDFBF8' }}>
         <Story />
       </View>
     ),
@@ -35,7 +35,7 @@ export const CardVariants: Story = {
     <View style={{ gap: 12 }}>
       <Card><View style={{ minHeight: 40 }} /></Card>
       <Card variant="glass"><View style={{ minHeight: 40 }} /></Card>
-      <Card accent="#10B981"><View style={{ minHeight: 40 }} /></Card>
+      <Card accent="#8BAA7A"><View style={{ minHeight: 40 }} /></Card>
     </View>
   ),
 };
@@ -54,7 +54,7 @@ export const ChipStates: Story = {
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
       <Chip label="Strength" active onPress={() => undefined} />
       <Chip label="Mobility" onPress={() => undefined} />
-      <Chip label="Read-only" active interactive={false} accentColor="#10B981" />
+      <Chip label="Read-only" active interactive={false} accentColor="#8BAA7A" />
     </View>
   ),
 };

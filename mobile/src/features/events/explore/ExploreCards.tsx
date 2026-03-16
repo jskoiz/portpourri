@@ -27,7 +27,7 @@ export function EventCard({
     <Card style={styles.eventCard}>
       <Pressable onPress={onOpen}>
       <LinearGradient
-        colors={[...meta.gradientColors, 'rgba(13,17,23,0.95)']}
+        colors={[...meta.gradientColors, 'rgba(253,251,248,0.85)']}
         locations={[0, 0.45, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -54,12 +54,12 @@ export function EventCard({
         <Text style={styles.eventTitle}>{event.title}</Text>
         <View style={styles.eventMetaRow}>
           <View style={styles.eventMetaInline}>
-            <AppIcon name="calendar" size={13} color="#64748B" />
+            <AppIcon name="calendar" size={13} color="#7A7068" />
             <Text style={styles.eventMeta}>{formatEventDate(event.startsAt)}</Text>
           </View>
           <View style={styles.attendeesBadge}>
             <View style={styles.attendeesBadgeInner}>
-              <AppIcon name="users" size={12} color="#94A3B8" />
+              <AppIcon name="users" size={12} color="#B0A89E" />
               <Text style={styles.attendeesBadgeText}>{event.attendeesCount}</Text>
             </View>
           </View>

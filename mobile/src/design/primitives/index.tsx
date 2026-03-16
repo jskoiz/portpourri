@@ -68,7 +68,7 @@ export function Button({
     switch (variant) {
       case 'primary':
         return {
-          backgroundColor: theme.textPrimary,
+          backgroundColor: '#1A1A1A',
           ...shadows.soft,
         };
       case 'secondary':

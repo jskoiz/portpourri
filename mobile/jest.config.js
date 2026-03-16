@@ -6,4 +6,7 @@ module.exports = {
     'node_modules/(?!((jest-)?react-native|@react-native|react-native|@react-navigation|expo(nent)?|@expo(nent)?/.*|expo-.*|@expo/.*|react-native-gesture-handler|react-native-reanimated|react-native-safe-area-context|tamagui|@tamagui/.*|@shopify/flash-list|@gorhom/bottom-sheet|@tanstack/react-query))',
   ],
   collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts'],
+  moduleNameMapper: {
+    '^@expo-google-fonts/playfair-display$': '<rootDir>/src/__mocks__/expo-google-fonts.js',
+  },
 };

@@ -40,13 +40,13 @@ function TabIcon({
         borderRadius: 15,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: focused ? 'rgba(124,106,247,0.08)' : 'transparent',
+        backgroundColor: focused ? 'rgba(26,26,26,0.08)' : 'transparent',
       }}
     >
       <AppIcon
         name={icon}
         size={19}
-        color={focused ? theme.primary : theme.textMuted}
+        color={focused ? '#1A1A1A' : theme.textMuted}
       />
       {routeName === 'Inbox' && unreadCount > 0 ? (
         <View
@@ -83,7 +83,7 @@ function TabLabel({ color, children, focused }: { color: string; children: strin
     <Text
       style={{
         fontSize: 11,
-        fontWeight: focused ? '700' : '600',
+        fontWeight: focused ? '800' : '600',
         letterSpacing: 0.2,
         marginTop: 1,
         color,
@@ -115,7 +115,7 @@ export default function MainTabNavigator() {
           shadowOffset: { width: 0, height: -2 },
           elevation: 8,
         },
-        tabBarActiveTintColor: theme.primary,
+        tabBarActiveTintColor: '#1A1A1A',
         tabBarInactiveTintColor: theme.textMuted,
         tabBarIcon: ({ focused }) => (
           <TabIcon routeName={route.name} focused={focused} unreadCount={unreadCount} />

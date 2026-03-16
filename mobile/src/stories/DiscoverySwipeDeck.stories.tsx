@@ -60,7 +60,7 @@ const meta = {
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: '#F8F7F4',
+          backgroundColor: '#FDFBF8',
           padding: 24,
         }}
       >
@@ -101,7 +101,7 @@ export const DiscoveryScreenPreview: Story = {
         style={{
           width: 375,
           height: 780,
-          backgroundColor: '#F8F7F4',
+          backgroundColor: '#FDFBF8',
           paddingTop: 16,
         }}
       >
@@ -109,7 +109,7 @@ export const DiscoveryScreenPreview: Story = {
           feedCount={17}
           filterCount={1}
           greeting="Evening, Lana"
-          intentOption={{ label: 'Open to both', color: '#10B981' }}
+          intentOption={{ label: 'Open to both', color: '#8BAA7A' }}
           onPressNotifications={() => undefined}
           unreadCount={4}
         />
@@ -128,7 +128,7 @@ export const DiscoveryScreenPreview: Story = {
             onSwipeRight={() => undefined}
           />
         </View>
-        <View style={{ height: 90, backgroundColor: 'rgba(248,247,244,0.92)' }} />
+        <View style={{ height: 90, backgroundColor: 'rgba(253,251,248,0.92)' }} />
       </View>
     );
   },

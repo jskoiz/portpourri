@@ -73,11 +73,11 @@ export function getSpotsSectionTitle(activeCategory: ExploreCategory) {
 
 export function getEventMeta(event: EventSummary) {
   const category = event.category?.toLowerCase() ?? '';
-  if (category.includes('run')) return { icon: 'navigation' as const, gradientColors: ['#34D399', '#059669'] as const };
-  if (category.includes('yoga')) return { icon: 'sun' as const, gradientColors: ['#7C6AF7', '#4B3EBF'] as const };
-  if (category.includes('hike')) return { icon: 'map' as const, gradientColors: ['#F59E0B', '#D97706'] as const };
-  if (category.includes('surf') || category.includes('swim')) return { icon: 'wind' as const, gradientColors: ['#7AA8B8', '#4D6C78'] as const };
-  return { icon: 'calendar' as const, gradientColors: ['#7C6AF7', '#F59E0B'] as const };
+  if (category.includes('run')) return { icon: 'navigation' as const, gradientColors: ['#8BAA7A', '#6B8A5A'] as const };
+  if (category.includes('yoga')) return { icon: 'sun' as const, gradientColors: ['#B8A9C4', '#9889A4'] as const };
+  if (category.includes('hike')) return { icon: 'map' as const, gradientColors: ['#C4A882', '#A48862'] as const };
+  if (category.includes('surf') || category.includes('swim')) return { icon: 'wind' as const, gradientColors: ['#B8A9C4', '#9889A4'] as const };
+  return { icon: 'calendar' as const, gradientColors: ['#B8A9C4', '#C4A882'] as const };
 }
 
 export function formatEventDate(startsAt: string) {

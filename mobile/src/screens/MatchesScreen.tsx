@@ -54,7 +54,7 @@ function getActivityTag(user: any): string {
 
 // Assign a consistent accent color per user based on name
 function getUserAccent(name?: string): string {
-  const ACCENTS = [PRIMARY, ACCENT, '#F59E0B', '#F87171', '#60A5FA', '#FB923C'];
+  const ACCENTS = ['#C4A882', '#D4A59A', '#B8A9C4', '#8BAA7A', '#D4C9DB', '#C4A882'];
   const idx = (name?.charCodeAt(0) ?? 65) % ACCENTS.length;
   return ACCENTS[idx];
 }
@@ -230,12 +230,12 @@ const styles = StyleSheet.create({
   },
   countBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(124,106,247,0.15)',
+    backgroundColor: 'rgba(196,168,130,0.15)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: 'rgba(124,106,247,0.35)',
+    borderColor: 'rgba(196,168,130,0.35)',
   },
   countBadgeText: {
     fontSize: 12,

@@ -24,9 +24,9 @@ export const INTENT_OPTIONS: Array<{
   label: string;
   color: string;
 }> = [
-  { value: 'dating', label: 'Dating', color: '#F87171' },
-  { value: 'workout', label: 'Training', color: '#7C6AF7' },
-  { value: 'both', label: 'Open to both', color: '#34D399' },
+  { value: 'dating', label: 'Dating', color: '#D4A59A' },
+  { value: 'workout', label: 'Training', color: '#B8A9C4' },
+  { value: 'both', label: 'Open to both', color: '#8BAA7A' },
 ];
 
 export const goalOptions = ['strength', 'weight_loss', 'endurance', 'mobility'];

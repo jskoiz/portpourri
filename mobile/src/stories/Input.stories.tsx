@@ -8,7 +8,7 @@ const meta = {
   component: Input,
   decorators: [
     (Story) => (
-      <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#F8F7F4' }}>
+      <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#FDFBF8' }}>
         <Story />
       </View>
     ),

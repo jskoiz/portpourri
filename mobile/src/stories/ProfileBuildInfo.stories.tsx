@@ -5,7 +5,7 @@ const meta = {
   title: 'Profile/BuildInfo',
   component: ProfileScreenContent,
   parameters: {
-    backgrounds: { default: 'light', values: [{ name: 'light', value: '#F8F7F4' }] },
+    backgrounds: { default: 'light', values: [{ name: 'light', value: '#FDFBF8' }] },
   },
 } satisfies Meta<typeof ProfileScreenContent>;
 

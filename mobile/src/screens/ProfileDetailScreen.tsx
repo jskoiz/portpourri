@@ -28,13 +28,13 @@ import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const HERO_HEIGHT = 420;
 
-const BASE = '#0D1117';
-const SURFACE = '#161B22';
-const PRIMARY = '#7C6AF7';
-const ACCENT = '#34D399';
-const BORDER = 'rgba(255,255,255,0.08)';
-const TEXT_PRIMARY = '#F0F6FC';
-const TEXT_MUTED = 'rgba(240,246,252,0.45)';
+const BASE = '#FDFBF8';
+const SURFACE = '#FFFFFF';
+const PRIMARY = '#C4A882';
+const ACCENT = '#8BAA7A';
+const BORDER = '#E8E2DA';
+const TEXT_PRIMARY = '#2C2420';
+const TEXT_MUTED = '#B0A89E';
 
 export default function ProfileDetailScreen() {
   const theme = useTheme();
@@ -138,7 +138,7 @@ export default function ProfileDetailScreen() {
             <Image source={{ uri: primaryPhoto }} style={styles.heroImage} contentFit="cover" />
           ) : (
             <LinearGradient
-              colors={['#1F2937', '#111827']}
+              colors={['#F7F4F0', '#E8E2DA']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.heroFallback}
@@ -148,7 +148,7 @@ export default function ProfileDetailScreen() {
           )}
 
           <LinearGradient
-            colors={['transparent', 'rgba(13,17,23,0.7)', 'rgba(13,17,23,0.98)']}
+            colors={['transparent', 'rgba(253,251,248,0.7)', 'rgba(253,251,248,0.98)']}
             locations={[0, 0.55, 1]}
             style={styles.heroGradient}
           />
@@ -221,8 +221,8 @@ export default function ProfileDetailScreen() {
                       style={[
                         styles.activityPill,
                         {
-                          backgroundColor: isAccent ? 'rgba(52,211,153,0.10)' : 'rgba(124,106,247,0.10)',
-                          borderColor: isAccent ? 'rgba(52,211,153,0.24)' : 'rgba(124,106,247,0.24)',
+                          backgroundColor: isAccent ? 'rgba(139,170,122,0.10)' : 'rgba(196,168,130,0.10)',
+                          borderColor: isAccent ? 'rgba(139,170,122,0.24)' : 'rgba(196,168,130,0.24)',
                         },
                       ]}
                     >
@@ -246,7 +246,7 @@ export default function ProfileDetailScreen() {
             style={styles.suggestBtn}
           >
             <LinearGradient
-              colors={['#9B8BFF', PRIMARY]}
+              colors={['#D4C9B0', PRIMARY]}
               style={styles.suggestBtnInner}
             >
               <Text style={styles.suggestBtnText}>Suggest activity</Text>
@@ -256,7 +256,7 @@ export default function ProfileDetailScreen() {
       </ScrollView>
 
       <LinearGradient
-        colors={['rgba(13,17,23,0)', 'rgba(13,17,23,0.95)', '#0D1117']}
+        colors={['rgba(253,251,248,0)', 'rgba(253,251,248,0.95)', '#FDFBF8']}
         style={styles.actionBar}
       >
         <View style={styles.actionRow}>
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   heroFallbackText: {
     fontSize: 96,
     fontWeight: '900',
-    color: 'rgba(240,246,252,0.92)',
+    color: '#7A7068',
     letterSpacing: -4,
   },
   heroGradient: {
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.lg,
     left: spacing.lg,
-    backgroundColor: 'rgba(13,17,23,0.56)',
+    backgroundColor: 'rgba(255,255,255,0.85)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -345,10 +345,10 @@ const styles = StyleSheet.create({
   },
   intentPill: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(124,106,247,0.18)',
+    backgroundColor: 'rgba(196,168,130,0.18)',
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: 'rgba(124,106,247,0.34)',
+    borderColor: 'rgba(196,168,130,0.34)',
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
     marginBottom: spacing.sm,
@@ -362,10 +362,10 @@ const styles = StyleSheet.create({
   heroName: {
     fontSize: 40,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#2C2420',
     letterSpacing: -1,
     marginBottom: spacing.xs,
-    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowColor: 'rgba(255,255,255,0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
   },
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   },
   heroLocation: {
     fontSize: typography.bodySmall,
-    color: 'rgba(255,255,255,0.75)',
+    color: '#7A7068',
     fontWeight: '600',
   },
   tagRow: {
@@ -386,22 +386,22 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tag: {
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(196,168,130,0.12)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderColor: 'rgba(196,168,130,0.25)',
   },
   tagText: {
-    color: '#FFFFFF',
+    color: '#2C2420',
     fontSize: 11,
     fontWeight: '700',
   },
 
   // Content
   contentArea: {
-    backgroundColor: 'rgba(13,17,23,0.92)',
+    backgroundColor: 'rgba(253,251,248,0.92)',
     paddingHorizontal: spacing.xxl,
     paddingTop: spacing.xl,
   },
@@ -433,8 +433,8 @@ const styles = StyleSheet.create({
   metaIntroCard: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    backgroundColor: 'rgba(28,35,48,0.82)',
+    borderColor: '#E8E2DA',
+    backgroundColor: 'rgba(247,244,240,0.82)',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
@@ -469,8 +469,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    backgroundColor: 'rgba(20,26,38,0.76)',
+    borderColor: '#E8E2DA',
+    backgroundColor: 'rgba(247,244,240,0.76)',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
@@ -501,6 +501,9 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     fontWeight: '800',
     color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
 
   // Action bar

@@ -40,7 +40,7 @@ export function CreateTimingSection({
               label={option}
               active={selectedWhen === option}
               onPress={() => onSelectWhen(option)}
-              accentColor="#7C6AF7"
+              accentColor="#C4A882"
             />
           ))}
         </View>
@@ -51,7 +51,7 @@ export function CreateTimingSection({
               label={option}
               active={selectedTime === option}
               onPress={() => onSelectTime(option)}
-              accentColor="#F59E0B"
+              accentColor="#C4A882"
             />
           ))}
         </View>
@@ -67,7 +67,7 @@ export function CreateTimingSection({
               label={option}
               active={skillLevel === option}
               onPress={() => onSelectSkill(option)}
-              accentColor="#34D399"
+              accentColor="#8BAA7A"
             />
           ))}
         </View>
@@ -76,12 +76,12 @@ export function CreateTimingSection({
         <View style={styles.formSection}>
           <SectionLabel label="Spots available" />
           <View style={styles.stepperRow}>
-            <Chip label="Less" onPress={() => onChangeSpots(Math.max(1, spots - 1))} accentColor="#F59E0B" />
+            <Chip label="Less" onPress={() => onChangeSpots(Math.max(1, spots - 1))} accentColor="#C4A882" />
             <View style={styles.stepperValueWrap}>
               <Text style={styles.stepperValue}>{spots}</Text>
               <Text style={styles.stepperSub}>open spots</Text>
             </View>
-            <Chip label="More" onPress={() => onChangeSpots(Math.min(10, spots + 1))} accentColor="#34D399" />
+            <Chip label="More" onPress={() => onChangeSpots(Math.min(10, spots + 1))} accentColor="#8BAA7A" />
           </View>
         </View>
       ) : null}

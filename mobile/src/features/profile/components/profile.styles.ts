@@ -2,19 +2,19 @@ import { Dimensions, StyleSheet } from 'react-native';
 import { radii, spacing, typography } from '../../../theme/tokens';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const BASE = '#F8F7F4';
+const BASE = '#FDFBF8';
 const SURFACE = '#FFFFFF';
-const SURFACE_ELEVATED = '#F5F3EF';
-const BORDER = 'rgba(0,0,0,0.06)';
-const PRIMARY = '#7C6AF7';
-const TEXT_PRIMARY = '#1A1A1A';
-const TEXT_SECONDARY = '#64748B';
-const TEXT_MUTED = '#94A3B8';
-const DANGER = '#EF4444';
+const SURFACE_ELEVATED = '#F7F4F0';
+const BORDER = '#E8E2DA';
+const PRIMARY = '#C4A882';
+const TEXT_PRIMARY = '#2C2420';
+const TEXT_SECONDARY = '#5C544C';
+const TEXT_MUTED = '#8C8279';
+const DANGER = '#C97070';
 
 const SOFT_SHADOW = {
-  shadowColor: '#000',
-  shadowOpacity: 0.06,
+  shadowColor: '#B0A89E',
+  shadowOpacity: 0.16,
   shadowRadius: 12,
   shadowOffset: { width: 0, height: 2 },
   elevation: 3,
@@ -49,10 +49,8 @@ export const profileStyles = StyleSheet.create({
   avatarFallbackText: { fontSize: 34, fontWeight: '900', color: TEXT_PRIMARY },
   heroName: { fontSize: 34, fontWeight: '900', letterSpacing: -0.8, color: TEXT_PRIMARY, marginBottom: spacing.sm },
   intentBadge: {
-    backgroundColor: 'rgba(124,106,247,0.08)',
+    backgroundColor: 'rgba(196,168,130,0.08)',
     borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: 'rgba(124,106,247,0.16)',
     paddingHorizontal: spacing.md,
     paddingVertical: 5,
     marginBottom: spacing.sm,
@@ -68,7 +66,7 @@ export const profileStyles = StyleSheet.create({
   editBtnWrap: { flex: 1, borderRadius: radii.pill, overflow: 'hidden' },
   editBtn: { paddingVertical: 11, alignItems: 'center', borderRadius: radii.pill, backgroundColor: 'rgba(0,0,0,0.04)' },
   editBtnText: { fontSize: typography.bodySmall, fontWeight: '900', letterSpacing: 0.2, color: TEXT_PRIMARY },
-  cancelBtn: { paddingHorizontal: spacing.md, paddingVertical: 11, borderRadius: radii.pill, borderWidth: 1, borderColor: BORDER, backgroundColor: 'rgba(0,0,0,0.03)' },
+  cancelBtn: { paddingHorizontal: spacing.md, paddingVertical: 11, borderRadius: radii.pill, backgroundColor: 'rgba(0,0,0,0.05)' },
   cancelBtnText: { fontSize: typography.bodySmall, fontWeight: '700', color: TEXT_MUTED },
   section: { paddingHorizontal: spacing.xxl, marginBottom: spacing.xxl },
   sectionEyebrow: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 2, color: TEXT_MUTED, marginBottom: spacing.md },
@@ -79,9 +77,9 @@ export const profileStyles = StyleSheet.create({
   fieldRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, gap: spacing.md },
   fieldLabel: { fontSize: typography.bodySmall, fontWeight: '700', width: 100, color: TEXT_MUTED, textTransform: 'capitalize' },
   fieldValue: { flex: 1, fontSize: typography.bodySmall, fontWeight: '600', textTransform: 'capitalize', color: TEXT_PRIMARY },
-  fieldInput: { flex: 1, fontSize: typography.bodySmall, borderWidth: 1, borderRadius: radii.sm, paddingHorizontal: spacing.sm, paddingVertical: 5, borderColor: 'rgba(124,106,247,0.2)', backgroundColor: 'rgba(124,106,247,0.04)', color: TEXT_PRIMARY },
+  fieldInput: { flex: 1, fontSize: typography.bodySmall, borderWidth: 1, borderRadius: radii.sm, paddingHorizontal: spacing.sm, paddingVertical: 5, borderColor: 'rgba(196,168,130,0.2)', backgroundColor: 'rgba(196,168,130,0.04)', color: TEXT_PRIMARY },
   fieldInputMultiline: { minHeight: 86, paddingTop: spacing.sm },
-  fieldDivider: { height: 1, backgroundColor: BORDER },
+  fieldDivider: { height: 1, backgroundColor: 'rgba(0,0,0,0.06)' },
   photoManager: { gap: spacing.md },
   photoIntro: { gap: spacing.xs, padding: spacing.md, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.02)', ...SOFT_SHADOW },
   photoIntroTitle: { fontSize: typography.bodySmall, fontWeight: '800', color: TEXT_PRIMARY },
@@ -93,24 +91,24 @@ export const profileStyles = StyleSheet.create({
   photoEmptyTitle: { fontSize: typography.bodySmall, fontWeight: '800', color: TEXT_PRIMARY },
   photoEmptyBody: { fontSize: typography.caption, lineHeight: 18, color: TEXT_SECONDARY },
   photoCard: { borderRadius: 18, backgroundColor: SURFACE, gap: spacing.md, ...SOFT_SHADOW },
-  photoCardActive: { borderColor: 'rgba(124,106,247,0.4)', backgroundColor: 'rgba(124,106,247,0.08)' },
+  photoCardActive: { borderColor: 'rgba(196,168,130,0.4)', backgroundColor: 'rgba(196,168,130,0.08)' },
   photoImage: { width: '100%', height: 200, borderRadius: 14, backgroundColor: BASE },
   photoMeta: { gap: spacing.sm },
   photoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
   photoHeaderMeta: { flex: 1, gap: 2 },
   photoLabel: { fontSize: typography.bodySmall, fontWeight: '800', color: TEXT_PRIMARY },
   photoSlotText: { fontSize: typography.caption, color: TEXT_MUTED, fontWeight: '600' },
-  photoSlotPill: { paddingHorizontal: spacing.sm, paddingVertical: 5, borderRadius: radii.pill, backgroundColor: 'rgba(0,0,0,0.03)', borderWidth: 1, borderColor: BORDER },
+  photoSlotPill: { paddingHorizontal: spacing.sm, paddingVertical: 5, borderRadius: radii.pill, backgroundColor: 'rgba(0,0,0,0.03)' },
   photoSlotPillText: { fontSize: 11, fontWeight: '800', color: TEXT_SECONDARY, letterSpacing: 0.3 },
-  photoPrimaryPill: { backgroundColor: 'rgba(124,106,247,0.15)', borderColor: 'rgba(124,106,247,0.35)' },
+  photoPrimaryPill: { backgroundColor: 'rgba(196,168,130,0.15)', borderColor: 'rgba(196,168,130,0.35)' },
   photoPrimaryPillText: { color: PRIMARY },
-  photoInlineStatus: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(124,106,247,0.08)', borderWidth: 1, borderColor: 'rgba(124,106,247,0.24)' },
+  photoInlineStatus: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(196,168,130,0.08)', borderWidth: 1, borderColor: 'rgba(196,168,130,0.24)' },
   photoInlineStatusText: { fontSize: typography.caption, fontWeight: '700', color: TEXT_PRIMARY },
   photoActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  photoActionChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md, paddingVertical: 7, borderRadius: radii.pill, borderWidth: 1, borderColor: BORDER, backgroundColor: 'rgba(0,0,0,0.02)' },
+  photoActionChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md, paddingVertical: 7, borderRadius: radii.pill, backgroundColor: 'rgba(0,0,0,0.05)' },
   photoActionText: { fontSize: typography.caption, fontWeight: '700', color: TEXT_SECONDARY },
   photoActionTextDisabled: { color: 'rgba(0,0,0,0.2)' },
-  photoDeleteChip: { borderColor: 'rgba(239,68,68,0.25)', backgroundColor: 'rgba(239,68,68,0.06)' },
+  photoDeleteChip: { borderColor: 'rgba(201,112,112,0.25)', backgroundColor: 'rgba(201,112,112,0.06)' },
   photoDeleteText: { fontSize: typography.caption, fontWeight: '700', color: DANGER },
   settingsCard: { backgroundColor: SURFACE, borderRadius: 16, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, ...SOFT_SHADOW },
   settingsRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, gap: spacing.md },
@@ -122,14 +120,14 @@ export const profileStyles = StyleSheet.create({
   buildInfoLabel: { fontSize: typography.bodySmall, fontWeight: '700', color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.6 },
   buildInfoValue: { fontSize: typography.bodySmall, lineHeight: 20, color: TEXT_PRIMARY, fontWeight: '600' },
   buildInfoDivider: { height: 1, backgroundColor: BORDER },
-  dangerCard: { backgroundColor: 'rgba(239,68,68,0.04)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.16)', borderRadius: 24, padding: spacing.xl, gap: spacing.md },
+  dangerCard: { backgroundColor: 'rgba(201,112,112,0.04)', borderWidth: 1, borderColor: 'rgba(201,112,112,0.16)', borderRadius: 24, padding: spacing.xl, gap: spacing.md },
   dangerTitle: { fontSize: typography.body, fontWeight: '800', color: TEXT_PRIMARY },
   dangerBody: { fontSize: typography.bodySmall, lineHeight: 20, color: TEXT_SECONDARY },
   deleteAccountBtn: { minHeight: 46, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: DANGER },
   deleteAccountBtnPressed: { opacity: 0.88 },
   deleteAccountBtnDisabled: { opacity: 0.6 },
   deleteAccountText: { fontSize: typography.bodySmall, fontWeight: '800', color: '#FFFFFF' },
-  errorBanner: { marginHorizontal: spacing.xxl, borderWidth: 1, borderRadius: 12, padding: spacing.md, marginBottom: spacing.sm, backgroundColor: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.16)' },
+  errorBanner: { marginHorizontal: spacing.xxl, borderWidth: 1, borderRadius: 12, padding: spacing.md, marginBottom: spacing.sm, backgroundColor: 'rgba(201,112,112,0.06)', borderColor: 'rgba(201,112,112,0.16)' },
   errorText: { fontSize: typography.bodySmall, fontWeight: '600', color: DANGER },
   logoutBtn: { alignItems: 'center', paddingVertical: spacing.xl, marginTop: spacing.sm },
   logoutText: { fontSize: typography.body, fontWeight: '800', color: DANGER, letterSpacing: 0.2 },

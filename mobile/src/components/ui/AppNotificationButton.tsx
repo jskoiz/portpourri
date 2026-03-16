@@ -30,7 +30,7 @@ export default function AppNotificationButton({
         style,
       ]}
     >
-      <AppIcon name="bell" size={16} color="#1A1A1A" />
+      <AppIcon name="bell" size={16} color="#2C2420" />
       {unreadCount > 0 ? (
         <View style={[styles.badge, { backgroundColor: theme.accent }]}>
           <Text style={styles.badgeLabel}>{badgeLabel}</Text>

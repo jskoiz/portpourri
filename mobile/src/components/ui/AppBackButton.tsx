@@ -48,12 +48,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     lineHeight: 20,
-    color: '#1A1A1A',
+    color: '#2C2420',
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 4,
-    color: '#64748B',
+    color: '#7A7068',
   },
 });

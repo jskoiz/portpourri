@@ -1,18 +1,18 @@
 import type { User } from '../../../api/types';
 
 export const ACTIVITY_OPTIONS = [
-  { label: '🏃 Running', value: 'Running', color: '#34D399' },
-  { label: '🧘 Yoga', value: 'Yoga', color: '#7C6AF7' },
-  { label: '🏋️ Lifting', value: 'Lifting', color: '#EF4444' },
-  { label: '🥾 Hiking', value: 'Hiking', color: '#F59E0B' },
-  { label: '🏖️ Beach', value: 'Beach', color: '#60A5FA' },
-  { label: '🚴 Cycling', value: 'Cycling', color: '#34D399' },
-  { label: '🏄 Surfing', value: 'Surfing', color: '#38BDF8' },
-  { label: '🧗 Climbing', value: 'Climbing', color: '#FB923C' },
-  { label: '🥊 Boxing', value: 'Boxing', color: '#EF4444' },
-  { label: '🏊 Swimming', value: 'Swimming', color: '#60A5FA' },
-  { label: '🎾 Tennis', value: 'Tennis', color: '#F59E0B' },
-  { label: '⛷️ Skiing', value: 'Skiing', color: '#93C5FD' },
+  { label: '🏃 Running', value: 'Running', color: '#8BAA7A' },
+  { label: '🧘 Yoga', value: 'Yoga', color: '#B8A9C4' },
+  { label: '🏋️ Lifting', value: 'Lifting', color: '#C97070' },
+  { label: '🥾 Hiking', value: 'Hiking', color: '#C4A882' },
+  { label: '🏖️ Beach', value: 'Beach', color: '#B8A9C4' },
+  { label: '🚴 Cycling', value: 'Cycling', color: '#8BAA7A' },
+  { label: '🏄 Surfing', value: 'Surfing', color: '#B8A9C4' },
+  { label: '🧗 Climbing', value: 'Climbing', color: '#D4A59A' },
+  { label: '🥊 Boxing', value: 'Boxing', color: '#C97070' },
+  { label: '🏊 Swimming', value: 'Swimming', color: '#B8A9C4' },
+  { label: '🎾 Tennis', value: 'Tennis', color: '#C4A882' },
+  { label: '⛷️ Skiing', value: 'Skiing', color: '#B8A9C4' },
 ];
 
 export const SCHEDULE_OPTIONS = ['Morning', 'Midday', 'Afternoon', 'Evening', 'Weekends'];

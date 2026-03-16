@@ -8,7 +8,7 @@ const meta = {
   component: Chip,
   decorators: [
     (Story) => (
-      <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#F8F7F4' }}>
+      <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#FDFBF8' }}>
         <Story />
       </View>
     ),
@@ -23,7 +23,7 @@ export const Active: Story = {
   args: {
     label: 'Running',
     active: true,
-    accentColor: '#7C6AF7',
+    accentColor: '#C4A882',
     onPress: () => undefined,
   },
 };
@@ -41,6 +41,6 @@ export const ReadOnly: Story = {
     label: 'Outdoors',
     active: true,
     interactive: false,
-    accentColor: '#10B981',
+    accentColor: '#8BAA7A',
   },
 };

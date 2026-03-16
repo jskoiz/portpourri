@@ -8,7 +8,7 @@ const meta = {
   component: HomeHero,
   decorators: [
     (Story) => (
-      <View style={{ flex: 1, padding: 24, backgroundColor: '#F8F7F4' }}>
+      <View style={{ flex: 1, padding: 24, backgroundColor: '#FDFBF8' }}>
         <Story />
       </View>
     ),
@@ -23,7 +23,7 @@ export const Default: Story = {
     feedCount: 12,
     filterCount: 2,
     greeting: 'Morning, Jordan',
-    intentOption: { label: 'Open to both', color: '#10B981' },
+    intentOption: { label: 'Open to both', color: '#8BAA7A' },
     onPressNotifications: () => undefined,
     unreadCount: 3,
   },

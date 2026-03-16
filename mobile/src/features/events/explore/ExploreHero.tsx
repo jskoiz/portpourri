@@ -27,7 +27,7 @@ export function ExploreHero({
           style={styles.heroNotificationButton}
         />
         <Pressable onPress={onOpenQuickActions} style={styles.heroActionButton}>
-          <AppIcon name="sliders" size={16} color="#1A1A1A" />
+          <AppIcon name="sliders" size={16} color="#2C2420" />
         </Pressable>
       </View>
     </View>

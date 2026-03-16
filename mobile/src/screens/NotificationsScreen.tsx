@@ -24,15 +24,15 @@ function getNotificationMeta(type: AppNotification['type']) {
   switch (type) {
     case 'match_created':
     case 'like_received':
-      return { icon: 'heart' as const, color: '#7C6AF7' };
+      return { icon: 'heart' as const, color: '#C4A882' };
     case 'message_received':
-      return { icon: 'message-square' as const, color: '#34D399' };
+      return { icon: 'message-square' as const, color: '#8BAA7A' };
     case 'event_rsvp':
-      return { icon: 'users' as const, color: '#F59E0B' };
+      return { icon: 'users' as const, color: '#C4A882' };
     case 'event_reminder':
-      return { icon: 'calendar' as const, color: '#34D399' };
+      return { icon: 'calendar' as const, color: '#8BAA7A' };
     default:
-      return { icon: 'bell' as const, color: '#60A5FA' };
+      return { icon: 'bell' as const, color: '#B8A9C4' };
   }
 }
 

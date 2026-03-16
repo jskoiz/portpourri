@@ -30,11 +30,11 @@ export default function AppNavigator() {
     ...DefaultTheme,
     colors: {
       ...DefaultTheme.colors,
-      background: '#F8F7F4',
+      background: '#FDFBF8',
       card: '#FFFFFF',
-      text: '#1A1A1A',
-      border: 'rgba(0,0,0,0.06)',
-      primary: '#7C6AF7',
+      text: '#2C2420',
+      border: '#E8E2DA',
+      primary: '#C4A882',
       notification: theme.accent,
     },
   };

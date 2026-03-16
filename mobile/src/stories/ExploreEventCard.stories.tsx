@@ -6,7 +6,7 @@ import { EventCard } from '../features/events/explore/ExploreCards';
 const meta = {
   title: 'Events/ExploreEventCard',
   component: EventCard,
-  decorators: [(Story) => <View style={{ flex: 1, padding: 24, backgroundColor: '#F8F7F4' }}><Story /></View>],
+  decorators: [(Story) => <View style={{ flex: 1, padding: 24, backgroundColor: '#FDFBF8' }}><Story /></View>],
 } satisfies Meta<typeof EventCard>;
 
 export default meta;

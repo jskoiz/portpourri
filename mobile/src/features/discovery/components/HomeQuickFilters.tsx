@@ -29,12 +29,12 @@ export function HomeQuickFilters({
           <AppIcon
             name="sliders"
             size={14}
-            color={activeFilterCount > 0 ? '#10B981' : '#94A3B8'}
+            color={activeFilterCount > 0 ? '#2C2420' : '#B0A89E'}
           />
           <Text
             style={[
               styles.refineTriggerText,
-              { color: activeFilterCount > 0 ? '#10B981' : '#94A3B8' },
+              { color: activeFilterCount > 0 ? '#2C2420' : '#B0A89E' },
             ]}
           >
             {refineLabel}

@@ -21,7 +21,7 @@ function ActivityTile({
           styles.activityTile,
           selected
             ? { borderColor: activity.color, backgroundColor: activity.color + '20' }
-            : { borderColor: 'rgba(255,255,255,0.07)', backgroundColor: '#161B22' },
+            : { borderColor: 'rgba(255,255,255,0.07)', backgroundColor: '#F7F4F0' },
         ]}
       >
         <AppIcon

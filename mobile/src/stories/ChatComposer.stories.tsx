@@ -7,7 +7,7 @@ import { lightTheme } from '../theme/tokens';
 const meta = {
   title: 'Chat/Composer',
   component: ChatComposer,
-  decorators: [(Story) => <View style={{ flex: 1, justifyContent: 'flex-end', padding: 24, backgroundColor: '#F8F7F4' }}><Story /></View>],
+  decorators: [(Story) => <View style={{ flex: 1, justifyContent: 'flex-end', padding: 24, backgroundColor: '#FDFBF8' }}><Story /></View>],
 } satisfies Meta<typeof ChatComposer>;
 
 export default meta;

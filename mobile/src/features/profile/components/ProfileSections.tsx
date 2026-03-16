@@ -9,7 +9,7 @@ import type { PhotoOperationState } from '../hooks/useProfileEditor';
 import { getVisibleOrderedPhotos } from '../hooks/profilePhotoHelpers';
 
 export function TagPill({
-  color = '#7C6AF7',
+  color = '#C4A882',
   interactive = true,
   label,
   onPress,
@@ -60,14 +60,14 @@ export function EditableField({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor="#B0A89E"
           autoCapitalize={multiline ? 'sentences' : 'none'}
           multiline={multiline}
           textAlignVertical={multiline ? 'top' : 'center'}
           {...inputProps}
         />
       ) : (
-        <Text style={[styles.fieldValue, { color: value ? '#1A1A1A' : '#94A3B8' }]}>
+        <Text style={[styles.fieldValue, { color: value ? '#2C2420' : '#B0A89E' }]}>
           {value || placeholder}
         </Text>
       )}
@@ -139,7 +139,7 @@ export function PhotoManager({
                   <AppIcon
                     name={operation.type === 'delete' ? 'trash-2' : operation.type === 'reorder' ? 'move' : 'star'}
                     size={14}
-                    color="#7C6AF7"
+                    color="#C4A882"
                   />
                   <Text style={styles.photoInlineStatusText}>{operation.label}</Text>
                 </View>
@@ -147,21 +147,21 @@ export function PhotoManager({
               {canEdit ? (
                 <View style={styles.photoActions}>
                   <Pressable disabled={isBusy || index === 0} onPress={() => onMoveLeft(photo.id)} style={styles.photoActionChip}>
-                    <AppIcon name="arrow-left" size={14} color={isBusy || index === 0 ? 'rgba(0,0,0,0.2)' : '#64748B'} />
+                    <AppIcon name="arrow-left" size={14} color={isBusy || index === 0 ? 'rgba(0,0,0,0.2)' : '#7A7068'} />
                     <Text style={[styles.photoActionText, isBusy || index === 0 ? styles.photoActionTextDisabled : null]}>Earlier</Text>
                   </Pressable>
                   <Pressable disabled={isBusy || index === visiblePhotos.length - 1} onPress={() => onMoveRight(photo.id)} style={styles.photoActionChip}>
-                    <AppIcon name="arrow-right" size={14} color={isBusy || index === visiblePhotos.length - 1 ? 'rgba(0,0,0,0.2)' : '#64748B'} />
+                    <AppIcon name="arrow-right" size={14} color={isBusy || index === visiblePhotos.length - 1 ? 'rgba(0,0,0,0.2)' : '#7A7068'} />
                     <Text style={[styles.photoActionText, isBusy || index === visiblePhotos.length - 1 ? styles.photoActionTextDisabled : null]}>Later</Text>
                   </Pressable>
                   {!photo.isPrimary ? (
                     <Pressable disabled={isBusy} onPress={() => onMakePrimary(photo.id)} style={styles.photoActionChip}>
-                      <AppIcon name="star" size={14} color={isBusy ? 'rgba(0,0,0,0.2)' : '#64748B'} />
+                      <AppIcon name="star" size={14} color={isBusy ? 'rgba(0,0,0,0.2)' : '#7A7068'} />
                       <Text style={[styles.photoActionText, isBusy ? styles.photoActionTextDisabled : null]}>Make primary</Text>
                     </Pressable>
                   ) : null}
                   <Pressable disabled={isBusy} onPress={() => onDelete(photo.id)} style={[styles.photoActionChip, styles.photoDeleteChip]}>
-                    <AppIcon name="trash-2" size={14} color={isBusy ? 'rgba(239,68,68,0.34)' : '#EF4444'} />
+                    <AppIcon name="trash-2" size={14} color={isBusy ? 'rgba(201,112,112,0.34)' : '#C97070'} />
                     <Text style={styles.photoDeleteText}>Remove</Text>
                   </Pressable>
                 </View>

@@ -160,11 +160,11 @@ export function ProfileScreenContent({
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor="#7C6AF7" />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor="#C4A882" />}
       >
         <View style={styles.hero}>
           <View style={styles.avatarGlowWrap}>
-            <LinearGradient colors={['#7C6AF7', '#34D399']} style={styles.avatarGlowRing}>
+            <LinearGradient colors={['#C4A882', '#B8A9C4']} style={styles.avatarGlowRing}>
               <View style={styles.avatarInnerWrap}>
                 {primaryPhoto ? (
                   <Image source={{ uri: primaryPhoto }} style={styles.avatar} />
@@ -186,17 +186,17 @@ export function ProfileScreenContent({
           <Text style={styles.heroLocation}>📍 {profile.profile?.city || 'Location not set'}</Text>
           <View style={styles.ambientStats}>
             <View style={styles.ambientStat}>
-              <Text style={[styles.ambientStatNum, { color: '#7C6AF7' }]}>12</Text>
+              <Text style={[styles.ambientStatNum, { color: '#C4A882' }]}>12</Text>
               <Text style={styles.ambientStatLabel}>matches</Text>
             </View>
             <View style={styles.ambientStatDot} />
             <View style={styles.ambientStat}>
-              <Text style={[styles.ambientStatNum, { color: '#34D399' }]}>8</Text>
+              <Text style={[styles.ambientStatNum, { color: '#8BAA7A' }]}>8</Text>
               <Text style={styles.ambientStatLabel}>activities</Text>
             </View>
             <View style={styles.ambientStatDot} />
             <View style={styles.ambientStat}>
-              <Text style={[styles.ambientStatNum, { color: '#F59E0B' }]}>5</Text>
+              <Text style={[styles.ambientStatNum, { color: '#C4A882' }]}>5</Text>
               <Text style={styles.ambientStatLabel}>connections</Text>
             </View>
           </View>
@@ -205,10 +205,10 @@ export function ProfileScreenContent({
         <View style={styles.editBar}>
           <Pressable onPress={onSave} disabled={isSavingFitness} style={styles.editBtnWrap}>
             <LinearGradient
-              colors={editMode ? ['#7C6AF7', '#7C6AF7AA'] : ['rgba(0,0,0,0.04)', 'rgba(0,0,0,0.02)']}
+              colors={editMode ? ['#C4A882', '#C4A882AA'] : ['rgba(0,0,0,0.04)', 'rgba(0,0,0,0.02)']}
               style={styles.editBtn}
             >
-              <Text style={[styles.editBtnText, { color: editMode ? '#FFFFFF' : '#64748B' }]}>
+              <Text style={[styles.editBtnText, { color: editMode ? '#FFFFFF' : '#7A7068' }]}>
                 {isSavingFitness || isSavingProfile ? 'Saving...' : editMode ? '✓ Save Changes' : '✏️ Edit Profile'}
               </Text>
             </LinearGradient>
@@ -265,9 +265,9 @@ export function ProfileScreenContent({
         <View style={styles.section}>
           <Text style={styles.sectionEyebrow}>Intent</Text>
           <View style={styles.tagCloud}>
-            <TagPill label="Dating" selected={intentDating} onPress={() => onSetIntentDating(!intentDating)} color="#EF4444" interactive={editMode} />
-            <TagPill label="Workout" selected={intentWorkout} onPress={() => onSetIntentWorkout(!intentWorkout)} color="#7C6AF7" interactive={editMode} />
-            <TagPill label="Friends" selected={intentFriends} onPress={() => onSetIntentFriends(!intentFriends)} color="#34D399" interactive={editMode} />
+            <TagPill label="Dating" selected={intentDating} onPress={() => onSetIntentDating(!intentDating)} color="#D4A59A" interactive={editMode} />
+            <TagPill label="Workout" selected={intentWorkout} onPress={() => onSetIntentWorkout(!intentWorkout)} color="#C4A882" interactive={editMode} />
+            <TagPill label="Friends" selected={intentFriends} onPress={() => onSetIntentFriends(!intentFriends)} color="#8BAA7A" interactive={editMode} />
           </View>
         </View>
 
@@ -355,7 +355,7 @@ export function ProfileScreenContent({
                 label={tag}
                 selected={selectedSchedule.includes(tag)}
                 onPress={() => editMode && onSetSelectedSchedule(tag)}
-                color="#34D399"
+                color="#8BAA7A"
                 interactive={editMode}
               />
             ))}
@@ -366,7 +366,7 @@ export function ProfileScreenContent({
           <Text style={styles.sectionEyebrow}>Environment</Text>
           <View style={styles.tagCloud}>
             {ENVIRONMENT_OPTIONS.map((tag) => (
-              <TagPill key={tag} label={tag} selected={['Outdoors', 'Gym'].includes(tag)} onPress={() => undefined} color="#F59E0B" interactive={false} />
+              <TagPill key={tag} label={tag} selected={['Outdoors', 'Gym'].includes(tag)} onPress={() => undefined} color="#C4A882" interactive={false} />
             ))}
           </View>
         </View>

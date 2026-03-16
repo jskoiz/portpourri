@@ -1,12 +1,11 @@
 import { StyleSheet } from 'react-native';
 import { radii, spacing, typography } from '../../../theme/tokens';
 
-const BASE = '#F8F7F4';
-const SURFACE_ELEVATED = '#F5F3EF';
-const BORDER = 'rgba(0,0,0,0.06)';
-const ACCENT = '#10B981';
-const TEXT_PRIMARY = '#1A1A1A';
-const TEXT_MUTED = '#94A3B8';
+const BASE = '#FDFBF8';
+const SURFACE_ELEVATED = '#F7F4F0';
+const BORDER = '#E8E2DA';
+const TEXT_PRIMARY = '#2C2420';
+const TEXT_MUTED = '#8C8279';
 
 export const homeStyles = StyleSheet.create({
   container: {
@@ -28,15 +27,15 @@ export const homeStyles = StyleSheet.create({
   },
   greetingEyebrow: {
     fontSize: 8,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: 2,
-    color: ACCENT,
+    color: TEXT_MUTED,
     textTransform: 'uppercase',
     marginBottom: 6,
   },
   greeting: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     color: TEXT_PRIMARY,
     letterSpacing: -0.6,
     lineHeight: 24,
@@ -50,7 +49,7 @@ export const homeStyles = StyleSheet.create({
   heroSummaryText: {
     flex: 1,
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
     color: TEXT_MUTED,
   },
   notificationButton: {
@@ -66,12 +65,10 @@ export const homeStyles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderRadius: radii.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.08)',
   },
   intentBadgeText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '600',
     letterSpacing: 0.3,
   },
   filterPillsScroll: {
@@ -89,13 +86,11 @@ export const homeStyles = StyleSheet.create({
     minHeight: 32,
     paddingHorizontal: spacing.sm + 1,
     borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: 'rgba(0,0,0,0.03)',
+    backgroundColor: 'rgba(44,36,32,0.05)',
   },
   refineTriggerText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   filterPillsRow: {
     flexDirection: 'row',
@@ -107,26 +102,25 @@ export const homeStyles = StyleSheet.create({
     paddingHorizontal: spacing.sm + 6,
     paddingVertical: 5,
     borderRadius: radii.pill,
-    borderWidth: 1,
     minHeight: 32,
     justifyContent: 'center',
   },
   filterPillActive: {
-    backgroundColor: 'rgba(124,106,247,0.08)',
-    borderColor: 'rgba(124,106,247,0.20)',
+    backgroundColor: '#2C2420',
+    borderColor: '#2C2420',
   },
   filterPillInactive: {
-    backgroundColor: 'rgba(0,0,0,0.03)',
-    borderColor: BORDER,
+    backgroundColor: 'rgba(44,36,32,0.06)',
+    borderWidth: 0,
   },
   filterPillText: {
     fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    fontWeight: '600',
+    letterSpacing: 0.4,
     color: TEXT_MUTED,
   },
   filterPillTextActive: {
-    color: '#7C6AF7',
+    color: '#FDFBF8',
   },
   deckArea: {
     flex: 1,
@@ -147,13 +141,13 @@ export const homeStyles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(0,0,0,0.12)',
+    backgroundColor: 'rgba(0,0,0,0.10)',
     alignSelf: 'center',
     marginBottom: spacing.lg,
   },
   modalTitle: {
     fontSize: typography.h2,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: -0.8,
     paddingHorizontal: spacing.xxl,
     marginBottom: spacing.lg,
@@ -165,7 +159,7 @@ export const homeStyles = StyleSheet.create({
   },
   filterSectionLabel: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     color: TEXT_MUTED,

@@ -1,16 +1,16 @@
 import type { EventSummary } from '../../../api/types';
 
 export const ACTIVITY_TYPES = [
-  { icon: 'activity', label: 'Run', color: '#34D399' },
-  { icon: 'circle', label: 'Yoga', color: '#7C6AF7' },
-  { icon: 'activity', label: 'Lift', color: '#F87171' },
-  { icon: 'map', label: 'Hike', color: '#F59E0B' },
-  { icon: 'sun', label: 'Beach', color: '#60A5FA' },
-  { icon: 'navigation', label: 'Cycle', color: '#34D399' },
-  { icon: 'wind', label: 'Surf', color: '#38BDF8' },
-  { icon: 'triangle', label: 'Climb', color: '#FB923C' },
-  { icon: 'target', label: 'Box', color: '#F87171' },
-  { icon: 'droplet', label: 'Swim', color: '#60A5FA' },
+  { icon: 'activity', label: 'Run', color: '#8BAA7A' },
+  { icon: 'circle', label: 'Yoga', color: '#B8A9C4' },
+  { icon: 'activity', label: 'Lift', color: '#D4A59A' },
+  { icon: 'map', label: 'Hike', color: '#C4A882' },
+  { icon: 'sun', label: 'Beach', color: '#B8A9C4' },
+  { icon: 'navigation', label: 'Cycle', color: '#8BAA7A' },
+  { icon: 'wind', label: 'Surf', color: '#B8A9C4' },
+  { icon: 'triangle', label: 'Climb', color: '#C4A882' },
+  { icon: 'target', label: 'Box', color: '#D4A59A' },
+  { icon: 'droplet', label: 'Swim', color: '#B8A9C4' },
 ] as const;
 
 export const WHEN_OPTIONS = ['Today', 'Tomorrow', 'This Weekend', 'Next Week'] as const;

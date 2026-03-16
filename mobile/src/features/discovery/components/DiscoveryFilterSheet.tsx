@@ -29,7 +29,7 @@ function ModalFilterPill({
       onPress={onPress}
       label={label}
       active={active}
-      accentColor="#7C6AF7"
+      accentColor="#C4A882"
       style={[styles.filterPill, active ? styles.filterPillActive : styles.filterPillInactive] as any}
       textStyle={[styles.filterPillText, { textTransform: 'capitalize' }] as any}
     />
