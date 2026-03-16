@@ -329,9 +329,11 @@
       "mobile/src/screens/__tests__/ExploreScreen.test.tsx",
       "mobile/src/screens/__tests__/HomeScreen.test.tsx",
       "mobile/src/screens/__tests__/LoginScreen.test.tsx",
+      "mobile/src/screens/__tests__/MatchesScreen.test.tsx",
       "mobile/src/screens/__tests__/MyEventsScreen.test.tsx",
       "mobile/src/screens/__tests__/NotificationsScreen.test.tsx",
       "mobile/src/screens/__tests__/OnboardingScreen.test.tsx",
+      "mobile/src/screens/__tests__/ProfileDetailScreen.test.tsx",
       "mobile/src/screens/__tests__/ProfileScreen.test.tsx",
       "mobile/src/screens/__tests__/SignupScreen.test.tsx"
     ],
@@ -547,9 +549,11 @@
           "mobile/src/screens/__tests__/ExploreScreen.test.tsx",
           "mobile/src/screens/__tests__/HomeScreen.test.tsx",
           "mobile/src/screens/__tests__/LoginScreen.test.tsx",
+          "mobile/src/screens/__tests__/MatchesScreen.test.tsx",
           "mobile/src/screens/__tests__/MyEventsScreen.test.tsx",
           "mobile/src/screens/__tests__/NotificationsScreen.test.tsx",
           "mobile/src/screens/__tests__/OnboardingScreen.test.tsx",
+          "mobile/src/screens/__tests__/ProfileDetailScreen.test.tsx",
           "mobile/src/screens/__tests__/ProfileScreen.test.tsx",
           "mobile/src/screens/__tests__/SignupScreen.test.tsx"
         ]
