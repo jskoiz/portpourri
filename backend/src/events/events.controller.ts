@@ -26,12 +26,19 @@ import { CreateEventDto } from './create-event.dto';
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
+  @UseGuards(AuthGuard('jwt'))
   @Get()
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'List public events' })
   @ApiOkResponse({ description: 'Events returned successfully.' })
-  list(@Query('take') take?: string, @Query('skip') skip?: string) {
+  @ApiUnauthorizedResponse({ description: 'Authentication is required.' })
+  list(
+    @Request() req: AuthenticatedRequest,
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
     return this.eventsService.list(
-      undefined,
+      req.user.id,
       take ? Math.min(parseInt(take, 10), 100) : 20,
       skip ? parseInt(skip, 10) : 0,
     );
