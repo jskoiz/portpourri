@@ -5,7 +5,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -52,6 +51,14 @@ export class NotificationsController {
     );
   }
 
+  @Get('unread-count')
+  @ApiOperation({ summary: 'Return the unread notification count' })
+  @ApiOkResponse({ description: 'Unread count returned successfully.' })
+  async getUnreadCount(@Request() req: AuthenticatedRequest) {
+    const count = await this.notificationsService.getUnreadCount(req.user.id);
+    return { count };
+  }
+
   @Patch(':id/read')
   @ApiOperation({ summary: 'Mark a notification as read' })
   @ApiOkResponse({ description: 'Notification marked as read.' })
@@ -60,11 +67,7 @@ export class NotificationsController {
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
-    const result = await this.notificationsService.markRead(req.user.id, id);
-    if (result === null) {
-      throw new NotFoundException(`Notification ${id} not found`);
-    }
-    return result;
+    return this.notificationsService.markRead(req.user.id, id);
   }
 
   @Patch('mark-all-read')

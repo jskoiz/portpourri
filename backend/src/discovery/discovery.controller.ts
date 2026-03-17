@@ -20,6 +20,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { DiscoveryService, type DiscoveryFilters } from './discovery.service';
+import { ProfileService } from '../profile/profile.service';
 import { AuthGuard } from '@nestjs/passport';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
 import { IsOptional, IsString } from 'class-validator';
@@ -103,7 +104,10 @@ const buildDiscoveryFilters = (
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Authentication is required.' })
 export class DiscoveryController {
-  constructor(private readonly discoveryService: DiscoveryService) {}
+  constructor(
+    private readonly discoveryService: DiscoveryService,
+    private readonly profileService: ProfileService,
+  ) {}
 
   @Get('feed')
   @ApiOperation({ summary: 'Return the discovery feed for the current user' })
@@ -156,6 +160,6 @@ export class DiscoveryController {
   @ApiOperation({ summary: 'Return profile completeness for the current user' })
   @ApiOkResponse({ description: 'Profile completeness returned successfully.' })
   async getProfileCompleteness(@Request() req: AuthenticatedRequest) {
-    return this.discoveryService.getProfileCompleteness(req.user.id);
+    return this.profileService.getProfileCompleteness(req.user.id);
   }
 }

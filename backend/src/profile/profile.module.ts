@@ -6,5 +6,6 @@ import { PhotoStorageService } from './photo-storage.service';
 @Module({
   providers: [ProfileService, PhotoStorageService],
   controllers: [ProfileController],
+  exports: [ProfileService],
 })
 export class ProfileModule {}

@@ -50,8 +50,6 @@ const GENDER_MAP: Record<string, Gender> = {
   woman: Gender.FEMALE,
   man: Gender.MALE,
   'non-binary': Gender.NON_BINARY,
-  female: Gender.FEMALE,
-  male: Gender.MALE,
 };
 
 const ALLOWED_GENDERS = ['woman', 'man', 'non-binary'] as const;

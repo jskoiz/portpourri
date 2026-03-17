@@ -37,11 +37,11 @@ export class EventsController {
     @Query('take') take?: string,
     @Query('skip') skip?: string,
   ) {
-    return this.eventsService.list(
-      req.user.id,
-      take ? Math.min(parseInt(take, 10), 100) : 20,
-      skip ? parseInt(skip, 10) : 0,
-    );
+    const parsedTake = parseInt(take ?? '', 10);
+    const parsedSkip = parseInt(skip ?? '', 10);
+    const safeTake = Number.isNaN(parsedTake) ? 20 : Math.min(Math.max(parsedTake, 1), 100);
+    const safeSkip = Number.isNaN(parsedSkip) ? 0 : Math.max(parsedSkip, 0);
+    return this.eventsService.list(req.user.id, safeTake, safeSkip);
   }
 
   @UseGuards(AuthGuard('jwt'))
@@ -55,11 +55,11 @@ export class EventsController {
     @Query('take') take?: string,
     @Query('skip') skip?: string,
   ) {
-    return this.eventsService.myEvents(
-      req.user.id,
-      take ? parseInt(take, 10) : 20,
-      skip ? parseInt(skip, 10) : 0,
-    );
+    const parsedTake = parseInt(take ?? '', 10);
+    const parsedSkip = parseInt(skip ?? '', 10);
+    const safeTake = Number.isNaN(parsedTake) ? 20 : Math.min(Math.max(parsedTake, 1), 100);
+    const safeSkip = Number.isNaN(parsedSkip) ? 0 : Math.max(parsedSkip, 0);
+    return this.eventsService.myEvents(req.user.id, safeTake, safeSkip);
   }
 
   @Get(':id')
