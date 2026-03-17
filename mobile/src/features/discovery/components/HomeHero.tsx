@@ -25,7 +25,9 @@ export function HomeHero({
   onPressNotifications: () => void;
   unreadCount: number;
 }) {
-  const timeLabel = greeting.split(/[,\s]/)[0]?.trim().toUpperCase() || 'TONIGHT';
+  const rawTimeWord = greeting.split(/[,\s]/)[0]?.trim() || 'Tonight';
+  const timeLabel = rawTimeWord.toUpperCase();
+  const headingLabel = rawTimeWord.charAt(0).toUpperCase() + rawTimeWord.slice(1).toLowerCase();
   const summaryLabel =
     filterCount > 0 ? `${feedCount} profiles · ${filterCount} active` : `${feedCount} profiles · Minimal`;
 
@@ -34,7 +36,7 @@ export function HomeHero({
       <View style={styles.heroHeaderRow}>
         <View style={styles.headerCopy}>
           <Text style={styles.greetingEyebrow}>{timeLabel} / INTENT-AWARE</Text>
-          <Text style={[styles.greeting, { fontFamily: fontFamily.serifBold }]}>Tonight&apos;s people</Text>
+          <Text style={[styles.greeting, { fontFamily: fontFamily.serifBold }]}>{headingLabel}&apos;s people</Text>
         </View>
 
         <AppNotificationButton
