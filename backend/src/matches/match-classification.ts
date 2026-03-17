@@ -6,7 +6,7 @@ export interface MatchClassification {
 }
 
 export async function deriveMatchClassification(
-  prisma: PrismaService,
+  prisma: Pick<PrismaService, 'userProfile'>,
   userIds: [string, string],
 ): Promise<MatchClassification> {
   const profiles = await prisma.userProfile.findMany({
