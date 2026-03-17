@@ -78,6 +78,67 @@ describe('MatchesController', () => {
     );
   });
 
+  describe('getMatches pagination bounds', () => {
+    beforeEach(() => matchesServiceMock.getMatches.mockResolvedValue([]));
+
+    it('defaults take=20 and skip=0 for NaN strings', async () => {
+      await controller.getMatches(req, 'abc', 'xyz');
+      expect(matchesServiceMock.getMatches).toHaveBeenCalledWith('user-1', 20, 0);
+    });
+
+    it('clamps take to minimum 1 when 0', async () => {
+      await controller.getMatches(req, '0', '0');
+      expect(matchesServiceMock.getMatches).toHaveBeenCalledWith('user-1', 1, 0);
+    });
+
+    it('clamps negative take to 1', async () => {
+      await controller.getMatches(req, '-5', '0');
+      expect(matchesServiceMock.getMatches).toHaveBeenCalledWith('user-1', 1, 0);
+    });
+
+    it('clamps take to maximum 100', async () => {
+      await controller.getMatches(req, '999', '0');
+      expect(matchesServiceMock.getMatches).toHaveBeenCalledWith('user-1', 100, 0);
+    });
+
+    it('clamps negative skip to 0', async () => {
+      await controller.getMatches(req, '10', '-10');
+      expect(matchesServiceMock.getMatches).toHaveBeenCalledWith('user-1', 10, 0);
+    });
+  });
+
+  describe('getMessages pagination bounds', () => {
+    beforeEach(() => matchesServiceMock.getMessages.mockResolvedValue([]));
+
+    it('defaults take=50 for NaN string', async () => {
+      await controller.getMessages(req, 'match-1', 'abc');
+      expect(matchesServiceMock.getMessages).toHaveBeenCalledWith(
+        'match-1', 'user-1', 50, undefined,
+      );
+    });
+
+    it('clamps take to minimum 1 when 0', async () => {
+      await controller.getMessages(req, 'match-1', '0');
+      expect(matchesServiceMock.getMessages).toHaveBeenCalledWith(
+        'match-1', 'user-1', 1, undefined,
+      );
+    });
+
+    it('clamps negative take to 1', async () => {
+      await controller.getMessages(req, 'match-1', '-5');
+      expect(matchesServiceMock.getMessages).toHaveBeenCalledWith(
+        'match-1', 'user-1', 1, undefined,
+      );
+    });
+
+    it('clamps take to maximum 100', async () => {
+      await controller.getMessages(req, 'match-1', '500');
+      expect(matchesServiceMock.getMessages).toHaveBeenCalledWith(
+        'match-1', 'user-1', 100, undefined,
+      );
+    });
+  });
+
   it('delegates sendMessage to service', async () => {
     const msg = {
       id: 'msg-1',

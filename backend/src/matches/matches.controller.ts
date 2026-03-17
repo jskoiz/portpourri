@@ -44,11 +44,12 @@ export class MatchesController {
     const parsedTake = take ? Number.parseInt(take, 10) : NaN;
     const parsedSkip = skip ? Number.parseInt(skip, 10) : NaN;
 
-    return this.matchesService.getMatches(
-      req.user.id,
-      Number.isNaN(parsedTake) ? 20 : Math.min(parsedTake, 100),
-      Number.isNaN(parsedSkip) ? 0 : parsedSkip,
-    );
+    const safeTake = Number.isNaN(parsedTake)
+      ? 20
+      : Math.min(Math.max(parsedTake, 1), 100);
+    const safeSkip = Number.isNaN(parsedSkip) ? 0 : Math.max(parsedSkip, 0);
+
+    return this.matchesService.getMatches(req.user.id, safeTake, safeSkip);
   }
 
   @Get(':id/messages')
@@ -61,10 +62,13 @@ export class MatchesController {
     @Query('cursor') cursor?: string,
   ) {
     const parsedTake = take ? Number.parseInt(take, 10) : NaN;
+    const safeTake = Number.isNaN(parsedTake)
+      ? 50
+      : Math.min(Math.max(parsedTake, 1), 100);
     return this.matchesService.getMessages(
       id,
       req.user.id,
-      Number.isNaN(parsedTake) ? 50 : Math.min(parsedTake, 100),
+      safeTake,
       cursor || undefined,
     );
   }
