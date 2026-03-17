@@ -241,7 +241,7 @@ describe('EventsService', () => {
           },
           'host-1',
         ),
-      ).resolves.toBeDefined(); // service does not validate past dates
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('accepts an event without endsAt', async () => {

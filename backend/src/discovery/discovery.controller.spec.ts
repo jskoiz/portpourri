@@ -38,10 +38,6 @@ describe('DiscoveryController', () => {
     controller = module.get<DiscoveryController>(DiscoveryController);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-
   it('parses feed filters from query params and forwards them to the service', async () => {
     const req = {
       user: { id: 'user-1', email: 'u@example.com' },

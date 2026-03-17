@@ -32,10 +32,6 @@ describe('ProfileController', () => {
     controller = module.get<ProfileController>(ProfileController);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-
   it('delegates updateFitnessProfile to profile service', async () => {
     const req = { user: { id: 'user-1' } } as AuthenticatedRequest;
     const dto = { intensityLevel: 'ADVANCED' as const };

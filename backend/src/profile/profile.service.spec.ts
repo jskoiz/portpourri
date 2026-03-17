@@ -53,10 +53,6 @@ describe('ProfileService', () => {
     service = module.get<ProfileService>(ProfileService);
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
   it('marks user as onboarded when fitness profile is updated', async () => {
     const fitnessProfile = {
       userId: 'user-1',

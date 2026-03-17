@@ -155,23 +155,18 @@ describe('CreateScreen', () => {
 describe('buildStartDate', () => {
   function mockDateToDay(dayOfWeek: number, hour = 8) {
     // dayOfWeek: 0=Sun, 1=Mon, ..., 6=Sat
-    const real = Date;
     const fakeNow = new Date(2024, 0, 1); // Jan 1 2024 = Monday
     // advance to the desired day of week
     const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     fakeNow.setDate(fakeNow.getDate() + mondayOffset);
     fakeNow.setHours(hour, 0, 0, 0);
-    jest.spyOn(globalThis, 'Date').mockImplementation((...args: any[]) => {
-      if (args.length === 0) return new real(fakeNow);
-      // @ts-ignore
-      return new real(...args);
-    });
-    (globalThis.Date as DateConstructor & { now: () => number }).now = () => fakeNow.getTime();
+    jest.useFakeTimers({ now: fakeNow });
+    jest.setSystemTime(fakeNow);
     return fakeNow;
   }
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    jest.useRealTimers();
   });
 
   it('returns a Saturday when "This Weekend" is selected on a Monday morning', () => {

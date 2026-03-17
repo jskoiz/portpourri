@@ -7,25 +7,38 @@
  * unconditionally set config.headers.Authorization, making the explicit token
  * parameter of authApi.me dead code at runtime.
  */
-import * as SecureStore from 'expo-secure-store';
 
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(),
   setItemAsync: jest.fn(),
   deleteItemAsync: jest.fn(),
 }));
+
+jest.mock('../authSession', () => ({
+  handleUnauthorized: jest.fn(),
+}));
+
+import * as SecureStore from 'expo-secure-store';
 import { STORAGE_KEYS } from '../../constants/storage';
+import client from '../client';
 
 const mockSecureStore = SecureStore as jest.Mocked<typeof SecureStore>;
 
-async function requestInterceptor(config: { headers: Record<string, string> }): Promise<{ headers: Record<string, string> }> {
-  if (!config.headers.Authorization) {
-    const token = await SecureStore.getItemAsync(STORAGE_KEYS.accessToken);
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+// Helper: run only the request interceptor pipeline on a config object
+async function runRequestInterceptor(config: { headers?: Record<string, string> }) {
+  // Axios interceptors are stored internally; we exercise them by calling
+  // client.request and intercepting before the actual HTTP call.
+  // Instead, we use the axios internals: the interceptor handlers array.
+  const handlers = (client.interceptors.request as any).handlers as Array<{
+    fulfilled: (config: any) => Promise<any>;
+  }>;
+  let result: any = { ...client.defaults, ...config, headers: { ...client.defaults.headers.common, ...config.headers } };
+  for (const handler of handlers) {
+    if (handler?.fulfilled) {
+      result = await handler.fulfilled(result);
     }
   }
-  return config;
+  return result;
 }
 
 describe('client request interceptor', () => {
@@ -36,8 +49,7 @@ describe('client request interceptor', () => {
   it('injects the stored token when no Authorization header is present', async () => {
     mockSecureStore.getItemAsync.mockResolvedValueOnce('stored-token');
 
-    const config = { headers: {} };
-    const result = await requestInterceptor(config);
+    const result = await runRequestInterceptor({ headers: {} });
 
     expect(mockSecureStore.getItemAsync).toHaveBeenCalledWith(STORAGE_KEYS.accessToken);
     expect(result.headers.Authorization).toBe('Bearer stored-token');
@@ -46,8 +58,7 @@ describe('client request interceptor', () => {
   it('does NOT overwrite an explicit Authorization header supplied by the caller', async () => {
     mockSecureStore.getItemAsync.mockResolvedValueOnce('stored-token');
 
-    const config = { headers: { Authorization: 'Bearer caller-token' } };
-    const result = await requestInterceptor(config);
+    const result = await runRequestInterceptor({ headers: { Authorization: 'Bearer caller-token' } });
 
     expect(mockSecureStore.getItemAsync).not.toHaveBeenCalled();
     expect(result.headers.Authorization).toBe('Bearer caller-token');
@@ -56,8 +67,7 @@ describe('client request interceptor', () => {
   it('leaves headers unchanged when no token is in storage and none is supplied', async () => {
     mockSecureStore.getItemAsync.mockResolvedValueOnce(null);
 
-    const config = { headers: {} };
-    const result = await requestInterceptor(config);
+    const result = await runRequestInterceptor({ headers: {} });
 
     expect(result.headers.Authorization).toBeUndefined();
   });

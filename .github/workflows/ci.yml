@@ -25,6 +25,7 @@ jobs:
           cache-dependency-path: |
             backend/package-lock.json
             mobile/package-lock.json
+      - run: npm install --ignore-scripts
       - run: npm ci
         working-directory: backend
       - run: npm ci
@@ -52,6 +53,7 @@ jobs:
           cache-dependency-path: |
             backend/package-lock.json
             mobile/package-lock.json
+      - run: npm install --ignore-scripts
       - run: npm ci
         working-directory: backend
       - run: npm ci

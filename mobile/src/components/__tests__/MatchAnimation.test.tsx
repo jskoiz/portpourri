@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, waitFor } from '@testing-library/react-native';
 import MatchAnimation from '../MatchAnimation';
 
 jest.mock('lottie-react-native', () => {
@@ -55,8 +55,6 @@ describe('MatchAnimation', () => {
 
     render(<MatchAnimation visible={true} onFinish={onFinish} />);
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    expect(onFinish).toHaveBeenCalled();
+    await waitFor(() => expect(onFinish).toHaveBeenCalled());
   });
 });

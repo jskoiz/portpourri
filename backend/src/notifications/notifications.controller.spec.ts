@@ -17,8 +17,6 @@ describe('NotificationsController', () => {
 
   const req = { user: { id: 'user-1' } } as AuthenticatedRequest;
 
-  const originalNodeEnv = process.env.NODE_ENV;
-
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -30,18 +28,6 @@ describe('NotificationsController', () => {
     }).compile();
 
     controller = module.get<NotificationsController>(NotificationsController);
-  });
-
-  afterEach(() => {
-    if (originalNodeEnv === undefined) {
-      delete process.env.NODE_ENV;
-    } else {
-      process.env.NODE_ENV = originalNodeEnv;
-    }
-  });
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
   });
 
   it('delegates list to notifications service', async () => {
@@ -77,17 +63,22 @@ describe('NotificationsController', () => {
   });
 
   it('throws ForbiddenException when NODE_ENV is production', async () => {
+    const original = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
 
-    await expect(
-      controller.emit(req, {
-        type: NotificationType.System,
-        title: 'Test',
-        body: 'test',
-      }),
-    ).rejects.toThrow(ForbiddenException);
+    try {
+      await expect(
+        controller.emit(req, {
+          type: NotificationType.System,
+          title: 'Test',
+          body: 'test',
+        }),
+      ).rejects.toThrow(ForbiddenException);
 
-    expect(notificationsServiceMock.create).not.toHaveBeenCalled();
+      expect(notificationsServiceMock.create).not.toHaveBeenCalled();
+    } finally {
+      process.env.NODE_ENV = original;
+    }
   });
 
   it('delegates emit with a valid type to notifications service', async () => {

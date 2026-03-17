@@ -99,10 +99,6 @@ describe('DiscoveryService', () => {
     prismaMock.user.findFirst.mockResolvedValue({ id: 'user-2' });
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
   it('pushes like/pass exclusions and profile filters into the feed query', async () => {
     prismaMock.user.findUnique.mockResolvedValue({
       id: 'me',

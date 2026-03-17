@@ -32,10 +32,6 @@ describe('AuthController', () => {
     controller = module.get<AuthController>(AuthController);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-
   it('delegates login to auth service', async () => {
     const dto: LoginDto = { email: 'test@example.com', password: 'pw' };
     authServiceMock.login.mockResolvedValue({ access_token: 'token' });

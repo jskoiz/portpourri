@@ -51,10 +51,6 @@ describe('EventsController', () => {
     expect(eventsServiceMock.list).toHaveBeenCalledWith('user-1', 12, 4);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-
   it('delegates create to events service', async () => {
     const req = {
       user: { id: 'user-1', email: 'u@example.com' },
