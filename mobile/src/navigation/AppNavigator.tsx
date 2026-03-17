@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
@@ -60,9 +60,17 @@ export default function AppNavigator() {
     },
   };
 
+  const autoLoginInFlight = useRef(false);
+
   useEffect(() => {
     const cleanupUnauthorizedHandler = setUnauthorizedHandler(clearSession);
-    loadToken();
+
+    if (!autoLoginInFlight.current) {
+      autoLoginInFlight.current = true;
+      loadToken().finally(() => {
+        autoLoginInFlight.current = false;
+      });
+    }
 
     return cleanupUnauthorizedHandler;
   }, [clearSession, loadToken]);

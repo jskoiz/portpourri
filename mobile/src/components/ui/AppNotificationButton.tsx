@@ -8,18 +8,21 @@ interface AppNotificationButtonProps {
   unreadCount?: number;
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 }
 
 export default function AppNotificationButton({
   unreadCount = 0,
   onPress,
   style,
+  testID,
 }: AppNotificationButtonProps) {
   const theme = useTheme();
   const badgeLabel = unreadCount > 99 ? '99+' : String(unreadCount);
 
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={unreadCount > 0 ? `${badgeLabel} unread notifications` : 'Notifications'}
