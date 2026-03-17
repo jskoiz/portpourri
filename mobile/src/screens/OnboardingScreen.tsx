@@ -590,7 +590,7 @@ export default function OnboardingScreen({
           <View style={styles.fullScreenStep}>
             <View style={styles.holyShitContent}>
               <Animated.View style={[styles.countBadge, { backgroundColor: theme.primary, transform: [{ scale: pulseAnim }] }]}>
-                <Text style={[styles.countNumber, { color: theme.white }]}>8</Text>
+                <AppIcon name="users" size={36} color={theme.white} />
                 <Text style={[styles.countLabel, { color: theme.white }]}>near you</Text>
               </Animated.View>
 
@@ -598,12 +598,12 @@ export default function OnboardingScreen({
                 People who share{'\n'}your lifestyle.
               </Text>
               <Text style={[styles.holyShitBody, { color: theme.textSecondary }]}>
-                BRDG found 8 people near you with matching activities, schedule, and vibe.
+                People near you are waiting with matching activities, schedule, and vibe.
               </Text>
 
               {/* Blurred avatar grid */}
               <View style={styles.avatarGrid}>
-                {[...Array(8)].map((_, i) => (
+                {(['activity', 'circle', 'wind', 'map', 'triangle'] as const).map((iconName, i) => (
                   <View
                     key={i}
                     style={[
@@ -615,7 +615,7 @@ export default function OnboardingScreen({
                     ]}
                   >
                     <AppIcon
-                      name={(['activity', 'circle', 'activity', 'navigation', 'wind', 'map', 'triangle', 'droplet'] as const)[i]}
+                      name={iconName}
                       size={18}
                       color={i % 2 === 0 ? theme.primary : theme.accent}
                     />

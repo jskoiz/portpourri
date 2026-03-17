@@ -109,9 +109,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await authApi.me(token);
       set({ token, user: response.data, isLoading: false });
-    } catch {
-      await storage.deleteItemAsync(STORAGE_KEYS.accessToken);
-      set({ token: null, user: null, isLoading: false });
+    } catch (err: unknown) {
+      const normalized = normalizeApiError(err);
+      if (normalized.isUnauthorized || normalized.status === 403) {
+        // Token is genuinely invalid — clear it
+        await storage.deleteItemAsync(STORAGE_KEYS.accessToken);
+        set({ token: null, user: null, isLoading: false });
+      } else {
+        // Network or transient error — keep the token so the app can retry
+        set({ token, user: null, isLoading: false });
+      }
     }
   },
 }));

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import type { ChatMessage } from '../../../api/types';
 import type { Theme } from '../../../theme/tokens';
@@ -31,13 +31,12 @@ export function ChatMessageList({
   refreshing: boolean;
   theme: Theme;
 }) {
-  const orderedMessages = useMemo(() => [...messages].reverse(), [messages]);
-
   return (
     <FlatList
-      data={orderedMessages}
+      data={messages}
       renderItem={({ item }) => <ChatBubble item={item} theme={theme} />}
       keyExtractor={(item) => item.id}
+      inverted
       contentContainerStyle={styles.listContent}
       showsVerticalScrollIndicator={false}
       windowSize={10}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import type { EventDetail } from '../api/types';
@@ -142,9 +142,7 @@ export default function EventDetailScreen({
     try {
       await joinEvent();
     } catch (err) {
-      // Optimistic update rollback is handled by the useEventDetail hook's onError.
-      // Surface errors are shown via errorMessage derived from query error state.
-      void err;
+      Alert.alert('Could not join event', 'Please try again later.');
     }
   };
 

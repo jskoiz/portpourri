@@ -51,11 +51,9 @@ describe('connectMatchMessageStream', () => {
     expect(mockSecureStore.getItemAsync).toHaveBeenCalledWith(STORAGE_KEYS.accessToken);
     expect(MockEventSource.instances).toHaveLength(1);
     expect(MockEventSource.instances[0].url).toBe(
-      `${env.apiUrl}/matches/match-1/messages/stream`,
+      `${env.apiUrl}/matches/match-1/messages/stream?token=secure-token`,
     );
-    expect(MockEventSource.instances[0].init).toMatchObject({
-      headers: { Authorization: 'Bearer secure-token' },
-    });
+    expect(MockEventSource.instances[0].init).toMatchObject({});
     expect(onStatus).toHaveBeenCalledWith('connecting');
 
     disconnect();

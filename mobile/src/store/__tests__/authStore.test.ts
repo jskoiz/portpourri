@@ -139,14 +139,82 @@ describe('authStore', () => {
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
 
-    it('clears token and user when stored token is expired', async () => {
+    it('clears token and user when server returns 401', async () => {
+      const axiosError = Object.assign(new Error('Unauthorized'), {
+        response: { status: 401, data: { message: 'Token expired' } },
+        isAxiosError: true,
+      });
       mockSecureStore.getItemAsync.mockResolvedValueOnce('expired-token');
-      mockAuthApi.me.mockRejectedValueOnce(new Error('401'));
+      mockAuthApi.me.mockRejectedValueOnce(axiosError);
 
       await useAuthStore.getState().loadToken();
 
       expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(STORAGE_KEYS.accessToken);
       expect(useAuthStore.getState().token).toBeNull();
+      expect(useAuthStore.getState().user).toBeNull();
+      expect(useAuthStore.getState().isLoading).toBe(false);
+    });
+
+    it('clears token and user when server returns 403', async () => {
+      const axiosError = Object.assign(new Error('Forbidden'), {
+        response: { status: 403, data: {} },
+        isAxiosError: true,
+      });
+      mockSecureStore.getItemAsync.mockResolvedValueOnce('revoked-token');
+      mockAuthApi.me.mockRejectedValueOnce(axiosError);
+
+      await useAuthStore.getState().loadToken();
+
+      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(STORAGE_KEYS.accessToken);
+      expect(useAuthStore.getState().token).toBeNull();
+      expect(useAuthStore.getState().user).toBeNull();
+      expect(useAuthStore.getState().isLoading).toBe(false);
+    });
+
+    it('keeps token on network error so the app can retry later', async () => {
+      const networkError = Object.assign(new Error('Network Error'), {
+        isAxiosError: true,
+        // no response property — indicates a network-level failure
+      });
+      mockSecureStore.getItemAsync.mockResolvedValueOnce('valid-token');
+      mockAuthApi.me.mockRejectedValueOnce(networkError);
+
+      await useAuthStore.getState().loadToken();
+
+      expect(mockSecureStore.deleteItemAsync).not.toHaveBeenCalled();
+      expect(useAuthStore.getState().token).toBe('valid-token');
+      expect(useAuthStore.getState().user).toBeNull();
+      expect(useAuthStore.getState().isLoading).toBe(false);
+    });
+
+    it('keeps token on timeout error', async () => {
+      const timeoutError = Object.assign(new Error('timeout of 10000ms exceeded'), {
+        isAxiosError: true,
+        code: 'ECONNABORTED',
+      });
+      mockSecureStore.getItemAsync.mockResolvedValueOnce('valid-token');
+      mockAuthApi.me.mockRejectedValueOnce(timeoutError);
+
+      await useAuthStore.getState().loadToken();
+
+      expect(mockSecureStore.deleteItemAsync).not.toHaveBeenCalled();
+      expect(useAuthStore.getState().token).toBe('valid-token');
+      expect(useAuthStore.getState().user).toBeNull();
+      expect(useAuthStore.getState().isLoading).toBe(false);
+    });
+
+    it('keeps token on 500 server error', async () => {
+      const serverError = Object.assign(new Error('Internal Server Error'), {
+        response: { status: 500, data: {} },
+        isAxiosError: true,
+      });
+      mockSecureStore.getItemAsync.mockResolvedValueOnce('valid-token');
+      mockAuthApi.me.mockRejectedValueOnce(serverError);
+
+      await useAuthStore.getState().loadToken();
+
+      expect(mockSecureStore.deleteItemAsync).not.toHaveBeenCalled();
+      expect(useAuthStore.getState().token).toBe('valid-token');
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
     });

@@ -13,6 +13,7 @@ interface PendingVerification {
 @Injectable()
 export class VerificationService {
   private readonly logger = new Logger(VerificationService.name);
+  // TODO: Replace in-memory Map with Redis or database for horizontal scaling
   private pending = new Map<string, PendingVerification>();
 
   constructor(private readonly prisma: PrismaService) {}

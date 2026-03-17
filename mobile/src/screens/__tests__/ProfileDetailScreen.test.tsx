@@ -113,16 +113,17 @@ describe('ProfileDetailScreen', () => {
     expect(screen.getAllByText('Trail Runs').length).toBeGreaterThan(0);
   });
 
-  it('returns null when the route has no user payload', () => {
+  it('shows error state when the route has no user payload', () => {
     mockUseRoute.mockReturnValue({
       params: {
         user: null,
       },
     });
 
-    const { toJSON } = render(<ProfileDetailScreen />);
+    render(<ProfileDetailScreen />);
 
-    expect(toJSON()).toBeNull();
+    expect(screen.getByText('Profile not found')).toBeTruthy();
+    expect(screen.getByText('This profile is no longer available.')).toBeTruthy();
   });
 
   it('opens chat with a suggested activity when a match already exists', async () => {

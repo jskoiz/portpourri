@@ -58,6 +58,7 @@ export class EventsService {
   async list(userId?: string, take = 20, skip = 0) {
     const safeTake = Math.min(Math.max(take, 1), 100);
     const events = await this.prisma.event.findMany({
+      where: { startsAt: { gte: new Date() } },
       orderBy: { startsAt: 'asc' },
       take: safeTake,
       skip,
@@ -187,16 +188,24 @@ export class EventsService {
       });
 
       if (event.host.id !== userId) {
-        void this.notifications.create(
-          event.host.id,
-          buildEventRsvpNotification(eventId, userId, event.title),
-        );
+        void this.notifications
+          .create(
+            event.host.id,
+            buildEventRsvpNotification(eventId, userId, event.title),
+          )
+          .catch((err) =>
+            this.logger.error('Failed to send notification', err),
+          );
       }
 
-      void this.notifications.create(
-        userId,
-        buildEventReminderNotification(eventId, event.title),
-      );
+      void this.notifications
+        .create(
+          userId,
+          buildEventReminderNotification(eventId, event.title),
+        )
+        .catch((err) =>
+          this.logger.error('Failed to send notification', err),
+        );
     }
 
     const total = await this.prisma.eventRsvp.count({ where: { eventId } });

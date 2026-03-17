@@ -11,7 +11,7 @@ const eventRsvpFindUnique = jest.fn();
 const eventRsvpUpsert = jest.fn();
 const eventRsvpCount = jest.fn();
 const eventRsvpFindMany = jest.fn();
-const notificationsCreate = jest.fn();
+const notificationsCreate = jest.fn().mockResolvedValue(undefined);
 
 const prisma = {
   event: {

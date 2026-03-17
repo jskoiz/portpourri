@@ -26,7 +26,7 @@ export const homeStyles = StyleSheet.create({
     flex: 1,
   },
   greetingEyebrow: {
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 2,
     color: TEXT_MUTED,

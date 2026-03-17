@@ -1,54 +1,4 @@
-export const darkTheme = {
-  // Backgrounds
-  background: '#FDFBF8',
-  backgroundSoft: '#F7F4F0',
-
-  // Surfaces
-  surface: '#FFFFFF',
-  surfaceElevated: '#FFFFFF',
-  surfaceGlass: 'rgba(255,255,255,0.82)',
-
-  // Borders
-  border: '#E8E2DA',
-  borderSoft: '#F0EBE4',
-  borderFocus: '#C4A882',
-
-  // Text
-  textPrimary: '#2C2420',
-  textSecondary: '#5C544C',
-  textMuted: '#8C8279',
-  textInverse: '#FDFBF8',
-
-  // Primary — warm gold / champagne
-  primary: '#C4A882',
-  primaryPressed: '#B09672',
-  primarySubtle: 'rgba(196,168,130,0.12)',
-
-  // Accent — muted lavender
-  accent: '#B8A9C4',
-  accentSoft: '#D4C9DB',
-  accentSubtle: 'rgba(184,169,196,0.12)',
-
-  // Energy — soft blush / rose
-  energy: '#D4A59A',
-  energySubtle: 'rgba(212,165,154,0.10)',
-
-  // Semantic
-  danger: '#C97070',
-  dangerSubtle: 'rgba(201,112,112,0.08)',
-  success: '#8BAA7A',
-  warning: '#C4A882',
-
-  // Fixed
-  white: '#FFFFFF',
-  black: '#000000',
-
-  // Shadows
-  shadowColor: '#000000',
-  shadowColorDark: '#000000',
-};
-
-export const lightTheme: Theme = {
+export const lightTheme = {
   // Backgrounds
   background: '#FDFBF8',
   backgroundSoft: '#F7F4F0',
@@ -98,7 +48,10 @@ export const lightTheme: Theme = {
   shadowColorDark: '#000000',
 };
 
-export type Theme = typeof darkTheme;
+export type Theme = typeof lightTheme;
+
+// TODO: darkTheme is currently identical to lightTheme — implement actual dark mode or remove
+export const darkTheme: Theme = { ...lightTheme };
 
 // Legacy flat colors export (dark values for backward compat)
 export const colors = darkTheme;

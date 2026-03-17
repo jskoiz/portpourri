@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, finalize } from 'rxjs';
 
 export interface MatchMessagePayload {
   id: string;
@@ -17,9 +17,18 @@ export interface MatchMessageEvent {
 @Injectable()
 export class MatchesRealtimeService {
   private readonly streams = new Map<string, Subject<MatchMessageEvent>>();
+  private readonly refCounts = new Map<string, number>();
+
+  /** Number of active streams (exposed for testing). */
+  get activeStreamCount(): number {
+    return this.streams.size;
+  }
 
   stream(matchId: string): Observable<MatchMessageEvent> {
-    return this.getOrCreateStream(matchId).asObservable();
+    this.incrementRef(matchId);
+    return this.getOrCreateStream(matchId).asObservable().pipe(
+      finalize(() => this.decrementRef(matchId)),
+    );
   }
 
   publishMessage(matchId: string, message: MatchMessagePayload) {
@@ -37,5 +46,27 @@ export class MatchesRealtimeService {
     const subject = new Subject<MatchMessageEvent>();
     this.streams.set(matchId, subject);
     return subject;
+  }
+
+  private incrementRef(matchId: string): void {
+    this.refCounts.set(matchId, (this.refCounts.get(matchId) ?? 0) + 1);
+  }
+
+  private decrementRef(matchId: string): void {
+    const count = (this.refCounts.get(matchId) ?? 1) - 1;
+    if (count <= 0) {
+      this.removeStream(matchId);
+    } else {
+      this.refCounts.set(matchId, count);
+    }
+  }
+
+  private removeStream(matchId: string): void {
+    const subject = this.streams.get(matchId);
+    if (subject) {
+      subject.complete();
+      this.streams.delete(matchId);
+    }
+    this.refCounts.delete(matchId);
   }
 }
