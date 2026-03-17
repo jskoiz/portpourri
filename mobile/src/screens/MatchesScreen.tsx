@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, RefreshControl, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { normalizeApiError } from '../api/errors';
@@ -90,8 +90,7 @@ const MatchCard = React.memo(function MatchCard({ item, onPress }: { item: Match
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-export default function MatchesScreen() {
-  const navigation = useNavigation<MainTabScreenProps<'Inbox'>['navigation']>();
+export default function MatchesScreen({ navigation }: MainTabScreenProps<'Inbox'>) {
   const { error, isLoading: loading, isRefetching, matches, refetch } =
     useMatches();
   const errorMessage = error ? normalizeApiError(error).message : null;

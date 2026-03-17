@@ -12,8 +12,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { profileApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { useProfile } from '../features/profile/hooks/useProfile';
 import { normalizeApiError } from '../api/errors';
 import { Button } from '../design/primitives';
 import AppBackButton from '../components/ui/AppBackButton';
@@ -110,6 +110,7 @@ export default function OnboardingScreen({
   const insets = useSafeAreaInsets();
   const setUser = useAuthStore((state) => state.setUser);
   const user = useAuthStore((state) => state.user);
+  const { updateFitness } = useProfile();
 
   const [step, setStep] = useState(0);
   const {
@@ -174,7 +175,7 @@ export default function OnboardingScreen({
         .map((key) => ACTIVITIES.find((activity) => activity.key === key)?.label ?? key)
         .join(', ');
 
-      await profileApi.updateFitness({
+      await updateFitness({
         intensityLevel: values.intensityLevel,
         weeklyFrequencyBand: values.weeklyFrequencyBand,
         primaryGoal:

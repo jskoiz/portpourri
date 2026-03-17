@@ -21,8 +21,8 @@ import { TabBarVisibilityProvider } from "./TabBarVisibilityContext";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const linking = {
-  prefixes: ['brdg://', 'com.avmillabs.brdg://'],
+const linking: import('@react-navigation/native').LinkingOptions<RootStackParamList> = {
+  prefixes: ['brdg://', 'com.avmillabs.brdg://', 'https://brdg.app'],
   config: {
     screens: {
       Main: {
@@ -36,6 +36,7 @@ const linking = {
       Chat: 'chat/:matchId',
       ProfileDetail: 'profile/:userId',
       EventDetail: 'event/:eventId',
+      Notifications: 'notifications',
     },
   },
 };

@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { normalizeApiError } from '../api/errors';
 import type { AppNotification } from '../api/types';
 import AppBackButton from '../components/ui/AppBackButton';
@@ -118,10 +118,10 @@ function NotifRow({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function NotificationsScreen() {
+export default function NotificationsScreen({
+  navigation,
+}: RootStackScreenProps<'Notifications'>) {
   const theme = useTheme();
-  const navigation =
-    useNavigation<RootStackScreenProps<'Notifications'>['navigation']>();
   const [actionError, setActionError] = useState<string | null>(null);
   const {
     error,
@@ -167,8 +167,11 @@ export default function NotificationsScreen() {
       navigation.navigate('Main', { screen: 'Inbox' });
     } else if (notif.type === 'like_received') {
       navigation.navigate('Main', { screen: 'Discover' });
+    } else if (notif.type === 'message_received' && data?.matchId) {
+      navigation.navigate('Chat', { matchId: data.matchId, user: { id: data.userId ?? '', firstName: data.firstName ?? '' } as any });
+    } else if ((notif.type === 'event_rsvp' || notif.type === 'event_reminder') && data?.eventId) {
+      navigation.navigate('EventDetail', { eventId: data.eventId });
     }
-    // Other types: no-op for now
   };
 
   const todayNotifs = notifs.filter(

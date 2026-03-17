@@ -44,7 +44,7 @@ export function ExploreScreenContent({
   isRefreshing: boolean;
   onInvite: (event?: EventSummary) => void;
   onOpenCreate: () => void;
-  onOpenEvent: (eventId: string) => void;
+  onOpenEvent: (eventId: string, event: EventSummary) => void;
   onOpenMyEvents: () => void;
   onPressNotifications: () => void;
   onRefresh: () => void;
@@ -66,7 +66,7 @@ export function ExploreScreenContent({
           key={event.id}
           event={event}
           currentUserId={currentUserId}
-          onOpen={() => onOpenEvent(event.id)}
+          onOpen={() => onOpenEvent(event.id, event)}
           onInvite={() => onInvite(event)}
         />
       )),

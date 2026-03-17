@@ -7,13 +7,12 @@ const mockMarkRead = jest.fn();
 const mockMarkAllRead = jest.fn();
 const mockUseNotifications = jest.fn();
 
+const mockNavigation = { goBack: mockGoBack, navigate: jest.fn() } as any;
+
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
 
   return {
-    useNavigation: () => ({
-      goBack: mockGoBack,
-    }),
     useFocusEffect: (callback: () => void) => {
       React.useEffect(() => {
         const cleanup = callback();
@@ -62,7 +61,7 @@ describe('NotificationsScreen', () => {
   });
 
   it('loads notifications and marks an item as read', async () => {
-    render(<NotificationsScreen />);
+    render(<NotificationsScreen navigation={mockNavigation} route={{ key: 'Notifications-1', name: 'Notifications' } as any} />);
 
     const title = await screen.findByText('New message');
     fireEvent.press(title);
@@ -73,7 +72,7 @@ describe('NotificationsScreen', () => {
   });
 
   it('clears all notifications and resets the unread badge count', async () => {
-    render(<NotificationsScreen />);
+    render(<NotificationsScreen navigation={mockNavigation} route={{ key: 'Notifications-1', name: 'Notifications' } as any} />);
 
     const clearAll = await screen.findByText('Clear all');
     fireEvent.press(clearAll);

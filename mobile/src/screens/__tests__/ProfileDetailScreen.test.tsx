@@ -7,25 +7,26 @@ const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 const mockPass = jest.fn();
 const mockLike = jest.fn();
-const mockMatchesList = jest.fn();
-const mockUseRoute = jest.fn();
+const mockMatches: any[] = [];
 
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({
-    navigate: mockNavigate,
-    goBack: mockGoBack,
+const mockNavigation = { navigate: mockNavigate, goBack: mockGoBack } as any;
+
+jest.mock('../../features/discovery/hooks/useDiscoveryActions', () => ({
+  useDiscoveryActions: () => ({
+    passUser: mockPass,
+    likeUser: mockLike,
+    isActing: false,
   }),
-  useRoute: () => mockUseRoute(),
 }));
 
-jest.mock('../../services/api', () => ({
-  discoveryApi: {
-    pass: (...args: unknown[]) => mockPass(...args),
-    like: (...args: unknown[]) => mockLike(...args),
-  },
-  matchesApi: {
-    list: (...args: unknown[]) => mockMatchesList(...args),
-  },
+jest.mock('../../features/matches/hooks/useMatches', () => ({
+  useMatches: () => ({
+    matches: mockMatches,
+    error: null,
+    isLoading: false,
+    isRefetching: false,
+    refetch: jest.fn(),
+  }),
 }));
 
 jest.mock('../../components/ui/AppBackdrop', () => () => null);
@@ -80,24 +81,19 @@ const routeUser = {
   photos: [],
 };
 
+const mockRoute = {
+  key: 'ProfileDetail-1',
+  name: 'ProfileDetail' as const,
+  params: { user: routeUser },
+};
+
 describe('ProfileDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseRoute.mockReturnValue({
-      params: {
-        user: routeUser,
-      },
-    });
     mockPass.mockResolvedValue(undefined);
     mockLike.mockResolvedValue(undefined);
-    mockMatchesList.mockResolvedValue({
-      data: [
-        {
-          id: 'match-1',
-          user: routeUser,
-        },
-      ],
-    });
+    mockMatches.length = 0;
+    mockMatches.push({ id: 'match-1', user: routeUser });
     jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
   });
 
@@ -106,7 +102,7 @@ describe('ProfileDetailScreen', () => {
   });
 
   it('renders profile content from the route params', async () => {
-    render(<ProfileDetailScreen />);
+    render(<ProfileDetailScreen navigation={mockNavigation} route={mockRoute as any} />);
 
     expect(await screen.findByText('Leilani, 31')).toBeTruthy();
     expect(screen.getByText('Honolulu')).toBeTruthy();
@@ -114,25 +110,20 @@ describe('ProfileDetailScreen', () => {
   });
 
   it('shows error state when the route has no user payload', () => {
-    mockUseRoute.mockReturnValue({
-      params: {
-        user: null,
-      },
-    });
+    const nullUserRoute = { ...mockRoute, params: { user: null } };
 
-    render(<ProfileDetailScreen />);
+    render(<ProfileDetailScreen navigation={mockNavigation} route={nullUserRoute as any} />);
 
     expect(screen.getByText('Profile not found')).toBeTruthy();
     expect(screen.getByText('This profile is no longer available.')).toBeTruthy();
   });
 
   it('opens chat with a suggested activity when a match already exists', async () => {
-    render(<ProfileDetailScreen />);
+    render(<ProfileDetailScreen navigation={mockNavigation} route={mockRoute as any} />);
 
     fireEvent.press(await screen.findByText('Suggest activity'));
 
     await waitFor(() => {
-      expect(mockMatchesList).toHaveBeenCalled();
       expect(mockNavigate).toHaveBeenCalledWith('Chat', {
         matchId: 'match-1',
         user: routeUser,
@@ -144,7 +135,7 @@ describe('ProfileDetailScreen', () => {
   it('shows an alert when liking the profile fails', async () => {
     mockLike.mockRejectedValue(new Error('Like failed'));
 
-    render(<ProfileDetailScreen />);
+    render(<ProfileDetailScreen navigation={mockNavigation} route={mockRoute as any} />);
 
     fireEvent.press(await screen.findByText('Like'));
 
