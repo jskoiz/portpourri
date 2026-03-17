@@ -23,9 +23,13 @@ export class MatchesService {
 
   async getMatches(userId: string, take: number, skip: number) {
     const safeTake = Math.min(Math.max(take, 1), 100);
+    const otherUserFilter = { isDeleted: false, isBanned: false };
     const matches = await this.prisma.match.findMany({
       where: {
-        OR: [{ userAId: userId }, { userBId: userId }],
+        OR: [
+          { userAId: userId, userB: otherUserFilter },
+          { userBId: userId, userA: otherUserFilter },
+        ],
         isBlocked: false,
         isArchived: false,
       },
@@ -38,8 +42,6 @@ export class MatchesService {
           select: {
             id: true,
             firstName: true,
-            isDeleted: true,
-            isBanned: true,
             photos: {
               where: { isPrimary: true },
               select: { storageKey: true },
@@ -51,8 +53,6 @@ export class MatchesService {
           select: {
             id: true,
             firstName: true,
-            isDeleted: true,
-            isBanned: true,
             photos: {
               where: { isPrimary: true },
               select: { storageKey: true },
@@ -71,26 +71,21 @@ export class MatchesService {
       skip,
     });
 
-    // Transform to return the *other* user, filtering out deleted/banned users
-    return matches
-      .filter((match) => {
-        const otherUser = match.userAId === userId ? match.userB : match.userA;
-        return !otherUser.isDeleted && !otherUser.isBanned;
-      })
-      .map((match) => {
-        const isUserA = match.userAId === userId;
-        const otherUser = isUserA ? match.userB : match.userA;
-        return {
-          id: match.id,
-          createdAt: match.createdAt,
-          user: {
-            id: otherUser.id,
-            firstName: otherUser.firstName,
-            photoUrl: otherUser.photos[0]?.storageKey ?? null,
-          },
-          lastMessage: match.messages[0]?.body ?? null,
-        };
-      });
+    // Transform to return the *other* user
+    return matches.map((match) => {
+      const isUserA = match.userAId === userId;
+      const otherUser = isUserA ? match.userB : match.userA;
+      return {
+        id: match.id,
+        createdAt: match.createdAt,
+        user: {
+          id: otherUser.id,
+          firstName: otherUser.firstName,
+          photoUrl: otherUser.photos[0]?.storageKey ?? null,
+        },
+        lastMessage: match.messages[0]?.body ?? null,
+      };
+    });
   }
   async getMessages(
     matchId: string,
@@ -148,23 +143,27 @@ export class MatchesService {
 
     const match = await this.assertMatchAccess(matchId, userId);
 
-    const message = await this.prisma.message.create({
-      data: {
-        matchId,
-        senderId: userId,
-        body: content,
-      },
-      select: {
-        id: true,
-        body: true,
-        createdAt: true,
-      },
-    });
+    const message = await this.prisma.$transaction(async (tx) => {
+      const msg = await tx.message.create({
+        data: {
+          matchId,
+          senderId: userId,
+          body: content,
+        },
+        select: {
+          id: true,
+          body: true,
+          createdAt: true,
+        },
+      });
 
-    // Update match timestamp
-    await this.prisma.match.update({
-      where: { id: matchId },
-      data: { updatedAt: new Date() },
+      // Update match timestamp
+      await tx.match.update({
+        where: { id: matchId },
+        data: { updatedAt: new Date() },
+      });
+
+      return msg;
     });
 
     const response = {

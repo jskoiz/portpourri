@@ -258,17 +258,27 @@ export class AuthService {
     }
 
     try {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: {
-          isDeleted: true,
-          email: `deleted-${userId}@deleted.invalid`,
-          passwordHash: null,
-          phoneNumber: null,
-          providerId: null,
-          firstName: 'Deleted',
-          pronouns: null,
-        },
+      await this.prisma.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            isDeleted: true,
+            email: `deleted-${userId}@deleted.invalid`,
+            passwordHash: null,
+            phoneNumber: null,
+            providerId: null,
+            firstName: 'Deleted',
+            pronouns: null,
+          },
+        });
+
+        // Archive all matches involving the deleted user
+        await tx.match.updateMany({
+          where: {
+            OR: [{ userAId: userId }, { userBId: userId }],
+          },
+          data: { isArchived: true },
+        });
       });
     } catch (error: unknown) {
       if (

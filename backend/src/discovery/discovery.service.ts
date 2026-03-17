@@ -505,83 +505,87 @@ export class DiscoveryService {
       throw new NotFoundException('User not found');
     }
 
-    const existingPass = await this.prisma.pass.findUnique({
-      where: {
-        fromUserId_toUserId: {
+    return this.prisma.$transaction(async (tx) => {
+      const existingPass = await tx.pass.findUnique({
+        where: {
+          fromUserId_toUserId: {
+            fromUserId: userId,
+            toUserId: targetUserId,
+          },
+        },
+      });
+
+      if (existingPass) return { status: 'already_passed' as const };
+
+      await tx.like.deleteMany({
+        where: { fromUserId: userId, toUserId: targetUserId },
+      });
+
+      await tx.pass.create({
+        data: {
           fromUserId: userId,
           toUserId: targetUserId,
         },
-      },
+      });
+
+      return { status: 'passed' as const };
     });
-
-    if (existingPass) return { status: 'already_passed' };
-
-    await this.prisma.like.deleteMany({
-      where: { fromUserId: userId, toUserId: targetUserId },
-    });
-
-    await this.prisma.pass.create({
-      data: {
-        fromUserId: userId,
-        toUserId: targetUserId,
-      },
-    });
-
-    return { status: 'passed' };
   }
 
   async undoLastSwipe(userId: string) {
-    const [lastLike, lastPass] = await Promise.all([
-      this.prisma.like.findFirst({
-        where: { fromUserId: userId },
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.pass.findFirst({
-        where: { fromUserId: userId },
-        orderBy: { createdAt: 'desc' },
-      }),
-    ]);
+    return this.prisma.$transaction(async (tx) => {
+      const [lastLike, lastPass] = await Promise.all([
+        tx.like.findFirst({
+          where: { fromUserId: userId },
+          orderBy: { createdAt: 'desc' },
+        }),
+        tx.pass.findFirst({
+          where: { fromUserId: userId },
+          orderBy: { createdAt: 'desc' },
+        }),
+      ]);
 
-    if (!lastLike && !lastPass) return { status: 'nothing_to_undo' };
+      if (!lastLike && !lastPass) return { status: 'nothing_to_undo' as const };
 
-    const undoLike =
-      !!lastLike && (!lastPass || lastLike.createdAt >= lastPass.createdAt);
+      const undoLike =
+        !!lastLike && (!lastPass || lastLike.createdAt >= lastPass.createdAt);
 
-    if (undoLike && lastLike) {
-      await this.prisma.like.delete({ where: { id: lastLike.id } });
+      if (undoLike && lastLike) {
+        await tx.like.delete({ where: { id: lastLike.id } });
 
-      const [userAId, userBId] = [userId, lastLike.toUserId].sort();
-      const existingMatch = await this.prisma.match.findUnique({
-        where: { userAId_userBId: { userAId, userBId } },
-      });
-
-      let archivedMatchId: string | undefined;
-      if (existingMatch && !existingMatch.isArchived) {
-        await this.prisma.match.update({
-          where: { id: existingMatch.id },
-          data: { isArchived: true },
+        const [userAId, userBId] = [userId, lastLike.toUserId].sort();
+        const existingMatch = await tx.match.findUnique({
+          where: { userAId_userBId: { userAId, userBId } },
         });
-        archivedMatchId = existingMatch.id;
+
+        let archivedMatchId: string | undefined;
+        if (existingMatch && !existingMatch.isArchived) {
+          await tx.match.update({
+            where: { id: existingMatch.id },
+            data: { isArchived: true },
+          });
+          archivedMatchId = existingMatch.id;
+        }
+
+        return {
+          status: 'undone' as const,
+          action: 'like' as const,
+          targetUserId: lastLike.toUserId,
+          ...(archivedMatchId ? { archivedMatchId } : {}),
+        };
       }
 
-      return {
-        status: 'undone',
-        action: 'like',
-        targetUserId: lastLike.toUserId,
-        ...(archivedMatchId ? { archivedMatchId } : {}),
-      };
-    }
+      if (lastPass) {
+        await tx.pass.delete({ where: { id: lastPass.id } });
+        return {
+          status: 'undone' as const,
+          action: 'pass' as const,
+          targetUserId: lastPass.toUserId,
+        };
+      }
 
-    if (lastPass) {
-      await this.prisma.pass.delete({ where: { id: lastPass.id } });
-      return {
-        status: 'undone',
-        action: 'pass',
-        targetUserId: lastPass.toUserId,
-      };
-    }
-
-    return { status: 'nothing_to_undo' };
+      return { status: 'nothing_to_undo' as const };
+    });
   }
 
   async getProfileCompleteness(userId: string) {
