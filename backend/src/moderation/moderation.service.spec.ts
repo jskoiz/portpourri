@@ -7,11 +7,13 @@ import { NotificationsService } from '../notifications/notifications.service';
 const reportCreate = jest.fn();
 const matchFindUnique = jest.fn();
 const matchUpdate = jest.fn();
-const notificationsCreate = jest.fn();
+const passUpsert = jest.fn().mockResolvedValue({});
+const notificationsCreate = jest.fn().mockResolvedValue({});
 
 const prisma = {
   report: { create: reportCreate },
   match: { findUnique: matchFindUnique, update: matchUpdate },
+  pass: { upsert: passUpsert },
 } as unknown as PrismaService;
 
 const notifications = {
@@ -114,6 +116,12 @@ describe('ModerationService', () => {
           data: { isBlocked: true, isArchived: true },
         }),
       );
+      expect(passUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { fromUserId_toUserId: { fromUserId: 'user-1', toUserId: 'user-2' } },
+          create: { fromUserId: 'user-1', toUserId: 'user-2' },
+        }),
+      );
       expect(notificationsCreate).toHaveBeenCalledWith(
         'user-1',
         expect.objectContaining({ type: 'system', title: 'User blocked' }),
@@ -129,6 +137,12 @@ describe('ModerationService', () => {
       expect(result).toEqual({ success: true, matchId: null });
       expect(reportCreate).toHaveBeenCalledTimes(1);
       expect(matchUpdate).not.toHaveBeenCalled();
+      expect(passUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { fromUserId_toUserId: { fromUserId: 'user-1', toUserId: 'user-99' } },
+          create: { fromUserId: 'user-1', toUserId: 'user-99' },
+        }),
+      );
       expect(notificationsCreate).toHaveBeenCalled();
     });
   });

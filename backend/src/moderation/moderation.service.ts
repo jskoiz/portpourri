@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -9,6 +10,8 @@ import { ReportCategory, ReportStatus } from '@prisma/client';
 
 @Injectable()
 export class ModerationService {
+  private readonly logger = new Logger(ModerationService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -51,12 +54,14 @@ export class ModerationService {
     });
 
     // Moderation hook: notify moderation inbox (future queue/webhook)
-    void this.notifications.create(reporterId, {
-      type: 'system',
-      title: 'Report submitted',
-      body: 'Thanks. Our team will review this report.',
-      data: { reportId: report.id },
-    });
+    void this.notifications
+      .create(reporterId, {
+        type: 'system',
+        title: 'Report submitted',
+        body: 'Thanks. Our team will review this report.',
+        data: { reportId: report.id },
+      })
+      .catch((err) => this.logger.error('Failed to send notification', err));
 
     return report;
   }
@@ -92,12 +97,21 @@ export class ModerationService {
       });
     }
 
-    void this.notifications.create(actorId, {
-      type: 'system',
-      title: 'User blocked',
-      body: 'You will no longer see this person.',
-      data: { matchId, targetUserId },
+    // Create a Pass so the blocked user is excluded from the blocker's discovery feed.
+    await this.prisma.pass.upsert({
+      where: { fromUserId_toUserId: { fromUserId: actorId, toUserId: targetUserId } },
+      update: {},
+      create: { fromUserId: actorId, toUserId: targetUserId },
     });
+
+    void this.notifications
+      .create(actorId, {
+        type: 'system',
+        title: 'User blocked',
+        body: 'You will no longer see this person.',
+        data: { matchId, targetUserId },
+      })
+      .catch((err) => this.logger.error('Failed to send notification', err));
 
     return { success: true, matchId };
   }
