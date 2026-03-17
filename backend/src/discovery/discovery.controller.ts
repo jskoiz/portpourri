@@ -1,16 +1,18 @@
 import {
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Post,
   UseGuards,
   Request,
   Param,
   Query,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
-  ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -20,15 +22,33 @@ import {
 import { DiscoveryService, type DiscoveryFilters } from './discovery.service';
 import { AuthGuard } from '@nestjs/passport';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
+import { IsOptional, IsString } from 'class-validator';
 
-type DiscoveryFeedQuery = {
-  distanceKm?: string | string[];
-  minAge?: string | string[];
-  maxAge?: string | string[];
-  goals?: string | string[];
-  intensity?: string | string[];
-  availability?: string | string[];
-};
+class DiscoveryFeedQuery {
+  @IsOptional()
+  @IsString()
+  distanceKm?: string;
+
+  @IsOptional()
+  @IsString()
+  minAge?: string;
+
+  @IsOptional()
+  @IsString()
+  maxAge?: string;
+
+  @IsOptional()
+  @IsString()
+  goals?: string;
+
+  @IsOptional()
+  @IsString()
+  intensity?: string;
+
+  @IsOptional()
+  @IsString()
+  availability?: string;
+}
 
 const parseNumber = (value?: string | string[]): number | undefined => {
   const candidates = Array.isArray(value) ? value : value ? [value] : [];
@@ -100,31 +120,34 @@ export class DiscoveryController {
 
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @Post('like/:id')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Like a discovery profile' })
-  @ApiCreatedResponse({ description: 'Profile liked successfully.' })
+  @ApiOkResponse({ description: 'Profile liked successfully.' })
   @ApiTooManyRequestsResponse({ description: 'Swipe rate limit exceeded.' })
   async likeUser(
     @Request() req: AuthenticatedRequest,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.discoveryService.likeUser(req.user.id, id);
   }
 
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @Post('pass/:id')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Pass on a discovery profile' })
-  @ApiCreatedResponse({ description: 'Profile passed successfully.' })
+  @ApiOkResponse({ description: 'Profile passed successfully.' })
   @ApiTooManyRequestsResponse({ description: 'Swipe rate limit exceeded.' })
   async passUser(
     @Request() req: AuthenticatedRequest,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.discoveryService.passUser(req.user.id, id);
   }
 
   @Post('undo')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Undo the most recent swipe action' })
-  @ApiCreatedResponse({ description: 'Last swipe undone successfully.' })
+  @ApiOkResponse({ description: 'Last swipe undone successfully.' })
   async undoLastSwipe(@Request() req: AuthenticatedRequest) {
     return this.discoveryService.undoLastSwipe(req.user.id);
   }

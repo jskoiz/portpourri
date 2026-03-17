@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Post,
-  Put,
   Patch,
   Body,
   UseGuards,
@@ -68,10 +67,25 @@ export class ProfileController {
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
-    return profile;
+
+    // Strip sensitive / internal fields from public profile responses
+    const {
+      isDeleted: _del,
+      isBanned: _ban,
+      email: _email,
+      ...safeProfile
+    } = profile;
+
+    // Strip coordinates from nested profile if present
+    if (safeProfile.profile) {
+      const { latitude: _lat, longitude: _lon, ...safeNestedProfile } = safeProfile.profile;
+      return { ...safeProfile, profile: safeNestedProfile };
+    }
+
+    return safeProfile;
   }
 
-  @Put()
+  @Patch()
   @ApiOperation({ summary: 'Update the current user profile' })
   @ApiOkResponse({ description: 'Profile updated successfully.' })
   async updateProfile(
@@ -81,7 +95,7 @@ export class ProfileController {
     return this.profileService.updateProfile(req.user.id, data);
   }
 
-  @Put('fitness')
+  @Patch('fitness')
   @ApiOperation({ summary: 'Update the current user fitness profile' })
   @ApiOkResponse({ description: 'Fitness profile updated successfully.' })
   async updateFitnessProfile(

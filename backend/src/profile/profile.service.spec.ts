@@ -58,21 +58,29 @@ describe('ProfileService', () => {
   });
 
   it('marks user as onboarded when fitness profile is updated', async () => {
-    const profile = {
+    const fitnessProfile = {
       userId: 'user-1',
       intensityLevel: IntensityLevel.ADVANCED,
     };
     prismaMock.$transaction.mockImplementation(
-      async (fn: (tx: typeof prismaMock) => Promise<typeof profile>) =>
+      async (fn: (tx: typeof prismaMock) => Promise<unknown>) =>
         fn(prismaMock),
     );
-    prismaMock.userFitnessProfile.upsert.mockResolvedValue(profile);
+    prismaMock.userFitnessProfile.upsert.mockResolvedValue(fitnessProfile);
+    // getProfile is called after the transaction to return the full user
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'user-1',
+      birthdate: null,
+      fitnessProfile,
+      profile: null,
+      photos: [],
+    });
 
     const result = await service.updateFitnessProfile('user-1', {
       intensityLevel: IntensityLevel.ADVANCED,
     });
 
-    expect(result).toEqual(profile);
+    expect(result).toMatchObject({ id: 'user-1' });
     expect(prismaMock.user.update).toHaveBeenCalledWith({
       where: { id: 'user-1' },
       data: { isOnboarded: true },
@@ -80,15 +88,22 @@ describe('ProfileService', () => {
   });
 
   it('runs fitness upsert and isOnboarded update inside a transaction', async () => {
-    const profile = {
+    const fitnessProfile = {
       userId: 'user-1',
       intensityLevel: IntensityLevel.ADVANCED,
     };
     prismaMock.$transaction.mockImplementation(
-      async (fn: (tx: typeof prismaMock) => Promise<typeof profile>) =>
+      async (fn: (tx: typeof prismaMock) => Promise<unknown>) =>
         fn(prismaMock),
     );
-    prismaMock.userFitnessProfile.upsert.mockResolvedValue(profile);
+    prismaMock.userFitnessProfile.upsert.mockResolvedValue(fitnessProfile);
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'user-1',
+      birthdate: null,
+      fitnessProfile,
+      profile: null,
+      photos: [],
+    });
 
     await service.updateFitnessProfile('user-1', {
       intensityLevel: IntensityLevel.ADVANCED,
@@ -100,31 +115,30 @@ describe('ProfileService', () => {
     expect(prismaMock.user.update).toHaveBeenCalledTimes(1);
   });
 
-  it('strips userId from caller-supplied data in updateFitnessProfile', async () => {
+  it('uses authoritative userId in updateFitnessProfile upsert', async () => {
     prismaMock.$transaction.mockImplementation(
       async (fn: (tx: typeof prismaMock) => Promise<unknown>) => fn(prismaMock),
     );
     prismaMock.userFitnessProfile.upsert.mockResolvedValue({
       userId: 'user-1',
     });
+    prismaMock.user.findFirst.mockResolvedValue(null);
 
     await service.updateFitnessProfile('user-1', {
-      userId: 'attacker-id',
       intensityLevel: IntensityLevel.BEGINNER,
     });
 
     const call = prismaMock.userFitnessProfile.upsert.mock.calls[0][0];
-    // The create clause must use the authoritative userId, not the one from the body
+    // The create clause must use the authoritative userId from the route param
     expect(call.create.userId).toBe('user-1');
     // The update clause must not contain userId at all
     expect(call.update).not.toHaveProperty('userId');
   });
 
-  it('strips userId from caller-supplied data in updateProfile', async () => {
+  it('uses authoritative userId in updateProfile upsert', async () => {
     prismaMock.userProfile.upsert.mockResolvedValue({ userId: 'user-1' });
 
     await service.updateProfile('user-1', {
-      userId: 'attacker-id',
       bio: 'hello',
     });
 

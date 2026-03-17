@@ -46,11 +46,11 @@ describe('ProfileController', () => {
     });
 
     await expect(
-      controller.updateFitnessProfile(req, { userId: 'user-1', ...dto }),
+      controller.updateFitnessProfile(req, dto),
     ).resolves.toEqual({ userId: 'user-1', ...dto });
     expect(profileServiceMock.updateFitnessProfile).toHaveBeenCalledWith(
       'user-1',
-      { userId: 'user-1', ...dto },
+      dto,
     );
   });
 

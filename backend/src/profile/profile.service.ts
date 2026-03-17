@@ -18,17 +18,15 @@ export class ProfileService {
   ) {}
 
   async updateFitnessProfile(userId: string, data: UpdateFitnessProfileDto) {
-    // Strip userId from caller-supplied data to prevent overwriting the relation key
-    const { userId: _ignored, ...safeData } = data;
-    const profile = await this.prisma.$transaction(async (tx) => {
-      const updatedProfile = await tx.userFitnessProfile.upsert({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userFitnessProfile.upsert({
         where: { userId },
         update: {
-          ...safeData,
+          ...data,
         },
         create: {
           userId,
-          ...safeData,
+          ...data,
         },
       });
 
@@ -36,20 +34,17 @@ export class ProfileService {
         where: { id: userId },
         data: { isOnboarded: true },
       });
-
-      return updatedProfile;
     });
 
-    return profile;
+    // Re-fetch and return the full user profile so callers get a consistent shape
+    return this.getProfile(userId);
   }
 
   async updateProfile(userId: string, data: UpdateProfileDto) {
-    // Strip userId from caller-supplied data to prevent overwriting the relation key
-    const { userId: _ignored, ...safeData } = data;
     return await this.prisma.userProfile.upsert({
       where: { userId },
-      update: { ...safeData },
-      create: { userId, ...safeData },
+      update: { ...data },
+      create: { userId, ...data },
     });
   }
 

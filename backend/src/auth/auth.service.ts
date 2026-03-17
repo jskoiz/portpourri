@@ -9,23 +9,41 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { AuthProvider, Gender, Prisma } from '@prisma/client';
 import { appConfig } from '../config/app.config';
+import { calculateAge } from '../common/age.util';
 import type { SignupDto, LoginDto } from './auth.dto';
 
 export type { SignupDto, LoginDto };
 
 export interface AuthResult {
   access_token: string;
-  user: { id: string; email: string; isOnboarded: boolean };
+  user: { id: string; email: string; firstName: string; isOnboarded: boolean };
 }
 
 type AuthenticatedUser = {
   id: string;
   email: string | null;
+  firstName: string;
   isOnboarded: boolean;
 };
 
 type EmailAuthUser = AuthenticatedUser & {
   passwordHash: string | null;
+};
+
+type CurrentUserResult = {
+  id: string;
+  email: string | null;
+  firstName: string;
+  birthdate: Date | null;
+  gender: Gender;
+  pronouns: string | null;
+  isOnboarded: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  age: number | null;
+  profile: unknown;
+  fitnessProfile: unknown;
+  photos: unknown[];
 };
 
 const GENDER_MAP: Record<string, Gender> = {
@@ -120,6 +138,7 @@ export class AuthService {
       select: {
         id: true,
         email: true,
+        firstName: true,
         isOnboarded: true,
         passwordHash: true,
       },
@@ -212,22 +231,13 @@ export class AuthService {
       user: {
         id: user.id,
         email: userEmail,
+        firstName: user.firstName,
         isOnboarded: user.isOnboarded,
       },
     };
   }
 
-  async getCurrentUser(userId: string): Promise<{
-    id: string;
-    email: string | null;
-    firstName: string;
-    birthdate: Date | null;
-    gender: Gender;
-    pronouns: string | null;
-    isOnboarded: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
+  async getCurrentUser(userId: string): Promise<CurrentUserResult> {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, isDeleted: false, isBanned: false },
       select: {
@@ -240,6 +250,19 @@ export class AuthService {
         isOnboarded: true,
         createdAt: true,
         updatedAt: true,
+        profile: true,
+        fitnessProfile: true,
+        photos: {
+          where: { isHidden: false },
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            id: true,
+            storageKey: true,
+            isPrimary: true,
+            sortOrder: true,
+            createdAt: true,
+          },
+        },
       },
     });
 
@@ -248,7 +271,10 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    return user;
+    return {
+      ...user,
+      age: calculateAge(user.birthdate),
+    };
   }
 
   async deleteAccount(userId: string): Promise<void> {

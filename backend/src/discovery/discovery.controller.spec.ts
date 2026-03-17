@@ -69,12 +69,12 @@ describe('DiscoveryController', () => {
 
     await expect(
       controller.getFeed(req, {
-        distanceKm: ['abc', '15'],
-        minAge: [' ', '24'],
-        maxAge: ['41'],
-        goals: ['strength,endurance', '', 'mobility'],
-        intensity: ['moderate', 'high'],
-        availability: ['morning,invalid', 'evening'],
+        distanceKm: '15',
+        minAge: '24',
+        maxAge: '41',
+        goals: 'strength,endurance,mobility',
+        intensity: 'moderate,high',
+        availability: 'morning,evening',
       }),
     ).resolves.toEqual([]);
 
