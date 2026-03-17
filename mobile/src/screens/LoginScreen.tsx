@@ -13,7 +13,7 @@ import { normalizeApiError } from '../api/errors';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import { Button, GlassView, Input } from '../design/primitives';
 import { useTheme } from '../theme/useTheme';
-import { radii, spacing, typography } from '../theme/tokens';
+import { lightTheme, radii, spacing, typography } from '../theme/tokens';
 import { fontFamily } from '../lib/fonts';
 // radii is used in JSX
 import { loginSchema, type LoginFormValues } from '../features/auth/schema';
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     letterSpacing: -1.5,
     lineHeight: 44,
     marginBottom: spacing.sm,
-    color: '#1A1A1A',
+    color: lightTheme.textPrimary,
   },
   headline: {
     fontSize: 28,

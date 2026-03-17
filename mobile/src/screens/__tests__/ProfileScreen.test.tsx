@@ -32,11 +32,8 @@ const mockAuthState = {
   deleteAccount: mockDeleteAccount,
 };
 
-jest.mock("@react-navigation/native", () => ({
-  useNavigation: () => ({
-    navigate: mockNavigate,
-  }),
-}));
+const mockNavigation = { navigate: mockNavigate } as any;
+const mockProfileRoute = { key: 'You-1', name: 'You' } as any;
 
 jest.mock("../../store/authStore", () => ({
   useAuthStore: (
@@ -118,7 +115,7 @@ describe("ProfileScreen", () => {
   });
 
   it("persists hydrated activity and schedule preferences when saving", async () => {
-    render(<ProfileScreen />);
+    render(<ProfileScreen navigation={mockNavigation} route={mockProfileRoute} />);
 
     expect(await screen.findByText("Jordan, 29")).toBeTruthy();
     expect(await screen.findByText(/Edit Profile/)).toBeTruthy();
@@ -139,7 +136,7 @@ describe("ProfileScreen", () => {
   });
 
   it("renders environment preferences as read-only chips in edit mode", async () => {
-    render(<ProfileScreen />);
+    render(<ProfileScreen navigation={mockNavigation} route={mockProfileRoute} />);
 
     expect(await screen.findByText("Environment")).toBeTruthy();
     fireEvent.press(screen.getByText(/Edit Profile/));
@@ -150,7 +147,7 @@ describe("ProfileScreen", () => {
   });
 
   it("uses the structured city picker when saving profile basics", async () => {
-    render(<ProfileScreen />);
+    render(<ProfileScreen navigation={mockNavigation} route={mockProfileRoute} />);
 
     expect(await screen.findByText("Jordan, 29")).toBeTruthy();
     fireEvent.press(screen.getByText(/Edit Profile/));

@@ -3,7 +3,7 @@ import { defaultConfig } from '@tamagui/config/v4';
 
 const tamaguiConfig = createTamagui({
   ...defaultConfig,
-  defaultTheme: 'dark',
+  defaultTheme: 'light',
 });
 
 export type AppTamaguiConfig = typeof tamaguiConfig;

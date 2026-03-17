@@ -12,17 +12,17 @@ export class EmitNotificationDto {
   @IsEnum(NotificationType, {
     message: `type must be one of: ${Object.values(NotificationType).join(', ')}`,
   })
-  type: NotificationType;
+  type!: NotificationType;
 
   @IsString()
   @MinLength(1)
   @MaxLength(200)
-  title: string;
+  title!: string;
 
   @IsString()
   @MinLength(1)
   @MaxLength(1000)
-  body: string;
+  body!: string;
 
   @IsOptional()
   @IsObject()

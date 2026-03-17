@@ -18,6 +18,7 @@ export function useChatThread(matchId: string) {
     enabled: Boolean(matchId),
     queryKey: messageKey,
     queryFn: async () => (await matchesApi.getMessages(matchId)).data || [],
+    staleTime: 0,
   });
 
   const refetchRef = useRef(query.refetch);

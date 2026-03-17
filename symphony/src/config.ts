@@ -53,7 +53,7 @@ export function resolveWorkflowConfig(document: WorkflowDocument, env: NodeJS.Pr
       apiKey,
       projectSlug,
       activeStates: coerceStringArray(tracker.active_states, ['Todo', 'In Progress', 'Rework', 'Human Review', 'Merging']),
-      terminalStates: coerceStringArray(tracker.terminal_states, ['Done', 'Closed', 'Cancelled', 'Canceleled', 'Duplicate']),
+      terminalStates: coerceStringArray(tracker.terminal_states, ['Done', 'Closed', 'Cancelled', 'Canceled', 'Duplicate']),
     },
     polling: {
       intervalMs: asNumber(polling.interval_ms, 5000),

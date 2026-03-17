@@ -13,14 +13,24 @@
     },
     "preview": {
       "distribution": "internal",
+      "channel": "preview",
       "env": {
         "APP_ENV": "preview"
       }
     },
     "production": {
       "autoIncrement": true,
+      "channel": "production",
       "env": {
         "APP_ENV": "production"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "",
+        "appleTeamId": "H8PYU9TN9X"
       }
     }
   }

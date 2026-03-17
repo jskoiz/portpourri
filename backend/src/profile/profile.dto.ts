@@ -13,10 +13,6 @@ import { IntensityLevel } from '@prisma/client';
 export class UpdateProfileDto {
   @IsOptional()
   @IsString()
-  userId?: string;
-
-  @IsOptional()
-  @IsString()
   @MaxLength(500)
   bio?: string;
 
@@ -56,10 +52,6 @@ export class UpdateProfileDto {
 }
 
 export class UpdateFitnessProfileDto {
-  @IsOptional()
-  @IsString()
-  userId?: string;
-
   @IsOptional()
   @IsEnum(IntensityLevel, {
     message: `intensityLevel must be one of: ${Object.values(IntensityLevel).join(', ')}`,

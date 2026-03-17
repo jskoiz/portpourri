@@ -9,12 +9,11 @@ export function useCreateEvent() {
   const createEvent = useMutation({
     mutationFn: async (payload: CreateEventPayload) => (await eventsApi.create(payload)).data,
     onSuccess: (createdEvent: EventSummary) => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.events.list });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.events.mine });
       queryClient.setQueryData<EventSummary[]>(queryKeys.events.list, (current = []) => [
         createdEvent,
         ...current,
       ]);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.events.mine });
     },
   });
 

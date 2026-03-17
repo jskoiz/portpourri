@@ -1,0 +1,43 @@
+name: Deploy to TestFlight
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: EAS Build & Submit
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: mobile
+
+      - name: Setup EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Build for iOS
+        run: eas build --platform ios --profile production --non-interactive
+        working-directory: mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Submit to TestFlight
+        run: eas submit --platform ios --profile production --non-interactive
+        working-directory: mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

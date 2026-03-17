@@ -3,7 +3,9 @@ import React, {
   PropsWithChildren,
   useCallback,
   useContext,
+  useEffect,
   useRef,
+  useState,
 } from 'react';
 import {
   AccessibilityInfo,
@@ -29,6 +31,16 @@ export function TabBarVisibilityProvider({ children }: PropsWithChildren) {
   const minimizeProgress = useRef(new Animated.Value(0)).current;
   const lastOffsetRef = useRef(0);
   const isMinimizedRef = useRef(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled?.().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setReduceMotion,
+    );
+    return () => subscription.remove();
+  }, []);
 
   const expand = useCallback(() => {
     if (isMinimizedRef.current) {
@@ -45,34 +57,32 @@ export function TabBarVisibilityProvider({ children }: PropsWithChildren) {
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       // Skip animation if user prefers reduced motion
-      AccessibilityInfo.isReduceMotionEnabled?.().then((reduceMotion) => {
-        if (reduceMotion) return;
+      if (reduceMotion) return;
 
-        const currentOffset = event.nativeEvent.contentOffset.y;
-        const delta = currentOffset - lastOffsetRef.current;
+      const currentOffset = event.nativeEvent.contentOffset.y;
+      const delta = currentOffset - lastOffsetRef.current;
 
-        if (delta > SCROLL_THRESHOLD && currentOffset > 50 && !isMinimizedRef.current) {
-          isMinimizedRef.current = true;
-          Animated.spring(minimizeProgress, {
-            toValue: 1,
-            useNativeDriver: false,
-            speed: 20,
-            bounciness: 2,
-          }).start();
-        } else if (delta < -SCROLL_THRESHOLD && isMinimizedRef.current) {
-          isMinimizedRef.current = false;
-          Animated.spring(minimizeProgress, {
-            toValue: 0,
-            useNativeDriver: false,
-            speed: 20,
-            bounciness: 2,
-          }).start();
-        }
+      if (delta > SCROLL_THRESHOLD && currentOffset > 50 && !isMinimizedRef.current) {
+        isMinimizedRef.current = true;
+        Animated.spring(minimizeProgress, {
+          toValue: 1,
+          useNativeDriver: false,
+          speed: 20,
+          bounciness: 2,
+        }).start();
+      } else if (delta < -SCROLL_THRESHOLD && isMinimizedRef.current) {
+        isMinimizedRef.current = false;
+        Animated.spring(minimizeProgress, {
+          toValue: 0,
+          useNativeDriver: false,
+          speed: 20,
+          bounciness: 2,
+        }).start();
+      }
 
-        lastOffsetRef.current = currentOffset;
-      });
+      lastOffsetRef.current = currentOffset;
     },
-    [minimizeProgress],
+    [minimizeProgress, reduceMotion],
   );
 
   return (

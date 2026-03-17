@@ -7,7 +7,7 @@ import { TamaguiProvider } from 'tamagui';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import tamaguiConfig from '../../design/tamagui.config';
 import { ThemeProvider } from '../../theme/useTheme';
-import { colors } from '../../theme/tokens';
+import { lightTheme } from '../../theme/tokens';
 
 function createStorybookClient() {
   return new QueryClient({
@@ -32,10 +32,10 @@ export function StorybookProviders({ children }: PropsWithChildren) {
 
   return (
     <ErrorBoundary>
-      <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
+      <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
         <SafeAreaProvider>
           <GestureHandlerRootView
-            style={{ flex: 1, backgroundColor: colors.background }}
+            style={{ flex: 1, backgroundColor: lightTheme.background }}
           >
             <QueryClientProvider client={client}>
               <BottomSheetModalProvider>

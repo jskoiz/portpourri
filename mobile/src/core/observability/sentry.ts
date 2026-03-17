@@ -19,6 +19,9 @@ export function initSentry() {
         ? undefined
         : `brdg-mobile@${buildInfo.version}+${buildInfo.gitShortSha}`,
     attachStacktrace: true,
+    tracesSampleRate: 0.2,
+    profilesSampleRate: 0.1,
+    enableAutoPerformanceTracing: true,
   });
 
   initialized = true;

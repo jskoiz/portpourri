@@ -16,7 +16,7 @@ export const lightTheme = {
   // Text
   textPrimary: '#2C2420',
   textSecondary: '#5C544C',
-  textMuted: '#8C8279',
+  textMuted: '#6B6159',
   textInverse: '#FDFBF8',
 
   // Primary — warm gold
@@ -25,7 +25,7 @@ export const lightTheme = {
   primarySubtle: 'rgba(196,168,130,0.12)',
 
   // Accent — muted lavender
-  accent: '#B8A9C4',
+  accent: '#8B7A9C',
   accentSoft: '#D4C9DB',
   accentSubtle: 'rgba(184,169,196,0.12)',
 
@@ -39,6 +39,9 @@ export const lightTheme = {
   success: '#8BAA7A',
   warning: '#C4A882',
 
+  // Button
+  buttonPrimary: '#1A1A1A',
+
   // Fixed
   white: '#FFFFFF',
   black: '#000000',
@@ -49,12 +52,6 @@ export const lightTheme = {
 };
 
 export type Theme = typeof lightTheme;
-
-// TODO: darkTheme is currently identical to lightTheme — implement actual dark mode or remove
-export const darkTheme: Theme = { ...lightTheme };
-
-// Legacy flat colors export (dark values for backward compat)
-export const colors = darkTheme;
 
 export const gradients = {
   appBg: ['#FDFBF8', '#F7F4F0'],

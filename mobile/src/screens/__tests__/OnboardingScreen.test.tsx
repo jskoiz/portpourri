@@ -5,10 +5,17 @@ import OnboardingScreen from '../OnboardingScreen';
 const mockUpdateFitness = jest.fn();
 const mockSetUser = jest.fn();
 
-jest.mock('../../services/api', () => ({
-  profileApi: {
-    updateFitness: (...args: unknown[]) => mockUpdateFitness(...args),
-  },
+jest.mock('../../features/profile/hooks/useProfile', () => ({
+  useProfile: () => ({
+    updateFitness: mockUpdateFitness,
+    updateProfile: jest.fn(),
+    uploadPhoto: jest.fn(),
+    updatePhoto: jest.fn(),
+    deletePhoto: jest.fn(),
+    profile: null,
+    isLoading: false,
+    error: null,
+  }),
 }));
 
 jest.mock('../../store/authStore', () => ({
@@ -61,30 +68,34 @@ describe('OnboardingScreen', () => {
   };
 
   it('submits canonical discovery intensity values for high-frequency onboarding choices', async () => {
-    render(<OnboardingScreen navigation={navigation} route={route} />);
+    try {
+      render(<OnboardingScreen navigation={navigation} route={route} />);
 
-    pressAndAdvance('Get started');
-    pressAndAdvance('Continue');
-    fireEvent.press(screen.getByText('Lifting'));
-    pressAndAdvance('Continue');
-    fireEvent.press(screen.getByText('5–6x'));
-    pressAndAdvance('Continue');
-    fireEvent.press(screen.getByText('Gym'));
-    pressAndAdvance('Continue');
-    fireEvent.press(screen.getByText('Morning'));
-    pressAndAdvance('Continue');
-    fireEvent.press(screen.getByText('1-on-1'));
-    pressAndAdvance('Continue');
-    pressAndAdvance('Looks good');
-    fireEvent.press(screen.getByText('Meet them now'));
+      pressAndAdvance('Get started');
+      pressAndAdvance('Continue');
+      fireEvent.press(screen.getByText('Lifting'));
+      pressAndAdvance('Continue');
+      fireEvent.press(screen.getByText('5–6x'));
+      pressAndAdvance('Continue');
+      fireEvent.press(screen.getByText('Gym'));
+      pressAndAdvance('Continue');
+      fireEvent.press(screen.getByText('Morning'));
+      pressAndAdvance('Continue');
+      fireEvent.press(screen.getByText('1-on-1'));
+      pressAndAdvance('Continue');
+      pressAndAdvance('Looks good');
+      fireEvent.press(screen.getByText('Meet them now'));
 
-    await waitFor(() => {
-      expect(mockUpdateFitness).toHaveBeenCalledWith(
-        expect.objectContaining({
-          weeklyFrequencyBand: '5-6',
-          intensityLevel: 'high',
-        }),
-      );
-    });
+      await waitFor(() => {
+        expect(mockUpdateFitness).toHaveBeenCalledWith(
+          expect.objectContaining({
+            weeklyFrequencyBand: '5-6',
+            intensityLevel: 'high',
+          }),
+        );
+      });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

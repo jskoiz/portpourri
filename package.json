@@ -2,7 +2,7 @@
   "name": "brdg",
   "private": true,
   "scripts": {
-    "check": "npm run check:root && npm run check:backend && npm run check:mobile",
+    "check": "npm run check:root && npm run check:backend && npm run check:mobile && npm run check:symphony",
     "check:root": "npm run docs:check && npm run policy:check && npm run test:root",
     "check:changed": "node ./scripts/check-changed.mjs",
     "check:backend": "npm --prefix backend run check",

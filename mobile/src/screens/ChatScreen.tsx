@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import { StatePanel } from '../design/primitives';
 import { normalizeApiError } from '../api/errors';
@@ -22,10 +21,8 @@ import { getPrimaryPhotoUri } from '../lib/profilePhotos';
 import { useTheme } from '../theme/useTheme';
 import type { RootStackScreenProps } from '../core/navigation/types';
 
-export default function ChatScreen() {
+export default function ChatScreen({ navigation, route }: RootStackScreenProps<'Chat'>) {
   const theme = useTheme();
-  const navigation = useNavigation<RootStackScreenProps<'Chat'>['navigation']>();
-  const route = useRoute<RootStackScreenProps<'Chat'>['route']>();
   const { matchId, user, prefillMessage } = route.params;
   const [message, setMessage] = useState(prefillMessage?.trim() ?? '');
   const [sendError, setSendError] = useState<string | null>(null);

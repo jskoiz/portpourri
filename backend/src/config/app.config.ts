@@ -13,8 +13,9 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',')
   .filter(Boolean) || ['http://localhost:3000'];
 
 if (process.env.NODE_ENV === 'production' && !process.env.ALLOWED_ORIGINS) {
-  console.warn(
-    '[CORS] WARNING: ALLOWED_ORIGINS not set in production. Defaulting to localhost — this may block all client requests.',
+  throw new Error(
+    '[CORS] ALLOWED_ORIGINS must be set in production. ' +
+      'Provide a comma-separated list of allowed origins.',
   );
 }
 
@@ -50,6 +51,9 @@ export const appConfig = {
   isProduction,
   docs: {
     swaggerEnabled: process.env.NODE_ENV !== 'production',
+  },
+  auth: {
+    bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
   },
   jwt: {
     secret: jwtSecret,

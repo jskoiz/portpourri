@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  DiscoveryUser,
   LikeResponse,
   UndoSwipeResponse,
-  User,
 } from '../../../api/types';
 import {
   discoveryApi,
@@ -24,8 +24,8 @@ export function useDiscoveryFeed(filters?: DiscoveryFiltersInput) {
   });
 
   const removeFromFeed = async (userId: string) => {
-    const previous = queryClient.getQueryData<User[]>(feedKey) || [];
-    queryClient.setQueryData<User[]>(
+    const previous = queryClient.getQueryData<DiscoveryUser[]>(feedKey) || [];
+    queryClient.setQueryData<DiscoveryUser[]>(
       feedKey,
       previous.filter((item) => item.id !== userId),
     );
@@ -46,6 +46,11 @@ export function useDiscoveryFeed(filters?: DiscoveryFiltersInput) {
     mutationFn: async (userId: string) =>
       (await discoveryApi.like(userId)).data as LikeResponse,
     onMutate: removeFromFeed,
+    onSuccess: (data) => {
+      if (data.status === 'match') {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.matches.list });
+      }
+    },
     onError: (_error, _userId, previous) => {
       if (previous) {
         queryClient.setQueryData(feedKey, previous);

@@ -85,11 +85,12 @@ describe('NotificationsService', () => {
     expect(result?.readAt).toBeInstanceOf(Date);
   });
 
-  it('returns null when marking unknown notification as read', async () => {
+  it('throws NotFoundException when marking unknown notification as read', async () => {
     (prisma.notification.findFirst as jest.Mock).mockResolvedValue(null);
 
-    const result = await service.markRead('user-1', 'non-existent-id');
-    expect(result).toBeNull();
+    await expect(
+      service.markRead('user-1', 'non-existent-id'),
+    ).rejects.toThrow('Notification non-existent-id not found');
   });
 
   it('marks all unread notifications as read', async () => {

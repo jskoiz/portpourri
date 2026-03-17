@@ -7,7 +7,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 describe('DiscoveryService', () => {
   let service: DiscoveryService;
 
-  const prismaMock = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prismaMock: any = {
     like: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
@@ -96,10 +97,6 @@ describe('DiscoveryService', () => {
 
     // Default: target user exists (tests that need it missing will override)
     prismaMock.user.findFirst.mockResolvedValue({ id: 'user-2' });
-  });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
   });
 
   it('pushes like/pass exclusions and profile filters into the feed query', async () => {

@@ -13,7 +13,7 @@ export class CreateEventDto {
   @IsNotEmpty()
   @MinLength(1)
   @MaxLength(200)
-  title: string;
+  title!: string;
 
   @IsOptional()
   @IsString()
@@ -24,7 +24,7 @@ export class CreateEventDto {
   @IsNotEmpty()
   @MinLength(1)
   @MaxLength(300)
-  location: string;
+  location!: string;
 
   @IsOptional()
   @IsEnum(EventCategory, {
@@ -34,7 +34,7 @@ export class CreateEventDto {
 
   @IsString()
   @IsNotEmpty()
-  startsAt: string;
+  startsAt!: string;
 
   @IsOptional()
   @IsString()

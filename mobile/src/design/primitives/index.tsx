@@ -76,7 +76,7 @@ export function Button({
     switch (variant) {
       case 'primary':
         return {
-          backgroundColor: '#1A1A1A',
+          backgroundColor: theme.buttonPrimary,
           ...shadows.soft,
         };
       case 'secondary':
@@ -96,9 +96,7 @@ export function Button({
         };
       case 'ghost':
         return {
-          backgroundColor: theme.surfaceElevated,
-          borderWidth: 1,
-          borderColor: theme.border,
+          backgroundColor: 'transparent',
         };
       case 'danger':
         return {
@@ -296,7 +294,7 @@ export function Input({
         style={[
           primitiveStyles.inputWrapper,
           {
-            backgroundColor: 'rgba(255,255,255,0.6)',
+            backgroundColor: theme.surfaceGlass,
             borderColor,
           },
         ]}

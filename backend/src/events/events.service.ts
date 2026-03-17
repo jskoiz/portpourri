@@ -56,11 +56,10 @@ export class EventsService {
   ) {}
 
   async list(userId?: string, take = 20, skip = 0) {
-    const safeTake = Math.min(Math.max(take, 1), 100);
     const events = await this.prisma.event.findMany({
       where: { startsAt: { gte: new Date() } },
       orderBy: { startsAt: 'asc' },
-      take: safeTake,
+      take,
       skip,
       include: {
         host: { select: { id: true, firstName: true } },
@@ -125,6 +124,10 @@ export class EventsService {
       throw new BadRequestException('A valid start time is required');
     }
 
+    if (startsAt <= new Date()) {
+      throw new BadRequestException('Start time must be in the future');
+    }
+
     if (endsAt && Number.isNaN(endsAt.getTime())) {
       throw new BadRequestException('End time must be a valid date');
     }
@@ -163,30 +166,27 @@ export class EventsService {
 
   async rsvp(eventId: string, userId: string) {
     const event = await this.detail(eventId);
-    const existingRsvp = await this.prisma.eventRsvp.findUnique({
+
+    const countBefore = await this.prisma.eventRsvp.count({
+      where: { eventId, userId },
+    });
+
+    await this.prisma.eventRsvp.upsert({
       where: {
         eventId_userId: {
           eventId,
           userId,
         },
       },
+      create: {
+        eventId,
+        userId,
+      },
+      update: {},
     });
 
-    if (!existingRsvp) {
-      await this.prisma.eventRsvp.upsert({
-        where: {
-          eventId_userId: {
-            eventId,
-            userId,
-          },
-        },
-        create: {
-          eventId,
-          userId,
-        },
-        update: {},
-      });
-
+    // Only send notifications for newly created RSVPs
+    if (countBefore === 0) {
       if (event.host.id !== userId) {
         void this.notifications
           .create(
@@ -217,7 +217,7 @@ export class EventsService {
     const rows = await this.prisma.eventRsvp.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      take: Math.min(take, 100),
+      take,
       skip,
       include: {
         event: {

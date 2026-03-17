@@ -9,20 +9,20 @@ import { VerificationChannel } from '../common/enums';
 
 export class StartVerificationDto {
   @IsEnum(VerificationChannel)
-  channel: VerificationChannel;
+  channel!: VerificationChannel;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(254)
-  target: string;
+  target!: string;
 }
 
 export class ConfirmVerificationDto {
   @IsEnum(VerificationChannel)
-  channel: VerificationChannel;
+  channel!: VerificationChannel;
 
   @IsString()
   @MinLength(6)
   @MaxLength(6)
-  code: string;
+  code!: string;
 }

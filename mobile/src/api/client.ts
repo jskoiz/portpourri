@@ -1,15 +1,7 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
 import { env } from '../config/env';
-import { STORAGE_KEYS } from '../constants/storage';
-import * as SecureStore from 'expo-secure-store';
 import { handleUnauthorized } from './authSession';
-
-// expo-secure-store has no web implementation; fall back to localStorage
-const getToken = (key: string) =>
-    Platform.OS === 'web'
-        ? Promise.resolve(localStorage.getItem(key))
-        : SecureStore.getItemAsync(key);
+import { getToken } from '../lib/secureStorage';
 
 const client = axios.create({
     baseURL: env.apiUrl,
@@ -25,7 +17,7 @@ client.interceptors.request.use(
         // Authorization header.  This lets call-sites pass an explicit token (e.g.
         // authApi.me) without having it silently overwritten by the interceptor.
         if (!config.headers.Authorization) {
-            const token = await getToken(STORAGE_KEYS.accessToken);
+            const token = await getToken();
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
             }

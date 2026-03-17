@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Alert,
   Dimensions,
@@ -10,39 +10,41 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Image } from 'expo-image';
 import { normalizeApiError } from '../api/errors';
-import { discoveryApi, matchesApi } from '../services/api';
-import type { RootStackParamList } from '../core/navigation/types';
+import type { RootStackScreenProps } from '../core/navigation/types';
 import AppBackButton from '../components/ui/AppBackButton';
 import AppIcon from '../components/ui/AppIcon';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import { Button, Screen, StatePanel } from '../design/primitives';
+import { useDiscoveryActions } from '../features/discovery/hooks/useDiscoveryActions';
+import { useMatches } from '../features/matches/hooks/useMatches';
 import { useTheme } from '../theme/useTheme';
-import { radii, spacing, typography } from '../theme/tokens';
+import { lightTheme, radii, spacing, typography } from '../theme/tokens';
 import { type SessionIntent } from '../types/sessionIntent';
 import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const HERO_HEIGHT = 420;
 
-const BASE = '#FDFBF8';
-const SURFACE = '#FFFFFF';
-const PRIMARY = '#C4A882';
-const ACCENT = '#8BAA7A';
-const BORDER = '#E8E2DA';
-const TEXT_PRIMARY = '#2C2420';
-const TEXT_MUTED = '#B0A89E';
+const BASE = lightTheme.background;
+const SURFACE = lightTheme.surface;
+const PRIMARY = lightTheme.primary;
+const ACCENT = lightTheme.success;
+const BORDER = lightTheme.border;
+const TEXT_PRIMARY = lightTheme.textPrimary;
+const TEXT_MUTED = lightTheme.textMuted;
 
-export default function ProfileDetailScreen() {
+export default function ProfileDetailScreen({
+  navigation,
+  route,
+}: RootStackScreenProps<'ProfileDetail'>) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const route = useRoute<RouteProp<RootStackParamList, 'ProfileDetail'>>();
   const { user } = route.params;
-  const [submitting, setSubmitting] = useState(false);
+  const { matches } = useMatches();
+  const { passUser, likeUser, isActing } = useDiscoveryActions();
+  const submitting = isActing;
 
   if (!user) {
     return (
@@ -85,55 +87,41 @@ export default function ProfileDetailScreen() {
     },
   ];
 
-  const handleSuggestActivity = async () => {
+  const handleSuggestActivity = () => {
     const firstActivity = activityTags[0] || 'a workout';
     const suggestion = `Let's plan ${firstActivity} together.`;
-    setSubmitting(true);
-    try {
-      const response = await matchesApi.list();
-      const existingMatch = (response.data ?? []).find((match) => match.user.id === user.id);
+    const existingMatch = matches.find((match) => match.user.id === user.id);
 
-      if (!existingMatch) {
-        Alert.alert(
-          'Match required',
-          'Once you both match, you can jump straight into chat with a suggested plan.',
-        );
-        return;
-      }
-
-      navigation.navigate('Chat', {
-        matchId: existingMatch.id,
-        user: existingMatch.user,
-        prefillMessage: suggestion,
-      });
-    } catch (error) {
-      Alert.alert('Could not open chat', normalizeApiError(error).message);
-    } finally {
-      setSubmitting(false);
+    if (!existingMatch) {
+      Alert.alert(
+        'Match required',
+        'Once you both match, you can jump straight into chat with a suggested plan.',
+      );
+      return;
     }
+
+    navigation.navigate('Chat', {
+      matchId: existingMatch.id,
+      user: existingMatch.user,
+      prefillMessage: suggestion,
+    });
   };
 
   const handlePass = async () => {
-    setSubmitting(true);
     try {
-      await discoveryApi.pass(user.id);
+      await passUser(user.id);
       navigation.goBack();
     } catch (error) {
       Alert.alert('Could not pass profile', normalizeApiError(error).message);
-    } finally {
-      setSubmitting(false);
     }
   };
 
   const handleLike = async () => {
-    setSubmitting(true);
     try {
-      await discoveryApi.like(user.id);
+      await likeUser(user.id);
       navigation.goBack();
     } catch (error) {
       Alert.alert('Could not like profile', normalizeApiError(error).message);
-    } finally {
-      setSubmitting(false);
     }
   };
 

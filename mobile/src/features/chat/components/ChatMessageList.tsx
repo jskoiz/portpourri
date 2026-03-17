@@ -4,7 +4,7 @@ import type { ChatMessage } from '../../../api/types';
 import type { Theme } from '../../../theme/tokens';
 import { chatStyles as styles } from './chat.styles';
 
-function ChatBubble({ item, theme }: { item: ChatMessage; theme: Theme }) {
+const ChatBubble = React.memo(function ChatBubble({ item, theme }: { item: ChatMessage; theme: Theme }) {
   const isMe = item.sender === 'me';
 
   return (
@@ -13,11 +13,12 @@ function ChatBubble({ item, theme }: { item: ChatMessage; theme: Theme }) {
         styles.bubble,
         isMe ? styles.bubbleMe : styles.bubbleThem,
       ]}
+      accessibilityLabel={isMe ? `You said: ${item.text}` : `They said: ${item.text}`}
     >
       <Text style={[styles.bubbleText, { color: isMe ? '#FFFFFF' : '#2C2420' }]}>{item.text}</Text>
     </View>
   );
-}
+});
 
 export function ChatMessageList({
   messages,

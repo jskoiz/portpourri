@@ -19,9 +19,6 @@ import {
   DISCOVERY_FEED_RESULT_LIMIT,
   DISCOVERY_SCORE_WEIGHTS,
   EARTH_RADIUS_KM,
-  PROFILE_COMPLETENESS_BIO_MIN_CHARS,
-  PROFILE_COMPLETENESS_PHOTO_MIN_COUNT,
-  PROFILE_COMPLETENESS_PROMPTS,
 } from './discovery.constants';
 
 export interface DiscoveryFilters {
@@ -505,140 +502,87 @@ export class DiscoveryService {
       throw new NotFoundException('User not found');
     }
 
-    const existingPass = await this.prisma.pass.findUnique({
-      where: {
-        fromUserId_toUserId: {
+    return this.prisma.$transaction(async (tx) => {
+      const existingPass = await tx.pass.findUnique({
+        where: {
+          fromUserId_toUserId: {
+            fromUserId: userId,
+            toUserId: targetUserId,
+          },
+        },
+      });
+
+      if (existingPass) return { status: 'already_passed' as const };
+
+      await tx.like.deleteMany({
+        where: { fromUserId: userId, toUserId: targetUserId },
+      });
+
+      await tx.pass.create({
+        data: {
           fromUserId: userId,
           toUserId: targetUserId,
         },
-      },
+      });
+
+      return { status: 'passed' as const };
     });
-
-    if (existingPass) return { status: 'already_passed' };
-
-    await this.prisma.like.deleteMany({
-      where: { fromUserId: userId, toUserId: targetUserId },
-    });
-
-    await this.prisma.pass.create({
-      data: {
-        fromUserId: userId,
-        toUserId: targetUserId,
-      },
-    });
-
-    return { status: 'passed' };
   }
 
   async undoLastSwipe(userId: string) {
-    const [lastLike, lastPass] = await Promise.all([
-      this.prisma.like.findFirst({
-        where: { fromUserId: userId },
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.pass.findFirst({
-        where: { fromUserId: userId },
-        orderBy: { createdAt: 'desc' },
-      }),
-    ]);
+    return this.prisma.$transaction(async (tx) => {
+      const [lastLike, lastPass] = await Promise.all([
+        tx.like.findFirst({
+          where: { fromUserId: userId },
+          orderBy: { createdAt: 'desc' },
+        }),
+        tx.pass.findFirst({
+          where: { fromUserId: userId },
+          orderBy: { createdAt: 'desc' },
+        }),
+      ]);
 
-    if (!lastLike && !lastPass) return { status: 'nothing_to_undo' };
+      if (!lastLike && !lastPass) return { status: 'nothing_to_undo' as const };
 
-    const undoLike =
-      !!lastLike && (!lastPass || lastLike.createdAt >= lastPass.createdAt);
+      const undoLike =
+        !!lastLike && (!lastPass || lastLike.createdAt >= lastPass.createdAt);
 
-    if (undoLike && lastLike) {
-      await this.prisma.like.delete({ where: { id: lastLike.id } });
+      if (undoLike && lastLike) {
+        await tx.like.delete({ where: { id: lastLike.id } });
 
-      const [userAId, userBId] = [userId, lastLike.toUserId].sort();
-      const existingMatch = await this.prisma.match.findUnique({
-        where: { userAId_userBId: { userAId, userBId } },
-      });
-
-      let archivedMatchId: string | undefined;
-      if (existingMatch && !existingMatch.isArchived) {
-        await this.prisma.match.update({
-          where: { id: existingMatch.id },
-          data: { isArchived: true },
+        const [userAId, userBId] = [userId, lastLike.toUserId].sort();
+        const existingMatch = await tx.match.findUnique({
+          where: { userAId_userBId: { userAId, userBId } },
         });
-        archivedMatchId = existingMatch.id;
+
+        let archivedMatchId: string | undefined;
+        if (existingMatch && !existingMatch.isArchived) {
+          await tx.match.update({
+            where: { id: existingMatch.id },
+            data: { isArchived: true },
+          });
+          archivedMatchId = existingMatch.id;
+        }
+
+        return {
+          status: 'undone' as const,
+          action: 'like' as const,
+          targetUserId: lastLike.toUserId,
+          ...(archivedMatchId ? { archivedMatchId } : {}),
+        };
       }
 
-      return {
-        status: 'undone',
-        action: 'like',
-        targetUserId: lastLike.toUserId,
-        ...(archivedMatchId ? { archivedMatchId } : {}),
-      };
-    }
+      if (lastPass) {
+        await tx.pass.delete({ where: { id: lastPass.id } });
+        return {
+          status: 'undone' as const,
+          action: 'pass' as const,
+          targetUserId: lastPass.toUserId,
+        };
+      }
 
-    if (lastPass) {
-      await this.prisma.pass.delete({ where: { id: lastPass.id } });
-      return {
-        status: 'undone',
-        action: 'pass',
-        targetUserId: lastPass.toUserId,
-      };
-    }
-
-    return { status: 'nothing_to_undo' };
-  }
-
-  async getProfileCompleteness(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        profile: true,
-        fitnessProfile: true,
-        photos: { where: { isHidden: false } },
-      },
+      return { status: 'nothing_to_undo' as const };
     });
-
-    if (!user) {
-      return {
-        score: 0,
-        prompts: [PROFILE_COMPLETENESS_PROMPTS.missingProfile],
-      };
-    }
-
-    const checks = [
-      { ok: !!user.firstName, prompt: PROFILE_COMPLETENESS_PROMPTS.firstName },
-      { ok: !!user.birthdate, prompt: PROFILE_COMPLETENESS_PROMPTS.birthdate },
-      {
-        ok:
-          !!user.profile?.bio &&
-          user.profile.bio.length >= PROFILE_COMPLETENESS_BIO_MIN_CHARS,
-        prompt: PROFILE_COMPLETENESS_PROMPTS.bio,
-      },
-      {
-        ok: !!user.profile?.city,
-        prompt: PROFILE_COMPLETENESS_PROMPTS.city,
-      },
-      {
-        ok: user.photos.length >= PROFILE_COMPLETENESS_PHOTO_MIN_COUNT,
-        prompt: PROFILE_COMPLETENESS_PROMPTS.photos,
-      },
-      {
-        ok: !!user.fitnessProfile?.primaryGoal,
-        prompt: PROFILE_COMPLETENESS_PROMPTS.primaryGoal,
-      },
-      {
-        ok: !!user.fitnessProfile?.intensityLevel,
-        prompt: PROFILE_COMPLETENESS_PROMPTS.intensity,
-      },
-      {
-        ok: !!(
-          user.fitnessProfile?.prefersMorning ||
-          user.fitnessProfile?.prefersEvening
-        ),
-        prompt: PROFILE_COMPLETENESS_PROMPTS.availability,
-      },
-    ];
-
-    const earned = checks.filter((c) => c.ok).length;
-    const score = Math.round((earned / checks.length) * 100);
-    const prompts = checks.filter((c) => !c.ok).map((c) => c.prompt);
-
-    return { score, prompts };
   }
+
 }

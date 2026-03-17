@@ -1,12 +1,25 @@
-import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '../authStore';
 import { authApi } from '../../services/api';
-import { STORAGE_KEYS } from '../../constants/storage';
+import { getToken, setToken, deleteToken } from '../../lib/secureStorage';
+
+jest.mock('@sentry/react-native', () => ({
+  setUser: jest.fn(),
+}));
+
+jest.mock('../../lib/secureStorage', () => ({
+  getToken: jest.fn(),
+  setToken: jest.fn(),
+  deleteToken: jest.fn(),
+}));
 
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(),
   setItemAsync: jest.fn(),
   deleteItemAsync: jest.fn(),
+}));
+
+jest.mock('../../lib/query/queryClient', () => ({
+  queryClient: { clear: jest.fn() },
 }));
 
 jest.mock('../../services/api', () => ({
@@ -18,7 +31,9 @@ jest.mock('../../services/api', () => ({
   },
 }));
 
-const mockSecureStore = SecureStore as jest.Mocked<typeof SecureStore>;
+const mockGetToken = getToken as jest.MockedFunction<typeof getToken>;
+const mockSetToken = setToken as jest.MockedFunction<typeof setToken>;
+const mockDeleteToken = deleteToken as jest.MockedFunction<typeof deleteToken>;
 const mockAuthApi = authApi as jest.Mocked<typeof authApi>;
 
 describe('authStore', () => {
@@ -30,13 +45,13 @@ describe('authStore', () => {
   describe('deleteAccount', () => {
     it('clears token from secure storage and clears in-memory session on success', async () => {
       mockAuthApi.deleteAccount.mockResolvedValueOnce({ data: undefined } as any);
-      mockSecureStore.deleteItemAsync.mockResolvedValueOnce(undefined);
+      mockDeleteToken.mockResolvedValueOnce(undefined);
 
       useAuthStore.setState({ token: 'tok', user: { id: 'u1' } });
 
       await useAuthStore.getState().deleteAccount();
 
-      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(STORAGE_KEYS.accessToken);
+      expect(mockDeleteToken).toHaveBeenCalled();
       expect(useAuthStore.getState().token).toBeNull();
       expect(useAuthStore.getState().user).toBeNull();
     });
@@ -55,12 +70,12 @@ describe('authStore', () => {
       // Session should remain intact — the account was not deleted
       expect(useAuthStore.getState().token).toBe('tok');
       expect(useAuthStore.getState().user).toEqual({ id: 'u1' });
-      expect(mockSecureStore.deleteItemAsync).not.toHaveBeenCalled();
+      expect(mockDeleteToken).not.toHaveBeenCalled();
     });
 
     it('still clears in-memory session even when secure storage deletion throws', async () => {
       mockAuthApi.deleteAccount.mockResolvedValueOnce({ data: undefined } as any);
-      mockSecureStore.deleteItemAsync.mockRejectedValueOnce(new Error('Storage unavailable'));
+      mockDeleteToken.mockRejectedValueOnce(new Error('Storage unavailable'));
 
       useAuthStore.setState({ token: 'tok', user: { id: 'u1' } });
 
@@ -76,13 +91,13 @@ describe('authStore', () => {
 
   describe('logout', () => {
     it('removes token from secure storage and clears session', async () => {
-      mockSecureStore.deleteItemAsync.mockResolvedValueOnce(undefined);
+      mockDeleteToken.mockResolvedValueOnce(undefined);
 
       useAuthStore.setState({ token: 'tok', user: { id: 'u1' } });
 
       await useAuthStore.getState().logout();
 
-      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(STORAGE_KEYS.accessToken);
+      expect(mockDeleteToken).toHaveBeenCalled();
       expect(useAuthStore.getState().token).toBeNull();
       expect(useAuthStore.getState().user).toBeNull();
     });
@@ -94,11 +109,11 @@ describe('authStore', () => {
       mockAuthApi.login.mockResolvedValueOnce({
         data: { access_token: 'new-token', user },
       } as any);
-      mockSecureStore.setItemAsync.mockResolvedValueOnce(undefined);
+      mockSetToken.mockResolvedValueOnce(undefined);
 
       await useAuthStore.getState().login({ email: 'a@b.com', password: 'pass' });
 
-      expect(mockSecureStore.setItemAsync).toHaveBeenCalledWith(STORAGE_KEYS.accessToken, 'new-token');
+      expect(mockSetToken).toHaveBeenCalledWith('new-token');
       expect(useAuthStore.getState().token).toBe('new-token');
       expect(useAuthStore.getState().user).toEqual(user);
     });
@@ -118,7 +133,7 @@ describe('authStore', () => {
 
   describe('loadToken', () => {
     it('sets isLoading false and clears state when no token is stored', async () => {
-      mockSecureStore.getItemAsync.mockResolvedValueOnce(null);
+      mockGetToken.mockResolvedValueOnce(null);
 
       await useAuthStore.getState().loadToken();
 
@@ -129,7 +144,7 @@ describe('authStore', () => {
 
     it('restores token and user when stored token is valid', async () => {
       const user = { id: 'u1' };
-      mockSecureStore.getItemAsync.mockResolvedValueOnce('stored-token');
+      mockGetToken.mockResolvedValueOnce('stored-token');
       mockAuthApi.me.mockResolvedValueOnce({ data: user } as any);
 
       await useAuthStore.getState().loadToken();
@@ -144,12 +159,12 @@ describe('authStore', () => {
         response: { status: 401, data: { message: 'Token expired' } },
         isAxiosError: true,
       });
-      mockSecureStore.getItemAsync.mockResolvedValueOnce('expired-token');
+      mockGetToken.mockResolvedValueOnce('expired-token');
       mockAuthApi.me.mockRejectedValueOnce(axiosError);
 
       await useAuthStore.getState().loadToken();
 
-      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(STORAGE_KEYS.accessToken);
+      expect(mockDeleteToken).toHaveBeenCalled();
       expect(useAuthStore.getState().token).toBeNull();
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
@@ -160,12 +175,12 @@ describe('authStore', () => {
         response: { status: 403, data: {} },
         isAxiosError: true,
       });
-      mockSecureStore.getItemAsync.mockResolvedValueOnce('revoked-token');
+      mockGetToken.mockResolvedValueOnce('revoked-token');
       mockAuthApi.me.mockRejectedValueOnce(axiosError);
 
       await useAuthStore.getState().loadToken();
 
-      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(STORAGE_KEYS.accessToken);
+      expect(mockDeleteToken).toHaveBeenCalled();
       expect(useAuthStore.getState().token).toBeNull();
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
@@ -176,12 +191,12 @@ describe('authStore', () => {
         isAxiosError: true,
         // no response property — indicates a network-level failure
       });
-      mockSecureStore.getItemAsync.mockResolvedValueOnce('valid-token');
+      mockGetToken.mockResolvedValueOnce('valid-token');
       mockAuthApi.me.mockRejectedValueOnce(networkError);
 
       await useAuthStore.getState().loadToken();
 
-      expect(mockSecureStore.deleteItemAsync).not.toHaveBeenCalled();
+      expect(mockDeleteToken).not.toHaveBeenCalled();
       expect(useAuthStore.getState().token).toBe('valid-token');
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
@@ -192,12 +207,12 @@ describe('authStore', () => {
         isAxiosError: true,
         code: 'ECONNABORTED',
       });
-      mockSecureStore.getItemAsync.mockResolvedValueOnce('valid-token');
+      mockGetToken.mockResolvedValueOnce('valid-token');
       mockAuthApi.me.mockRejectedValueOnce(timeoutError);
 
       await useAuthStore.getState().loadToken();
 
-      expect(mockSecureStore.deleteItemAsync).not.toHaveBeenCalled();
+      expect(mockDeleteToken).not.toHaveBeenCalled();
       expect(useAuthStore.getState().token).toBe('valid-token');
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
@@ -208,12 +223,12 @@ describe('authStore', () => {
         response: { status: 500, data: {} },
         isAxiosError: true,
       });
-      mockSecureStore.getItemAsync.mockResolvedValueOnce('valid-token');
+      mockGetToken.mockResolvedValueOnce('valid-token');
       mockAuthApi.me.mockRejectedValueOnce(serverError);
 
       await useAuthStore.getState().loadToken();
 
-      expect(mockSecureStore.deleteItemAsync).not.toHaveBeenCalled();
+      expect(mockDeleteToken).not.toHaveBeenCalled();
       expect(useAuthStore.getState().token).toBe('valid-token');
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);

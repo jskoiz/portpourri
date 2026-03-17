@@ -148,27 +148,24 @@ describe('EventsService', () => {
   describe('rsvp', () => {
     it('does not send duplicate notifications when the RSVP already exists', async () => {
       eventFindUnique.mockResolvedValue(baseEvent);
-      eventRsvpFindUnique.mockResolvedValue({
-        id: 'existing-rsvp',
-        eventId: 'event-1',
-        userId: 'user-2',
-      });
-      eventRsvpCount.mockResolvedValue(5);
+      // First count call: check if RSVP already exists (returns 1 = existing)
+      // Second count call: total attendees
+      eventRsvpCount.mockResolvedValueOnce(1).mockResolvedValueOnce(5);
+      eventRsvpUpsert.mockResolvedValue({});
 
       await expect(service.rsvp('event-1', 'user-2')).resolves.toEqual({
         status: 'joined',
         attendeesCount: 5,
       });
 
-      expect(eventRsvpUpsert).not.toHaveBeenCalled();
+      expect(eventRsvpUpsert).toHaveBeenCalled();
       expect(notificationsCreate).not.toHaveBeenCalled();
     });
 
     it('returns joined status with attendee count', async () => {
       eventFindUnique.mockResolvedValue(baseEvent);
-      eventRsvpFindUnique.mockResolvedValue(null);
+      eventRsvpCount.mockResolvedValueOnce(0).mockResolvedValueOnce(6);
       eventRsvpUpsert.mockResolvedValue({});
-      eventRsvpCount.mockResolvedValue(6);
 
       const result = await service.rsvp('event-1', 'user-2');
 
@@ -177,9 +174,8 @@ describe('EventsService', () => {
 
     it('sends notification to host when a non-host RSVPs', async () => {
       eventFindUnique.mockResolvedValue(baseEvent);
-      eventRsvpFindUnique.mockResolvedValue(null);
+      eventRsvpCount.mockResolvedValueOnce(0).mockResolvedValueOnce(6);
       eventRsvpUpsert.mockResolvedValue({});
-      eventRsvpCount.mockResolvedValue(6);
 
       await service.rsvp('event-1', 'user-2');
 
@@ -191,9 +187,8 @@ describe('EventsService', () => {
 
     it('does not send host notification when the host RSVPs their own event', async () => {
       eventFindUnique.mockResolvedValue(baseEvent);
-      eventRsvpFindUnique.mockResolvedValue(null);
+      eventRsvpCount.mockResolvedValueOnce(0).mockResolvedValueOnce(5);
       eventRsvpUpsert.mockResolvedValue({});
-      eventRsvpCount.mockResolvedValue(5);
 
       await service.rsvp('event-1', 'host-1');
 
@@ -209,9 +204,8 @@ describe('EventsService', () => {
 
     it('always sends reminder notification to the RSVPing user', async () => {
       eventFindUnique.mockResolvedValue(baseEvent);
-      eventRsvpFindUnique.mockResolvedValue(null);
+      eventRsvpCount.mockResolvedValueOnce(0).mockResolvedValueOnce(6);
       eventRsvpUpsert.mockResolvedValue({});
-      eventRsvpCount.mockResolvedValue(6);
 
       await service.rsvp('event-1', 'user-2');
 
@@ -241,7 +235,7 @@ describe('EventsService', () => {
           },
           'host-1',
         ),
-      ).resolves.toBeDefined(); // service does not validate past dates
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('accepts an event without endsAt', async () => {

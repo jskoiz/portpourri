@@ -179,7 +179,7 @@ export function ProfileScreenContent({
               </LinearGradient>
             )}
             <LinearGradient colors={['transparent', '#FDFBF8']} style={styles.heroOverlay}>
-              <Text style={styles.heroName}>
+              <Text style={styles.heroName} accessibilityRole="header">
                 {profile.firstName}
                 {profile.age ? `, ${profile.age}` : ''}
               </Text>

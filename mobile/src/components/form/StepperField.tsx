@@ -43,7 +43,7 @@ export function StepperField({
           accessibilityLabel={`Decrease ${label}`}
           disabled={disabled || atMin}
           onPress={() => onChange(Math.max(min, value - 1))}
-          style={{ opacity: disabled || atMin ? 0.36 : 1 }}
+          style={{ opacity: disabled || atMin ? 0.36 : 1, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
         >
           <Text style={{ color: theme.textPrimary, fontSize: 22, fontWeight: '700' }}>-</Text>
         </Pressable>
@@ -52,7 +52,7 @@ export function StepperField({
           accessibilityLabel={`Increase ${label}`}
           disabled={disabled || atMax}
           onPress={() => onChange(Math.min(max, value + 1))}
-          style={{ opacity: disabled || atMax ? 0.36 : 1 }}
+          style={{ opacity: disabled || atMax ? 0.36 : 1, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
         >
           <Text style={{ color: theme.textPrimary, fontSize: 22, fontWeight: '700' }}>+</Text>
         </Pressable>
