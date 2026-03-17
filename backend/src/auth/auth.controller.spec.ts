@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { PrismaService } from '../prisma/prisma.service';
 import type { LoginDto } from './auth.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
 import { Gender } from '../common/enums';
@@ -16,6 +17,12 @@ describe('AuthController', () => {
     deleteAccount: jest.fn(),
   };
 
+  const prismaMock = {
+    user: {
+      update: jest.fn(),
+    },
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -25,6 +32,10 @@ describe('AuthController', () => {
         {
           provide: AuthService,
           useValue: authServiceMock,
+        },
+        {
+          provide: PrismaService,
+          useValue: prismaMock,
         },
       ],
     }).compile();
@@ -108,5 +119,19 @@ describe('AuthController', () => {
         gender: Gender.Man,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('registers a push token for the authenticated user', async () => {
+    prismaMock.user.update.mockResolvedValue({ id: 'user-1', pushToken: 'ExponentPushToken[abc]' });
+    const req = { user: { id: 'user-1' } } as AuthenticatedRequest;
+
+    await expect(
+      controller.registerPushToken(req, { token: 'ExponentPushToken[abc]' }),
+    ).resolves.toBeUndefined();
+
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { pushToken: 'ExponentPushToken[abc]' },
+    });
   });
 });

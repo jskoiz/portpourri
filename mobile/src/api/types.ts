@@ -123,9 +123,18 @@ export interface UndoSwipeResponse {
   targetUserId?: string;
 }
 
+export interface ProfileCompletenessMissingItem {
+  field: string;
+  label: string;
+  route: string;
+}
+
 export interface ProfileCompletenessResponse {
   score: number;
+  total: number;
+  earned: number;
   prompts: string[];
+  missing: ProfileCompletenessMissingItem[];
 }
 
 export interface EventSummary {
@@ -158,6 +167,29 @@ export interface EventRsvpResponse {
   attendeesCount: number;
 }
 
+export interface EventInviteResponse {
+  id: string;
+  status: string;
+  event: {
+    id: string;
+    title: string;
+    location: string;
+    startsAt: string;
+    endsAt?: string | null;
+    category?: string | null;
+    host: { id: string; firstName: string };
+    attendeesCount: number;
+  };
+}
+
+export interface EventInviteListItem {
+  id: string;
+  status: string;
+  createdAt: string;
+  inviter: { id: string; firstName: string };
+  invitee: { id: string; firstName: string };
+}
+
 export type NotificationType =
   | 'like_received'
   | 'match_created'
@@ -182,4 +214,32 @@ export interface ApiErrorPayload {
   message?: string;
   error?: string;
   code?: string;
+}
+
+export type ReportCategory =
+  | 'HARASSMENT'
+  | 'SPAM'
+  | 'FAKE_PROFILE'
+  | 'INAPPROPRIATE'
+  | 'OTHER';
+
+export interface ReportPayload {
+  reportedUserId: string;
+  matchId?: string;
+  category: ReportCategory;
+  description?: string;
+}
+
+export interface BlockPayload {
+  blockedUserId: string;
+  matchId?: string;
+}
+
+export interface ReportResponse {
+  id: string;
+  status: string;
+}
+
+export interface BlockResponse {
+  status: string;
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -19,10 +19,14 @@ import AppBackdrop from '../components/ui/AppBackdrop';
 import { Button, Screen, StatePanel } from '../design/primitives';
 import { useDiscoveryActions } from '../features/discovery/hooks/useDiscoveryActions';
 import { useMatches } from '../features/matches/hooks/useMatches';
+import { useSheetController } from '../design/sheets/useSheetController';
 import { useTheme } from '../theme/useTheme';
 import { lightTheme, radii, spacing, typography } from '../theme/tokens';
 import { type SessionIntent } from '../types/sessionIntent';
 import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
+import { ReportSheet } from '../features/moderation/components/ReportSheet';
+import { useBlock } from '../features/moderation/hooks/useBlock';
+import { showBlockConfirmation } from '../features/moderation/components/BlockConfirmation';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const HERO_HEIGHT = 420;
@@ -45,6 +49,23 @@ export default function ProfileDetailScreen({
   const { matches } = useMatches();
   const { passUser, likeUser, isActing } = useDiscoveryActions();
   const submitting = isActing;
+  const [menuVisible, setMenuVisible] = useState(false);
+  const reportSheet = useSheetController();
+  const { block, isLoading: isBlocking } = useBlock({
+    onSuccess: () => navigation.goBack(),
+  });
+
+  const handleBlock = () => {
+    setMenuVisible(false);
+    showBlockConfirmation(() => {
+      void block({ blockedUserId: user.id });
+    });
+  };
+
+  const handleReport = () => {
+    setMenuVisible(false);
+    reportSheet.open();
+  };
 
   if (!user) {
     return (
@@ -151,6 +172,38 @@ export default function ProfileDetailScreen({
 
           <View style={styles.backButtonOverlay}>
             <AppBackButton onPress={() => navigation.goBack()} style={{ marginBottom: 0 }} />
+          </View>
+
+          <View style={styles.overflowButtonOverlay}>
+            <Pressable
+              onPress={() => setMenuVisible((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel="More options"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.overflowButton}
+            >
+              <AppIcon name="more-vertical" size={18} color={TEXT_PRIMARY} />
+            </Pressable>
+            {menuVisible && (
+              <View style={styles.overflowMenu}>
+                <Pressable
+                  onPress={handleReport}
+                  style={styles.overflowMenuItem}
+                  accessibilityRole="menuitem"
+                >
+                  <AppIcon name="flag" size={16} color={TEXT_PRIMARY} />
+                  <Text style={styles.overflowMenuText}>Report</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleBlock}
+                  style={styles.overflowMenuItem}
+                  accessibilityRole="menuitem"
+                >
+                  <AppIcon name="slash" size={16} color="#C0392B" />
+                  <Text style={[styles.overflowMenuText, { color: '#C0392B' }]}>Block</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
 
           <View style={styles.heroNameOverlay}>
@@ -277,6 +330,12 @@ export default function ProfileDetailScreen({
           />
         </View>
       </LinearGradient>
+
+      <ReportSheet
+        controller={reportSheet.sheetProps}
+        onClose={reportSheet.close}
+        reportedUserId={user.id}
+      />
     </SafeAreaView>
   );
 }
@@ -336,6 +395,48 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+  },
+  overflowButtonOverlay: {
+    position: 'absolute',
+    top: spacing.lg,
+    right: spacing.lg,
+    zIndex: 10,
+  },
+  overflowButton: {
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: radii.pill,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overflowMenu: {
+    position: 'absolute',
+    top: 48,
+    right: 0,
+    backgroundColor: SURFACE,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.xs,
+    minWidth: 160,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  overflowMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  overflowMenuText: {
+    fontSize: typography.body,
+    fontWeight: '600',
+    color: TEXT_PRIMARY,
   },
   heroNameOverlay: {
     position: 'absolute',

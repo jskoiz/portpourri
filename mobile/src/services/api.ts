@@ -3,15 +3,21 @@ import type {
   AppNotification,
   AuthenticatedUser,
   AuthResponse,
+  BlockPayload,
+  BlockResponse,
   ChatMessage,
   CreateEventPayload,
   DiscoveryUser,
   EventDetail,
+  EventInviteListItem,
+  EventInviteResponse,
   EventRsvpResponse,
   EventSummary,
   LikeResponse,
   Match,
   ProfileCompletenessResponse,
+  ReportPayload,
+  ReportResponse,
   UpdatePhotoPayload,
   UpdateProfilePayload,
   UndoSwipeResponse,
@@ -203,6 +209,19 @@ export const notificationsApi = {
     ),
 };
 
+export const moderationApi = {
+  report: async (payload: ReportPayload) =>
+    withErrorLogging("moderation", "report", () =>
+      client.post<ReportResponse>("/moderation/report", payload),
+      { reportedUserId: payload.reportedUserId, category: payload.category },
+    ),
+  block: async (payload: BlockPayload) =>
+    withErrorLogging("moderation", "block", () =>
+      client.post<BlockResponse>("/moderation/block", payload),
+      { blockedUserId: payload.blockedUserId },
+    ),
+};
+
 export const eventsApi = {
   list: async () =>
     withErrorLogging("events", "list", () =>
@@ -226,5 +245,18 @@ export const eventsApi = {
   mine: async () =>
     withErrorLogging("events", "mine", () =>
       client.get<EventSummary[]>("/events/me"),
+    ),
+  invite: async (eventId: string, matchId: string, message?: string) =>
+    withErrorLogging("events", "invite", () =>
+      client.post<EventInviteResponse>(`/events/${eventId}/invite`, {
+        matchId,
+        ...(message ? { message } : {}),
+      }),
+      { eventId, matchId },
+    ),
+  getInvites: async (eventId: string) =>
+    withErrorLogging("events", "getInvites", () =>
+      client.get<EventInviteListItem[]>(`/events/${eventId}/invites`),
+      { eventId },
     ),
 };

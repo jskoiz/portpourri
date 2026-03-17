@@ -3,7 +3,7 @@ import { env } from '../config/env';
 import { normalizeApiError } from './errors';
 
 export function logApiFailure(
-  domain: 'auth' | 'profile' | 'discovery' | 'events' | 'matches' | 'notifications',
+  domain: 'auth' | 'profile' | 'discovery' | 'events' | 'matches' | 'moderation' | 'notifications',
   action: string,
   error: unknown,
   context: Record<string, unknown> = {},

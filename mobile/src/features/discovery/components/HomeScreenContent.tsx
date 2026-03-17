@@ -8,6 +8,7 @@ import AppBackdrop from '../../../components/ui/AppBackdrop';
 import { StatePanel } from '../../../design/primitives';
 import type { AppBottomSheetProps } from '../../../design/sheets/AppBottomSheet';
 import { spacing } from '../../../theme/tokens';
+import { DiscoveryNudgeCard } from './DiscoveryNudgeCard';
 import { HomeHero } from './HomeHero';
 import { HomeQuickFilters } from './HomeQuickFilters';
 import { DiscoveryFilterSheet } from './DiscoveryFilterSheet';
@@ -25,11 +26,13 @@ function clampCardHeight(value: number) {
 export function HomeScreenContent({
   activeFilterCount,
   activeQuickFilter,
+  completenessScore,
   filtersSheet,
   filterState,
   feed,
   greeting,
   intentOption,
+  onPressCompleteness,
   onApplyFilters,
   onOpenFilters,
   onMatchAnimationFinish,
@@ -59,6 +62,8 @@ export function HomeScreenContent({
   feed: User[];
   greeting: string;
   intentOption: { color: string; label: string };
+  completenessScore: number;
+  onPressCompleteness: () => void;
   onApplyFilters: () => void;
   onOpenFilters: () => void;
   onMatchAnimationFinish: () => void;
@@ -103,6 +108,8 @@ export function HomeScreenContent({
         onPressFilter={onQuickFilterPress}
         onPressRefine={onOpenFilters}
       />
+
+      <DiscoveryNudgeCard score={completenessScore} onPress={onPressCompleteness} />
 
       <View style={styles.deckArea}>
         <View

@@ -22,13 +22,30 @@ jest.mock('../../features/chat/hooks/useChatThread', () => ({
   useChatThread: () => ({
     connectionStatus: 'connected',
     error: null,
+    isTyping: false,
     loading: false,
     messages: [],
     refresh: mockRefresh,
     refreshing: false,
     sendMessage: mockSendMessage,
     sending: false,
+    emitTyping: jest.fn(),
   }),
+}));
+
+jest.mock('../../features/moderation/hooks/useBlock', () => ({
+  useBlock: () => ({
+    block: jest.fn(),
+    isLoading: false,
+  }),
+}));
+
+jest.mock('../../features/moderation/components/BlockConfirmation', () => ({
+  showBlockConfirmation: jest.fn(),
+}));
+
+jest.mock('../../features/moderation/components/ReportSheet', () => ({
+  ReportSheet: () => null,
 }));
 
 describe('ChatScreen', () => {

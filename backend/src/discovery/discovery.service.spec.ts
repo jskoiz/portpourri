@@ -607,4 +607,126 @@ describe('DiscoveryService', () => {
     const result = await service.likeUser('user-1', 'user-2');
     expect(result).toEqual({ status: 'liked' });
   });
+
+  describe('getProfileCompleteness', () => {
+    const makeCompleteUser = (overrides: Record<string, unknown> = {}) => ({
+      id: 'user-1',
+      firstName: 'Casey',
+      birthdate: new Date('1998-06-15T00:00:00.000Z'),
+      profile: {
+        bio: 'This is a bio that is definitely long enough to pass the check.',
+        city: 'Honolulu',
+      },
+      fitnessProfile: {
+        primaryGoal: 'strength',
+        intensityLevel: IntensityLevel.INTERMEDIATE,
+        prefersMorning: true,
+        prefersEvening: false,
+      },
+      photos: [
+        { id: 'p1', storageKey: 'p1.jpg' },
+        { id: 'p2', storageKey: 'p2.jpg' },
+      ],
+      ...overrides,
+    });
+
+    it('returns 100% for a fully complete profile', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(makeCompleteUser());
+
+      const result = await service.getProfileCompleteness('user-1');
+
+      expect(result.score).toBe(100);
+      expect(result.earned).toBe(result.total);
+      expect(result.missing).toEqual([]);
+      expect(result.prompts).toEqual([]);
+    });
+
+    it('returns 0% and all missing items when user is not found', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+
+      const result = await service.getProfileCompleteness('ghost');
+
+      expect(result.score).toBe(0);
+      expect(result.earned).toBe(0);
+      expect(result.missing.length).toBe(result.total);
+      expect(result.missing[0]).toEqual(
+        expect.objectContaining({ field: expect.any(String), label: expect.any(String), route: expect.any(String) }),
+      );
+    });
+
+    it('returns correct score for partially complete profile (no bio, no photos)', async () => {
+      const user = makeCompleteUser({
+        profile: { bio: null, city: 'Honolulu' },
+        photos: [],
+      });
+      prismaMock.user.findUnique.mockResolvedValue(user);
+
+      const result = await service.getProfileCompleteness('user-1');
+
+      // 6 out of 8 checks pass (missing bio and photos)
+      expect(result.score).toBe(75);
+      expect(result.earned).toBe(6);
+      expect(result.total).toBe(8);
+      expect(result.missing).toHaveLength(2);
+      expect(result.missing.map((m: { field: string }) => m.field)).toEqual(
+        expect.arrayContaining(['bio', 'photos']),
+      );
+    });
+
+    it('returns correct score when bio is too short', async () => {
+      const user = makeCompleteUser({
+        profile: { bio: 'Short', city: 'Honolulu' },
+      });
+      prismaMock.user.findUnique.mockResolvedValue(user);
+
+      const result = await service.getProfileCompleteness('user-1');
+
+      expect(result.score).toBe(88); // 7/8
+      expect(result.missing.map((m: { field: string }) => m.field)).toContain('bio');
+    });
+
+    it('returns correct score when only one photo exists', async () => {
+      const user = makeCompleteUser({
+        photos: [{ id: 'p1', storageKey: 'p1.jpg' }],
+      });
+      prismaMock.user.findUnique.mockResolvedValue(user);
+
+      const result = await service.getProfileCompleteness('user-1');
+
+      expect(result.score).toBe(88); // 7/8
+      expect(result.missing.map((m: { field: string }) => m.field)).toContain('photos');
+    });
+
+    it('returns 50% for a half-complete profile', async () => {
+      const user = makeCompleteUser({
+        profile: { bio: null, city: null },
+        fitnessProfile: { primaryGoal: null, intensityLevel: null, prefersMorning: false, prefersEvening: false },
+        photos: [],
+      });
+      prismaMock.user.findUnique.mockResolvedValue(user);
+
+      const result = await service.getProfileCompleteness('user-1');
+
+      // Only firstName and birthdate pass (2/8)
+      expect(result.score).toBe(25);
+      expect(result.earned).toBe(2);
+      expect(result.missing).toHaveLength(6);
+    });
+
+    it('missing items have route and label fields', async () => {
+      const user = makeCompleteUser({
+        profile: { bio: null, city: null },
+      });
+      prismaMock.user.findUnique.mockResolvedValue(user);
+
+      const result = await service.getProfileCompleteness('user-1');
+
+      for (const item of result.missing) {
+        expect(item).toHaveProperty('field');
+        expect(item).toHaveProperty('label');
+        expect(item).toHaveProperty('route');
+        expect(typeof item.route).toBe('string');
+      }
+    });
+  });
 });

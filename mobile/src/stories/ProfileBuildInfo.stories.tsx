@@ -14,6 +14,8 @@ type Story = StoryObj<typeof meta>;
 
 export const Expanded: Story = {
   args: {
+    completenessScore: 75,
+    completenessMissing: [],
     deletingAccount: false,
     editingPhotos: false,
     bio: 'Early starts, surf checks, and low-pressure plans.',

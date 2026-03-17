@@ -47,3 +47,10 @@ export class LoginDto {
   @MaxLength(128)
   password!: string;
 }
+
+export class RegisterPushTokenDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  token!: string;
+}
