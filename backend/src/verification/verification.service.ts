@@ -1,6 +1,14 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { randomInt } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { appConfig } from '../config/app.config';
+
+/** Verification code lives for 10 minutes. */
+const VERIFICATION_TTL_MS = 10 * 60 * 1000;
+/** Minimum value (inclusive) for a 6-digit verification code. */
+const CODE_MIN = 100_000;
+/** Maximum value (exclusive) for a 6-digit verification code. */
+const CODE_MAX = 1_000_000;
 
 interface PendingVerification {
   userId: string;
@@ -19,14 +27,14 @@ export class VerificationService {
   constructor(private readonly prisma: PrismaService) {}
 
   start(userId: string, channel: 'email' | 'phone', target: string) {
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = randomInt(CODE_MIN, CODE_MAX).toString();
     const key = `${userId}:${channel}`;
     this.pending.set(key, {
       userId,
       channel,
       target,
       code,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      expiresAt: new Date(Date.now() + VERIFICATION_TTL_MS),
     });
 
     // In production, dispatch via real SMS/email provider and never return the code.

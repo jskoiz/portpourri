@@ -24,6 +24,7 @@ import {
 import { NotificationsService } from './notifications.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
 import { EmitNotificationDto } from './notifications.dto';
+import { appConfig } from '../config/app.config';
 
 @Controller('notifications')
 @UseGuards(AuthGuard('jwt'))
@@ -79,7 +80,7 @@ export class NotificationsController {
     @Request() req: AuthenticatedRequest,
     @Body() body: EmitNotificationDto,
   ) {
-    if (process.env.NODE_ENV === 'production') {
+    if (appConfig.isProduction) {
       throw new ForbiddenException('Endpoint disabled in production');
     }
     return this.notificationsService.create(req.user.id, {

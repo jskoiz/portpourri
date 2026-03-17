@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { AuthProvider, Gender, Prisma } from '@prisma/client';
+import { appConfig } from '../config/app.config';
 import type { SignupDto, LoginDto } from './auth.dto';
 
 export type { SignupDto, LoginDto };
@@ -48,6 +49,10 @@ export class AuthService {
 
   private normalizeEmail(email?: string | null) {
     return email?.trim().toLowerCase() ?? '';
+  }
+
+  private redactEmail(email: string) {
+    return email.replace(/(.{2}).*(@.*)/, '$1***$2');
   }
 
   private parseBirthdate(birthdate: string) {
@@ -137,14 +142,14 @@ export class AuthService {
     const normalizedGender = this.normalizeGender(gender);
 
     const existing = await this.prisma.user.findFirst({
-      where: this.buildEmailLookup(normalizedEmail),
+      where: { ...this.buildEmailLookup(normalizedEmail), isDeleted: false },
     });
     if (existing) {
-      this.logger.warn(`Signup conflict for email=${normalizedEmail}`);
+      this.logger.warn(`Signup conflict for email=${this.redactEmail(normalizedEmail)}`);
       throw new BadRequestException('Unable to create account');
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(password, appConfig.auth.bcryptRounds);
 
     try {
       const user = await this.prisma.user.create({
@@ -164,7 +169,7 @@ export class AuthService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        this.logger.warn(`Signup unique-constraint conflict for email=${normalizedEmail}`);
+        this.logger.warn(`Signup unique-constraint conflict for email=${this.redactEmail(normalizedEmail)}`);
         throw new BadRequestException('Unable to create account');
       }
       throw error;
@@ -184,13 +189,13 @@ export class AuthService {
 
     const foundUser = await this.findEmailAuthUser(userEmail);
     if (!foundUser || !foundUser.passwordHash) {
-      this.logger.warn(`Login rejected for email=${userEmail}`);
+      this.logger.warn(`Login rejected for email=${this.redactEmail(userEmail)}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const isMatch = await bcrypt.compare(password, foundUser.passwordHash);
     if (!isMatch) {
-      this.logger.warn(`Login rejected for email=${userEmail}`);
+      this.logger.warn(`Login rejected for email=${this.redactEmail(userEmail)}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -200,7 +205,7 @@ export class AuthService {
 
   private issueAuthToken(user: AuthenticatedUser): AuthResult {
     const userEmail = user.email?.trim() ?? '';
-    const payload = { email: userEmail, sub: user.id };
+    const payload = { sub: user.id };
 
     return {
       access_token: this.jwtService.sign(payload),
@@ -283,7 +288,7 @@ export class AuthService {
     }
 
     this.logger.log(
-      `Soft-deleted account for userId=${user.id}${user.email ? ` email=${user.email}` : ''}`,
+      `Soft-deleted account for userId=${user.id}${user.email ? ` email=${this.redactEmail(user.email)}` : ''}`,
     );
   }
 }
