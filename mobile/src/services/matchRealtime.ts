@@ -36,11 +36,12 @@ export async function connectMatchMessageStream(
     return () => undefined;
   }
 
-  const token = await SecureStore.getItemAsync(STORAGE_KEYS.accessToken);
-  if (!token) {
+  const rawToken = await SecureStore.getItemAsync(STORAGE_KEYS.accessToken);
+  if (!rawToken) {
     handlers.onStatus('fallback');
     return () => undefined;
   }
+  const token: string = rawToken;
 
   let retryCount = 0;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -80,11 +81,8 @@ export async function connectMatchMessageStream(
     handlers.onStatus('connecting');
 
     const streamUrl = `${env.apiUrl}/matches/${matchId}/messages/stream`;
-    const nextSource = new EventSourceCtor!(streamUrl, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    } as EventSourceInit);
+    const urlWithToken = `${streamUrl}${streamUrl.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
+    const nextSource = new EventSourceCtor!(urlWithToken, {} as EventSourceInit);
     source = nextSource;
 
     nextSource.onopen = () => {
