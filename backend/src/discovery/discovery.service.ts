@@ -411,83 +411,94 @@ export class DiscoveryService {
       throw new NotFoundException('User not found');
     }
 
-    const existingLike = await this.prisma.like.findUnique({
-      where: {
-        fromUserId_toUserId: {
-          fromUserId: userId,
-          toUserId: targetUserId,
-        },
-      },
-    });
-
-    if (existingLike) return { status: 'already_liked' };
-
-    await this.prisma.pass.deleteMany({
-      where: { fromUserId: userId, toUserId: targetUserId },
-    });
-
-    await this.prisma.like.create({
-      data: {
-        fromUserId: userId,
-        toUserId: targetUserId,
-      },
-    });
-
-    void this.notifications.create(
-      targetUserId,
-      buildLikeReceivedNotification(userId),
-    );
-
-    const mutualLike = await this.prisma.like.findUnique({
-      where: {
-        fromUserId_toUserId: {
-          fromUserId: targetUserId,
-          toUserId: userId,
-        },
-      },
-    });
-
-    if (mutualLike) {
-      const [userAId, userBId] = [userId, targetUserId].sort();
-
-      const classification = await deriveMatchClassification(this.prisma, [
-        userId,
-        targetUserId,
-      ]);
-
-      const match = await this.prisma.match.upsert({
+    const result = await this.prisma.$transaction(async (tx) => {
+      const existingLike = await tx.like.findUnique({
         where: {
-          userAId_userBId: {
-            userAId,
-            userBId,
+          fromUserId_toUserId: {
+            fromUserId: userId,
+            toUserId: targetUserId,
           },
-        },
-        create: {
-          userAId,
-          userBId,
-          ...classification,
-        },
-        update: {
-          updatedAt: new Date(),
-          isBlocked: false,
-          isArchived: false,
-          ...classification,
         },
       });
 
-      void this.notifications.create(
-        userId,
-        buildMatchCreatedNotification(match.id, targetUserId),
-      );
-      void this.notifications.create(
-        targetUserId,
-        buildMatchCreatedNotification(match.id, userId),
-      );
+      if (existingLike) return { status: 'already_liked' as const };
 
-      return { status: 'match', match };
+      await tx.pass.deleteMany({
+        where: { fromUserId: userId, toUserId: targetUserId },
+      });
+
+      await tx.like.create({
+        data: {
+          fromUserId: userId,
+          toUserId: targetUserId,
+        },
+      });
+
+      const mutualLike = await tx.like.findUnique({
+        where: {
+          fromUserId_toUserId: {
+            fromUserId: targetUserId,
+            toUserId: userId,
+          },
+        },
+      });
+
+      if (mutualLike) {
+        const [userAId, userBId] = [userId, targetUserId].sort();
+
+        const classification = await deriveMatchClassification(tx, [
+          userId,
+          targetUserId,
+        ]);
+
+        const match = await tx.match.upsert({
+          where: {
+            userAId_userBId: {
+              userAId,
+              userBId,
+            },
+          },
+          create: {
+            userAId,
+            userBId,
+            ...classification,
+          },
+          update: {
+            updatedAt: new Date(),
+            isBlocked: false,
+            isArchived: false,
+            ...classification,
+          },
+        });
+
+        return { status: 'match' as const, match };
+      }
+
+      return { status: 'liked' as const };
+    });
+
+    if (result.status !== 'already_liked') {
+      void this.notifications
+        .create(targetUserId, buildLikeReceivedNotification(userId))
+        .catch((err) => this.logger.error('Failed to send notification', err));
     }
 
-    return { status: 'liked' };
+    if (result.status === 'match') {
+      void this.notifications
+        .create(
+          userId,
+          buildMatchCreatedNotification(result.match.id, targetUserId),
+        )
+        .catch((err) => this.logger.error('Failed to send notification', err));
+      void this.notifications
+        .create(
+          targetUserId,
+          buildMatchCreatedNotification(result.match.id, userId),
+        )
+        .catch((err) => this.logger.error('Failed to send notification', err));
+    }
+
+    return result;
   }
 
   async passUser(userId: string, targetUserId: string) {
@@ -547,10 +558,26 @@ export class DiscoveryService {
 
     if (undoLike && lastLike) {
       await this.prisma.like.delete({ where: { id: lastLike.id } });
+
+      const [userAId, userBId] = [userId, lastLike.toUserId].sort();
+      const existingMatch = await this.prisma.match.findUnique({
+        where: { userAId_userBId: { userAId, userBId } },
+      });
+
+      let archivedMatchId: string | undefined;
+      if (existingMatch && !existingMatch.isArchived) {
+        await this.prisma.match.update({
+          where: { id: existingMatch.id },
+          data: { isArchived: true },
+        });
+        archivedMatchId = existingMatch.id;
+      }
+
       return {
         status: 'undone',
         action: 'like',
         targetUserId: lastLike.toUserId,
+        ...(archivedMatchId ? { archivedMatchId } : {}),
       };
     }
 

@@ -34,11 +34,16 @@ describe('DiscoveryService', () => {
     },
     match: {
       upsert: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
     },
+    $transaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) =>
+      fn(prismaMock),
+    ),
   };
 
   const notificationsMock = {
-    create: jest.fn(),
+    create: jest.fn().mockResolvedValue(undefined),
   };
 
   const makeCandidate = (overrides: Record<string, unknown> = {}) => ({
@@ -525,5 +530,84 @@ describe('DiscoveryService', () => {
       action: 'pass',
       targetUserId: 'user-2',
     });
+  });
+
+  it('undoes a like and archives the resulting match', async () => {
+    prismaMock.like.findFirst.mockResolvedValue({
+      id: 'like-1',
+      toUserId: 'user-2',
+      createdAt: new Date('2026-01-01T10:00:00.000Z'),
+    });
+    prismaMock.pass.findFirst.mockResolvedValue(null);
+    prismaMock.like.delete.mockResolvedValue({ id: 'like-1' });
+    prismaMock.match.findUnique.mockResolvedValue({
+      id: 'match-1',
+      userAId: 'user-1',
+      userBId: 'user-2',
+      isArchived: false,
+    });
+    prismaMock.match.update.mockResolvedValue({ id: 'match-1', isArchived: true });
+
+    const result = await service.undoLastSwipe('user-1');
+
+    expect(prismaMock.match.findUnique).toHaveBeenCalledWith({
+      where: { userAId_userBId: { userAId: 'user-1', userBId: 'user-2' } },
+    });
+    expect(prismaMock.match.update).toHaveBeenCalledWith({
+      where: { id: 'match-1' },
+      data: { isArchived: true },
+    });
+    expect(result).toEqual({
+      status: 'undone',
+      action: 'like',
+      targetUserId: 'user-2',
+      archivedMatchId: 'match-1',
+    });
+  });
+
+  it('undoes a like without archiving when no match exists', async () => {
+    prismaMock.like.findFirst.mockResolvedValue({
+      id: 'like-1',
+      toUserId: 'user-2',
+      createdAt: new Date('2026-01-01T10:00:00.000Z'),
+    });
+    prismaMock.pass.findFirst.mockResolvedValue(null);
+    prismaMock.like.delete.mockResolvedValue({ id: 'like-1' });
+    prismaMock.match.findUnique.mockResolvedValue(null);
+
+    const result = await service.undoLastSwipe('user-1');
+
+    expect(prismaMock.match.findUnique).toHaveBeenCalled();
+    expect(prismaMock.match.update).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      status: 'undone',
+      action: 'like',
+      targetUserId: 'user-2',
+    });
+  });
+
+  it('wraps likeUser core logic in a transaction', async () => {
+    prismaMock.like.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+    prismaMock.pass.deleteMany.mockResolvedValue({ count: 0 });
+    prismaMock.like.create.mockResolvedValue({ id: 'like-1' });
+
+    await service.likeUser('user-1', 'user-2');
+
+    expect(prismaMock.$transaction).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('catches notification errors without rejecting', async () => {
+    prismaMock.like.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+    prismaMock.pass.deleteMany.mockResolvedValue({ count: 0 });
+    prismaMock.like.create.mockResolvedValue({ id: 'like-1' });
+    notificationsMock.create.mockRejectedValue(new Error('notification fail'));
+
+    // Should not throw even though notification fails
+    const result = await service.likeUser('user-1', 'user-2');
+    expect(result).toEqual({ status: 'liked' });
   });
 });
