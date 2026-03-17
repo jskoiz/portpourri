@@ -43,15 +43,16 @@ export default function ChatScreen() {
   const handleSendMessage = async () => {
     if (!message.trim() || sending) return;
     const text = message.trim();
-    setMessage('');
 
     try {
       setSendError(null);
       void triggerImpactHaptic();
       await sendMessage(text);
+      setMessage('');  // Only clear on success
     } catch (err) {
       void triggerWarningHaptic();
       setSendError(normalizeApiError(err).message);
+      // message stays in the input for retry
     }
   };
 

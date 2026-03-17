@@ -51,4 +51,20 @@ describe('ChatScreen', () => {
       expect(mockSendMessage).toHaveBeenCalledWith('Coffee after the run?');
     });
   });
+
+  it('preserves the message in the input when send fails', async () => {
+    mockSendMessage.mockRejectedValueOnce(new Error('Network error'));
+
+    render(<ChatScreen />);
+
+    const input = await screen.findByDisplayValue('Coffee after the run?');
+    fireEvent(input, 'submitEditing');
+
+    await waitFor(() => {
+      expect(mockSendMessage).toHaveBeenCalledWith('Coffee after the run?');
+    });
+
+    // Message should still be in the input so the user can retry
+    expect(screen.getByDisplayValue('Coffee after the run?')).toBeTruthy();
+  });
 });
