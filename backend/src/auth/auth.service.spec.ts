@@ -26,6 +26,10 @@ describe('AuthService', () => {
       delete: jest.fn(),
       update: jest.fn(),
     },
+    match: {
+      updateMany: jest.fn(),
+    },
+    $transaction: jest.fn(),
   };
 
   const jwtServiceMock = {
@@ -61,6 +65,7 @@ describe('AuthService', () => {
     prismaMock.user.findFirst.mockResolvedValue({
       id: 'user-1',
       email: 'test@example.com',
+      firstName: 'Test',
       passwordHash: 'hashed-password',
       isOnboarded: true,
     });
@@ -87,12 +92,12 @@ describe('AuthService', () => {
       select: {
         id: true,
         email: true,
+        firstName: true,
         isOnboarded: true,
         passwordHash: true,
       },
     });
     expect(jwtServiceMock.sign).toHaveBeenCalledWith({
-      email: 'test@example.com',
       sub: 'user-1',
     });
     expect(result).toEqual({
@@ -100,6 +105,7 @@ describe('AuthService', () => {
       user: {
         id: 'user-1',
         email: 'test@example.com',
+        firstName: 'Test',
         isOnboarded: true,
       },
     });
@@ -110,6 +116,7 @@ describe('AuthService', () => {
     prismaMock.user.create.mockResolvedValue({
       id: 'user-1',
       email: 'jordan@example.com',
+      firstName: 'Jordan',
       isOnboarded: false,
     });
     jwtServiceMock.sign.mockReturnValue('signed-token');
@@ -130,6 +137,7 @@ describe('AuthService', () => {
           mode: 'insensitive',
         },
         authProvider: AuthProvider.EMAIL,
+        isDeleted: false,
       },
     });
     expect(prismaMock.user.create).toHaveBeenCalledWith({
@@ -143,6 +151,7 @@ describe('AuthService', () => {
       user: {
         id: 'user-1',
         email: 'jordan@example.com',
+        firstName: 'Jordan',
         isOnboarded: false,
       },
     });
@@ -328,6 +337,7 @@ describe('AuthService', () => {
     prismaMock.user.create.mockResolvedValue({
       id: 'new-user',
       email: 'new@example.com',
+      firstName: 'New',
       isOnboarded: false,
     });
 
@@ -340,7 +350,6 @@ describe('AuthService', () => {
     });
 
     expect(jwtServiceMock.sign).toHaveBeenCalledWith({
-      email: 'new@example.com',
       sub: 'new-user',
     });
     expect(result).toEqual({
@@ -348,6 +357,7 @@ describe('AuthService', () => {
       user: {
         id: 'new-user',
         email: 'new@example.com',
+        firstName: 'New',
         isOnboarded: false,
       },
     });
@@ -358,7 +368,11 @@ describe('AuthService', () => {
       id: 'user-1',
       email: 'test@example.com',
     });
+    prismaMock.$transaction.mockImplementation(
+      async (fn: (tx: typeof prismaMock) => Promise<unknown>) => fn(prismaMock),
+    );
     prismaMock.user.update.mockResolvedValue({ id: 'user-1', isDeleted: true });
+    prismaMock.match.updateMany.mockResolvedValue({ count: 0 });
 
     await expect(service.deleteAccount('user-1')).resolves.toBeUndefined();
     expect(prismaMock.user.update).toHaveBeenCalledWith({
@@ -369,6 +383,12 @@ describe('AuthService', () => {
         phoneNumber: null,
         providerId: null,
       }),
+    });
+    expect(prismaMock.match.updateMany).toHaveBeenCalledWith({
+      where: {
+        OR: [{ userAId: 'user-1' }, { userBId: 'user-1' }],
+      },
+      data: { isArchived: true },
     });
   });
 
@@ -393,6 +413,7 @@ describe('AuthService', () => {
     prismaMock.user.findFirst.mockResolvedValue({
       id: 'user-1',
       email: 'jordan@example.com',
+      firstName: 'Jordan',
       passwordHash: 'stored-hash',
       isOnboarded: true,
     });
@@ -420,6 +441,7 @@ describe('AuthService', () => {
       select: {
         id: true,
         email: true,
+        firstName: true,
         isOnboarded: true,
         passwordHash: true,
       },
@@ -430,6 +452,7 @@ describe('AuthService', () => {
       user: {
         id: 'user-1',
         email: 'jordan@example.com',
+        firstName: 'Jordan',
         isOnboarded: true,
       },
     });
@@ -481,11 +504,18 @@ describe('AuthService', () => {
       id: 'user-1',
       email: 'test@example.com',
       firstName: 'Test',
+      birthdate: new Date('1990-01-01'),
       isOnboarded: true,
+      profile: null,
+      fitnessProfile: null,
+      photos: [],
     });
 
     const result = await service.getCurrentUser('user-1');
     expect(result).toMatchObject({ id: 'user-1', email: 'test@example.com' });
+    expect(result.age).toBeGreaterThan(30);
+    expect(result).toHaveProperty('profile');
+    expect(result).toHaveProperty('photos');
   });
 
   it('rejects getCurrentUser for deleted or unknown users', async () => {
@@ -500,6 +530,7 @@ describe('AuthService', () => {
     prismaMock.user.findFirst.mockResolvedValue({
       id: 'user-1',
       email: 'Jordan@Example.com',
+      firstName: 'Jordan',
       passwordHash: 'stored-hash',
       isOnboarded: true,
     });
@@ -527,6 +558,7 @@ describe('AuthService', () => {
       select: {
         id: true,
         email: true,
+        firstName: true,
         isOnboarded: true,
         passwordHash: true,
       },

@@ -4,10 +4,11 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { buildInfo } from '../../../config/buildInfo';
-import type { User } from '../../../api/types';
+import type { ProfileCompletenessMissingItem, User } from '../../../api/types';
 import { LocationField } from '../../../components/form/LocationField';
 import { SheetSelectField } from '../../../components/form/SheetSelectField';
 import { Button, Card } from '../../../design/primitives';
+import { CompletenessBar } from './CompletenessBar';
 import { profileStyles as styles } from './profile.styles';
 import {
   ACTIVITY_OPTIONS,
@@ -60,6 +61,8 @@ function BuildInfoRow({ label, value }: { label: string; value: string }) {
 }
 
 export function ProfileScreenContent({
+  completenessScore,
+  completenessMissing,
   deletingAccount,
   editingPhotos,
   bio,
@@ -105,6 +108,8 @@ export function ProfileScreenContent({
   showBuildInfo,
   weeklyFrequencyBand,
 }: {
+  completenessScore: number;
+  completenessMissing: ProfileCompletenessMissingItem[];
   deletingAccount: boolean;
   editingPhotos: boolean;
   bio: string;
@@ -179,7 +184,7 @@ export function ProfileScreenContent({
               </LinearGradient>
             )}
             <LinearGradient colors={['transparent', '#FDFBF8']} style={styles.heroOverlay}>
-              <Text style={styles.heroName}>
+              <Text style={styles.heroName} accessibilityRole="header">
                 {profile.firstName}
                 {profile.age ? `, ${profile.age}` : ''}
               </Text>
@@ -192,6 +197,14 @@ export function ProfileScreenContent({
             </LinearGradient>
           </View>
         </View>
+
+        <CompletenessBar
+          score={completenessScore}
+          missing={completenessMissing}
+          onPressMissing={() => {
+            if (!editMode) onSave();
+          }}
+        />
 
         <View style={styles.editBar}>
           <Pressable

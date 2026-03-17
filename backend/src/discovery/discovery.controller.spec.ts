@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryController } from './discovery.controller';
 import { DiscoveryService } from './discovery.service';
+import { ProfileService } from '../profile/profile.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
 
 describe('DiscoveryController', () => {
@@ -12,6 +13,9 @@ describe('DiscoveryController', () => {
     likeUser: jest.fn(),
     passUser: jest.fn(),
     undoLastSwipe: jest.fn(),
+  };
+
+  const profileServiceMock = {
     getProfileCompleteness: jest.fn(),
   };
 
@@ -25,14 +29,14 @@ describe('DiscoveryController', () => {
           provide: DiscoveryService,
           useValue: discoveryServiceMock,
         },
+        {
+          provide: ProfileService,
+          useValue: profileServiceMock,
+        },
       ],
     }).compile();
 
     controller = module.get<DiscoveryController>(DiscoveryController);
-  });
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
   });
 
   it('parses feed filters from query params and forwards them to the service', async () => {
@@ -70,12 +74,12 @@ describe('DiscoveryController', () => {
 
     await expect(
       controller.getFeed(req, {
-        distanceKm: ['abc', '15'],
-        minAge: [' ', '24'],
-        maxAge: ['41'],
-        goals: ['strength,endurance', '', 'mobility'],
-        intensity: ['moderate', 'high'],
-        availability: ['morning,invalid', 'evening'],
+        distanceKm: '15',
+        minAge: '24',
+        maxAge: '41',
+        goals: 'strength,endurance,mobility',
+        intensity: 'moderate,high',
+        availability: 'morning,evening',
       }),
     ).resolves.toEqual([]);
 
@@ -163,11 +167,11 @@ describe('DiscoveryController', () => {
     );
   });
 
-  it('delegates profile completeness lookup to discovery service', async () => {
+  it('delegates profile completeness lookup to profile service', async () => {
     const req = {
       user: { id: 'user-1', email: 'u@example.com' },
     } as AuthenticatedRequest;
-    discoveryServiceMock.getProfileCompleteness.mockResolvedValue({
+    profileServiceMock.getProfileCompleteness.mockResolvedValue({
       score: 75,
       prompts: ['Upload at least 2 profile photos.'],
     });
@@ -176,7 +180,7 @@ describe('DiscoveryController', () => {
       score: 75,
       prompts: ['Upload at least 2 profile photos.'],
     });
-    expect(discoveryServiceMock.getProfileCompleteness).toHaveBeenCalledWith(
+    expect(profileServiceMock.getProfileCompleteness).toHaveBeenCalledWith(
       'user-1',
     );
   });

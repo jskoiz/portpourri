@@ -2,6 +2,7 @@ export const queryKeys = {
   discovery: {
     feed: (filters?: Record<string, unknown>) =>
       ['discovery', 'feed', filters ?? {}] as const,
+    profileCompleteness: ['discovery', 'profileCompleteness'] as const,
   },
   profile: {
     current: ['profile', 'current'] as const,

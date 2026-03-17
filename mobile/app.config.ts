@@ -71,7 +71,19 @@ const config: ExpoConfig = {
   scheme: slug,
   userInterfaceStyle: "light",
   newArchEnabled: true,
-  plugins: ["expo-asset", "expo-font"],
+  plugins: [
+    "expo-asset",
+    "expo-font",
+    ["expo-image-picker", { "photosPermission": "BRDG needs access to your photos to update your profile picture." }],
+    "@sentry/react-native/expo",
+    [
+      "expo-location",
+      {
+        locationWhenInUsePermission:
+          "BRDG uses your location to show people nearby and display distances.",
+      },
+    ],
+  ],
   runtimeVersion: {
     policy: "appVersion",
   },
@@ -89,6 +101,8 @@ const config: ExpoConfig = {
     buildNumber: iosBuildNumber,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      NSLocationWhenInUseUsageDescription:
+        "BRDG uses your location to show people nearby and display distances.",
     },
   },
   android: {

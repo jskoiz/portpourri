@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { PushService } from './push.service';
 import type { Notification } from '@prisma/client';
 
 export type NotificationType =
@@ -11,9 +12,22 @@ export type NotificationType =
   | 'event_reminder'
   | 'system';
 
+/** Notification types that should trigger a push notification. */
+const PUSH_ELIGIBLE_TYPES: ReadonlySet<NotificationType> = new Set([
+  'match_created',
+  'message_received',
+  'like_received',
+  'event_rsvp',
+]);
+
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(NotificationsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pushService: PushService,
+  ) {}
 
   async create(
     userId: string,
@@ -61,13 +75,13 @@ export class NotificationsService {
   async markRead(
     userId: string,
     notificationId: string,
-  ): Promise<Notification | null> {
+  ): Promise<Notification> {
     const existing = await this.prisma.notification.findFirst({
       where: { id: notificationId, userId },
     });
 
     if (!existing) {
-      return null;
+      throw new NotFoundException(`Notification ${notificationId} not found`);
     }
 
     if (existing.read) {
@@ -95,9 +109,32 @@ export class NotificationsService {
     });
   }
 
-  private dispatchPush(notification: Notification) {
-    // Intentionally a no-op for now.
-    // Future implementation: route to APNS/FCM + device token store.
-    void notification;
+  private async dispatchPush(notification: Notification): Promise<void> {
+    if (!PUSH_ELIGIBLE_TYPES.has(notification.type as NotificationType)) {
+      return;
+    }
+
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: notification.userId },
+        select: { pushToken: true },
+      });
+
+      if (!user?.pushToken) {
+        return;
+      }
+
+      await this.pushService.sendPushNotification(
+        user.pushToken,
+        notification.title,
+        notification.body,
+        (notification.data as Record<string, unknown>) ?? undefined,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to dispatch push for notification ${notification.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 }

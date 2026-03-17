@@ -1,0 +1,26 @@
+appId: com.avmillabs.brdg
+tags:
+  - screenshot
+  - main
+---
+# Screenshot: Create Event Screen
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Login
+- tapOn: "Email"
+- inputText: "preview.lana@brdg.local"
+- tapOn: "Password"
+- inputText: "PreviewPass123!"
+- hideKeyboard
+- tapOn: "Sign in"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Discover"
+    timeout: 15000
+
+# Navigate to Create tab
+- tapOn: "Create"
+- waitForAnimationToEnd
+- takeScreenshot: screenshots/05-create-screen

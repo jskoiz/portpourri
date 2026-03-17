@@ -1,6 +1,13 @@
-import React, { useEffect } from "react";
-import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
+import React, { useEffect, useRef } from "react";
+import { AppState, type AppStateStatus } from "react-native";
+import {
+  DefaultTheme,
+  NavigationContainer,
+  type NavigationContainerRef,
+} from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { StatusBar } from "expo-status-bar";
+import * as Notifications from "expo-notifications";
 import { useAuthStore } from "../store/authStore";
 import type { RootStackParamList } from "../core/navigation/types";
 import LoginScreen from "../screens/LoginScreen";
@@ -12,13 +19,57 @@ import { ActivityIndicator, View } from "react-native";
 import EventDetailScreen from "../screens/EventDetailScreen";
 import MyEventsScreen from "../screens/MyEventsScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
+import { refreshUserLocation } from "../lib/location";
 
 import MainTabNavigator from "./MainTabNavigator";
 import { setUnauthorizedHandler } from "../api/authSession";
 import { useTheme } from "../theme/useTheme";
 import { TabBarVisibilityProvider } from "./TabBarVisibilityContext";
+import {
+  linkingConfig,
+  handleNotificationNavigation,
+  type NotificationData,
+} from "../lib/deepLinks";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+/** Dev-only: auto-login with preview credentials when no token is stored. */
+let devAutoLoginDone = false;
+
+function useDevAutoLogin() {
+  const token = useAuthStore((s) => s.token);
+  const isLoading = useAuthStore((s) => s.isLoading);
+
+  useEffect(() => {
+    if (!__DEV__ || isLoading || token || devAutoLoginDone) return;
+    devAutoLoginDone = true;
+
+    (async () => {
+      try {
+        const res = await fetch("http://127.0.0.1:3010/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "preview.lana@brdg.local",
+            password: "PreviewPass123!",
+          }),
+        });
+        if (!res.ok) {
+          devAutoLoginDone = false;
+          return;
+        }
+        const data = await res.json();
+        const { STORAGE_KEYS } = require("../constants/storage");
+        const SecureStore = require("expo-secure-store");
+        await SecureStore.setItemAsync(STORAGE_KEYS.accessToken, data.access_token);
+        useAuthStore.setState({ token: data.access_token, user: data.user, isLoading: false });
+      } catch (e: any) {
+        devAutoLoginDone = false;
+        console.warn("[dev-auto-login]", e?.message || e);
+      }
+    })();
+  }, [token, isLoading]);
+}
 
 export default function AppNavigator() {
   const token = useAuthStore((state) => state.token);
@@ -26,6 +77,9 @@ export default function AppNavigator() {
   const loadToken = useAuthStore((state) => state.loadToken);
   const clearSession = useAuthStore((state) => state.clearSession);
   const theme = useTheme();
+  const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+
+  useDevAutoLogin();
 
   const navigationTheme = {
     ...DefaultTheme,
@@ -40,12 +94,58 @@ export default function AppNavigator() {
     },
   };
 
+  const autoLoginInFlight = useRef(false);
+
   useEffect(() => {
     const cleanupUnauthorizedHandler = setUnauthorizedHandler(clearSession);
-    loadToken();
+
+    if (!autoLoginInFlight.current) {
+      autoLoginInFlight.current = true;
+      loadToken().finally(() => {
+        autoLoginInFlight.current = false;
+      });
+    }
 
     return cleanupUnauthorizedHandler;
   }, [clearSession, loadToken]);
+
+  // Handle app-killed-state launches: check the last notification response on boot.
+  useEffect(() => {
+    if (!token) return;
+
+    let cancelled = false;
+
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (cancelled || !response) return;
+      const data = response.notification.request.content.data as unknown as
+        | NotificationData
+        | undefined;
+      if (data && navigationRef.current) {
+        handleNotificationNavigation(data, navigationRef.current);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  // Refresh user location on initial auth and whenever the app comes to the foreground.
+  useEffect(() => {
+    if (!token) return;
+
+    // Fire once on mount (login / app launch).
+    void refreshUserLocation();
+
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === "active") {
+        void refreshUserLocation();
+      }
+    };
+
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
+    return () => subscription.remove();
+  }, [token]);
 
   if (isLoading) {
     return (
@@ -64,7 +164,8 @@ export default function AppNavigator() {
 
   return (
     <TabBarVisibilityProvider>
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer ref={navigationRef} linking={linkingConfig} theme={navigationTheme}>
+      <StatusBar style="dark" />
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
@@ -76,12 +177,13 @@ export default function AppNavigator() {
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-            <Stack.Screen name="Chat" component={ChatScreen} />
+            <Stack.Screen name="Chat" component={ChatScreen} options={{ presentation: 'modal' }} />
             <Stack.Screen
               name="ProfileDetail"
               component={ProfileDetailScreen}
+              options={{ presentation: 'modal' }}
             />
-            <Stack.Screen name="EventDetail" component={EventDetailScreen} />
+            <Stack.Screen name="EventDetail" component={EventDetailScreen} options={{ presentation: 'modal' }} />
             <Stack.Screen name="MyEvents" component={MyEventsScreen} />
             <Stack.Screen
               name="Notifications"

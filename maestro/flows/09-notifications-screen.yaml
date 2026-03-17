@@ -1,0 +1,29 @@
+appId: com.avmillabs.brdg
+tags:
+  - screenshot
+  - main
+---
+# Screenshot: Notifications Screen
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Login
+- tapOn: "Email"
+- inputText: "preview.lana@brdg.local"
+- tapOn: "Password"
+- inputText: "PreviewPass123!"
+- hideKeyboard
+- tapOn: "Sign in"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Discover"
+    timeout: 15000
+
+# Tap the notifications icon (bell icon in header)
+# The notification icon uses a bell icon — try tapping by accessibility label
+- tapOn:
+    text: "Notifications"
+    optional: true
+- waitForAnimationToEnd
+- takeScreenshot: screenshots/09-notifications-screen

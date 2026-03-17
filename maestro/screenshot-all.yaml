@@ -1,0 +1,104 @@
+appId: com.avmillabs.brdg
+tags:
+  - screenshot
+  - all
+---
+# ============================================================
+# BRDG — Screenshot Every Screen
+# ============================================================
+# Auto-login kicks in on dev builds when no token is stored.
+# Run: maestro test maestro/screenshot-all.yaml
+# Output: screenshots/
+# ============================================================
+
+# ------ Stop and relaunch app with clean state ------
+- stopApp
+- launchApp:
+    clearState: true
+
+# Handle Expo dev client and dev menus
+- runFlow:
+    when:
+      visible: "DEVELOPMENT SERVERS"
+    commands:
+      - tapOn: "http://localhost:8081"
+      - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Not Now"
+    commands:
+      - tapOn: "Not Now"
+      - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Go home"
+    commands:
+      - tapOn:
+          point: "86%,27%"
+      - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible:
+        text: "Continue"
+        below: "Runtime version"
+    commands:
+      - tapOn:
+          text: "Continue"
+          below: "Runtime version"
+      - waitForAnimationToEnd
+
+# Wait for auto-login to complete — use testID instead of text
+- extendedWaitUntil:
+    visible:
+      id: "main-screen"
+    timeout: 90000
+- waitForAnimationToEnd
+
+# ------ Tab 1: Discover (Home) ------
+- takeScreenshot: screenshots/03-discover-screen
+
+# ------ Tab 2: Explore ------
+- tapOn:
+    id: "tab-explore"
+- waitForAnimationToEnd
+- takeScreenshot: screenshots/04-explore-screen
+
+# ------ Tab 3: Create ------
+- tapOn:
+    id: "tab-create"
+- waitForAnimationToEnd
+- takeScreenshot: screenshots/05-create-screen
+
+# ------ Tab 4: Inbox / Matches ------
+- tapOn:
+    id: "tab-inbox"
+- waitForAnimationToEnd
+- takeScreenshot: screenshots/06-inbox-screen
+
+# ------ Open Chat from a match (tap on match card area) ------
+- tapOn:
+    point: "28%,38%"
+- waitForAnimationToEnd
+- takeScreenshot: screenshots/08-chat-screen
+# Dismiss chat — tap back button
+- tapOn:
+    id: "back-button"
+- waitForAnimationToEnd
+
+# ------ Tab 5: Profile / You ------
+- tapOn:
+    id: "tab-you"
+- waitForAnimationToEnd
+- takeScreenshot: screenshots/07-profile-screen
+
+# ------ Notifications (via header icon on Discover) ------
+- tapOn:
+    id: "tab-discover"
+- waitForAnimationToEnd
+- tapOn:
+    id: "notifications-button"
+- waitForAnimationToEnd
+- takeScreenshot: screenshots/09-notifications-screen

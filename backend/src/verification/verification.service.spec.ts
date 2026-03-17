@@ -41,15 +41,14 @@ describe('VerificationService', () => {
     });
 
     it('does NOT return devCode when isProduction is true', () => {
-      const original = appConfig.isProduction;
-      (appConfig as { isProduction: boolean }).isProduction = true;
+      const replaced = jest.replaceProperty(appConfig as { isProduction: boolean }, 'isProduction', true);
       try {
         const result = service.start('user-1', 'email', 'alice@example.com');
 
         expect(result.started).toBe(true);
         expect(result).not.toHaveProperty('devCode');
       } finally {
-        (appConfig as { isProduction: boolean }).isProduction = original;
+        replaced.restore();
       }
     });
 

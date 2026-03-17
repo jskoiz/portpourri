@@ -1,9 +1,10 @@
 import { create } from "zustand";
+import * as Sentry from "@sentry/react-native";
 import { authApi } from "../services/api";
-import { STORAGE_KEYS } from "../constants/storage";
 import { normalizeApiError } from "../api/errors";
+import { getToken, setToken, deleteToken } from "../lib/secureStorage";
+import { queryClient } from "../lib/query/queryClient";
 import type { User } from "../api/types";
-import { storage } from "../api/storage";
 
 interface LoginPayload {
   email: string;
@@ -18,6 +19,13 @@ interface SignupPayload {
   gender: string;
 }
 
+// NOTE: `user` is duplicated here and in the React Query profile cache
+// (via useProfile). Several screens (HomeScreen, OnboardingScreen, ExploreScreen,
+// MyEventsScreen) read `authStore.user` for lightweight data like `id` and
+// `firstName`. Ideally screens would read exclusively from useProfile and this
+// store would only hold `token` + auth status, but that migration touches many
+// screens. Until then, profile mutation hooks sync back into this store via
+// `setUser` in their onSuccess callbacks to keep the two sources consistent.
 interface AuthState {
   token: string | null;
   user: User | null;
@@ -44,8 +52,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await authApi.login(data);
       const { access_token, user } = response.data;
-      await storage.setItemAsync(STORAGE_KEYS.accessToken, access_token);
+      await setToken(access_token);
       set({ token: access_token, user });
+      Sentry.setUser({ id: user.id, email: user.email });
     } catch (error) {
       throw normalizeApiError(error);
     }
@@ -55,15 +64,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await authApi.signup(data);
       const { access_token, user } = response.data;
-      await storage.setItemAsync(STORAGE_KEYS.accessToken, access_token);
+      await setToken(access_token);
       set({ token: access_token, user });
+      Sentry.setUser({ id: user.id, email: user.email });
     } catch (error) {
       throw normalizeApiError(error);
     }
   },
 
   logout: async () => {
-    await storage.deleteItemAsync(STORAGE_KEYS.accessToken);
+    queryClient.clear();
+    await deleteToken();
+    Sentry.setUser(null);
     get().clearSession();
   },
 
@@ -75,15 +87,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     try {
-      await storage.deleteItemAsync(STORAGE_KEYS.accessToken);
+      queryClient.clear();
+      await deleteToken();
     } finally {
+      Sentry.setUser(null);
       get().clearSession();
     }
   },
 
   loadToken: async () => {
     set({ isLoading: true });
-    const token = await storage.getItemAsync(STORAGE_KEYS.accessToken);
+    const token = await getToken();
     if (!token) {
       set({ token: null, user: null, isLoading: false });
       return;
@@ -96,7 +110,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const normalized = normalizeApiError(err);
       if (normalized.isUnauthorized || normalized.status === 403) {
         // Token is genuinely invalid — clear it
-        await storage.deleteItemAsync(STORAGE_KEYS.accessToken);
+        await deleteToken();
         set({ token: null, user: null, isLoading: false });
       } else {
         // Network or transient error — keep the token so the app can retry

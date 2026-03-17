@@ -106,6 +106,7 @@ function FloatingGlassTabBar({ state, descriptors, navigation }: BottomTabBarPro
             return (
               <Pressable
                 key={route.key}
+                testID={`tab-${route.name.toLowerCase()}`}
                 accessibilityRole="button"
                 accessibilityState={isFocused ? { selected: true } : {}}
                 accessibilityLabel={options.tabBarAccessibilityLabel}
@@ -157,20 +158,25 @@ function FloatingGlassTabBar({ state, descriptors, navigation }: BottomTabBarPro
 
 export default function MainTabNavigator() {
   return (
-    <Tab.Navigator
-      tabBar={(props) => <FloatingGlassTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Tab.Screen name="Discover" component={HomeScreen} />
-      <Tab.Screen name="Explore" component={ExploreScreen} />
-      <Tab.Screen name="Create" component={CreateScreen} />
-      <Tab.Screen name="Inbox" component={MatchesScreen} />
-      <Tab.Screen name="You" component={ProfileScreen} />
-    </Tab.Navigator>
+    <View testID="main-screen" style={styles.mainContainer}>
+      <Tab.Navigator
+        tabBar={(props) => <FloatingGlassTabBar {...props} />}
+        screenOptions={{ headerShown: false }}
+      >
+        <Tab.Screen name="Discover" component={HomeScreen} />
+        <Tab.Screen name="Explore" component={ExploreScreen} />
+        <Tab.Screen name="Create" component={CreateScreen} />
+        <Tab.Screen name="Inbox" component={MatchesScreen} />
+        <Tab.Screen name="You" component={ProfileScreen} />
+      </Tab.Navigator>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+  },
   tabBarOuter: {
     position: 'absolute',
     bottom: 0,

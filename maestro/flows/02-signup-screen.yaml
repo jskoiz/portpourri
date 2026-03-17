@@ -1,0 +1,13 @@
+appId: com.avmillabs.brdg
+tags:
+  - screenshot
+  - auth
+---
+# Screenshot: Signup Screen (Step 1 — Account)
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- tapOn: "Join BRDG"
+- waitForAnimationToEnd
+- assertVisible: "What's your name?"
+- takeScreenshot: screenshots/02-signup-screen

@@ -119,6 +119,7 @@ export class MatchesService {
 
     return validMatches.slice(0, safeTake);
   }
+
   async getMessages(
     matchId: string,
     userId: string,
@@ -176,23 +177,27 @@ export class MatchesService {
 
     const match = await this.assertMatchAccess(matchId, userId);
 
-    const message = await this.prisma.message.create({
-      data: {
-        matchId,
-        senderId: userId,
-        body: trimmedContent,
-      },
-      select: {
-        id: true,
-        body: true,
-        createdAt: true,
-      },
-    });
+    const message = await this.prisma.$transaction(async (tx) => {
+      const msg = await tx.message.create({
+        data: {
+          matchId,
+          senderId: userId,
+          body: trimmedContent,
+        },
+        select: {
+          id: true,
+          body: true,
+          createdAt: true,
+        },
+      });
 
-    // Update match timestamp
-    await this.prisma.match.update({
-      where: { id: matchId },
-      data: { updatedAt: new Date() },
+      // Update match timestamp
+      await tx.match.update({
+        where: { id: matchId },
+        data: { updatedAt: new Date() },
+      });
+
+      return msg;
     });
 
     const response = {

@@ -11,16 +11,17 @@ import { useTheme } from '../../theme/useTheme';
 import { fieldStyles } from './fieldStyles';
 
 function formatDateValue(date: Date) {
-  const year = date.getUTCFullYear();
-  const month = `${date.getUTCMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getUTCDate()}`.padStart(2, '0');
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
 function parseDateValue(value: string) {
   if (!value) return null;
   const [year, month, day] = value.split('-').map((part) => Number(part));
-  const parsed = new Date(Date.UTC(year, (month || 1) - 1, day || 1));
+  // Use noon local time to avoid date-boundary shifts from timezone offsets
+  const parsed = new Date(year, (month || 1) - 1, day || 1, 12, 0, 0, 0);
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed;
 }
@@ -32,14 +33,14 @@ function formatDateLabel(value: string) {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
-    timeZone: 'UTC',
   }).format(parsed);
 }
 
 function getDefaultDate() {
-  const nextDate = new Date();
-  nextDate.setFullYear(nextDate.getFullYear() - 21);
-  return nextDate;
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 21);
+  d.setHours(12, 0, 0, 0);
+  return d;
 }
 
 export function DateField({
@@ -126,7 +127,7 @@ export function DateField({
         title={sheetTitle}
         subtitle={sheetSubtitle}
         scrollable={false}
-        snapPoints={APP_BOTTOM_SHEET_SNAP_POINTS.compact}
+        snapPoints={APP_BOTTOM_SHEET_SNAP_POINTS.standard}
       >
         <View style={fieldStyles.inputGroup}>
           <DateTimePicker

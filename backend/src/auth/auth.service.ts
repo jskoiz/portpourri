@@ -8,18 +8,21 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { AuthProvider, Gender, Prisma } from '@prisma/client';
+import { appConfig } from '../config/app.config';
+import { calculateAge } from '../common/age.util';
 import type { SignupDto, LoginDto } from './auth.dto';
 
 export type { SignupDto, LoginDto };
 
 export interface AuthResult {
   access_token: string;
-  user: { id: string; email: string; isOnboarded: boolean };
+  user: { id: string; email: string; firstName: string; isOnboarded: boolean };
 }
 
 type AuthenticatedUser = {
   id: string;
   email: string | null;
+  firstName: string;
   isOnboarded: boolean;
 };
 
@@ -27,12 +30,26 @@ type EmailAuthUser = AuthenticatedUser & {
   passwordHash: string | null;
 };
 
+type CurrentUserResult = {
+  id: string;
+  email: string | null;
+  firstName: string;
+  birthdate: Date | null;
+  gender: Gender;
+  pronouns: string | null;
+  isOnboarded: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  age: number | null;
+  profile: unknown;
+  fitnessProfile: unknown;
+  photos: unknown[];
+};
+
 const GENDER_MAP: Record<string, Gender> = {
   woman: Gender.FEMALE,
   man: Gender.MALE,
   'non-binary': Gender.NON_BINARY,
-  female: Gender.FEMALE,
-  male: Gender.MALE,
 };
 
 const ALLOWED_GENDERS = ['woman', 'man', 'non-binary'] as const;
@@ -48,6 +65,10 @@ export class AuthService {
 
   private normalizeEmail(email?: string | null) {
     return email?.trim().toLowerCase() ?? '';
+  }
+
+  private redactEmail(email: string) {
+    return email.replace(/(.{2}).*(@.*)/, '$1***$2');
   }
 
   private parseBirthdate(birthdate: string) {
@@ -115,6 +136,7 @@ export class AuthService {
       select: {
         id: true,
         email: true,
+        firstName: true,
         isOnboarded: true,
         passwordHash: true,
       },
@@ -137,14 +159,14 @@ export class AuthService {
     const normalizedGender = this.normalizeGender(gender);
 
     const existing = await this.prisma.user.findFirst({
-      where: this.buildEmailLookup(normalizedEmail),
+      where: { ...this.buildEmailLookup(normalizedEmail), isDeleted: false },
     });
     if (existing) {
-      this.logger.warn(`Signup conflict for email=${normalizedEmail}`);
+      this.logger.warn(`Signup conflict for email=${this.redactEmail(normalizedEmail)}`);
       throw new BadRequestException('Unable to create account');
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(password, appConfig.auth.bcryptRounds);
 
     try {
       const user = await this.prisma.user.create({
@@ -164,7 +186,7 @@ export class AuthService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        this.logger.warn(`Signup unique-constraint conflict for email=${normalizedEmail}`);
+        this.logger.warn(`Signup unique-constraint conflict for email=${this.redactEmail(normalizedEmail)}`);
         throw new BadRequestException('Unable to create account');
       }
       throw error;
@@ -184,13 +206,13 @@ export class AuthService {
 
     const foundUser = await this.findEmailAuthUser(userEmail);
     if (!foundUser || !foundUser.passwordHash) {
-      this.logger.warn(`Login rejected for email=${userEmail}`);
+      this.logger.warn(`Login rejected for email=${this.redactEmail(userEmail)}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const isMatch = await bcrypt.compare(password, foundUser.passwordHash);
     if (!isMatch) {
-      this.logger.warn(`Login rejected for email=${userEmail}`);
+      this.logger.warn(`Login rejected for email=${this.redactEmail(userEmail)}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -200,29 +222,20 @@ export class AuthService {
 
   private issueAuthToken(user: AuthenticatedUser): AuthResult {
     const userEmail = user.email?.trim() ?? '';
-    const payload = { email: userEmail, sub: user.id };
+    const payload = { sub: user.id };
 
     return {
       access_token: this.jwtService.sign(payload),
       user: {
         id: user.id,
         email: userEmail,
+        firstName: user.firstName,
         isOnboarded: user.isOnboarded,
       },
     };
   }
 
-  async getCurrentUser(userId: string): Promise<{
-    id: string;
-    email: string | null;
-    firstName: string;
-    birthdate: Date | null;
-    gender: Gender;
-    pronouns: string | null;
-    isOnboarded: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
+  async getCurrentUser(userId: string): Promise<CurrentUserResult> {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, isDeleted: false, isBanned: false },
       select: {
@@ -235,6 +248,19 @@ export class AuthService {
         isOnboarded: true,
         createdAt: true,
         updatedAt: true,
+        profile: true,
+        fitnessProfile: true,
+        photos: {
+          where: { isHidden: false },
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            id: true,
+            storageKey: true,
+            isPrimary: true,
+            sortOrder: true,
+            createdAt: true,
+          },
+        },
       },
     });
 
@@ -243,7 +269,10 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    return user;
+    return {
+      ...user,
+      age: calculateAge(user.birthdate),
+    };
   }
 
   async deleteAccount(userId: string): Promise<void> {
@@ -258,17 +287,27 @@ export class AuthService {
     }
 
     try {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: {
-          isDeleted: true,
-          email: `deleted-${userId}@deleted.invalid`,
-          passwordHash: null,
-          phoneNumber: null,
-          providerId: null,
-          firstName: 'Deleted',
-          pronouns: null,
-        },
+      await this.prisma.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            isDeleted: true,
+            email: `deleted-${userId}@deleted.invalid`,
+            passwordHash: null,
+            phoneNumber: null,
+            providerId: null,
+            firstName: 'Deleted',
+            pronouns: null,
+          },
+        });
+
+        // Archive all matches involving the deleted user
+        await tx.match.updateMany({
+          where: {
+            OR: [{ userAId: userId }, { userBId: userId }],
+          },
+          data: { isArchived: true },
+        });
       });
     } catch (error: unknown) {
       if (
@@ -283,7 +322,7 @@ export class AuthService {
     }
 
     this.logger.log(
-      `Soft-deleted account for userId=${user.id}${user.email ? ` email=${user.email}` : ''}`,
+      `Soft-deleted account for userId=${user.id}${user.email ? ` email=${this.redactEmail(user.email)}` : ''}`,
     );
   }
 }

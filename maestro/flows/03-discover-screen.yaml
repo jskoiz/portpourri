@@ -1,0 +1,25 @@
+appId: com.avmillabs.brdg
+tags:
+  - screenshot
+  - main
+---
+# Screenshot: Discover / Home Screen (after login)
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Login with preview user
+- tapOn: "Email"
+- inputText: "preview.lana@brdg.local"
+- tapOn: "Password"
+- inputText: "PreviewPass123!"
+- hideKeyboard
+- tapOn: "Sign in"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Discover"
+    timeout: 15000
+
+# Already on Discover tab by default
+- waitForAnimationToEnd
+- takeScreenshot: screenshots/03-discover-screen

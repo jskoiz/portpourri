@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
 import { GlassView } from '../../design/primitives/GlassView';
+import { lightTheme } from '../../theme/tokens';
 
 interface AppBackButtonProps {
   label?: string;
@@ -20,6 +21,7 @@ export default function AppBackButton({ label, onPress, disabled, style }: AppBa
         },
         style,
       ]}
+      testID="back-button"
       accessibilityRole="button"
       accessibilityLabel={label ?? 'Back'}
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -44,12 +46,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     lineHeight: 20,
-    color: '#2C2420',
+    color: lightTheme.textPrimary,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 4,
-    color: '#7A7068',
+    color: lightTheme.textMuted,
   },
 });

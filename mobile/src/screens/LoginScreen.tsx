@@ -13,7 +13,7 @@ import { normalizeApiError } from '../api/errors';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import { Button, GlassView, Input } from '../design/primitives';
 import { useTheme } from '../theme/useTheme';
-import { radii, spacing, typography } from '../theme/tokens';
+import { lightTheme, radii, spacing, typography } from '../theme/tokens';
 import { fontFamily } from '../lib/fonts';
 // radii is used in JSX
 import { loginSchema, type LoginFormValues } from '../features/auth/schema';
@@ -81,6 +81,7 @@ export function LoginScreenView({
               name="email"
               render={({ field: { onBlur, onChange, value } }) => (
                 <Input
+                  testID="login-email-input"
                   label="Email"
                   placeholder="you@example.com"
                   value={value}
@@ -105,6 +106,7 @@ export function LoginScreenView({
               name="password"
               render={({ field: { onBlur, onChange, value } }) => (
                 <Input
+                  testID="login-password-input"
                   label="Password"
                   placeholder="••••••••"
                   value={value}
@@ -133,6 +135,7 @@ export function LoginScreenView({
             ) : null}
 
             <Button
+              testID="login-submit-button"
               label="Sign in"
               onPress={onSubmit}
               loading={isSubmitting}
@@ -233,7 +236,7 @@ const styles = StyleSheet.create({
     letterSpacing: -1.5,
     lineHeight: 44,
     marginBottom: spacing.sm,
-    color: '#1A1A1A',
+    color: lightTheme.textPrimary,
   },
   headline: {
     fontSize: 28,

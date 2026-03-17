@@ -40,6 +40,7 @@ export function HomeHero({
         </View>
 
         <AppNotificationButton
+          testID="notifications-button"
           unreadCount={unreadCount}
           onPress={onPressNotifications}
           style={styles.notificationButton}

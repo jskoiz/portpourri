@@ -1,5 +1,6 @@
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PushService } from './push.service';
 
 function makeMockPrisma() {
   return {
@@ -11,16 +12,27 @@ function makeMockPrisma() {
       updateMany: jest.fn(),
       count: jest.fn(),
     },
+    user: {
+      findUnique: jest.fn(),
+    },
   } as unknown as PrismaService;
+}
+
+function makeMockPushService() {
+  return {
+    sendPushNotification: jest.fn().mockResolvedValue(undefined),
+  } as unknown as PushService;
 }
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
   let prisma: ReturnType<typeof makeMockPrisma>;
+  let pushService: ReturnType<typeof makeMockPushService>;
 
   beforeEach(() => {
     prisma = makeMockPrisma();
-    service = new NotificationsService(prisma);
+    pushService = makeMockPushService();
+    service = new NotificationsService(prisma, pushService);
   });
 
   it('creates a notification via prisma', async () => {
@@ -85,11 +97,12 @@ describe('NotificationsService', () => {
     expect(result?.readAt).toBeInstanceOf(Date);
   });
 
-  it('returns null when marking unknown notification as read', async () => {
+  it('throws NotFoundException when marking unknown notification as read', async () => {
     (prisma.notification.findFirst as jest.Mock).mockResolvedValue(null);
 
-    const result = await service.markRead('user-1', 'non-existent-id');
-    expect(result).toBeNull();
+    await expect(
+      service.markRead('user-1', 'non-existent-id'),
+    ).rejects.toThrow('Notification non-existent-id not found');
   });
 
   it('marks all unread notifications as read', async () => {

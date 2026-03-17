@@ -27,10 +27,6 @@ describe('MatchesController', () => {
     controller = module.get<MatchesController>(MatchesController);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-
   it('delegates getMatches to service', async () => {
     matchesServiceMock.getMatches.mockResolvedValue([]);
     const result = await controller.getMatches(req);

@@ -6,6 +6,7 @@ import type { User } from '../api/types';
 import { useAuthStore } from '../store/authStore';
 import { useUnreadNotificationCount } from '../features/notifications/hooks/useUnreadNotificationCount';
 import { useDiscoveryFeed } from '../features/discovery/hooks/useDiscoveryFeed';
+import { useProfileCompleteness } from '../features/profile/hooks/useProfileCompleteness';
 import type { MainTabScreenProps } from '../core/navigation/types';
 import { HomeScreenContent } from '../features/discovery/components/HomeScreenContent';
 import {
@@ -52,6 +53,7 @@ export default function HomeScreen({ navigation }: MainTabScreenProps<'Discover'
     [activeQuickFilter, filterState],
   );
   const { error, feed, isLoading, likeUser, passUser, refetch, undoSwipe } = useDiscoveryFeed(currentFilters);
+  const { score: completenessScore } = useProfileCompleteness();
   const errorMessage = error ? normalizeApiError(error).message : null;
 
   useEffect(() => {
@@ -158,6 +160,8 @@ export default function HomeScreen({ navigation }: MainTabScreenProps<'Discover'
       onUpdateDistanceKm={(value) => setFilterState((current) => ({ ...current, distanceKm: value }))}
       onUpdateMaxAge={(value) => setFilterState((current) => ({ ...current, maxAge: value }))}
       onUpdateMinAge={(value) => setFilterState((current) => ({ ...current, minAge: value }))}
+      completenessScore={completenessScore}
+      onPressCompleteness={() => navigation.navigate('You' as never)}
       showMatch={showMatch}
       unreadCount={unreadCount}
     />

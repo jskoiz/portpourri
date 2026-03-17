@@ -55,7 +55,7 @@ export default function ExploreScreen({ navigation }: MainTabScreenProps<'Explor
         void triggerImpactHaptic();
         navigation.navigate('Create');
       }}
-      onOpenEvent={(eventId) => navigation.navigate('EventDetail', { eventId })}
+      onOpenEvent={(eventId, event) => navigation.navigate('EventDetail', { eventId, event })}
       onOpenMyEvents={() => {
         void triggerImpactHaptic();
         openMyEvents(navigation);

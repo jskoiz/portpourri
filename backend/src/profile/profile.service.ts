@@ -1,7 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { calculateAge } from '../common/age.util';
 import { PhotoStorageService } from './photo-storage.service';
+import {
+  PROFILE_COMPLETENESS_BIO_MIN_CHARS,
+  PROFILE_COMPLETENESS_PHOTO_MIN_COUNT,
+  PROFILE_COMPLETENESS_PROMPTS,
+} from '../discovery/discovery.constants';
 import type {
   UpdateFitnessProfileDto,
   UpdatePhotoDto,
@@ -49,17 +54,15 @@ export class ProfileService {
   ) {}
 
   async updateFitnessProfile(userId: string, data: UpdateFitnessProfileDto) {
-    // Strip userId from caller-supplied data to prevent overwriting the relation key
-    const { userId: _ignored, ...safeData } = data;
-    const profile = await this.prisma.$transaction(async (tx) => {
-      const updatedProfile = await tx.userFitnessProfile.upsert({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userFitnessProfile.upsert({
         where: { userId },
         update: {
-          ...safeData,
+          ...data,
         },
         create: {
           userId,
-          ...safeData,
+          ...data,
         },
       });
 
@@ -67,20 +70,17 @@ export class ProfileService {
         where: { id: userId },
         data: { isOnboarded: true },
       });
-
-      return updatedProfile;
     });
 
-    return profile;
+    // Re-fetch and return the full user profile so callers get a consistent shape
+    return this.getProfile(userId);
   }
 
   async updateProfile(userId: string, data: UpdateProfileDto) {
-    // Strip userId from caller-supplied data to prevent overwriting the relation key
-    const { userId: _ignored, ...safeData } = data;
     return await this.prisma.userProfile.upsert({
       where: { userId },
-      update: { ...safeData },
-      create: { userId, ...safeData },
+      update: { ...data },
+      create: { userId, ...data },
     });
   }
 
@@ -106,7 +106,7 @@ export class ProfileService {
 
     if (!user) {
       this.logger.warn(`Profile not found for userId=${userId}`);
-      return null;
+      throw new NotFoundException('Profile not found');
     }
 
     return {
@@ -189,7 +189,7 @@ export class ProfileService {
     });
 
     if (!existingPhoto) {
-      return null;
+      throw new NotFoundException('Photo not found');
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -237,7 +237,7 @@ export class ProfileService {
     });
 
     if (!existingPhoto) {
-      return null;
+      throw new NotFoundException('Photo not found');
     }
 
     const deleted = await this.prisma.$transaction(async (tx) => {
@@ -266,5 +266,63 @@ export class ProfileService {
 
     await this.photoStorage.removeProfilePhoto(existingPhoto.storageKey);
     return deleted;
+  }
+
+  async getProfileCompleteness(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        profile: true,
+        fitnessProfile: true,
+        photos: { where: { isHidden: false } },
+      },
+    });
+
+    if (!user) {
+      return {
+        score: 0,
+        prompts: [PROFILE_COMPLETENESS_PROMPTS.missingProfile],
+      };
+    }
+
+    const checks = [
+      { ok: !!user.firstName, prompt: PROFILE_COMPLETENESS_PROMPTS.firstName },
+      { ok: !!user.birthdate, prompt: PROFILE_COMPLETENESS_PROMPTS.birthdate },
+      {
+        ok:
+          !!user.profile?.bio &&
+          user.profile.bio.length >= PROFILE_COMPLETENESS_BIO_MIN_CHARS,
+        prompt: PROFILE_COMPLETENESS_PROMPTS.bio,
+      },
+      {
+        ok: !!user.profile?.city,
+        prompt: PROFILE_COMPLETENESS_PROMPTS.city,
+      },
+      {
+        ok: user.photos.length >= PROFILE_COMPLETENESS_PHOTO_MIN_COUNT,
+        prompt: PROFILE_COMPLETENESS_PROMPTS.photos,
+      },
+      {
+        ok: !!user.fitnessProfile?.primaryGoal,
+        prompt: PROFILE_COMPLETENESS_PROMPTS.primaryGoal,
+      },
+      {
+        ok: !!user.fitnessProfile?.intensityLevel,
+        prompt: PROFILE_COMPLETENESS_PROMPTS.intensity,
+      },
+      {
+        ok: !!(
+          user.fitnessProfile?.prefersMorning ||
+          user.fitnessProfile?.prefersEvening
+        ),
+        prompt: PROFILE_COMPLETENESS_PROMPTS.availability,
+      },
+    ];
+
+    const earned = checks.filter((c) => c.ok).length;
+    const score = Math.round((earned / checks.length) * 100);
+    const prompts = checks.filter((c) => !c.ok).map((c) => c.prompt);
+
+    return { score, prompts };
   }
 }

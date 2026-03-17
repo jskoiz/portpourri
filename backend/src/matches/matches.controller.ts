@@ -73,9 +73,14 @@ export class MatchesController {
     );
   }
 
+  /**
+   * @deprecated Prefer the WebSocket gateway at /chat namespace.
+   * This SSE endpoint is kept as a fallback for clients that cannot use WebSockets.
+   */
   @Sse(':id/messages/stream')
   @ApiOperation({
     summary: 'Stream server-sent events for a match conversation',
+    deprecated: true,
   })
   @ApiProduces('text/event-stream')
   @ApiOkResponse({ description: 'Message event stream opened successfully.' })

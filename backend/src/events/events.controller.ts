@@ -20,6 +20,7 @@ import {
 import { EventsService } from './events.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
 import { CreateEventDto } from './create-event.dto';
+import { InviteEventDto } from './invite-event.dto';
 
 @Controller('events')
 @ApiTags('Events')
@@ -37,11 +38,11 @@ export class EventsController {
     @Query('take') take?: string,
     @Query('skip') skip?: string,
   ) {
-    return this.eventsService.list(
-      req.user.id,
-      take ? Math.min(parseInt(take, 10), 100) : 20,
-      skip ? parseInt(skip, 10) : 0,
-    );
+    const parsedTake = parseInt(take ?? '', 10);
+    const parsedSkip = parseInt(skip ?? '', 10);
+    const safeTake = Number.isNaN(parsedTake) ? 20 : Math.min(Math.max(parsedTake, 1), 100);
+    const safeSkip = Number.isNaN(parsedSkip) ? 0 : Math.max(parsedSkip, 0);
+    return this.eventsService.list(req.user.id, safeTake, safeSkip);
   }
 
   @UseGuards(AuthGuard('jwt'))
@@ -55,11 +56,11 @@ export class EventsController {
     @Query('take') take?: string,
     @Query('skip') skip?: string,
   ) {
-    return this.eventsService.myEvents(
-      req.user.id,
-      take ? parseInt(take, 10) : 20,
-      skip ? parseInt(skip, 10) : 0,
-    );
+    const parsedTake = parseInt(take ?? '', 10);
+    const parsedSkip = parseInt(skip ?? '', 10);
+    const safeTake = Number.isNaN(parsedTake) ? 20 : Math.min(Math.max(parsedTake, 1), 100);
+    const safeSkip = Number.isNaN(parsedSkip) ? 0 : Math.max(parsedSkip, 0);
+    return this.eventsService.myEvents(req.user.id, safeTake, safeSkip);
   }
 
   @Get(':id')
@@ -93,5 +94,37 @@ export class EventsController {
   @ApiUnauthorizedResponse({ description: 'Authentication is required.' })
   rsvp(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.eventsService.rsvp(id, req.user.id);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post(':id/invite')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Invite a match to an event' })
+  @ApiCreatedResponse({ description: 'Invite sent successfully.' })
+  @ApiUnauthorizedResponse({ description: 'Authentication is required.' })
+  invite(
+    @Param('id') id: string,
+    @Body() payload: InviteEventDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.eventsService.invite(
+      id,
+      req.user.id,
+      payload.matchId,
+      payload.message,
+    );
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':id/invites')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List invites for an event (host only)' })
+  @ApiOkResponse({ description: 'Event invites returned successfully.' })
+  @ApiUnauthorizedResponse({ description: 'Authentication is required.' })
+  getInvites(
+    @Param('id') id: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.eventsService.getInvites(id, req.user.id);
   }
 }

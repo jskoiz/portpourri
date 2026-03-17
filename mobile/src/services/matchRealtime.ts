@@ -1,6 +1,5 @@
-import * as SecureStore from 'expo-secure-store';
 import { env } from '../config/env';
-import { STORAGE_KEYS } from '../constants/storage';
+import { getToken } from '../lib/secureStorage';
 
 type RealtimeStatus = 'connecting' | 'connected' | 'fallback';
 
@@ -36,12 +35,11 @@ export async function connectMatchMessageStream(
     return () => undefined;
   }
 
-  const rawToken = await SecureStore.getItemAsync(STORAGE_KEYS.accessToken);
-  if (!rawToken) {
+  const token = await getToken();
+  if (!token) {
     handlers.onStatus('fallback');
     return () => undefined;
   }
-  const token: string = rawToken;
 
   let retryCount = 0;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -81,7 +79,11 @@ export async function connectMatchMessageStream(
     handlers.onStatus('connecting');
 
     const streamUrl = `${env.apiUrl}/matches/${matchId}/messages/stream`;
-    const urlWithToken = `${streamUrl}${streamUrl.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
+    // TODO: Replace the long-lived access token with a short-lived, scoped
+    // connection token to limit exposure in URL/query-string logs. For now the
+    // backend JWT strategy accepts `token` as a query parameter fallback since
+    // EventSource does not support custom headers.
+    const urlWithToken = `${streamUrl}${streamUrl.includes('?') ? '&' : '?'}token=${encodeURIComponent(token ?? '')}`;
     const nextSource = new EventSourceCtor!(urlWithToken, {} as EventSourceInit);
     source = nextSource;
 

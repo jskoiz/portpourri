@@ -43,6 +43,20 @@ export function buildEventRsvpNotification(
   };
 }
 
+export function buildEventInviteNotification(
+  eventId: string,
+  inviterName: string,
+  eventTitle: string,
+  matchId: string,
+): NotificationTemplatePayload {
+  return {
+    type: 'event_reminder',
+    title: 'Event invite',
+    body: `${inviterName} invited you to ${eventTitle}`,
+    data: { eventId, matchId, type: 'event_invite' },
+  };
+}
+
 export function buildEventReminderNotification(
   eventId: string,
   eventTitle: string,

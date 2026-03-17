@@ -34,11 +34,8 @@ const mockAuthState = {
   deleteAccount: mockDeleteAccount,
 };
 
-jest.mock("@react-navigation/native", () => ({
-  useNavigation: () => ({
-    navigate: mockNavigate,
-  }),
-}));
+const mockNavigation = { navigate: mockNavigate } as any;
+const mockProfileRoute = { key: 'You-1', name: 'You' } as any;
 
 jest.mock("../../store/authStore", () => ({
   useAuthStore: (
@@ -122,7 +119,7 @@ describe("ProfileScreen", () => {
   });
 
   it("persists hydrated activity and schedule preferences when saving", async () => {
-    render(<ProfileScreen />);
+    render(<ProfileScreen navigation={mockNavigation} route={mockProfileRoute} />);
 
     expect(await screen.findByText("Jordan, 29")).toBeTruthy();
     expect(await screen.findByText(/Edit Profile/)).toBeTruthy();
@@ -143,7 +140,7 @@ describe("ProfileScreen", () => {
   });
 
   it("does not render fake environment pills", async () => {
-    render(<ProfileScreen />);
+    render(<ProfileScreen navigation={mockNavigation} route={mockProfileRoute} />);
 
     fireEvent.press(screen.getByText(/Edit Profile/));
 
@@ -152,18 +149,18 @@ describe("ProfileScreen", () => {
   });
 
   it('disables save while profile updates are in progress', async () => {
-    const { rerender } = render(<ProfileScreen />);
+    const { rerender } = render(<ProfileScreen navigation={mockNavigation} route={mockProfileRoute} />);
 
     fireEvent.press(await screen.findByLabelText('Edit profile'));
     mockIsSavingFitness = true;
-    rerender(<ProfileScreen />);
+    rerender(<ProfileScreen navigation={mockNavigation} route={mockProfileRoute} />);
 
     expect(screen.getByLabelText('Save profile').props.accessibilityState?.disabled).toBe(true);
     expect(screen.getByText('Saving...')).toBeTruthy();
   });
 
   it("uses the structured city picker when saving profile basics", async () => {
-    render(<ProfileScreen />);
+    render(<ProfileScreen navigation={mockNavigation} route={mockProfileRoute} />);
 
     expect(await screen.findByText("Jordan, 29")).toBeTruthy();
     fireEvent.press(screen.getByText(/Edit Profile/));

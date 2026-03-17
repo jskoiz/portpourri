@@ -1,0 +1,11 @@
+appId: com.avmillabs.brdg
+tags:
+  - screenshot
+  - auth
+---
+# Screenshot: Login Screen
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- assertVisible: "Sign in"
+- takeScreenshot: screenshots/01-login-screen

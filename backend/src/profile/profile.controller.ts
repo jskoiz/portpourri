@@ -3,14 +3,13 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Post,
-  Put,
   Patch,
   Body,
   UseGuards,
   Request,
   Param,
-  NotFoundException,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -52,11 +51,7 @@ export class ProfileController {
   @ApiOkResponse({ description: 'Profile returned successfully.' })
   @ApiNotFoundResponse({ description: 'Profile not found.' })
   async getProfile(@Request() req: AuthenticatedRequest) {
-    const profile = await this.profileService.getProfile(req.user.id);
-    if (!profile) {
-      throw new NotFoundException('Profile not found');
-    }
-    return profile;
+    return this.profileService.getProfile(req.user.id);
   }
 
   @Get(':id')
@@ -68,10 +63,11 @@ export class ProfileController {
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
+
     return profile;
   }
 
-  @Put()
+  @Patch()
   @ApiOperation({ summary: 'Update the current user profile' })
   @ApiOkResponse({ description: 'Profile updated successfully.' })
   async updateProfile(
@@ -81,7 +77,7 @@ export class ProfileController {
     return this.profileService.updateProfile(req.user.id, data);
   }
 
-  @Put('fitness')
+  @Patch('fitness')
   @ApiOperation({ summary: 'Update the current user fitness profile' })
   @ApiOkResponse({ description: 'Fitness profile updated successfully.' })
   async updateFitnessProfile(
@@ -136,11 +132,7 @@ export class ProfileController {
     @Param('id') id: string,
     @Body() data: UpdatePhotoDto,
   ) {
-    const result = await this.profileService.updatePhoto(req.user.id, id, data);
-    if (!result) {
-      throw new NotFoundException('Photo not found');
-    }
-    return result;
+    return this.profileService.updatePhoto(req.user.id, id, data);
   }
 
   @Delete('photos/:id')
@@ -150,10 +142,6 @@ export class ProfileController {
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
-    const result = await this.profileService.deletePhoto(req.user.id, id);
-    if (!result) {
-      throw new NotFoundException('Photo not found');
-    }
-    return result;
+    return this.profileService.deletePhoto(req.user.id, id);
   }
 }

@@ -1,0 +1,28 @@
+appId: com.avmillabs.brdg
+tags:
+  - screenshot
+  - main
+---
+# Screenshot: Chat Screen (from a match conversation)
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Login
+- tapOn: "Email"
+- inputText: "preview.lana@brdg.local"
+- tapOn: "Password"
+- inputText: "PreviewPass123!"
+- hideKeyboard
+- tapOn: "Sign in"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Discover"
+    timeout: 15000
+
+# Navigate to Inbox, then open a conversation
+- tapOn: "Inbox"
+- waitForAnimationToEnd
+- tapOn: "Mason"
+- waitForAnimationToEnd
+- takeScreenshot: screenshots/08-chat-screen

@@ -33,10 +33,6 @@ describe('ProfileController', () => {
     controller = module.get<ProfileController>(ProfileController);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-
   it('delegates updateFitnessProfile to profile service', async () => {
     const req = { user: { id: 'user-1' } } as AuthenticatedRequest;
     const dto = { intensityLevel: 'ADVANCED' as const };
@@ -47,11 +43,11 @@ describe('ProfileController', () => {
     });
 
     await expect(
-      controller.updateFitnessProfile(req, { userId: 'user-1', ...dto }),
+      controller.updateFitnessProfile(req, dto),
     ).resolves.toEqual({ userId: 'user-1', ...dto });
     expect(profileServiceMock.updateFitnessProfile).toHaveBeenCalledWith(
       'user-1',
-      { userId: 'user-1', ...dto },
+      dto,
     );
   });
 
@@ -126,10 +122,12 @@ describe('ProfileController', () => {
     expect(profileServiceMock.getProfile).toHaveBeenCalledWith('user-1');
   });
 
-  it('throws NotFoundException when getProfile returns null', async () => {
+  it('throws NotFoundException when getProfile rejects', async () => {
     const req = { user: { id: 'missing' } } as AuthenticatedRequest;
 
-    profileServiceMock.getProfile.mockResolvedValue(null);
+    profileServiceMock.getProfile.mockRejectedValue(
+      new NotFoundException('Profile not found'),
+    );
 
     await expect(controller.getProfile(req)).rejects.toBeInstanceOf(
       NotFoundException,

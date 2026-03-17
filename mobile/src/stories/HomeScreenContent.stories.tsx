@@ -75,6 +75,8 @@ function HomeScreenContentStory({
       onUpdateDistanceKm={() => undefined}
       onUpdateMaxAge={() => undefined}
       onUpdateMinAge={() => undefined}
+      completenessScore={85}
+      onPressCompleteness={() => undefined}
       showMatch={showMatch}
       unreadCount={4}
     />

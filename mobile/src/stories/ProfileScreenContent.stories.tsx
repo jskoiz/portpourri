@@ -24,6 +24,8 @@ function ProfileScreenContentStory({
 
   return (
     <ProfileScreenContent
+      completenessScore={80}
+      completenessMissing={[]}
       deletingAccount={false}
       editingPhotos={Boolean(photoOperation)}
       bio={profile.profile?.bio ?? ''}

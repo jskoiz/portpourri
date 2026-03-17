@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import LottieView from 'lottie-react-native';
-import { colors } from '../theme/tokens';
+import { lightTheme } from '../theme/tokens';
 
 export default function LoadingState() {
     return (
@@ -16,7 +16,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: colors.background,
+        backgroundColor: lightTheme.background,
     },
     lottie: {
         width: 200,

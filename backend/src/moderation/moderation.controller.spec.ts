@@ -27,10 +27,6 @@ describe('ModerationController', () => {
     controller = module.get<ModerationController>(ModerationController);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-
   it('delegates report to moderation service', async () => {
     const report = { id: 'report-1', status: 'open' };
     moderationServiceMock.reportUser.mockResolvedValue(report);

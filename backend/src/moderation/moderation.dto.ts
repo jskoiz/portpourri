@@ -10,12 +10,12 @@ import { ReportCategory } from '@prisma/client';
 export class ReportUserDto {
   @IsString()
   @IsNotEmpty()
-  reportedUserId: string;
+  reportedUserId!: string;
 
   @IsEnum(ReportCategory, {
     message: `category must be one of: ${Object.values(ReportCategory).join(', ')}`,
   })
-  category: ReportCategory;
+  category!: ReportCategory;
 
   @IsOptional()
   @IsString()
@@ -30,5 +30,5 @@ export class ReportUserDto {
 export class BlockUserDto {
   @IsString()
   @IsNotEmpty()
-  targetUserId: string;
+  targetUserId!: string;
 }

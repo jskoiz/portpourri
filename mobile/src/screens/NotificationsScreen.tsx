@@ -1,14 +1,14 @@
 import React, { useCallback, useState } from 'react';
 import {
   RefreshControl,
-  ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { normalizeApiError } from '../api/errors';
 import type { AppNotification } from '../api/types';
 import AppBackButton from '../components/ui/AppBackButton';
@@ -130,10 +130,10 @@ function NotifRow({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function NotificationsScreen() {
+export default function NotificationsScreen({
+  navigation,
+}: RootStackScreenProps<'Notifications'>) {
   const theme = useTheme();
-  const navigation =
-    useNavigation<RootStackScreenProps<'Notifications'>['navigation']>();
   const [actionError, setActionError] = useState<string | null>(null);
   const {
     error,
@@ -253,7 +253,7 @@ export default function NotificationsScreen() {
         <AppBackButton onPress={() => navigation.goBack()} />
         <View style={styles.headerCopy}>
           <Text style={[styles.eyebrow, { color: theme.accent }]}>NOTIFICATIONS</Text>
-          <Text style={[styles.title, { color: theme.textPrimary }]}>Notifications</Text>
+          <Text style={[styles.title, { color: theme.textPrimary }]} accessibilityRole="header">Notifications</Text>
         </View>
         {unreadCount > 0 && (
           <TouchableOpacity
@@ -292,9 +292,35 @@ export default function NotificationsScreen() {
           </Text>
         </View>
       ) : (
-        <ScrollView
+        <SectionList
+          sections={[
+            ...(todayNotifs.length > 0 ? [{ title: 'Today', data: todayNotifs }] : []),
+            ...(earlierNotifs.length > 0 ? [{ title: 'Earlier', data: earlierNotifs }] : []),
+          ]}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <NotifRow
+              notif={item}
+              theme={theme}
+              onMarkRead={handleMarkRead}
+              onNavigate={handleNavigate}
+            />
+          )}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text style={[styles.groupLabel, { color: theme.textMuted }]}>{title}</Text>
+          )}
+          ListHeaderComponent={
+            actionError ? (
+              <View style={styles.routeError}>
+                <Text style={[styles.routeErrorText, { color: theme.danger }]}>
+                  {actionError}
+                </Text>
+              </View>
+            ) : null
+          }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          stickySectionHeadersEnabled={false}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching && !loading}
@@ -304,43 +330,7 @@ export default function NotificationsScreen() {
               tintColor={theme.primary}
             />
           }
-        >
-          {actionError ? (
-            <View style={styles.routeError}>
-              <Text style={[styles.routeErrorText, { color: theme.danger }]}>
-                {actionError}
-              </Text>
-            </View>
-          ) : null}
-          {todayNotifs.length > 0 && (
-            <View style={styles.group}>
-              <Text style={[styles.groupLabel, { color: theme.textMuted }]}>Today</Text>
-              {todayNotifs.map((n) => (
-                <NotifRow
-                  key={n.id}
-                  notif={n}
-                  theme={theme}
-                  onMarkRead={handleMarkRead}
-                  onNavigate={handleNavigate}
-                />
-              ))}
-            </View>
-          )}
-          {earlierNotifs.length > 0 && (
-            <View style={styles.group}>
-              <Text style={[styles.groupLabel, { color: theme.textMuted }]}>Earlier</Text>
-              {earlierNotifs.map((n) => (
-                <NotifRow
-                  key={n.id}
-                  notif={n}
-                  theme={theme}
-                  onMarkRead={handleMarkRead}
-                  onNavigate={handleNavigate}
-                />
-              ))}
-            </View>
-          )}
-        </ScrollView>
+        />
       )}
     </SafeAreaView>
   );
@@ -395,9 +385,6 @@ const styles = StyleSheet.create({
     paddingBottom: 64,
   },
 
-  group: {
-    marginBottom: spacing.lg,
-  },
   groupLabel: {
     fontSize: typography.caption,
     fontWeight: '800',

@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, RefreshControl, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { normalizeApiError } from '../api/errors';
@@ -16,17 +16,16 @@ import type { MainTabScreenProps } from '../core/navigation/types';
 import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
 import { getActivityTag } from '../lib/profile-helpers';
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
+// ─── Design Tokens (reactive via useTheme() in components) ───────────────────
+import { useTheme } from '../theme/useTheme';
 import { lightTheme } from '../theme/tokens';
 
+// Static references for StyleSheet (module-level); components use useTheme() for reactivity
 const BASE = lightTheme.background;
 const SURFACE = lightTheme.surface;
-const BORDER = lightTheme.border;
 const PRIMARY = lightTheme.primary;
 const ACCENT = lightTheme.accent;
 const TEXT_PRIMARY = lightTheme.textPrimary;
-const TEXT_SECONDARY = lightTheme.textSecondary;
-const TEXT_MUTED = lightTheme.textMuted;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function timeAgo(timestamp?: string) {
@@ -52,7 +51,7 @@ const GRID_PADDING = spacing.xxl;
 const CARD_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP) / 2;
 
 // ─── Match Card (photo-forward grid) ─────────────────────────────────────────
-function MatchCard({ item, onPress }: { item: Match; onPress: () => void }) {
+const MatchCard = React.memo(function MatchCard({ item, onPress }: { item: Match; onPress: () => void }) {
   const accent = getUserAccent(item.user.firstName);
   const photoUrl = getPrimaryPhotoUri(item.user);
 
@@ -87,11 +86,11 @@ function MatchCard({ item, onPress }: { item: Match; onPress: () => void }) {
       </View>
     </Pressable>
   );
-}
+});
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-export default function MatchesScreen() {
-  const navigation = useNavigation<MainTabScreenProps<'Inbox'>['navigation']>();
+export default function MatchesScreen({ navigation }: MainTabScreenProps<'Inbox'>) {
+  const theme = useTheme();
   const { error, isLoading: loading, isRefetching, matches, refetch } =
     useMatches();
   const errorMessage = error ? normalizeApiError(error).message : null;
@@ -109,7 +108,7 @@ export default function MatchesScreen() {
 
       <View style={styles.header}>
         <Text style={styles.eyebrow}>MATCHES</Text>
-        <Text style={styles.title}>Matches</Text>
+        <Text style={styles.title} accessibilityRole="header">Matches</Text>
         {matches.length > 0 && (
           <View style={styles.countBadge}>
             <Text style={styles.countBadgeText}>{matches.length} active</Text>
@@ -157,7 +156,7 @@ export default function MatchesScreen() {
               onRefresh={() => {
                 void refetch();
               }}
-              tintColor={PRIMARY}
+              tintColor={theme.primary}
             />
           }
         />

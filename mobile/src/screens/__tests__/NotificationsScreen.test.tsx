@@ -23,6 +23,8 @@ const createNotificationsState = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+const mockNavigation = { goBack: mockGoBack, navigate: mockNavigate } as any;
+
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
 
@@ -76,7 +78,7 @@ describe('NotificationsScreen', () => {
   });
 
   it('loads notifications and marks an item as read', async () => {
-    render(<NotificationsScreen />);
+    render(<NotificationsScreen navigation={mockNavigation} route={{ key: 'Notifications-1', name: 'Notifications' } as any} />);
 
     const title = await screen.findByText('New message');
     fireEvent.press(title);
@@ -87,7 +89,7 @@ describe('NotificationsScreen', () => {
   });
 
   it('navigates match notifications to chat', async () => {
-    render(<NotificationsScreen />);
+    render(<NotificationsScreen navigation={mockNavigation} route={{ key: 'Notifications-1', name: 'Notifications' } as any} />);
 
     const title = await screen.findByText('New message');
     fireEvent.press(title);
@@ -117,7 +119,7 @@ describe('NotificationsScreen', () => {
       ],
     });
 
-    render(<NotificationsScreen />);
+    render(<NotificationsScreen navigation={mockNavigation} route={{ key: 'Notifications-1', name: 'Notifications' } as any} />);
 
     const title = await screen.findByText('New message');
     fireEvent.press(title);
@@ -147,7 +149,7 @@ describe('NotificationsScreen', () => {
       ],
     });
 
-    render(<NotificationsScreen />);
+    render(<NotificationsScreen navigation={mockNavigation} route={{ key: 'Notifications-1', name: 'Notifications' } as any} />);
 
     const title = await screen.findByText('Event RSVP');
     fireEvent.press(title);
@@ -174,7 +176,7 @@ describe('NotificationsScreen', () => {
       ],
     });
 
-    render(<NotificationsScreen />);
+    render(<NotificationsScreen navigation={mockNavigation} route={{ key: 'Notifications-1', name: 'Notifications' } as any} />);
 
     const title = await screen.findByText('Someone likes you');
     fireEvent.press(title);
@@ -203,7 +205,7 @@ describe('NotificationsScreen', () => {
       ],
     });
 
-    render(<NotificationsScreen />);
+    render(<NotificationsScreen navigation={mockNavigation} route={{ key: 'Notifications-1', name: 'Notifications' } as any} />);
 
     fireEvent.press(await screen.findByText('Could not route'));
 
@@ -214,7 +216,7 @@ describe('NotificationsScreen', () => {
   });
 
   it('clears all notifications and resets the unread badge count', async () => {
-    render(<NotificationsScreen />);
+    render(<NotificationsScreen navigation={mockNavigation} route={{ key: 'Notifications-1', name: 'Notifications' } as any} />);
 
     const clearAll = await screen.findByText('Clear all');
     fireEvent.press(clearAll);

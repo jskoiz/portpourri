@@ -2,7 +2,7 @@
   "name": "brdg",
   "private": true,
   "scripts": {
-    "check": "npm run check:root && npm run check:backend && npm run check:mobile",
+    "check": "npm run check:root && npm run check:backend && npm run check:mobile && npm run check:symphony",
     "check:root": "npm run docs:check && npm run policy:check && npm run test:root",
     "check:changed": "node ./scripts/check-changed.mjs",
     "check:backend": "npm --prefix backend run check",
@@ -29,6 +29,8 @@
     "scaffold:backend-module": "npm --prefix backend run module:new --",
     "test:root": "node --test scripts/__tests__/*.test.mjs",
     "test:backend": "npm --prefix backend run test",
-    "test:mobile": "npm --prefix mobile run test"
+    "test:mobile": "npm --prefix mobile run test",
+    "screenshots": "./scripts/screenshot-all.sh",
+    "screenshots:quick": "./scripts/screenshot-all.sh --quick"
   }
 }

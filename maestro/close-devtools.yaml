@@ -1,0 +1,5 @@
+appId: com.avmillabs.brdg
+---
+- tapOn:
+    point: "86%,27%"
+- waitForAnimationToEnd

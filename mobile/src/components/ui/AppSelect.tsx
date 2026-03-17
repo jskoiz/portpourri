@@ -9,7 +9,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
-import { radii, spacing, typography } from '../../theme/tokens';
+import { lightTheme, radii, spacing, typography } from '../../theme/tokens';
 
 export interface AppSelectOption {
   label: string;
@@ -53,7 +53,7 @@ export default function AppSelect({
   return (
     <View style={[styles.wrapper, wrapperStyle]}>
       {label ? (
-        <Text style={[styles.label, { color: '#7A7068' }]}>{label}</Text>
+        <Text style={[styles.label, { color: theme.textMuted }]}>{label}</Text>
       ) : null}
       <Pressable
         accessibilityLabel={triggerAccessibilityLabel}
@@ -72,13 +72,13 @@ export default function AppSelect({
         <Text
           style={[
             styles.triggerText,
-            { color: selectedOption ? '#2C2420' : '#B0A89E' },
+            { color: selectedOption ? theme.textPrimary : theme.textMuted },
           ]}
           numberOfLines={1}
         >
           {selectedOption?.label ?? placeholder}
         </Text>
-        <Text style={[styles.chevron, { color: '#B0A89E' }]}>
+        <Text style={[styles.chevron, { color: theme.textMuted }]}>
           {open ? '▲' : '▼'}
         </Text>
       </Pressable>
@@ -99,13 +99,13 @@ export default function AppSelect({
                   }}
                   style={[
                     styles.option,
-                    selected && { backgroundColor: 'rgba(196,168,130,0.10)' },
+                    selected && { backgroundColor: theme.primarySubtle },
                   ]}
                 >
                   <Text
                     style={[
                       styles.optionText,
-                      { color: selected ? theme.primary : '#2C2420' },
+                      { color: selected ? theme.primary : theme.textPrimary },
                     ]}
                   >
                     {option.label}
@@ -144,8 +144,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
+    backgroundColor: lightTheme.surface,
+    shadowColor: lightTheme.shadowColor,
     shadowOpacity: 0.05,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -164,8 +164,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     borderRadius: radii.lg,
     overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
+    backgroundColor: lightTheme.surface,
+    shadowColor: lightTheme.shadowColor,
     shadowOpacity: 0.1,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },

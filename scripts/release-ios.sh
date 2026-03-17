@@ -216,3 +216,9 @@ EOF
     )
     ;;
 esac
+
+# Tag the release commit so deploy-testflight workflow can trigger on it.
+# Format: v{APP_VERSION}+{IOS_BUILD_NUMBER}
+RELEASE_TAG="v${APP_VERSION}+${IOS_BUILD_NUMBER}"
+echo "release-ios: tagging release as $RELEASE_TAG"
+run_git tag "$RELEASE_TAG"

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { notificationsApi } from '../../../services/api';
 import type { AppNotification } from '../../../api/types';
@@ -74,10 +75,16 @@ export function useNotifications() {
         queryClient.setQueryData(getNotificationList(), context.previous);
       }
     },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: getNotificationList() });
+    },
   });
 
   const notifications = query.data || [];
-  const unreadCount = notifications.filter((item) => !item.readAt).length;
+  const unreadCount = useMemo(
+    () => notifications.filter((item) => !item.readAt).length,
+    [notifications],
+  );
 
   return {
     ...query,

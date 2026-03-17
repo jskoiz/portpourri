@@ -6,13 +6,12 @@ const mockNavigate = jest.fn();
 const mockRefetch = jest.fn();
 const mockUseMatches = jest.fn();
 
+const mockNavigation = { navigate: mockNavigate } as any;
+
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
 
   return {
-    useNavigation: () => ({
-      navigate: mockNavigate,
-    }),
     useFocusEffect: (callback: () => void) => {
       React.useEffect(() => {
         const cleanup = callback();
@@ -43,7 +42,7 @@ describe('MatchesScreen', () => {
       refetch: mockRefetch,
     });
 
-    render(<MatchesScreen />);
+    render(<MatchesScreen navigation={mockNavigation} route={{ key: 'Inbox-1', name: 'Inbox' } as any} />);
 
     expect(screen.getByText('Loading conversations')).toBeTruthy();
   });
@@ -57,7 +56,7 @@ describe('MatchesScreen', () => {
       refetch: mockRefetch,
     });
 
-    render(<MatchesScreen />);
+    render(<MatchesScreen navigation={mockNavigation} route={{ key: 'Inbox-1', name: 'Inbox' } as any} />);
 
     const goExplore = await screen.findByText('Go explore');
     fireEvent.press(goExplore);
@@ -76,7 +75,7 @@ describe('MatchesScreen', () => {
       refetch: mockRefetch,
     });
 
-    render(<MatchesScreen />);
+    render(<MatchesScreen navigation={mockNavigation} route={{ key: 'Inbox-1', name: 'Inbox' } as any} />);
 
     expect(await screen.findByText("Couldn't load inbox")).toBeTruthy();
 
@@ -109,7 +108,7 @@ describe('MatchesScreen', () => {
       refetch: mockRefetch,
     });
 
-    render(<MatchesScreen />);
+    render(<MatchesScreen navigation={mockNavigation} route={{ key: 'Inbox-1', name: 'Inbox' } as any} />);
 
     const card = await screen.findByText('Kai');
     fireEvent.press(card);

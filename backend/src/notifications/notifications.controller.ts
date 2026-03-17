@@ -3,7 +3,8 @@ import {
   Controller,
   ForbiddenException,
   Get,
-  NotFoundException,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -25,6 +26,7 @@ import { appConfig } from '../config/app.config';
 import { NotificationsService } from './notifications.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
 import { EmitNotificationDto } from './notifications.dto';
+import { appConfig } from '../config/app.config';
 
 @Controller('notifications')
 @UseGuards(AuthGuard('jwt'))
@@ -50,6 +52,14 @@ export class NotificationsController {
     );
   }
 
+  @Get('unread-count')
+  @ApiOperation({ summary: 'Return the unread notification count' })
+  @ApiOkResponse({ description: 'Unread count returned successfully.' })
+  async getUnreadCount(@Request() req: AuthenticatedRequest) {
+    const count = await this.notificationsService.getUnreadCount(req.user.id);
+    return { count };
+  }
+
   @Patch(':id/read')
   @ApiOperation({ summary: 'Mark a notification as read' })
   @ApiOkResponse({ description: 'Notification marked as read.' })
@@ -58,16 +68,13 @@ export class NotificationsController {
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
-    const result = await this.notificationsService.markRead(req.user.id, id);
-    if (result === null) {
-      throw new NotFoundException(`Notification ${id} not found`);
-    }
-    return result;
+    return this.notificationsService.markRead(req.user.id, id);
   }
 
-  @Post('mark-all-read')
+  @Patch('mark-all-read')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mark all notifications as read' })
-  @ApiCreatedResponse({ description: 'All notifications marked as read.' })
+  @ApiOkResponse({ description: 'All notifications marked as read.' })
   async markAllRead(@Request() req: AuthenticatedRequest) {
     return this.notificationsService.markAllRead(req.user.id);
   }

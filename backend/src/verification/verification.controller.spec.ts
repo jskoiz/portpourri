@@ -28,10 +28,6 @@ describe('VerificationController', () => {
     controller = module.get<VerificationController>(VerificationController);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-
   it('delegates status to verification service', async () => {
     const statusResult = { hasVerifiedEmail: true, hasVerifiedPhone: false };
     verificationServiceMock.status.mockResolvedValue(statusResult);

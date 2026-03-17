@@ -1,0 +1,26 @@
+appId: com.avmillabs.brdg
+tags:
+  - screenshot
+  - main
+---
+# Screenshot: Explore Screen
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Login
+- tapOn: "Email"
+- inputText: "preview.lana@brdg.local"
+- tapOn: "Password"
+- inputText: "PreviewPass123!"
+- hideKeyboard
+- tapOn: "Sign in"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Discover"
+    timeout: 15000
+
+# Navigate to Explore tab
+- tapOn: "Explore"
+- waitForAnimationToEnd
+- takeScreenshot: screenshots/04-explore-screen

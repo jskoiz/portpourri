@@ -1,0 +1,9 @@
+# Maestro global config
+# Used by all flows via --config flag
+flows:
+  - "./*.yaml"
+  - "./flows/*.yaml"
+
+# Default screenshot output directory
+output:
+  path: "./screenshots"

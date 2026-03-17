@@ -12,38 +12,45 @@ import { Gender } from '../common/enums';
 export class SignupDto {
   @IsEmail()
   @MaxLength(254)
-  email: string;
+  email!: string;
 
   @IsString()
   @MinLength(8)
   @MaxLength(128)
-  password: string;
+  password!: string;
 
   @IsString()
   @IsNotEmpty()
   @MinLength(1)
   @MaxLength(100)
-  firstName: string;
+  firstName!: string;
 
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, {
     message: 'Birthdate must use YYYY-MM-DD format',
   })
-  birthdate: string;
+  birthdate!: string;
 
   @IsEnum(Gender, {
     message: `Gender must be one of: ${Object.values(Gender).join(', ')}`,
   })
-  gender: Gender;
+  gender!: Gender;
 }
 
 export class LoginDto {
   @IsEmail()
   @MaxLength(254)
-  email: string;
+  email!: string;
 
   @IsString()
   @MinLength(1)
   @MaxLength(128)
-  password: string;
+  password!: string;
+}
+
+export class RegisterPushTokenDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  token!: string;
 }
