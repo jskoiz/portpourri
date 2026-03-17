@@ -35,3 +35,87 @@ export const PROFILE_COMPLETENESS_PROMPTS = {
   intensity: 'Choose your training intensity.',
   availability: 'Set your availability (morning/evening).',
 } as const;
+
+interface CompletenessCheckUser {
+  firstName: string | null;
+  birthdate: Date | null;
+  profile: {
+    bio: string | null;
+    city: string | null;
+  } | null;
+  fitnessProfile: {
+    primaryGoal: string | null;
+    intensityLevel: string | null;
+    prefersMorning: boolean | null;
+    prefersEvening: boolean | null;
+  } | null;
+  photos: unknown[];
+}
+
+export const PROFILE_COMPLETENESS_CHECKS: ReadonlyArray<{
+  field: string;
+  label: string;
+  route: string;
+  prompt: string;
+  test: (user: CompletenessCheckUser) => boolean;
+}> = [
+  {
+    field: 'firstName',
+    label: 'Add your first name',
+    route: 'EditProfile',
+    prompt: PROFILE_COMPLETENESS_PROMPTS.firstName,
+    test: (user) => !!user.firstName,
+  },
+  {
+    field: 'birthdate',
+    label: 'Add your birthday',
+    route: 'EditProfile',
+    prompt: PROFILE_COMPLETENESS_PROMPTS.birthdate,
+    test: (user) => !!user.birthdate,
+  },
+  {
+    field: 'bio',
+    label: 'Add a bio',
+    route: 'EditProfile',
+    prompt: PROFILE_COMPLETENESS_PROMPTS.bio,
+    test: (user) =>
+      !!user.profile?.bio &&
+      user.profile.bio.length >= PROFILE_COMPLETENESS_BIO_MIN_CHARS,
+  },
+  {
+    field: 'city',
+    label: 'Set your city',
+    route: 'EditProfile',
+    prompt: PROFILE_COMPLETENESS_PROMPTS.city,
+    test: (user) => !!user.profile?.city,
+  },
+  {
+    field: 'photos',
+    label: 'Add more photos',
+    route: 'EditPhotos',
+    prompt: PROFILE_COMPLETENESS_PROMPTS.photos,
+    test: (user) => user.photos.length >= PROFILE_COMPLETENESS_PHOTO_MIN_COUNT,
+  },
+  {
+    field: 'primaryGoal',
+    label: 'Set a fitness goal',
+    route: 'EditFitness',
+    prompt: PROFILE_COMPLETENESS_PROMPTS.primaryGoal,
+    test: (user) => !!user.fitnessProfile?.primaryGoal,
+  },
+  {
+    field: 'intensityLevel',
+    label: 'Choose your intensity',
+    route: 'EditFitness',
+    prompt: PROFILE_COMPLETENESS_PROMPTS.intensity,
+    test: (user) => !!user.fitnessProfile?.intensityLevel,
+  },
+  {
+    field: 'availability',
+    label: 'Set your availability',
+    route: 'EditFitness',
+    prompt: PROFILE_COMPLETENESS_PROMPTS.availability,
+    test: (user) =>
+      !!(user.fitnessProfile?.prefersMorning || user.fitnessProfile?.prefersEvening),
+  },
+];

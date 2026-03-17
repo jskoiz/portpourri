@@ -4,6 +4,7 @@ import { StatePanel } from '../design/primitives';
 import { normalizeApiError } from '../api/errors';
 import { useAuthStore } from '../store/authStore';
 import { useProfile } from '../features/profile/hooks/useProfile';
+import { useProfileCompleteness } from '../features/profile/hooks/useProfileCompleteness';
 import { useProfileEditor } from '../features/profile/hooks/useProfileEditor';
 import { ProfileScreenContent } from '../features/profile/components/ProfileScreenContent';
 import { useKnownLocationSuggestions } from '../features/locations/useKnownLocationSuggestions';
@@ -31,6 +32,7 @@ export default function ProfileScreen({ navigation }: MainTabScreenProps<'You'>)
     isDeletingPhoto,
   } = useProfile();
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const { score: completenessScore, missing: completenessMissing } = useProfileCompleteness();
   const knownLocationSuggestions = useKnownLocationSuggestions();
   const editor = useProfileEditor({
     profile,
@@ -54,6 +56,8 @@ export default function ProfileScreen({ navigation }: MainTabScreenProps<'You'>)
 
   return (
     <ProfileScreenContent
+      completenessScore={completenessScore}
+      completenessMissing={completenessMissing}
       deletingAccount={deletingAccount}
       editingPhotos={editor.isEditingPhotos || isUploadingPhoto || isUpdatingPhoto || isDeletingPhoto}
       bio={editor.bio}

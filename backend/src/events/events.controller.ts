@@ -20,6 +20,7 @@ import {
 import { EventsService } from './events.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
 import { CreateEventDto } from './create-event.dto';
+import { InviteEventDto } from './invite-event.dto';
 
 @Controller('events')
 @ApiTags('Events')
@@ -93,5 +94,37 @@ export class EventsController {
   @ApiUnauthorizedResponse({ description: 'Authentication is required.' })
   rsvp(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.eventsService.rsvp(id, req.user.id);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post(':id/invite')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Invite a match to an event' })
+  @ApiCreatedResponse({ description: 'Invite sent successfully.' })
+  @ApiUnauthorizedResponse({ description: 'Authentication is required.' })
+  invite(
+    @Param('id') id: string,
+    @Body() payload: InviteEventDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.eventsService.invite(
+      id,
+      req.user.id,
+      payload.matchId,
+      payload.message,
+    );
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':id/invites')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List invites for an event (host only)' })
+  @ApiOkResponse({ description: 'Event invites returned successfully.' })
+  @ApiUnauthorizedResponse({ description: 'Authentication is required.' })
+  getInvites(
+    @Param('id') id: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.eventsService.getInvites(id, req.user.id);
   }
 }

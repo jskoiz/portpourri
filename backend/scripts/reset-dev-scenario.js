@@ -182,7 +182,7 @@ async function createUser(definition, password, index) {
   });
 
   await request("/profile/fitness", {
-    method: "PUT",
+    method: "PATCH",
     token,
     body: definition.fitness,
   });

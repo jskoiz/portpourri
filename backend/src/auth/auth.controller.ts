@@ -21,16 +21,20 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService, type AuthResult } from './auth.service';
-import { SignupDto, LoginDto } from './auth.dto';
+import { SignupDto, LoginDto, RegisterPushTokenDto } from './auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
 
 @Controller('auth')
 @ApiTags('Auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private prisma: PrismaService,
+  ) {}
 
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @Post('signup')
   @ApiOperation({ summary: 'Create a new account' })
   @ApiCreatedResponse({ description: 'User account created successfully.' })
@@ -68,5 +72,22 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Authentication is required.' })
   async deleteAccount(@Request() req: AuthenticatedRequest): Promise<void> {
     await this.authService.deleteAccount(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Post('push-token')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Register an Expo push token for the authenticated user' })
+  @ApiNoContentResponse({ description: 'Push token registered successfully.' })
+  @ApiUnauthorizedResponse({ description: 'Authentication is required.' })
+  async registerPushToken(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: RegisterPushTokenDto,
+  ): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: req.user.id },
+      data: { pushToken: body.token },
+    });
   }
 }
