@@ -1,5 +1,6 @@
 import { VerificationService } from './verification.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { appConfig } from '../config/app.config';
 
 const userUpdate = jest.fn();
 const userFindUnique = jest.fn();
@@ -37,6 +38,19 @@ describe('VerificationService', () => {
       expect(result.started).toBe(true);
       expect(result.maskedTarget).toBe('***34');
       expect(result.devCode).toMatch(/^\d{6}$/);
+    });
+
+    it('does NOT return devCode when isProduction is true', () => {
+      const original = appConfig.isProduction;
+      (appConfig as { isProduction: boolean }).isProduction = true;
+      try {
+        const result = service.start('user-1', 'email', 'alice@example.com');
+
+        expect(result.started).toBe(true);
+        expect(result).not.toHaveProperty('devCode');
+      } finally {
+        (appConfig as { isProduction: boolean }).isProduction = original;
+      }
     });
 
     it('overwrites a previous pending entry for the same channel', () => {
