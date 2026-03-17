@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   Injectable,
   UnauthorizedException,
   BadRequestException,
@@ -8,7 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import { AuthProvider, Gender } from '@prisma/client';
+import { AuthProvider, Gender, Prisma } from '@prisma/client';
 import type { SignupDto, LoginDto } from './auth.dto';
 
 export type { SignupDto, LoginDto };
@@ -162,12 +161,11 @@ export class AuthService {
       return this.issueAuthToken(user);
     } catch (error: unknown) {
       if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        (error as { code: string }).code === 'P2002'
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
       ) {
-        throw new ConflictException('Unable to create account');
+        this.logger.warn(`Signup unique-constraint conflict for email=${normalizedEmail}`);
+        throw new BadRequestException('Unable to create account');
       }
       throw error;
     }
