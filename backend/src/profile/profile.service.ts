@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { calculateAge } from '../common/age.util';
 import { PhotoStorageService } from './photo-storage.service';
 import type {
   UpdateFitnessProfileDto,
@@ -88,7 +89,7 @@ export class ProfileService {
 
     return {
       ...safeUser,
-      age: this.calculateAge(user.birthdate),
+      age: calculateAge(user.birthdate),
     };
   }
 
@@ -212,16 +213,5 @@ export class ProfileService {
 
     await this.photoStorage.removeProfilePhoto(existingPhoto.storageKey);
     return deleted;
-  }
-
-  private calculateAge(birthdate: Date | null | undefined): number | null {
-    if (!birthdate) return null;
-    const today = new Date();
-    let age = today.getFullYear() - birthdate.getFullYear();
-    const m = today.getMonth() - birthdate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthdate.getDate())) {
-      age--;
-    }
-    return age;
   }
 }

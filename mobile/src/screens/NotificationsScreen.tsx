@@ -54,10 +54,12 @@ function NotifRow({
   notif,
   theme,
   onMarkRead,
+  onNavigate,
 }: {
   notif: AppNotification;
   theme: Theme;
   onMarkRead: (id: string) => void;
+  onNavigate: (notif: AppNotification) => void;
 }) {
   const { color, icon } = getNotificationMeta(notif.type);
   const isRead = Boolean(notif.readAt);
@@ -75,6 +77,7 @@ function NotifRow({
       ]}
       onPress={() => {
         if (!isRead) onMarkRead(notif.id);
+        onNavigate(notif);
       }}
       activeOpacity={0.85}
       accessibilityRole="button"
@@ -158,6 +161,16 @@ export default function NotificationsScreen() {
     }
   };
 
+  const handleNavigate = (notif: AppNotification) => {
+    const data = notif.data as Record<string, string> | undefined;
+    if (notif.type === 'match_created' && data?.matchId) {
+      navigation.navigate('Main', { screen: 'Inbox' });
+    } else if (notif.type === 'like_received') {
+      navigation.navigate('Main', { screen: 'Discover' });
+    }
+    // Other types: no-op for now
+  };
+
   const todayNotifs = notifs.filter(
     (n) => getNotificationGroup(n.createdAt) === 'Today',
   );
@@ -235,6 +248,7 @@ export default function NotificationsScreen() {
                   notif={n}
                   theme={theme}
                   onMarkRead={handleMarkRead}
+                  onNavigate={handleNavigate}
                 />
               ))}
             </View>
@@ -248,6 +262,7 @@ export default function NotificationsScreen() {
                   notif={n}
                   theme={theme}
                   onMarkRead={handleMarkRead}
+                  onNavigate={handleNavigate}
                 />
               ))}
             </View>

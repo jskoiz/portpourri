@@ -19,7 +19,7 @@ import type { RootStackParamList } from '../core/navigation/types';
 import AppBackButton from '../components/ui/AppBackButton';
 import AppIcon from '../components/ui/AppIcon';
 import AppBackdrop from '../components/ui/AppBackdrop';
-import { Button } from '../design/primitives';
+import { Button, Screen, StatePanel } from '../design/primitives';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
 import { type SessionIntent } from '../types/sessionIntent';
@@ -44,7 +44,14 @@ export default function ProfileDetailScreen() {
   const { user } = route.params;
   const [submitting, setSubmitting] = useState(false);
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <Screen>
+        <AppBackButton onPress={() => navigation.goBack()} />
+        <StatePanel title="Profile not found" description="This profile is no longer available." />
+      </Screen>
+    );
+  }
 
   const primaryPhoto = getPrimaryPhotoUri(user);
   const activityTags: string[] = (user.fitnessProfile?.favoriteActivities || '')
@@ -66,15 +73,15 @@ export default function ProfileDetailScreen() {
   const structuredRows = [
     {
       label: 'Pace',
-      value: user.fitnessProfile?.intensityLevel ? `${user.fitnessProfile.intensityLevel}` : 'Conversational',
+      value: user.fitnessProfile?.intensityLevel ? `${user.fitnessProfile.intensityLevel}` : 'Not set',
     },
     {
       label: 'Prefers',
-      value: activityTags.slice(0, 2).join(' / ') || 'Night runs',
+      value: activityTags.slice(0, 2).join(' / ') || 'Not set',
     },
     {
       label: 'Intent',
-      value: intentDisplay || 'Meet after',
+      value: intentDisplay || 'Not set',
     },
   ];
 

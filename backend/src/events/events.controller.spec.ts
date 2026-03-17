@@ -32,17 +32,23 @@ describe('EventsController', () => {
   });
 
   it('defaults pagination at the controller boundary', async () => {
+    const req = {
+      user: { id: 'user-1', email: 'u@example.com' },
+    } as AuthenticatedRequest;
     eventsServiceMock.list.mockResolvedValue([]);
 
-    await expect(controller.list(undefined, undefined)).resolves.toEqual([]);
-    expect(eventsServiceMock.list).toHaveBeenCalledWith(undefined, 20, 0);
+    await expect(controller.list(req, undefined, undefined)).resolves.toEqual([]);
+    expect(eventsServiceMock.list).toHaveBeenCalledWith('user-1', 20, 0);
   });
 
   it('parses provided pagination params before delegating', async () => {
+    const req = {
+      user: { id: 'user-1', email: 'u@example.com' },
+    } as AuthenticatedRequest;
     eventsServiceMock.list.mockResolvedValue([]);
 
-    await expect(controller.list('12', '4')).resolves.toEqual([]);
-    expect(eventsServiceMock.list).toHaveBeenCalledWith(undefined, 12, 4);
+    await expect(controller.list(req, '12', '4')).resolves.toEqual([]);
+    expect(eventsServiceMock.list).toHaveBeenCalledWith('user-1', 12, 4);
   });
 
   it('should be defined', () => {

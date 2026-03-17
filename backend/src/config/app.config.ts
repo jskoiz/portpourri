@@ -11,6 +11,13 @@ const assetBaseUrl = process.env.BASE_URL || apiBaseUrl;
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',')
   .map((origin) => origin.trim())
   .filter(Boolean) || ['http://localhost:3000'];
+
+if (process.env.NODE_ENV === 'production' && !process.env.ALLOWED_ORIGINS) {
+  console.warn(
+    '[CORS] WARNING: ALLOWED_ORIGINS not set in production. Defaulting to localhost — this may block all client requests.',
+  );
+}
+
 const jwtSecret = (() => {
   if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
   if (process.env.NODE_ENV === 'test') return 'test-jwt-secret';

@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
@@ -17,6 +17,8 @@ describe('NotificationsController', () => {
 
   const req = { user: { id: 'user-1' } } as AuthenticatedRequest;
 
+  const originalNodeEnv = process.env.NODE_ENV;
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -28,6 +30,14 @@ describe('NotificationsController', () => {
     }).compile();
 
     controller = module.get<NotificationsController>(NotificationsController);
+  });
+
+  afterEach(() => {
+    if (originalNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
   });
 
   it('should be defined', () => {
@@ -64,6 +74,20 @@ describe('NotificationsController', () => {
     const result = await controller.markAllRead(req);
     expect(notificationsServiceMock.markAllRead).toHaveBeenCalledWith('user-1');
     expect(result).toEqual({ updated: 3 });
+  });
+
+  it('throws ForbiddenException when NODE_ENV is production', async () => {
+    process.env.NODE_ENV = 'production';
+
+    await expect(
+      controller.emit(req, {
+        type: NotificationType.System,
+        title: 'Test',
+        body: 'test',
+      }),
+    ).rejects.toThrow(ForbiddenException);
+
+    expect(notificationsServiceMock.create).not.toHaveBeenCalled();
   });
 
   it('delegates emit with a valid type to notifications service', async () => {

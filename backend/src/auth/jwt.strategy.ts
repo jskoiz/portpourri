@@ -1,7 +1,8 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { appConfig } from '../config/app.config';
+import { PrismaService } from '../prisma/prisma.service';
 
 interface JwtPayload {
   sub: string;
@@ -10,7 +11,7 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(private readonly prisma: PrismaService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -18,7 +19,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  validate(payload: JwtPayload) {
-    return { id: payload.sub, email: payload.email };
+  async validate(payload: JwtPayload) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: payload.sub, isDeleted: false, isBanned: false },
+      select: { id: true, email: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User no longer valid');
+    }
+
+    return user;
   }
 }

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
@@ -78,6 +79,9 @@ export class NotificationsController {
     @Request() req: AuthenticatedRequest,
     @Body() body: EmitNotificationDto,
   ) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException('Endpoint disabled in production');
+    }
     return this.notificationsService.create(req.user.id, {
       type: body.type,
       title: body.title,

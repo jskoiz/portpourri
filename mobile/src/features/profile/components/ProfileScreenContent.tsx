@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Pressable, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Pressable, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { buildInfo } from '../../../config/buildInfo';
@@ -187,26 +187,13 @@ export function ProfileScreenContent({
             {profile.firstName}
             {profile.age ? `, ${profile.age}` : ''}
           </Text>
-          <View style={styles.intentBadge}>
-            <Text style={styles.intentBadgeText}>🏃 Active Mover</Text>
-          </View>
+          {primaryGoal ? (
+            <View style={styles.intentBadge}>
+              <Text style={styles.intentBadgeText}>🎯 {PRIMARY_GOAL_OPTIONS.find((o) => o.value === primaryGoal)?.label ?? primaryGoal}</Text>
+            </View>
+          ) : null}
           <Text style={styles.heroLocation}>📍 {profile.profile?.city || 'Location not set'}</Text>
-          <View style={styles.ambientStats}>
-            <View style={styles.ambientStat}>
-              <Text style={[styles.ambientStatNum, { color: '#C4A882' }]}>12</Text>
-              <Text style={styles.ambientStatLabel}>matches</Text>
-            </View>
-            <View style={styles.ambientStatDot} />
-            <View style={styles.ambientStat}>
-              <Text style={[styles.ambientStatNum, { color: '#8BAA7A' }]}>8</Text>
-              <Text style={styles.ambientStatLabel}>activities</Text>
-            </View>
-            <View style={styles.ambientStatDot} />
-            <View style={styles.ambientStat}>
-              <Text style={[styles.ambientStatNum, { color: '#C4A882' }]}>5</Text>
-              <Text style={styles.ambientStatLabel}>connections</Text>
-            </View>
-          </View>
+          {/* Stats: wire to real API data when available */}
         </View>
 
         <View style={styles.editBar}>
@@ -381,9 +368,9 @@ export function ProfileScreenContent({
         <View style={styles.section}>
           <Text style={styles.sectionEyebrow}>Settings</Text>
           <Card style={styles.settingsCard}>
-            <SettingsRow icon="👤" label="Account" onPress={() => undefined} />
+            <SettingsRow icon="👤" label="Account" onPress={() => Alert.alert('Coming Soon', 'This feature is not yet available.')} />
             <View style={styles.fieldDivider} />
-            <SettingsRow icon="🔒" label="Privacy" onPress={() => undefined} />
+            <SettingsRow icon="🔒" label="Privacy" onPress={() => Alert.alert('Coming Soon', 'This feature is not yet available.')} />
             <View style={styles.fieldDivider} />
             <SettingsRow icon="🔔" label="Notifications" onPress={() => navigation.navigate('Notifications')} />
             <View style={styles.fieldDivider} />

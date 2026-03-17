@@ -20,6 +20,9 @@ export function useChatThread(matchId: string) {
     queryFn: async () => (await matchesApi.getMessages(matchId)).data || [],
   });
 
+  const refetchRef = useRef(query.refetch);
+  refetchRef.current = query.refetch;
+
   const refresh = useCallback(async () => {
     await query.refetch();
   }, [query]);
@@ -39,7 +42,7 @@ export function useChatThread(matchId: string) {
     const startPolling = () => {
       if (!pollTimerRef.current) {
         pollTimerRef.current = setInterval(() => {
-          void query.refetch();
+          void refetchRef.current();
         }, 5000);
       }
     };
@@ -57,7 +60,7 @@ export function useChatThread(matchId: string) {
           }
         },
         onMessage: () => {
-          void query.refetch();
+          void refetchRef.current();
         },
         onError: () => {
           setConnectionStatus('fallback');
@@ -73,7 +76,7 @@ export function useChatThread(matchId: string) {
       disconnect();
       stopPolling();
     };
-  }, [matchId, query]);
+  }, [matchId]);
 
   const sendMessage = useMutation({
     mutationFn: async (text: string) => (await matchesApi.sendMessage(matchId, text)).data,

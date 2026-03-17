@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
-import { AuthProvider, Gender } from '@prisma/client';
+import { AuthProvider, Gender, Prisma } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { Gender as AppGender } from '../common/enums';
@@ -165,6 +165,45 @@ describe('AuthService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(prismaMock.user.create).not.toHaveBeenCalled();
+  });
+
+  it('throws BadRequestException when prisma.user.create hits a P2002 unique constraint error (race condition)', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    mockedHash.mockImplementation(() => Promise.resolve('hashed-password'));
+    const p2002Error = new Prisma.PrismaClientKnownRequestError(
+      'Unique constraint failed on the fields: (`email`,`auth_provider`)',
+      { code: 'P2002', clientVersion: '5.0.0' },
+    );
+    prismaMock.user.create.mockRejectedValue(p2002Error);
+
+    await expect(
+      service.signup({
+        email: 'race@example.com',
+        password: 'password123',
+        firstName: 'Race',
+        birthdate: '1995-02-03',
+        gender: AppGender.Woman,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prismaMock.user.create).toHaveBeenCalled();
+  });
+
+  it('re-throws non-P2002 errors from prisma.user.create', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    mockedHash.mockImplementation(() => Promise.resolve('hashed-password'));
+    const genericError = new Error('Connection lost');
+    prismaMock.user.create.mockRejectedValue(genericError);
+
+    await expect(
+      service.signup({
+        email: 'fail@example.com',
+        password: 'password123',
+        firstName: 'Fail',
+        birthdate: '1995-02-03',
+        gender: AppGender.Woman,
+      }),
+    ).rejects.toThrow('Connection lost');
   });
 
   it('rejects signup when the normalized email is blank', async () => {

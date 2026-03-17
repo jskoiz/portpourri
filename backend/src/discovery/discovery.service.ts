@@ -11,6 +11,7 @@ import {
   buildLikeReceivedNotification,
   buildMatchCreatedNotification,
 } from '../notifications/notification.templates';
+import { calculateAge } from '../common/age.util';
 import { deriveMatchClassification } from '../matches/match-classification';
 import {
   DISCOVERY_DISTANCE_SCORE_TIERS,
@@ -149,7 +150,7 @@ export class DiscoveryService {
 
     const scored = users
       .map((user) => {
-        const age = this.calculateAge(user.birthdate);
+        const age = calculateAge(user.birthdate) ?? 0;
         const distanceKm = this.calculateDistanceKm(
           me?.profile?.latitude,
           me?.profile?.longitude,
@@ -364,16 +365,6 @@ export class DiscoveryService {
     if (candidate.profile?.bio) score += DISCOVERY_SCORE_WEIGHTS.bio;
 
     return score;
-  }
-
-  private calculateAge(birthdate: Date): number {
-    const today = new Date();
-    let age = today.getFullYear() - birthdate.getFullYear();
-    const m = today.getMonth() - birthdate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthdate.getDate())) {
-      age--;
-    }
-    return age;
   }
 
   private calculateDistanceKm(
