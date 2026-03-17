@@ -12,10 +12,9 @@ function ChatBubble({ item, theme }: { item: ChatMessage; theme: Theme }) {
       style={[
         styles.bubble,
         isMe ? styles.bubbleMe : styles.bubbleThem,
-        isMe ? { backgroundColor: theme.primary } : { backgroundColor: theme.surface, borderColor: theme.border },
       ]}
     >
-      <Text style={[styles.bubbleText, { color: isMe ? theme.white : theme.textPrimary }]}>{item.text}</Text>
+      <Text style={[styles.bubbleText, { color: isMe ? '#FFFFFF' : '#2C2420' }]}>{item.text}</Text>
     </View>
   );
 }

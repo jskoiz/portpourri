@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import OnboardingScreen from '../OnboardingScreen';
 
 const mockUpdateFitness = jest.fn();
@@ -46,26 +46,36 @@ describe('OnboardingScreen', () => {
   } as any;
 
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     mockUpdateFitness.mockResolvedValue({ data: {} });
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const pressAndAdvance = (label: string) => {
+    fireEvent.press(screen.getByText(label));
+    act(() => { jest.advanceTimersByTime(400); });
+  };
+
   it('submits canonical discovery intensity values for high-frequency onboarding choices', async () => {
     render(<OnboardingScreen navigation={navigation} route={route} />);
 
-    fireEvent.press(screen.getByText('Get started'));
-    fireEvent.press(screen.getByText('Continue'));
+    pressAndAdvance('Get started');
+    pressAndAdvance('Continue');
     fireEvent.press(screen.getByText('Lifting'));
-    fireEvent.press(screen.getByText('Continue'));
+    pressAndAdvance('Continue');
     fireEvent.press(screen.getByText('5–6x'));
-    fireEvent.press(screen.getByText('Continue'));
+    pressAndAdvance('Continue');
     fireEvent.press(screen.getByText('Gym'));
-    fireEvent.press(screen.getByText('Continue'));
+    pressAndAdvance('Continue');
     fireEvent.press(screen.getByText('Morning'));
-    fireEvent.press(screen.getByText('Continue'));
+    pressAndAdvance('Continue');
     fireEvent.press(screen.getByText('1-on-1'));
-    fireEvent.press(screen.getByText('Continue'));
-    fireEvent.press(screen.getByText('Looks good'));
+    pressAndAdvance('Continue');
+    pressAndAdvance('Looks good');
     fireEvent.press(screen.getByText('Meet them now'));
 
     await waitFor(() => {

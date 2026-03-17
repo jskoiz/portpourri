@@ -50,7 +50,7 @@ export const exploreStyles = StyleSheet.create({
   categoriesScroll: { marginBottom: spacing.md },
   categoriesRow: { paddingHorizontal: CARD_PADDING, gap: spacing.sm, paddingRight: CARD_PADDING },
   categoryPill: { paddingHorizontal: 15, paddingVertical: 7, borderRadius: radii.pill },
-  categoryPillActive: { backgroundColor: PRIMARY + '14' },
+  categoryPillActive: { backgroundColor: '#1A1A1A' },
   categoryPillInactive: { backgroundColor: 'rgba(0,0,0,0.06)' },
   categoryPillText: { fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
   sheetSectionLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 2, textTransform: 'uppercase', color: TEXT_MUTED, marginBottom: spacing.md },

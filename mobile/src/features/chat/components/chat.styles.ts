@@ -30,12 +30,25 @@ export const chatStyles = StyleSheet.create({
   bubble: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
-    borderRadius: radii.lg,
+    borderRadius: 20,
     marginBottom: spacing.sm,
     maxWidth: '82%',
   },
-  bubbleMe: { alignSelf: 'flex-end', borderBottomRightRadius: 4 },
-  bubbleThem: { alignSelf: 'flex-start', borderBottomLeftRadius: 4 },
+  bubbleMe: {
+    alignSelf: 'flex-end',
+    borderBottomRightRadius: 6,
+    backgroundColor: '#3D3530',
+  },
+  bubbleThem: {
+    alignSelf: 'flex-start',
+    borderBottomLeftRadius: 6,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#B0A89E',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
   bubbleText: { fontSize: typography.body, lineHeight: 22 },
   statusNote: { textAlign: 'center', fontSize: typography.caption, paddingVertical: spacing.xs },
   errorNote: {

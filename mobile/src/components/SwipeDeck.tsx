@@ -54,7 +54,6 @@ const SwipeDeckCard = ({ cardHeight, onPress, user }: SwipeDeckCardProps) => {
   const presenceLabel = getPresenceLabel(user);
   const alignmentLabel = getAlignmentLabel(user.recommendationScore);
   const tempoLabel = getTempoLabel(user);
-  const activityLabel = user.fitnessProfile?.favoriteActivities?.split(',')[0]?.trim() || 'Movement';
 
   return (
     <TouchableOpacity
@@ -120,9 +119,6 @@ const SwipeDeckCard = ({ cardHeight, onPress, user }: SwipeDeckCardProps) => {
             ultraCompact && styles.bottomShellUltraCompact,
           ]}
         >
-          {!ultraCompact ? (
-            <Text style={styles.eyebrow}>{activityLabel.toUpperCase()} / CURATED MATCH</Text>
-          ) : null}
           <Text style={[styles.name, compact && styles.nameCompact]}>
             {user.firstName || 'Someone'}
             {user.age ? `, ${user.age}` : ''}
@@ -393,13 +389,6 @@ const styles = StyleSheet.create({
   bottomShellUltraCompact: {
     paddingBottom: spacing.sm,
     paddingTop: spacing.xxl + spacing.md,
-  },
-  eyebrow: {
-    fontSize: 10,
-    color: '#8C8279',
-    fontWeight: '700',
-    letterSpacing: 2.0,
-    marginBottom: spacing.sm,
   },
   name: {
     fontSize: 30,

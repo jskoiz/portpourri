@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, Pressable, RefreshControl, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import type { Match } from '../api/types';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import { StatePanel } from '../design/primitives';
 import { radii, spacing, typography } from '../theme/tokens';
+import { fontFamily } from '../lib/fonts';
 import { useMatches } from '../features/matches/hooks/useMatches';
 import type { MainTabScreenProps } from '../core/navigation/types';
 import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
@@ -45,66 +46,45 @@ function getUserAccent(name?: string): string {
   return ACCENTS[idx];
 }
 
-// ─── Match Row ────────────────────────────────────────────────────────────────
-function MatchRow({ item, onPress }: { item: Match; onPress: () => void }) {
-  // Safe default until the API provides unread tracking (e.g. unreadCount / lastReadAt)
-  const hasUnread = false;
-  const activityTag = getActivityTag(item.user);
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const GRID_GAP = 12;
+const GRID_PADDING = spacing.xxl;
+const CARD_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP) / 2;
+
+// ─── Match Card (photo-forward grid) ─────────────────────────────────────────
+function MatchCard({ item, onPress }: { item: Match; onPress: () => void }) {
   const accent = getUserAccent(item.user.firstName);
   const photoUrl = getPrimaryPhotoUri(item.user);
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.row, { opacity: pressed ? 0.85 : 1, minHeight: 56 }]}
+      style={({ pressed }) => [styles.card, { opacity: pressed ? 0.9 : 1 }]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Conversation with ${item.user.firstName || 'Match'}. ${item.lastMessage || 'No messages yet'}`}
       accessibilityHint="Tap to open conversation"
     >
-      {/* Avatar */}
-      <View style={styles.avatarWrapper}>
-        {photoUrl ? (
-          <Image
-            source={{ uri: photoUrl }}
-            style={[styles.avatar, { borderColor: hasUnread ? accent : BORDER }]}
-            contentFit="cover"
-            accessibilityLabel={`Photo of ${item.user.firstName || 'match'}`}
-          />
-        ) : (
-          <View
-            style={[
-              styles.avatar,
-              styles.avatarFallback,
-              { backgroundColor: accent + '22', borderColor: hasUnread ? accent : BORDER },
-            ]}
-          >
-            <Text style={[styles.avatarInitial, { color: accent }]}>
-              {getAvatarInitial(item.user.firstName)}
-            </Text>
-          </View>
-        )}
-        {hasUnread && (
-          <View style={[styles.avatarUnreadDot, { backgroundColor: accent, borderColor: BASE }]} />
-        )}
-      </View>
-
-      {/* Text content */}
-      <View style={styles.rowContent}>
-        <View style={styles.nameRow}>
-          <Text style={styles.name}>{item.user.firstName || 'Match'}</Text>
-          <Text style={styles.timestamp}>{timeAgo(item.createdAt as string)}</Text>
+      {photoUrl ? (
+        <Image
+          source={{ uri: photoUrl }}
+          style={styles.cardImage}
+          contentFit="cover"
+          accessibilityLabel={`Photo of ${item.user.firstName || 'match'}`}
+        />
+      ) : (
+        <View style={[styles.cardImage, styles.cardImageFallback, { backgroundColor: accent + '22' }]}>
+          <Text style={[styles.cardFallbackInitial, { color: accent }]}>
+            {getAvatarInitial(item.user.firstName)}
+          </Text>
         </View>
-        <Text style={styles.lastMsg} numberOfLines={1}>
-          {item.lastMessage || 'Start the conversation'}
-        </Text>
+      )}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.55)']}
+        style={styles.cardGradient}
+      />
+      <View style={styles.cardOverlay}>
+        <Text style={styles.cardName} numberOfLines={1}>{item.user.firstName || 'Match'}</Text>
       </View>
-
-      {/* Activity tag */}
-      {activityTag ? (
-        <View style={[styles.activityTag, { backgroundColor: accent + '18', borderColor: accent + '40' }]}>
-          <Text style={[styles.activityTagText, { color: accent }]}>{activityTag}</Text>
-        </View>
-      ) : null}
     </Pressable>
   );
 }
@@ -159,11 +139,14 @@ export default function MatchesScreen() {
       ) : (
         <FlashList
           data={matches}
-          renderItem={({ item }) =>
-            <MatchRow
-              item={item}
-              onPress={() => navigation.navigate('Chat', { matchId: item.id, user: item.user })}
-            />
+          numColumns={2}
+          renderItem={({ item, index }) =>
+            <View style={{ marginRight: index % 2 === 0 ? GRID_GAP : 0, marginBottom: GRID_GAP }}>
+              <MatchCard
+                item={item}
+                onPress={() => navigation.navigate('Chat', { matchId: item.id, user: item.user })}
+              />
+            </View>
           }
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
@@ -213,8 +196,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: '900',
-    letterSpacing: -1.5,
+    fontFamily: fontFamily.serifBold,
+    letterSpacing: -0.5,
     color: TEXT_PRIMARY,
     lineHeight: 36,
     marginBottom: spacing.md,
@@ -234,85 +217,55 @@ const styles = StyleSheet.create({
     color: PRIMARY,
   },
   list: {
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: GRID_PADDING,
     paddingBottom: 80,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  card: {
+    width: CARD_WIDTH,
+    height: CARD_WIDTH * 1.3,
+    borderRadius: 18,
+    overflow: 'hidden',
     backgroundColor: SURFACE,
-    padding: spacing.md,
-    marginBottom: 10,
-    borderRadius: 22,
-    borderWidth: 0,
-    gap: spacing.md,
     shadowColor: '#000',
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 12,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
-  avatarWrapper: {
-    position: 'relative',
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
-  },
-  avatarFallback: {
+  cardImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    borderRadius: 18,
+  } as any,
+  cardImageFallback: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarInitial: {
-    fontSize: typography.h3,
+  cardFallbackInitial: {
+    fontSize: 36,
     fontWeight: '900',
   },
-  avatarUnreadDot: {
+  cardGradient: {
     position: 'absolute',
-    bottom: 1,
-    right: 1,
-    width: 13,
-    height: 13,
-    borderRadius: 7,
-    borderWidth: 2,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '45%',
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
   },
-  rowContent: {
-    flex: 1,
+  cardOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: spacing.md,
   },
-  nameRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 3,
-  },
-  name: {
+  cardName: {
     fontSize: typography.body,
-    fontWeight: '700',
-    color: TEXT_PRIMARY,
-    letterSpacing: -0.2,
-  },
-  timestamp: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: TEXT_MUTED,
-  },
-  lastMsg: {
-    fontSize: typography.bodySmall,
-    lineHeight: 20,
-    color: TEXT_SECONDARY,
-  },
-  activityTag: {
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    flexShrink: 0,
-  },
-  activityTagText: {
-    fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.2,
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
   },
 });

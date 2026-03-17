@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import AppIcon from '../../../components/ui/AppIcon';
 import AppNotificationButton from '../../../components/ui/AppNotificationButton';
+import { fontFamily } from '../../../lib/fonts';
 import { exploreStyles as styles } from './explore.styles';
 
 export function ExploreHero({
@@ -18,7 +19,7 @@ export function ExploreHero({
       <View style={styles.heroHeaderRow}>
         <View style={styles.heroCopy}>
           <Text style={styles.heroEyebrow}>EXPLORE</Text>
-          <Text style={styles.heroTitle}>What&apos;s{'\n'}nearby.</Text>
+          <Text style={[styles.heroTitle, { fontFamily: fontFamily.serifBold, letterSpacing: -0.5 }]}>What&apos;s{'\n'}nearby.</Text>
           <Text style={styles.heroSubtitle}>Events, spots, and people near you.</Text>
         </View>
         <AppNotificationButton

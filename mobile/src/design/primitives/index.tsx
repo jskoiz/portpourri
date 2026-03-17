@@ -66,10 +66,10 @@ export function Button({
   const isGlass = variant === 'glass' || variant === 'glassProminent';
 
   const handlePressIn = () => {
-    Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, speed: 60, bounciness: 2 }).start();
+    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
   };
   const handlePressOut = () => {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 4 }).start();
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
   };
 
   const getContainerStyle = (): ViewStyle => {
@@ -193,20 +193,41 @@ export function Card({
   accent,
   children,
   imageUri,
+  onPress,
   style,
   testID,
   variant = 'default',
 }: PropsWithChildren<{
   accent?: string;
   imageUri?: string;
+  onPress?: () => void;
   style?: StyleProp<ViewStyle>;
   testID?: string;
   variant?: CardVariant;
 }>) {
   const theme = useTheme();
+  const cardScale = useRef(new Animated.Value(1)).current;
+
+  const handleCardPressIn = () => {
+    Animated.spring(cardScale, { toValue: 0.985, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
+  };
+  const handleCardPressOut = () => {
+    Animated.spring(cardScale, { toValue: 1, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
+  };
+
+  const wrapInteractive = (content: React.ReactElement) => {
+    if (!onPress) return content;
+    return (
+      <Pressable onPress={onPress} onPressIn={handleCardPressIn} onPressOut={handleCardPressOut}>
+        <Animated.View style={{ transform: [{ scale: cardScale }] }}>
+          {content}
+        </Animated.View>
+      </Pressable>
+    );
+  };
 
   if (variant === 'imageCard' && imageUri) {
-    return (
+    return wrapInteractive(
       <ImageBackground testID={testID} source={{ uri: imageUri }} style={[primitiveStyles.card, primitiveStyles.imageCard, style]} imageStyle={{ borderRadius: radii.lg }}>
         <View style={primitiveStyles.imageOverlay}>{children}</View>
       </ImageBackground>
@@ -215,7 +236,7 @@ export function Card({
 
   // Glass variant uses GlassView for real blur
   if (variant === 'glass') {
-    return (
+    return wrapInteractive(
       <GlassView testID={testID} tier="light" borderRadius={radii.lg} style={[primitiveStyles.cardGlass, style]}>
         {accent ? <View style={[primitiveStyles.accentStrip, { backgroundColor: accent }]} /> : null}
         <View style={primitiveStyles.accentContent}>{children}</View>
@@ -228,7 +249,7 @@ export function Card({
     ...(variant === 'elevated' ? shadows.medium : variant === 'flat' ? {} : shadows.soft),
   };
 
-  return (
+  return wrapInteractive(
     <View testID={testID} style={[primitiveStyles.card, baseStyle, style]}>
       {accent ? <View style={[primitiveStyles.accentStrip, { backgroundColor: accent }]} /> : null}
       <View style={primitiveStyles.accentContent}>{children}</View>

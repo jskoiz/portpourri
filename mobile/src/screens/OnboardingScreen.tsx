@@ -21,6 +21,7 @@ import AppIcon from '../components/ui/AppIcon';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
+import { fontFamily } from '../lib/fonts';
 import { type SessionIntent } from '../types/sessionIntent';
 import type { RootStackScreenProps } from '../core/navigation/types';
 import { onboardingSchema } from '../features/onboarding/schema';
@@ -135,14 +136,32 @@ export default function OnboardingScreen({
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const pulseLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
+  // Fade transition between steps
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
   const progress = (step + 1) / TOTAL_STEPS;
 
+  const transitionToStep = (nextStep: number) => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => {
+      setStep(nextStep);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+  };
+
   const goNext = () => {
-    if (step < TOTAL_STEPS - 1) setStep((s) => s + 1);
+    if (step < TOTAL_STEPS - 1) transitionToStep(step + 1);
   };
 
   const goBack = () => {
-    if (step > 0) setStep((s) => s - 1);
+    if (step > 0) transitionToStep(step - 1);
     else if (navigation.canGoBack()) navigation.goBack();
   };
 
@@ -668,7 +687,9 @@ export default function OnboardingScreen({
         <Text style={[styles.chapterLabel, { color: theme.accent }]}>{STEP_CHAPTERS[step]}</Text>
       </View>
 
-      {renderStep()}
+      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+        {renderStep()}
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -770,8 +791,8 @@ const styles = StyleSheet.create({
 
   stepHeadline: {
     fontSize: 34,
-    fontWeight: '800',
-    letterSpacing: -1,
+    fontFamily: fontFamily.serifBold,
+    letterSpacing: -0.5,
     lineHeight: 40,
     marginBottom: spacing.sm,
   },
@@ -802,8 +823,8 @@ const styles = StyleSheet.create({
   },
   welcomeHeadline: {
     fontSize: 42,
-    fontWeight: '900',
-    letterSpacing: -1.4,
+    fontFamily: fontFamily.serifBold,
+    letterSpacing: -1.0,
     lineHeight: 48,
   },
   welcomeBody: {

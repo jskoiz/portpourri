@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert, Image, Pressable, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { buildInfo } from '../../../config/buildInfo';
@@ -163,36 +164,33 @@ export function ProfileScreenContent({
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.heroBg} pointerEvents="none" />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor="#C4A882" />}
       >
         <View style={styles.hero}>
-          <View style={styles.avatarGlowWrap}>
-            <LinearGradient colors={['#C4A882', '#B8A9C4']} style={styles.avatarGlowRing}>
-              <View style={styles.avatarInnerWrap}>
-                {primaryPhoto ? (
-                  <Image source={{ uri: primaryPhoto }} style={styles.avatar} accessibilityLabel={`Your profile photo`} />
-                ) : (
-                  <View style={styles.avatarFallback}>
-                    <Text style={styles.avatarFallbackText}>{getAvatarInitial(profile.firstName)}</Text>
-                  </View>
-                )}
-              </View>
+          <View style={styles.heroPhotoWrap}>
+            {primaryPhoto ? (
+              <Image source={{ uri: primaryPhoto }} style={styles.heroPhoto} contentFit="cover" accessibilityLabel="Your profile photo" />
+            ) : (
+              <LinearGradient colors={['#C4A882', '#B8A9C4']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroFallback}>
+                <Text style={styles.heroFallbackText}>{getAvatarInitial(profile.firstName)}</Text>
+              </LinearGradient>
+            )}
+            <LinearGradient colors={['transparent', '#FDFBF8']} style={styles.heroOverlay}>
+              <Text style={styles.heroName}>
+                {profile.firstName}
+                {profile.age ? `, ${profile.age}` : ''}
+              </Text>
+              {primaryGoal ? (
+                <View style={styles.intentBadge}>
+                  <Text style={styles.intentBadgeText}>{PRIMARY_GOAL_OPTIONS.find((o) => o.value === primaryGoal)?.label ?? primaryGoal}</Text>
+                </View>
+              ) : null}
+              <Text style={styles.heroLocation}>{profile.profile?.city || 'Location not set'}</Text>
             </LinearGradient>
           </View>
-          <Text style={styles.heroName}>
-            {profile.firstName}
-            {profile.age ? `, ${profile.age}` : ''}
-          </Text>
-          {primaryGoal ? (
-            <View style={styles.intentBadge}>
-              <Text style={styles.intentBadgeText}>{PRIMARY_GOAL_OPTIONS.find((o) => o.value === primaryGoal)?.label ?? primaryGoal}</Text>
-            </View>
-          ) : null}
-          <Text style={styles.heroLocation}>{profile.profile?.city || 'Location not set'}</Text>
           <View style={styles.ambientStats}>
             <View style={styles.ambientStat}>
               <Text style={[styles.ambientStatNum, { color: '#C4A882' }]}>12</Text>

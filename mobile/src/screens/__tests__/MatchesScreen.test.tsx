@@ -111,8 +111,8 @@ describe('MatchesScreen', () => {
 
     render(<MatchesScreen />);
 
-    const thread = await screen.findByText('Want to lift tonight?');
-    fireEvent.press(thread);
+    const card = await screen.findByText('Kai');
+    fireEvent.press(card);
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('Chat', {

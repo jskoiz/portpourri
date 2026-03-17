@@ -14,6 +14,7 @@ import AppBackdrop from '../components/ui/AppBackdrop';
 import { Button, GlassView, Input } from '../design/primitives';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
+import { fontFamily } from '../lib/fonts';
 // radii is used in JSX
 import { loginSchema, type LoginFormValues } from '../features/auth/schema';
 import type { RootStackScreenProps } from '../core/navigation/types';
@@ -236,8 +237,8 @@ const styles = StyleSheet.create({
   },
   headline: {
     fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -1,
+    fontFamily: fontFamily.serifBold,
+    letterSpacing: -0.5,
     lineHeight: 34,
     marginBottom: spacing.md,
   },
