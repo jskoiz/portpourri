@@ -107,7 +107,7 @@ jest.mock('@react-native-community/datetimepicker', () => {
     return (
       <Pressable
         accessibilityRole="button"
-        onPress={() => props.onChange?.({ type: 'set' }, new Date('1995-02-03T00:00:00.000Z'))}
+        onPress={() => props.onChange?.({ type: 'set' }, new Date(1995, 1, 3, 12, 0, 0, 0))}
       >
         <Text>{props.testID || 'mock-date-picker'}</Text>
       </Pressable>
