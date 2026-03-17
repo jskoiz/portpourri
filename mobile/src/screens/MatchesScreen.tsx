@@ -47,7 +47,8 @@ function getUserAccent(name?: string): string {
 
 // ─── Match Row ────────────────────────────────────────────────────────────────
 function MatchRow({ item, onPress }: { item: Match; onPress: () => void }) {
-  const hasUnread = !!item.lastMessage;
+  // Safe default until the API provides unread tracking (e.g. unreadCount / lastReadAt)
+  const hasUnread = false;
   const activityTag = getActivityTag(item.user);
   const accent = getUserAccent(item.user.firstName);
   const photoUrl = getPrimaryPhotoUri(item.user);
