@@ -21,20 +21,20 @@ import AppIcon from '../components/ui/AppIcon';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import { Button, Screen, StatePanel } from '../design/primitives';
 import { useTheme } from '../theme/useTheme';
-import { radii, spacing, typography } from '../theme/tokens';
+import { lightTheme, radii, spacing, typography } from '../theme/tokens';
 import { type SessionIntent } from '../types/sessionIntent';
 import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const HERO_HEIGHT = 420;
 
-const BASE = '#FDFBF8';
-const SURFACE = '#FFFFFF';
-const PRIMARY = '#C4A882';
-const ACCENT = '#8BAA7A';
-const BORDER = '#E8E2DA';
-const TEXT_PRIMARY = '#2C2420';
-const TEXT_MUTED = '#B0A89E';
+const BASE = lightTheme.background;
+const SURFACE = lightTheme.surface;
+const PRIMARY = lightTheme.primary;
+const ACCENT = lightTheme.success;
+const BORDER = lightTheme.border;
+const TEXT_PRIMARY = lightTheme.textPrimary;
+const TEXT_MUTED = lightTheme.textMuted;
 
 export default function ProfileDetailScreen() {
   const theme = useTheme();

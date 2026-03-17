@@ -39,6 +39,9 @@ export const lightTheme = {
   success: '#8BAA7A',
   warning: '#C4A882',
 
+  // Button
+  buttonPrimary: '#1A1A1A',
+
   // Fixed
   white: '#FFFFFF',
   black: '#000000',

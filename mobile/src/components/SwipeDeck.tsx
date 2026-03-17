@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Swiper from 'react-native-deck-swiper';
@@ -56,10 +56,9 @@ const SwipeDeckCard = ({ cardHeight, onPress, user }: SwipeDeckCardProps) => {
   const tempoLabel = getTempoLabel(user);
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.96}
+    <Pressable
       onPress={onPress}
-      style={[styles.card, { height: cardHeight }]}
+      style={({ pressed }) => [styles.card, { height: cardHeight, opacity: pressed ? 0.96 : 1 }]}
       accessibilityRole="button"
       accessibilityLabel={`View profile of ${user.firstName || 'Someone'}${user.age ? `, age ${user.age}` : ''}`}
       accessibilityHint="Tap to view full profile. Swipe right to like, swipe left to pass."
@@ -141,7 +140,7 @@ const SwipeDeckCard = ({ cardHeight, onPress, user }: SwipeDeckCardProps) => {
           </View>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 

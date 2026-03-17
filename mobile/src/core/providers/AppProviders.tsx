@@ -16,7 +16,7 @@ initSentry();
 export function AppProviders({ children }: PropsWithChildren) {
   return (
     <ErrorBoundary>
-      <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
+      <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
         <SafeAreaProvider>
           <GestureHandlerRootView
             style={{ flex: 1, backgroundColor: colors.background }}

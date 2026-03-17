@@ -16,17 +16,16 @@ import type { MainTabScreenProps } from '../core/navigation/types';
 import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
 import { getActivityTag } from '../lib/profile-helpers';
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
+// ─── Design Tokens (reactive via useTheme() in components) ───────────────────
+import { useTheme } from '../theme/useTheme';
 import { lightTheme } from '../theme/tokens';
 
+// Static references for StyleSheet (module-level); components use useTheme() for reactivity
 const BASE = lightTheme.background;
 const SURFACE = lightTheme.surface;
-const BORDER = lightTheme.border;
 const PRIMARY = lightTheme.primary;
 const ACCENT = lightTheme.accent;
 const TEXT_PRIMARY = lightTheme.textPrimary;
-const TEXT_SECONDARY = lightTheme.textSecondary;
-const TEXT_MUTED = lightTheme.textMuted;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function timeAgo(timestamp?: string) {
@@ -91,6 +90,7 @@ function MatchCard({ item, onPress }: { item: Match; onPress: () => void }) {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function MatchesScreen() {
+  const theme = useTheme();
   const navigation = useNavigation<MainTabScreenProps<'Inbox'>['navigation']>();
   const { error, isLoading: loading, isRefetching, matches, refetch } =
     useMatches();
@@ -140,6 +140,7 @@ export default function MatchesScreen() {
         <FlashList
           data={matches}
           numColumns={2}
+          overrideProps={{ estimatedItemSize: 200 }}
           renderItem={({ item, index }) =>
             <View style={{ marginRight: index % 2 === 0 ? GRID_GAP : 0, marginBottom: GRID_GAP }}>
               <MatchCard
@@ -157,7 +158,7 @@ export default function MatchesScreen() {
               onRefresh={() => {
                 void refetch();
               }}
-              tintColor={PRIMARY}
+              tintColor={theme.primary}
             />
           }
         />

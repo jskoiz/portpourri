@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
-import { radii } from '../../theme/tokens';
+import { lightTheme, radii } from '../../theme/tokens';
 import AppIcon from './AppIcon';
 
 interface AppNotificationButtonProps {
@@ -30,7 +30,7 @@ export default function AppNotificationButton({
         style,
       ]}
     >
-      <AppIcon name="bell" size={16} color="#2C2420" />
+      <AppIcon name="bell" size={16} color={theme.textPrimary} />
       {unreadCount > 0 ? (
         <View style={[styles.badge, { backgroundColor: theme.accent }]}>
           <Text style={styles.badgeLabel}>{badgeLabel}</Text>
@@ -45,10 +45,10 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radii.pill,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: lightTheme.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
+    shadowColor: lightTheme.shadowColor,
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
@@ -70,6 +70,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 12,
     letterSpacing: 0.2,
-    color: '#FFFFFF',
+    color: lightTheme.white,
   },
 });
