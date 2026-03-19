@@ -298,6 +298,9 @@ EOF
         MARKETING_VERSION="$APP_VERSION" \
         CURRENT_PROJECT_VERSION="$IOS_BUILD_NUMBER"
 
+      MAIN_BUNDLE_PATH="$ARCHIVE_PATH/Products/Applications/${XCODE_SCHEME}.app/main.jsbundle"
+      [[ -f "$MAIN_BUNDLE_PATH" ]] || fail "archive is missing main.jsbundle at $MAIN_BUNDLE_PATH"
+
       run_xcodebuild_with_auth \
         -exportArchive \
         -archivePath "$ARCHIVE_PATH" \
