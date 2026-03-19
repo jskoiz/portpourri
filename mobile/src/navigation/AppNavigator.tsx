@@ -1,5 +1,9 @@
 import React, { useEffect, useRef } from "react";
-import { AppState, type AppStateStatus } from "react-native";
+import {
+  AppState,
+  InteractionManager,
+  type AppStateStatus,
+} from "react-native";
 import {
   DefaultTheme,
   NavigationContainer,
@@ -20,6 +24,7 @@ import EventDetailScreen from "../screens/EventDetailScreen";
 import MyEventsScreen from "../screens/MyEventsScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
 import { refreshUserLocation } from "../lib/location";
+import { getLastNotificationResponseSafe } from "../lib/pushNotifications";
 
 import MainTabNavigator from "./MainTabNavigator";
 import { setUnauthorizedHandler } from "../api/authSession";
@@ -114,19 +119,21 @@ export default function AppNavigator() {
     if (!token) return;
 
     let cancelled = false;
-
-    Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (cancelled || !response) return;
-      const data = response.notification.request.content.data as unknown as
-        | NotificationData
-        | undefined;
-      if (data && navigationRef.current) {
-        handleNotificationNavigation(data, navigationRef.current);
-      }
+    const task = InteractionManager.runAfterInteractions(() => {
+      getLastNotificationResponseSafe().then((response) => {
+        if (cancelled || !response) return;
+        const data = response.notification.request.content.data as unknown as
+          | NotificationData
+          | undefined;
+        if (data && navigationRef.current) {
+          handleNotificationNavigation(data, navigationRef.current);
+        }
+      });
     });
 
     return () => {
       cancelled = true;
+      task.cancel();
     };
   }, [token]);
 
@@ -134,17 +141,27 @@ export default function AppNavigator() {
   useEffect(() => {
     if (!token) return;
 
-    // Fire once on mount (login / app launch).
-    void refreshUserLocation();
+    const safeRefreshUserLocation = () => {
+      refreshUserLocation().catch((error) => {
+        console.warn("[location] Failed to refresh user location:", error);
+      });
+    };
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      safeRefreshUserLocation();
+    });
 
     const handleAppStateChange = (nextState: AppStateStatus) => {
       if (nextState === "active") {
-        void refreshUserLocation();
+        safeRefreshUserLocation();
       }
     };
 
     const subscription = AppState.addEventListener("change", handleAppStateChange);
-    return () => subscription.remove();
+    return () => {
+      task.cancel();
+      subscription.remove();
+    };
   }, [token]);
 
   if (isLoading) {

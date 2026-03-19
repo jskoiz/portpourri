@@ -4,17 +4,24 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import client from '../api/client';
 
-/**
- * Configure how notifications are presented when the app is in the foreground.
- */
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+let notificationHandlerConfigured = false;
+
+export function configureNotificationHandler(): void {
+  if (notificationHandlerConfigured) {
+    return;
+  }
+
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+
+  notificationHandlerConfigured = true;
+}
 
 /**
  * Request notification permissions from the user.
@@ -118,5 +125,14 @@ export async function registerForPushNotifications(): Promise<void> {
     await registerPushToken(token);
   } catch (error) {
     console.warn('Failed to register push token with backend:', error);
+  }
+}
+
+export async function getLastNotificationResponseSafe() {
+  try {
+    return await Notifications.getLastNotificationResponseAsync();
+  } catch (error) {
+    console.warn('Failed to read last notification response:', error);
+    return null;
   }
 }
