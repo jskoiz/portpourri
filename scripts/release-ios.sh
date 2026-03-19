@@ -36,18 +36,50 @@ run_eas() {
   npx -y eas-cli "$@"
 }
 
+detect_apple_team_id() {
+  node -e '
+    const fs = require("fs");
+    const path = require("path");
+    const easPath = path.join(process.argv[1], "eas.json");
+    try {
+      const eas = JSON.parse(fs.readFileSync(easPath, "utf8"));
+      const teamId = eas?.submit?.production?.ios?.appleTeamId ?? "";
+      process.stdout.write(teamId.trim());
+    } catch {
+      process.stdout.write("");
+    }
+  ' "$MOBILE_DIR"
+}
+
 detect_xcode_container() {
-  if [[ -d "$IOS_DIR/mobile.xcworkspace" ]]; then
-    echo "workspace:$IOS_DIR/mobile.xcworkspace"
+  local workspace_path
+  workspace_path="$(
+    find "$IOS_DIR" -maxdepth 1 -type d -name '*.xcworkspace' ! -name 'project.xcworkspace' | sort | head -n 1
+  )"
+
+  if [[ -n "$workspace_path" ]]; then
+    echo "workspace:$workspace_path"
     return
   fi
 
-  if [[ -d "$IOS_DIR/mobile.xcodeproj" ]]; then
-    echo "project:$IOS_DIR/mobile.xcodeproj"
+  local project_path
+  project_path="$(
+    find "$IOS_DIR" -maxdepth 1 -type d -name '*.xcodeproj' | sort | head -n 1
+  )"
+
+  if [[ -n "$project_path" ]]; then
+    echo "project:$project_path"
     return
   fi
 
   fail "unable to locate Xcode project or workspace under $IOS_DIR"
+}
+
+detect_xcode_scheme() {
+  local container_path="$1"
+  local container_name
+  container_name="$(basename "$container_path")"
+  echo "${container_name%.*}"
 }
 
 load_env_file() {
@@ -116,11 +148,18 @@ export BRDG_RELEASE_PROFILE="$PROFILE"
 export APP_VERSION="${APP_VERSION:-1.0.0}"
 export IOS_BUILD_NUMBER="${IOS_BUILD_NUMBER:-}"
 export IOS_BUNDLE_IDENTIFIER="${IOS_BUNDLE_IDENTIFIER:-}"
+export IOS_DEVELOPMENT_TEAM="${IOS_DEVELOPMENT_TEAM:-$(detect_apple_team_id)}"
 export EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-}"
 
 [[ -n "$IOS_BUILD_NUMBER" ]] || fail "IOS_BUILD_NUMBER must be set before running a release"
 [[ -n "$IOS_BUNDLE_IDENTIFIER" ]] || fail "IOS_BUNDLE_IDENTIFIER must be set before running a release"
 [[ -n "$EXPO_PUBLIC_API_URL" ]] || fail "EXPO_PUBLIC_API_URL must be set before running a release"
+if [[ "$MODE" == "xcode" ]]; then
+  [[ -n "$IOS_DEVELOPMENT_TEAM" ]] || fail "IOS_DEVELOPMENT_TEAM is required for xcode releases when mobile/eas.json does not define submit.production.ios.appleTeamId"
+  if [[ -z "${SENTRY_ALLOW_FAILURE:-}" && ( -z "${SENTRY_ORG:-}" || -z "${SENTRY_PROJECT:-}" || -z "${SENTRY_AUTH_TOKEN:-}" ) ]]; then
+    export SENTRY_ALLOW_FAILURE=true
+  fi
+fi
 
 echo "release-ios: running repo validation"
 (
@@ -159,8 +198,15 @@ case "$MODE" in
     )
     ;;
   xcode)
+    echo "release-ios: regenerating Expo iOS project"
+    (
+      cd "$MOBILE_DIR"
+      npx expo prebuild --clean -p ios --npm
+    )
+
     IFS=":" read -r XCODE_CONTAINER_KIND XCODE_CONTAINER_PATH <<<"$(detect_xcode_container)"
-    ARCHIVE_PATH="$MOBILE_DIR/build/BRDG.xcarchive"
+    XCODE_SCHEME="$(detect_xcode_scheme "$XCODE_CONTAINER_PATH")"
+    ARCHIVE_PATH="$MOBILE_DIR/build/${XCODE_SCHEME}.xcarchive"
     EXPORT_PATH="$MOBILE_DIR/build/ios-export"
     EXPORT_OPTIONS_PATH="$MOBILE_DIR/build/ios-export-options.plist"
     XCODE_TARGET_ARGS=()
@@ -197,12 +243,13 @@ EOF
       cd "$MOBILE_DIR"
       xcodebuild \
         "${XCODE_TARGET_ARGS[@]}" \
-        -scheme mobile \
+        -scheme "$XCODE_SCHEME" \
         -configuration Release \
         -destination 'generic/platform=iOS' \
         archive \
         -archivePath "$ARCHIVE_PATH" \
         PRODUCT_BUNDLE_IDENTIFIER="$IOS_BUNDLE_IDENTIFIER" \
+        DEVELOPMENT_TEAM="$IOS_DEVELOPMENT_TEAM" \
         MARKETING_VERSION="$APP_VERSION" \
         CURRENT_PROJECT_VERSION="$IOS_BUILD_NUMBER" \
         -allowProvisioningUpdates
@@ -212,6 +259,7 @@ EOF
         -archivePath "$ARCHIVE_PATH" \
         -exportPath "$EXPORT_PATH" \
         -exportOptionsPlist "$EXPORT_OPTIONS_PATH" \
+        DEVELOPMENT_TEAM="$IOS_DEVELOPMENT_TEAM" \
         -allowProvisioningUpdates
     )
     ;;

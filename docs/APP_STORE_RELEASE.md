@@ -22,8 +22,10 @@ Copy [`mobile/.env.example`](../mobile/.env.example) into your local env or EAS 
 
 - `EXPO_PUBLIC_API_URL` with the production backend origin
 - `IOS_BUNDLE_IDENTIFIER` with the App Store bundle ID reserved in Apple Developer
+- `IOS_DEVELOPMENT_TEAM` only if the local Xcode release should override the Apple team id already stored in [`mobile/eas.json`](../mobile/eas.json)
 - `ANDROID_PACKAGE` with the Play package name if Android release is also planned
 - `EAS_PROJECT_ID` only if an EAS build is explicitly needed
+- `SENTRY_ORG`, `SENTRY_PROJECT`, and `SENTRY_AUTH_TOKEN` only if you want sourcemap upload during the local Xcode release; otherwise the wrapper allows that step to fail without blocking TestFlight delivery
 
 Current production values prepared in this workspace:
 
@@ -43,6 +45,8 @@ npm run release:ios
 ```
 
 This is the normal BRDG TestFlight/App Store path. The root scripts pin `--mode xcode`, and [`scripts/release-ios.sh`](../scripts/release-ios.sh) enforces branch cleanliness, upstream sync, backend/mobile validation, writes a manifest to `mobile/build/ios-release-manifest.json`, then archives and uploads through Xcode.
+
+In `xcode` mode the wrapper first runs `npx expo prebuild --clean -p ios --npm` inside [`mobile`](../mobile). That regenerates the ignored native iOS folder, installs CocoaPods, and then archives the top-level generated workspace/project and matching scheme. A fresh worktree is therefore expected to start without a committed `Podfile`, `Pods/`, or other generated iOS artifacts. The wrapper also defaults Xcode signing to `submit.production.ios.appleTeamId` from [`mobile/eas.json`](../mobile/eas.json); set `IOS_DEVELOPMENT_TEAM` only when the local release should use a different Apple team.
 
 Use `npm run release:ios:check` when you want the preflight and manifest generation without starting the Xcode archive/upload.
 
