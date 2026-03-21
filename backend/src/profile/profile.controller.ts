@@ -36,7 +36,13 @@ import {
   UpdateProfileDto,
 } from './profile.dto';
 
-const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+]);
 
 @Controller('profile')
 @UseGuards(AuthGuard('jwt'))

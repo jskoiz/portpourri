@@ -85,6 +85,27 @@ describe('ProfileController', () => {
     expect(profileServiceMock.uploadPhoto).toHaveBeenCalledWith('user-1', file);
   });
 
+  it.each(['image/heic', 'image/heif'])(
+    'accepts %s uploads from the mobile photo library',
+    async (mimetype) => {
+      const req = { user: { id: 'user-1' } } as AuthenticatedRequest;
+      const file = {
+        mimetype,
+        buffer: Buffer.from('img'),
+      } as Express.Multer.File;
+
+      profileServiceMock.uploadPhoto.mockResolvedValue({ id: 'photo-1' });
+
+      await expect(controller.uploadPhoto(req, file)).resolves.toEqual({
+        id: 'photo-1',
+      });
+      expect(profileServiceMock.uploadPhoto).toHaveBeenCalledWith(
+        'user-1',
+        file,
+      );
+    },
+  );
+
   it('delegates updatePhoto to profile service', async () => {
     const req = { user: { id: 'user-1' } } as AuthenticatedRequest;
     const dto = { isPrimary: true };

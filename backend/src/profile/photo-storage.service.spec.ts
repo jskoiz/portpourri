@@ -55,6 +55,34 @@ describe('PhotoStorageService', () => {
     });
   });
 
+  it.each([
+    ['image/heic', 'heic'],
+    ['image/heif', 'heif'],
+  ])(
+    'preserves the correct extension for %s uploads',
+    async (mimetype, extension) => {
+      const file = {
+        mimetype,
+        buffer: Buffer.from('image-bytes'),
+      } as Express.Multer.File;
+
+      const result = await service.saveProfilePhoto(file);
+
+      expect(writeFileMock).toHaveBeenCalledWith(
+        join(
+          process.cwd(),
+          appConfig.uploads.profileDir,
+          `11111111-1111-1111-1111-111111111111.${extension}`,
+        ),
+        file.buffer,
+      );
+      expect(result).toEqual({
+        storageKey: `${appConfig.uploads.profilePublicBaseUrl}/11111111-1111-1111-1111-111111111111.${extension}`,
+        fileName: `11111111-1111-1111-1111-111111111111.${extension}`,
+      });
+    },
+  );
+
   it('deletes a valid profile photo path', async () => {
     await service.removeProfilePhoto(
       `${appConfig.uploads.profilePublicBaseUrl}/11111111-1111-1111-1111-111111111111.webp`,

@@ -12,6 +12,10 @@ function extensionForMimeType(mimeType: string) {
       return 'png';
     case 'image/webp':
       return 'webp';
+    case 'image/heic':
+      return 'heic';
+    case 'image/heif':
+      return 'heif';
     default:
       return 'bin';
   }
