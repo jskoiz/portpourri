@@ -2,24 +2,38 @@ import type { Meta, StoryObj } from '@storybook/react-native';
 import { createLocationSuggestion } from '../features/locations/locationSuggestions';
 import { ProfileScreenContent } from '../features/profile/components/ProfileScreenContent';
 import type { PhotoOperationState } from '../features/profile/hooks/useProfileEditor';
-import { makeUser, withStoryScreenFrame } from './support';
+import { LOW_CONTRAST_HERO_PHOTO, makeUser, makeUserPhoto, withStoryScreenFrame } from './support';
 
 function ProfileScreenContentStory({
   editMode = false,
   errorMessage = null,
   isSaving = false,
+  lowContrastHero = false,
   photoOperation = null,
   showBuildInfo = false,
 }: {
   editMode?: boolean;
   errorMessage?: string | null;
   isSaving?: boolean;
+  lowContrastHero?: boolean;
   photoOperation?: PhotoOperationState;
   showBuildInfo?: boolean;
 }) {
   const profile = makeUser({
     firstName: 'Lana',
     age: 29,
+    photos: lowContrastHero
+      ? [
+          makeUserPhoto({
+            id: 'photo-1',
+            storageKey: LOW_CONTRAST_HERO_PHOTO,
+            isPrimary: true,
+            sortOrder: 0,
+          }),
+          makeUserPhoto({ id: 'photo-2', sortOrder: 1 }),
+          makeUserPhoto({ id: 'photo-3', sortOrder: 2 }),
+        ]
+      : undefined,
   });
 
   return (
@@ -116,5 +130,11 @@ export const UploadingPhoto: Story = {
       label: 'Uploading photo… 78%',
       progress: 78,
     },
+  },
+};
+
+export const LowContrastHero: Story = {
+  args: {
+    lowContrastHero: true,
   },
 };

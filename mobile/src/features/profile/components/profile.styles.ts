@@ -9,6 +9,7 @@ const SURFACE = '#FFFFFF';
 const SURFACE_ELEVATED = '#F7F4F0';
 const BORDER = '#E8E2DA';
 const PRIMARY = '#C4A882';
+const ACCENT_TEXT = '#8B6A42';
 const TEXT_PRIMARY = '#2C2420';
 const TEXT_SECONDARY = '#5C544C';
 const TEXT_MUTED = '#8C8279';
@@ -64,17 +65,27 @@ export const profileStyles = StyleSheet.create({
     borderBottomRightRadius: 28,
     overflow: 'hidden',
   },
+  heroCopyCard: {
+    alignSelf: 'flex-start',
+    maxWidth: '82%',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: 24,
+    backgroundColor: 'rgba(253,251,248,0.74)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+  },
   heroName: { fontSize: 28, fontWeight: '900', letterSpacing: -0.8, color: TEXT_PRIMARY, marginBottom: spacing.xs },
   intentBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(196,168,130,0.12)',
+    backgroundColor: 'rgba(196,168,130,0.2)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 5,
     marginBottom: spacing.xs,
   },
-  intentBadgeText: { fontSize: typography.bodySmall, fontWeight: '800', color: PRIMARY },
-  heroLocation: { fontSize: typography.bodySmall, color: TEXT_MUTED, fontWeight: '500' },
+  intentBadgeText: { fontSize: typography.bodySmall, fontWeight: '800', color: ACCENT_TEXT },
+  heroLocation: { fontSize: typography.bodySmall, color: TEXT_SECONDARY, fontWeight: '600' },
   ambientStats: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.lg, paddingTop: spacing.lg },
   ambientStat: { alignItems: 'center' },
   ambientStatNum: { fontSize: 32, fontWeight: '900', letterSpacing: -1, lineHeight: 36, color: TEXT_PRIMARY },

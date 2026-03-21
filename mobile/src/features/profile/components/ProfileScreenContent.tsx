@@ -184,16 +184,18 @@ export function ProfileScreenContent({
               </LinearGradient>
             )}
             <LinearGradient colors={['transparent', '#FDFBF8']} style={styles.heroOverlay}>
-              <Text style={styles.heroName} accessibilityRole="header">
-                {profile.firstName}
-                {profile.age ? `, ${profile.age}` : ''}
-              </Text>
-              {primaryGoal ? (
-                <View style={styles.intentBadge}>
-                  <Text style={styles.intentBadgeText}>{PRIMARY_GOAL_OPTIONS.find((o) => o.value === primaryGoal)?.label ?? primaryGoal}</Text>
-                </View>
-              ) : null}
-              <Text style={styles.heroLocation}>{profile.profile?.city || 'Location not set'}</Text>
+              <View style={styles.heroCopyCard}>
+                <Text style={styles.heroName} accessibilityRole="header">
+                  {profile.firstName}
+                  {profile.age ? `, ${profile.age}` : ''}
+                </Text>
+                {primaryGoal ? (
+                  <View style={styles.intentBadge}>
+                    <Text style={styles.intentBadgeText}>{PRIMARY_GOAL_OPTIONS.find((o) => o.value === primaryGoal)?.label ?? primaryGoal}</Text>
+                  </View>
+                ) : null}
+                <Text style={styles.heroLocation}>{profile.profile?.city || 'Location not set'}</Text>
+              </View>
             </LinearGradient>
           </View>
         </View>
