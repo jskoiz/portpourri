@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { User, UserProfile } from '../../../api/types';
 import { profileApi } from '../../../services/api';
 import { queryKeys } from '../../../lib/query/queryKeys';
 import { useAuthStore } from '../../../store/authStore';
@@ -10,8 +11,24 @@ function invalidateProfileSurfaces(queryClient: ReturnType<typeof useQueryClient
 }
 
 /** Sync the returned User back into authStore so screens reading authStore.user stay current. */
-function syncUserToAuthStore(response: { data: import('../../../api/types').User }) {
+function syncUserToAuthStore(response: { data: User }) {
   useAuthStore.getState().setUser(response.data);
+}
+
+function syncUserProfileToAuthStore(response: { data: UserProfile & { userId: string } }) {
+  const currentUser = useAuthStore.getState().user;
+  if (!currentUser) {
+    return;
+  }
+
+  const { userId: _userId, ...profile } = response.data;
+  useAuthStore.getState().setUser({
+    ...currentUser,
+    profile: {
+      ...currentUser.profile,
+      ...profile,
+    },
+  });
 }
 
 export function useProfile() {
@@ -31,7 +48,7 @@ export function useProfile() {
   const updateProfile = useMutation({
     mutationFn: profileApi.updateProfile,
     onSuccess: (response) => {
-      syncUserToAuthStore(response);
+      syncUserProfileToAuthStore(response);
       invalidateProfileSurfaces(queryClient);
     },
   });

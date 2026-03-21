@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import type { User } from '../../../api/types';
 import { normalizeApiError } from '../../../api/errors';
+import { normalizeIntensityLevelForForm } from '../../../api/profileIntensity';
 import type { LocationSuggestion } from '../../locations/locationSuggestions';
 import { triggerErrorHaptic, triggerSelectionHaptic, triggerSuccessHaptic } from '../../../lib/interaction/feedback';
 import { buildSchedulePreferences, parseFavoriteActivities } from '../components/profile.helpers';
@@ -79,7 +80,7 @@ export function useProfileEditor({
       latitude: profile.profile?.latitude,
       longitude: profile.profile?.longitude,
     });
-    setIntensityLevel(profile.fitnessProfile?.intensityLevel || '');
+    setIntensityLevel(normalizeIntensityLevelForForm(profile.fitnessProfile?.intensityLevel));
     setIntentDating(Boolean(profile.profile?.intentDating));
     setIntentWorkout(Boolean(profile.profile?.intentWorkout));
     setIntentFriends(Boolean(profile.profile?.intentFriends));
@@ -97,7 +98,7 @@ export function useProfileEditor({
       latitude: profile.profile?.latitude,
       longitude: profile.profile?.longitude,
     });
-    setIntensityLevel(profile.fitnessProfile?.intensityLevel || '');
+    setIntensityLevel(normalizeIntensityLevelForForm(profile.fitnessProfile?.intensityLevel));
     setIntentDating(Boolean(profile.profile?.intentDating));
     setIntentWorkout(Boolean(profile.profile?.intentWorkout));
     setIntentFriends(Boolean(profile.profile?.intentFriends));

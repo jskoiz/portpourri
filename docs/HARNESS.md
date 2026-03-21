@@ -68,6 +68,8 @@ npm run scaffold:backend-module -- --name moderation
 ## CI Shape
 
 - Pull requests run the fast diff-driven lane.
+- Pull requests run the dedicated iOS simulator build only for native-impacting mobile changes such as Expo config, native plugin/dependency changes, generated iOS project changes, or workflow edits.
+- The iOS simulator workflow cancels stale in-progress runs when a newer commit lands on the same PR or branch.
 - `main` and scheduled maintenance runs execute the full lane.
 - Every lane uploads `harness-plan.json`, `harness-results.json`, and `harness-failure-summary.json` as CI artifacts.
 - Scheduled maintenance also audits docs, tracked marker drift, dependency visibility, Storybook/test coverage signals, repo-index drift, and harness health.

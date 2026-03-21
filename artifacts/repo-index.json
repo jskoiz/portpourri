@@ -421,6 +421,7 @@
           "mobile/src/api/client.ts",
           "mobile/src/api/errors.ts",
           "mobile/src/api/observability.ts",
+          "mobile/src/api/profileIntensity.ts",
           "mobile/src/api/storage.ts",
           "mobile/src/api/tokenStorage.ts",
           "mobile/src/lib/query/queryClient.ts",

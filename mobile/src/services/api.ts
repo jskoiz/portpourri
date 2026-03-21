@@ -18,14 +18,17 @@ import type {
   ProfileCompletenessResponse,
   ReportPayload,
   ReportResponse,
+  UpdateFitnessPayload,
   UpdatePhotoPayload,
   UpdateProfilePayload,
   UndoSwipeResponse,
   UploadPhotoPayload,
   User,
+  UserProfile,
   UserPhoto,
 } from "../api/types";
 import { logApiFailure } from "../api/observability";
+import { normalizeIntensityLevelForApi } from "../api/profileIntensity";
 
 type ApiDomain = Parameters<typeof logApiFailure>[0];
 type ReactNativeFormDataFile = {
@@ -36,6 +39,7 @@ type ReactNativeFormDataFile = {
 type ReactNativeFormData = FormData & {
   append(name: string, value: ReactNativeFormDataFile): void;
 };
+type UserProfileRecord = UserProfile & { userId: string };
 
 async function withErrorLogging<T>(
   domain: ApiDomain,
@@ -85,20 +89,16 @@ export const profileApi = {
     withErrorLogging("profile", "getProfile", () =>
       client.get<User>("/profile"),
     ),
-  updateFitness: async (payload: {
-    intensityLevel: string;
-    weeklyFrequencyBand: string;
-    primaryGoal: string;
-    favoriteActivities: string;
-    prefersMorning?: boolean;
-    prefersEvening?: boolean;
-  }) =>
+  updateFitness: async (payload: UpdateFitnessPayload) =>
     withErrorLogging("profile", "updateFitness", () =>
-      client.put<User>("/profile/fitness", payload),
+      client.patch<User>("/profile/fitness", {
+        ...payload,
+        intensityLevel: normalizeIntensityLevelForApi(payload.intensityLevel),
+      }),
     ),
   updateProfile: async (payload: UpdateProfilePayload) =>
     withErrorLogging("profile", "updateProfile", () =>
-      client.put<User>("/profile", payload),
+      client.patch<UserProfileRecord>("/profile", payload),
     ),
   uploadPhoto: async (payload: UploadPhotoPayload) => {
     const formData = new FormData() as ReactNativeFormData;

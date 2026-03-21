@@ -169,6 +169,64 @@ describe('profileApi', () => {
     jest.clearAllMocks();
   });
 
+  describe('updateProfile', () => {
+    it('uses the backend patch route for profile basics', async () => {
+      const payload = { bio: 'Updated bio', city: 'Vancouver' };
+      mockClient.patch.mockResolvedValueOnce({ data: { userId: 'user-1', ...payload } });
+
+      const result = await profileApi.updateProfile(payload);
+
+      expect(mockClient.patch).toHaveBeenCalledWith('/profile', payload);
+      expect(result.data).toEqual({ userId: 'user-1', ...payload });
+      expect(mockLogApiFailure).not.toHaveBeenCalled();
+    });
+
+    it('logs failures and rethrows when profile basics update fails', async () => {
+      const payload = { bio: 'Updated bio' };
+      mockClient.patch.mockRejectedValueOnce(networkError);
+
+      await expect(profileApi.updateProfile(payload)).rejects.toThrow('Network Error');
+      expect(mockLogApiFailure).toHaveBeenCalledWith('profile', 'updateProfile', networkError, undefined);
+    });
+  });
+
+  describe('updateFitness', () => {
+    it('uses the backend patch route for fitness profile updates', async () => {
+      const payload = {
+        intensityLevel: 'moderate',
+        weeklyFrequencyBand: '3-4',
+        primaryGoal: 'connection',
+        favoriteActivities: 'Running, Surfing',
+        prefersMorning: true,
+        prefersEvening: false,
+      };
+      const apiPayload = {
+        ...payload,
+        intensityLevel: 'INTERMEDIATE',
+      };
+      mockClient.patch.mockResolvedValueOnce({ data: { id: 'user-1', fitnessProfile: apiPayload } });
+
+      const result = await profileApi.updateFitness(payload);
+
+      expect(mockClient.patch).toHaveBeenCalledWith('/profile/fitness', apiPayload);
+      expect(result.data).toEqual({ id: 'user-1', fitnessProfile: apiPayload });
+      expect(mockLogApiFailure).not.toHaveBeenCalled();
+    });
+
+    it('logs failures and rethrows when fitness profile update fails', async () => {
+      const payload = {
+        intensityLevel: 'moderate',
+        weeklyFrequencyBand: '3-4',
+        primaryGoal: 'connection',
+        favoriteActivities: 'Running, Surfing',
+      };
+      mockClient.patch.mockRejectedValueOnce(networkError);
+
+      await expect(profileApi.updateFitness(payload)).rejects.toThrow('Network Error');
+      expect(mockLogApiFailure).toHaveBeenCalledWith('profile', 'updateFitness', networkError, undefined);
+    });
+  });
+
   describe('uploadPhoto', () => {
     it('passes multipart payload and forwards upload progress', async () => {
       const onProgress = jest.fn();

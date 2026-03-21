@@ -8,7 +8,18 @@ on:
       - "mobile/**"
   pull_request:
     paths:
-      - "mobile/**"
+      - ".github/workflows/ios-build.yml"
+      - "mobile/app.config.ts"
+      - "mobile/app.json"
+      - "mobile/eas.json"
+      - "mobile/package.json"
+      - "mobile/package-lock.json"
+      - "mobile/plugins/**"
+      - "mobile/ios/**"
+
+concurrency:
+  group: ios-build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -43,10 +54,34 @@ jobs:
         env:
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
+          set -euo pipefail
+
+          XCODE_WORKSPACE="$(
+            find ios -maxdepth 1 -type d -name '*.xcworkspace' ! -name 'project.xcworkspace' | sort | head -n 1
+          )"
+          XCODE_PROJECT="$(
+            find ios -maxdepth 1 -type d -name '*.xcodeproj' | sort | head -n 1
+          )"
+
+          if [[ -n "$XCODE_WORKSPACE" ]]; then
+            XCODE_TARGET_FLAG="-workspace"
+            XCODE_TARGET_PATH="$XCODE_WORKSPACE"
+            XCODE_SCHEME="$(basename "${XCODE_WORKSPACE%.*}")"
+          elif [[ -n "$XCODE_PROJECT" ]]; then
+            XCODE_TARGET_FLAG="-project"
+            XCODE_TARGET_PATH="$XCODE_PROJECT"
+            XCODE_SCHEME="$(basename "${XCODE_PROJECT%.*}")"
+          else
+            echo "No generated Xcode workspace or project found under mobile/ios" >&2
+            exit 1
+          fi
+
           xcodebuild build \
-            -workspace ios/BRDG.xcworkspace \
-            -scheme BRDG \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            "$XCODE_TARGET_FLAG" "$XCODE_TARGET_PATH" \
+            -scheme "$XCODE_SCHEME" \
+            -destination 'generic/platform=iOS Simulator' \
             -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            SENTRY_DISABLE_AUTO_UPLOAD=true \
+            SENTRY_COPY_OPTIONS_FILE=false
         working-directory: mobile
