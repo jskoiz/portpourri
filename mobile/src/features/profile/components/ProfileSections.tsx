@@ -75,6 +75,42 @@ export function EditableField({
   );
 }
 
+function PhotoActionButton({
+  destructive = false,
+  disabled,
+  icon,
+  label,
+  onPress,
+}: {
+  destructive?: boolean;
+  disabled: boolean;
+  icon: string;
+  label: string;
+  onPress: () => void;
+}) {
+  const iconColor = destructive
+    ? disabled ? 'rgba(201,112,112,0.34)' : '#C97070'
+    : disabled ? 'rgba(0,0,0,0.22)' : '#5C544C';
+
+  return (
+    <Pressable
+      disabled={disabled}
+      onPress={onPress}
+      hitSlop={4}
+      style={[
+        styles.photoActionButton,
+        destructive ? styles.photoActionButtonDanger : null,
+        disabled ? styles.photoActionButtonDisabled : null,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+    >
+      <AppIcon name={icon} size={16} color={iconColor} />
+    </Pressable>
+  );
+}
+
 export function PhotoManager({
   canEdit,
   isBusy,
@@ -97,9 +133,106 @@ export function PhotoManager({
   photos: UserPhoto[];
 }) {
   const visiblePhotos = getVisibleOrderedPhotos(photos);
+  const primaryPhoto = visiblePhotos.find((photo) => photo.isPrimary) ?? visiblePhotos[0];
+  const secondaryPhotos = primaryPhoto
+    ? visiblePhotos.filter((photo) => photo.id !== primaryPhoto.id)
+    : [];
   const uploadLabel = operation?.type === 'upload'
     ? operation.label
     : 'Upload a square photo. You can crop before it uploads.';
+  const renderPhotoCard = (
+    photo: UserPhoto,
+    orderedIndex: number,
+    isFeaturedCard = false,
+  ) => {
+    const isPrimaryPhoto = photo.isPrimary;
+    const isActive = operation?.photoId === photo.id;
+    const slotLabel = isPrimaryPhoto ? 'Primary photo' : `Photo ${orderedIndex + 1}`;
+    const slotDescription = isPrimaryPhoto
+      ? 'Shows first in your profile'
+      : 'Order decides what shows next';
+
+    return (
+      <View
+        key={photo.id}
+        style={[
+          styles.photoGalleryCardShell,
+          isFeaturedCard
+            ? styles.photoGalleryCardShellPrimary
+            : styles.photoGalleryCardShellSecondary,
+          isActive ? styles.photoCardActive : null,
+        ]}
+      >
+        <View style={styles.photoGalleryCard}>
+          <View style={styles.photoMedia}>
+            <Image
+              source={{ uri: photo.storageKey }}
+              style={[
+                styles.photoGalleryImage,
+                isFeaturedCard
+                  ? styles.photoGalleryImagePrimary
+                  : styles.photoGalleryImageSecondary,
+              ]}
+            />
+            <View style={styles.photoBadgeRow}>
+              <View style={[styles.photoSlotPill, isPrimaryPhoto ? styles.photoPrimaryPill : null]}>
+                <Text style={[styles.photoSlotPillText, isPrimaryPhoto ? styles.photoPrimaryPillText : null]}>
+                  {isPrimaryPhoto ? 'Primary' : `#${orderedIndex + 1}`}
+                </Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.photoMeta}>
+            <View style={styles.photoHeaderMeta}>
+              <Text style={styles.photoLabel}>{slotLabel}</Text>
+              <Text style={styles.photoSlotText}>{slotDescription}</Text>
+            </View>
+            {isActive ? (
+              <View style={styles.photoInlineStatus}>
+                <AppIcon
+                  name={operation.type === 'delete' ? 'trash-2' : operation.type === 'reorder' ? 'move' : 'star'}
+                  size={14}
+                  color="#C4A882"
+                />
+                <Text style={styles.photoInlineStatusText}>{operation.label}</Text>
+              </View>
+            ) : null}
+            {canEdit ? (
+              <View style={styles.photoActionsCompact}>
+                <PhotoActionButton
+                  disabled={isBusy || orderedIndex === 0}
+                  icon="arrow-left"
+                  label="Move photo earlier"
+                  onPress={() => onMoveLeft(photo.id)}
+                />
+                <PhotoActionButton
+                  disabled={isBusy || orderedIndex === visiblePhotos.length - 1}
+                  icon="arrow-right"
+                  label="Move photo later"
+                  onPress={() => onMoveRight(photo.id)}
+                />
+                {!isPrimaryPhoto ? (
+                  <PhotoActionButton
+                    disabled={isBusy}
+                    icon="star"
+                    label="Make primary photo"
+                    onPress={() => onMakePrimary(photo.id)}
+                  />
+                ) : null}
+                <PhotoActionButton
+                  destructive
+                  disabled={isBusy}
+                  icon="trash-2"
+                  label="Remove photo"
+                  onPress={() => onDelete(photo.id)}
+                />
+              </View>
+            ) : null}
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.photoManager}>
@@ -118,57 +251,18 @@ export function PhotoManager({
             <Text style={styles.photoEmptyTitle}>No photos yet</Text>
             <Text style={styles.photoEmptyBody}>Add one strong headshot first, then use the rest to show movement and context.</Text>
           </Card>
-        ) : null}
-        {visiblePhotos.map((photo, index) => (
-          <Card key={photo.id} style={[styles.photoCard, operation?.photoId === photo.id ? styles.photoCardActive : null]}>
-            <Image source={{ uri: photo.storageKey }} style={styles.photoImage} />
-            <View style={styles.photoMeta}>
-              <View style={styles.photoHeader}>
-                <View style={styles.photoHeaderMeta}>
-                  <Text style={styles.photoLabel}>{photo.isPrimary ? 'Primary photo' : `Photo ${index + 1}`}</Text>
-                  <Text style={styles.photoSlotText}>{index === 0 ? 'Shows first in your profile' : 'Reorder to control what shows next'}</Text>
-                </View>
-                <View style={[styles.photoSlotPill, photo.isPrimary ? styles.photoPrimaryPill : null]}>
-                  <Text style={[styles.photoSlotPillText, photo.isPrimary ? styles.photoPrimaryPillText : null]}>
-                    {photo.isPrimary ? 'Primary' : `#${index + 1}`}
-                  </Text>
-                </View>
+        ) : (
+          <>
+            {primaryPhoto ? renderPhotoCard(primaryPhoto, visiblePhotos.indexOf(primaryPhoto), true) : null}
+            {secondaryPhotos.length > 0 ? (
+              <View style={styles.photoSecondaryGrid}>
+                {secondaryPhotos.map((photo) =>
+                  renderPhotoCard(photo, visiblePhotos.indexOf(photo)),
+                )}
               </View>
-              {operation?.photoId === photo.id ? (
-                <View style={styles.photoInlineStatus}>
-                  <AppIcon
-                    name={operation.type === 'delete' ? 'trash-2' : operation.type === 'reorder' ? 'move' : 'star'}
-                    size={14}
-                    color="#C4A882"
-                  />
-                  <Text style={styles.photoInlineStatusText}>{operation.label}</Text>
-                </View>
-              ) : null}
-              {canEdit ? (
-                <View style={styles.photoActions}>
-                  <Pressable disabled={isBusy || index === 0} onPress={() => onMoveLeft(photo.id)} style={[styles.photoActionChip, { minHeight: 44 }]} accessibilityRole="button" accessibilityLabel="Move photo earlier">
-                    <AppIcon name="arrow-left" size={14} color={isBusy || index === 0 ? 'rgba(0,0,0,0.2)' : '#7A7068'} />
-                    <Text style={[styles.photoActionText, isBusy || index === 0 ? styles.photoActionTextDisabled : null]}>Earlier</Text>
-                  </Pressable>
-                  <Pressable disabled={isBusy || index === visiblePhotos.length - 1} onPress={() => onMoveRight(photo.id)} style={[styles.photoActionChip, { minHeight: 44 }]} accessibilityRole="button" accessibilityLabel="Move photo later">
-                    <AppIcon name="arrow-right" size={14} color={isBusy || index === visiblePhotos.length - 1 ? 'rgba(0,0,0,0.2)' : '#7A7068'} />
-                    <Text style={[styles.photoActionText, isBusy || index === visiblePhotos.length - 1 ? styles.photoActionTextDisabled : null]}>Later</Text>
-                  </Pressable>
-                  {!photo.isPrimary ? (
-                    <Pressable disabled={isBusy} onPress={() => onMakePrimary(photo.id)} style={[styles.photoActionChip, { minHeight: 44 }]} accessibilityRole="button" accessibilityLabel="Make primary photo">
-                      <AppIcon name="star" size={14} color={isBusy ? 'rgba(0,0,0,0.2)' : '#7A7068'} />
-                      <Text style={[styles.photoActionText, isBusy ? styles.photoActionTextDisabled : null]}>Make primary</Text>
-                    </Pressable>
-                  ) : null}
-                  <Pressable disabled={isBusy} onPress={() => onDelete(photo.id)} style={[styles.photoActionChip, styles.photoDeleteChip, { minHeight: 44 }]} accessibilityRole="button" accessibilityLabel="Remove photo">
-                    <AppIcon name="trash-2" size={14} color={isBusy ? 'rgba(201,112,112,0.34)' : '#C97070'} />
-                    <Text style={styles.photoDeleteText}>Remove</Text>
-                  </Pressable>
-                </View>
-              ) : null}
-            </View>
-          </Card>
-        ))}
+            ) : null}
+          </>
+        )}
       </View>
       {canEdit ? (
         <Button

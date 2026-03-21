@@ -7,16 +7,27 @@ import {
   TagPill,
 } from '../features/profile/components/ProfileSections';
 import type { PhotoOperationState } from '../features/profile/hooks/useProfileEditor';
-import { withStorySurface, makeUser } from './support';
+import { withStorySurface, makeUser, makeUserPhoto } from './support';
 
 function ProfileSectionsStory({
   editMode,
+  photoCount,
   photoOperation,
 }: {
   editMode: boolean;
+  photoCount: number;
   photoOperation: PhotoOperationState;
 }) {
-  const profile = makeUser();
+  const normalizedPhotoCount = Number.isFinite(photoCount)
+    ? Math.max(0, Math.floor(photoCount))
+    : 0;
+  const profile = makeUser({
+    photos: Array.from({ length: normalizedPhotoCount }, (_, index) => makeUserPhoto({
+      id: `photo-${index + 1}`,
+      isPrimary: index === 0,
+      sortOrder: index,
+    })),
+  });
 
   return (
     <View style={{ gap: 24 }}>
@@ -54,6 +65,7 @@ const meta = {
   decorators: [withStorySurface({ centered: false })],
   args: {
     editMode: true,
+    photoCount: 5,
     photoOperation: null,
   },
 } satisfies Meta<typeof ProfileSectionsStory>;
@@ -77,5 +89,11 @@ export const UploadingPhoto: Story = {
       label: 'Uploading photo… 62%',
       progress: 62,
     },
+  },
+};
+
+export const TwoPhotoGallery: Story = {
+  args: {
+    photoCount: 2,
   },
 };
