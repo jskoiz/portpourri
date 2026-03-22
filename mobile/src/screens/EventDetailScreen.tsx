@@ -142,7 +142,13 @@ export default function EventDetailScreen({
     try {
       await joinEvent();
     } catch (err) {
-      Alert.alert('Could not join event', 'Please try again later.');
+      const normalized = normalizeApiError(err);
+      Alert.alert(
+        'Could not join event',
+        normalized.isNetworkError
+          ? 'A network error occurred. Please check your connection and try again.'
+          : normalized.message,
+      );
     }
   };
 

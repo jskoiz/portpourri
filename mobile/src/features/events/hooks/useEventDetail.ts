@@ -35,10 +35,10 @@ export function useEventDetail(eventId: string) {
       }
     },
     onSuccess: (result) => {
-      queryClient.setQueryData<EventDetail | undefined>(detailKey, (current) =>
+      queryClient.setQueryData<EventDetail>(detailKey, (current) =>
         current
           ? { ...current, joined: true, attendeesCount: result.attendeesCount }
-          : current,
+          : undefined,
       );
       void queryClient.invalidateQueries({ queryKey: queryKeys.events.mine });
       void queryClient.invalidateQueries({ queryKey: queryKeys.events.list });

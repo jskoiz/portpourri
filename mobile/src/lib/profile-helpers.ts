@@ -1,5 +1,44 @@
 import type { User } from '../api/types';
 
+export const ACTIVITY_OPTIONS = [
+  { label: '🏃 Running', value: 'Running', color: '#8BAA7A' },
+  { label: '🧘 Yoga', value: 'Yoga', color: '#B8A9C4' },
+  { label: '🏋️ Lifting', value: 'Lifting', color: '#C97070' },
+  { label: '🥾 Hiking', value: 'Hiking', color: '#C4A882' },
+  { label: '🏖️ Beach', value: 'Beach', color: '#B8A9C4' },
+  { label: '🚴 Cycling', value: 'Cycling', color: '#8BAA7A' },
+  { label: '🏄 Surfing', value: 'Surfing', color: '#B8A9C4' },
+  { label: '🧗 Climbing', value: 'Climbing', color: '#D4A59A' },
+  { label: '🥊 Boxing', value: 'Boxing', color: '#C97070' },
+  { label: '🏊 Swimming', value: 'Swimming', color: '#B8A9C4' },
+  { label: '🎾 Tennis', value: 'Tennis', color: '#C4A882' },
+  { label: '⛷️ Skiing', value: 'Skiing', color: '#B8A9C4' },
+];
+
+const ACTIVITY_LABEL_LOOKUP = new Map(
+  ACTIVITY_OPTIONS.flatMap(({ label, value }) => {
+    const normalized = label.replace(/^[^\p{L}\p{N}]+/u, '').trim();
+    return [
+      [value.toLowerCase(), value],
+      [label.toLowerCase(), value],
+      [normalized.toLowerCase(), value],
+    ];
+  }),
+);
+
+function normalizeActivityValue(activity: string) {
+  const normalized = activity.trim();
+  if (!normalized) return null;
+  return ACTIVITY_LABEL_LOOKUP.get(normalized.toLowerCase()) ?? normalized;
+}
+
+export function parseFavoriteActivities(favoriteActivities?: string | null) {
+  return (favoriteActivities ?? '')
+    .split(',')
+    .map((activity) => normalizeActivityValue(activity))
+    .filter((activity): activity is string => Boolean(activity));
+}
+
 const ACTIVITY_TAGS: Record<string, string> = {
   strength: 'Strength',
   weight_loss: 'Conditioning',
@@ -26,10 +65,7 @@ export function getActivityTag(user: Record<string, any> | null | undefined): st
 export function getProfileChips(user: Pick<User, 'fitnessProfile'> | null | undefined): string[] {
   const chips: string[] = [];
 
-  const favoriteActivity = user?.fitnessProfile?.favoriteActivities
-    ?.split(',')
-    .map((value: string) => value.trim())
-    .find(Boolean);
+  const favoriteActivity = parseFavoriteActivities(user?.fitnessProfile?.favoriteActivities)[0];
 
   if (favoriteActivity) chips.push(formatProfileLabel(favoriteActivity));
   if (user?.fitnessProfile?.primaryGoal) {

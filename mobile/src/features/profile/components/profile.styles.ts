@@ -1,19 +1,21 @@
 import { Dimensions, StyleSheet } from 'react-native';
-import { radii, spacing, typography } from '../../../theme/tokens';
+import { lightTheme, radii, spacing, typography } from '../../../theme/tokens';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PHOTO_GALLERY_WIDTH = SCREEN_WIDTH - spacing.xxl * 2;
 const PHOTO_SECONDARY_CARD_WIDTH = (PHOTO_GALLERY_WIDTH - spacing.sm) / 2;
-const BASE = '#FDFBF8';
-const SURFACE = '#FFFFFF';
-const SURFACE_ELEVATED = '#F7F4F0';
-const BORDER = '#E8E2DA';
-const PRIMARY = '#C4A882';
+
+// Static references for StyleSheet (module-level); components use useTheme() for reactivity
+const BASE = lightTheme.background;
+const SURFACE = lightTheme.surface;
+const SURFACE_ELEVATED = lightTheme.surfaceElevated;
+const BORDER = lightTheme.border;
+const PRIMARY = lightTheme.primary;
 const ACCENT_TEXT = '#8B6A42';
-const TEXT_PRIMARY = '#2C2420';
-const TEXT_SECONDARY = '#5C544C';
-const TEXT_MUTED = '#8C8279';
-const DANGER = '#C97070';
+const TEXT_PRIMARY = lightTheme.textPrimary;
+const TEXT_SECONDARY = lightTheme.textSecondary;
+const TEXT_MUTED = lightTheme.textMuted;
+const DANGER = lightTheme.danger;
 
 const SOFT_SHADOW = {
   shadowColor: '#B0A89E',

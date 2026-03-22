@@ -37,12 +37,10 @@ export const chatStyles = StyleSheet.create({
   bubbleMe: {
     alignSelf: 'flex-end',
     borderBottomRightRadius: 6,
-    backgroundColor: '#3D3530',
   },
   bubbleThem: {
     alignSelf: 'flex-start',
     borderBottomLeftRadius: 6,
-    backgroundColor: '#FFFFFF',
     shadowColor: '#B0A89E',
     shadowOpacity: 0.12,
     shadowRadius: 8,

@@ -49,7 +49,9 @@ export default function ExploreScreen({ navigation }: MainTabScreenProps<'Explor
         const message = event
           ? `Join me for ${event.title} on BRDG${event.location ? ` at ${event.location}` : ''}.`
           : "Join me on BRDG. Let's move together.";
-        void Share.share({ message }).catch(() => undefined);
+        void Share.share({ message }).catch((err) => {
+          console.warn('[ExploreScreen] Share failed:', err);
+        });
       }}
       onOpenCreate={() => {
         void triggerImpactHaptic();

@@ -58,10 +58,11 @@ const ChatBubble = React.memo(function ChatBubble({
       style={[
         styles.bubble,
         isMe ? styles.bubbleMe : styles.bubbleThem,
+        { backgroundColor: isMe ? theme.textPrimary : theme.surface },
       ]}
       accessibilityLabel={isMe ? `You said: ${item.text}` : `They said: ${item.text}`}
     >
-      <Text style={[styles.bubbleText, { color: isMe ? '#FFFFFF' : '#2C2420' }]}>{item.text}</Text>
+      <Text style={[styles.bubbleText, { color: isMe ? theme.textInverse : theme.textPrimary }]}>{item.text}</Text>
     </View>
   );
 });

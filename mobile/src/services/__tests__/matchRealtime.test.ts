@@ -27,6 +27,16 @@ class MockEventSource {
     this.listeners.set(eventName, listener);
   }
 
+  removeEventListener(
+    eventName: string,
+    listener?: (event: MessageEvent) => void,
+    options?: boolean | AddEventListenerOptions,
+  ) {
+    void listener;
+    void options;
+    this.listeners.delete(eventName);
+  }
+
   close() {
     return undefined;
   }

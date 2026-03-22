@@ -213,6 +213,9 @@ describe('MatchesService realtime', () => {
       userAId: 'user-1',
       userBId: 'user-2',
     } as any);
+    jest.mocked((prisma as any).$transaction).mockImplementation(
+      async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma),
+    );
     jest.mocked(prisma.message.create).mockResolvedValue({
       id: 'msg-1',
       body: 'hey',

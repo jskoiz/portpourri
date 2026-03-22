@@ -23,6 +23,7 @@ import { useSheetController } from '../design/sheets/useSheetController';
 import { useTheme } from '../theme/useTheme';
 import { lightTheme, radii, spacing, typography } from '../theme/tokens';
 import { type SessionIntent } from '../types/sessionIntent';
+import { parseFavoriteActivities } from '../lib/profile-helpers';
 import { getAvatarInitial, getPrimaryPhotoUri } from '../lib/profilePhotos';
 import { ReportSheet } from '../features/moderation/components/ReportSheet';
 import { useBlock } from '../features/moderation/hooks/useBlock';
@@ -31,6 +32,7 @@ import { showBlockConfirmation } from '../features/moderation/components/BlockCo
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const HERO_HEIGHT = 420;
 
+// Static references for StyleSheet (module-level); components use useTheme() for reactivity
 const BASE = lightTheme.background;
 const SURFACE = lightTheme.surface;
 const PRIMARY = lightTheme.primary;
@@ -77,10 +79,7 @@ export default function ProfileDetailScreen({
   }
 
   const primaryPhoto = getPrimaryPhotoUri(user);
-  const activityTags: string[] = (user.fitnessProfile?.favoriteActivities || '')
-    .split(',')
-    .map((s: string) => s.trim())
-    .filter(Boolean);
+  const activityTags: string[] = parseFavoriteActivities(user.fitnessProfile?.favoriteActivities);
 
   const intentFlags = [
     user.profile?.intentDating ? 'Dating' : null,
@@ -178,7 +177,7 @@ export default function ProfileDetailScreen({
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={styles.overflowButton}
             >
-              <AppIcon name="more-vertical" size={18} color={TEXT_PRIMARY} />
+              <AppIcon name="more-vertical" size={18} color={theme.textPrimary} />
             </Pressable>
             {menuVisible && (
               <View style={styles.overflowMenu}>
@@ -187,7 +186,7 @@ export default function ProfileDetailScreen({
                   style={styles.overflowMenuItem}
                   accessibilityRole="menuitem"
                 >
-                  <AppIcon name="flag" size={16} color={TEXT_PRIMARY} />
+                  <AppIcon name="flag" size={16} color={theme.textPrimary} />
                   <Text style={styles.overflowMenuText}>Report</Text>
                 </Pressable>
                 <Pressable
@@ -195,8 +194,8 @@ export default function ProfileDetailScreen({
                   style={styles.overflowMenuItem}
                   accessibilityRole="menuitem"
                 >
-                  <AppIcon name="slash" size={16} color="#C0392B" />
-                  <Text style={[styles.overflowMenuText, { color: '#C0392B' }]}>Block</Text>
+                  <AppIcon name="slash" size={16} color={theme.danger} />
+                  <Text style={[styles.overflowMenuText, { color: theme.danger }]}>Block</Text>
                 </Pressable>
               </View>
             )}
@@ -212,7 +211,7 @@ export default function ProfileDetailScreen({
               {user.firstName || 'Someone'}{user.age ? `, ${user.age}` : ''}
             </Text>
             <View style={styles.locationRow}>
-              <AppIcon name="map-pin" size={14} color={TEXT_MUTED} />
+              <AppIcon name="map-pin" size={14} color={theme.textMuted} />
               <Text style={styles.heroLocation}>
                 {user.profile?.city || 'Nearby'}
               </Text>
@@ -220,8 +219,8 @@ export default function ProfileDetailScreen({
 
             {activityTags.length > 0 && (
               <View style={styles.tagRow}>
-                {activityTags.slice(0, 4).map((tag) => (
-                  <View key={tag} style={styles.tag}>
+                {activityTags.slice(0, 4).map((tag, index) => (
+                  <View key={`${tag}-${index}`} style={styles.tag}>
                     <Text style={styles.tagText}>{tag}</Text>
                   </View>
                 ))}
@@ -274,7 +273,7 @@ export default function ProfileDetailScreen({
                       <Text
                         style={[
                           styles.activityPillText,
-                          { color: isAccent ? ACCENT : PRIMARY },
+                          { color: isAccent ? theme.success : theme.primary },
                         ]}
                       >
                         {tag}
@@ -295,7 +294,7 @@ export default function ProfileDetailScreen({
             disabled={submitting}
           >
             <LinearGradient
-              colors={['#D4C9B0', PRIMARY]}
+              colors={['#D4C9B0', theme.primary]}
               style={styles.suggestBtnInner}
             >
               <Text style={styles.suggestBtnText}>Suggest activity</Text>

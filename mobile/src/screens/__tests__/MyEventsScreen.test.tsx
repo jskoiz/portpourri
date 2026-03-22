@@ -31,9 +31,10 @@ jest.mock('../../components/ui/AppIcon', () => {
   return () => <Text>icon</Text>;
 });
 
+let mockAuthUser: { id: string } | null = { id: 'current-user-id' };
 jest.mock('../../store/authStore', () => ({
   useAuthStore: (selector: (state: { user: { id: string } | null }) => unknown) =>
-    selector({ user: { id: 'current-user-id' } }),
+    selector({ user: mockAuthUser }),
 }));
 
 describe('MyEventsScreen', () => {
@@ -49,6 +50,7 @@ describe('MyEventsScreen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthUser = { id: 'current-user-id' };
     mockUseMyEvents.mockReturnValue({
       error: null,
       events: [
@@ -143,5 +145,36 @@ describe('MyEventsScreen', () => {
 
     expect(await screen.findByText('Mystery Event')).toBeTruthy();
     expect(screen.getByText('Date TBD')).toBeTruthy();
+  });
+
+  it('does not misclassify events when currentUserId is undefined', async () => {
+    mockAuthUser = null;
+    mockUseMyEvents.mockReturnValue({
+      error: null,
+      events: [
+        {
+          id: 'hosted-1',
+          title: 'My Beach Workout',
+          location: 'Kailua Beach',
+          startsAt: '2026-03-16T08:00:00.000Z',
+          joined: true,
+          host: { id: 'current-user-id', firstName: 'Jordan' },
+        },
+      ],
+      isLoading: false,
+      isRefetching: false,
+      refetch: mockRefetch,
+    });
+
+    render(<MyEventsScreen navigation={navigation} route={route} />);
+
+    // With no userId, joined events should still show (not filtered to empty)
+    expect(await screen.findByText('My Beach Workout')).toBeTruthy();
+
+    // Created tab should be empty since we can't determine the host
+    fireEvent.press(screen.getByText('Created'));
+    await waitFor(() => {
+      expect(screen.getByText("You haven't hosted anything yet")).toBeTruthy();
+    });
   });
 });

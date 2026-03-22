@@ -99,8 +99,8 @@ export function ChatHeader({
                 style={headerMenuStyles.menuItem}
                 accessibilityRole="menuitem"
               >
-                <AppIcon name="slash" size={16} color="#C0392B" />
-                <Text style={[headerMenuStyles.menuItemText, { color: '#C0392B' }]}>Block</Text>
+                <AppIcon name="slash" size={16} color={theme.danger} />
+                <Text style={[headerMenuStyles.menuItemText, { color: theme.danger }]}>Block</Text>
               </Pressable>
             )}
           </View>

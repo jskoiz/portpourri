@@ -93,6 +93,10 @@ describe('ExploreScreen', () => {
     });
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('filters explore content when category pills change', async () => {
     render(<ExploreScreen navigation={navigation} route={route} />);
 
@@ -121,6 +125,7 @@ describe('ExploreScreen', () => {
 
   it('does not navigate to Create when the Share sheet fails', async () => {
     jest.spyOn(Share, 'share').mockRejectedValue(new Error('sharing unavailable'));
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     render(<ExploreScreen navigation={navigation} route={route} />);
 
@@ -131,6 +136,10 @@ describe('ExploreScreen', () => {
 
     await waitFor(() => {
       expect(mockNavigate).not.toHaveBeenCalledWith('Create');
+      expect(console.warn).toHaveBeenCalledWith(
+        '[ExploreScreen] Share failed:',
+        expect.any(Error),
+      );
     });
   });
 });

@@ -108,9 +108,11 @@ export default function MyEventsScreen({
   const createdEvents = currentUserId
     ? events.filter((event) => event.host?.id === currentUserId)
     : [];
-  const joinedEvents = events.filter(
-    (event) => event.joined && event.host?.id !== currentUserId,
-  );
+  const joinedEvents = currentUserId
+    ? events.filter(
+        (event) => event.joined && event.host?.id !== currentUserId,
+      )
+    : events.filter((event) => event.joined);
   const displayedEvents = activeTab === 'Joined' ? joinedEvents : createdEvents;
   const tabCounts = {
     Joined: joinedEvents.length,
@@ -228,7 +230,7 @@ export default function MyEventsScreen({
         <FlashList
           contentContainerStyle={styles.list}
           data={displayedEvents}
-          keyExtractor={(item, index) => item.id || `event-${index}`}
+          keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -360,7 +362,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: spacing.xxxl || 40,
+    paddingHorizontal: spacing.xxxxl,
   },
   emptyIconWrap: {
     width: 64,
@@ -396,7 +398,7 @@ const styles = StyleSheet.create({
 
   list: {
     paddingHorizontal: spacing.xxl,
-    paddingBottom: spacing.xxxl || 48,
+    paddingBottom: spacing.xxxxl,
   },
   card: {
     borderRadius: radii.xl,
