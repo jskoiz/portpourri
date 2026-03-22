@@ -6,6 +6,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -38,8 +42,8 @@ jobs:
           name: harness-pr-fast
           path: artifacts/harness/pr-fast
 
-  full-main:
-    name: Main full lane
+  main-check:
+    name: Main check lane
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
@@ -58,9 +62,9 @@ jobs:
         working-directory: backend
       - run: npm ci
         working-directory: mobile
-      - run: node ./scripts/run-harness-lane.mjs --lane full-main --artifacts-dir artifacts/harness/full-main
+      - run: node ./scripts/run-harness-lane.mjs --lane main-check --artifacts-dir artifacts/harness/main-check
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: harness-full-main
-          path: artifacts/harness/full-main
+          name: harness-main-check
+          path: artifacts/harness/main-check

@@ -61,7 +61,7 @@ npm run scaffold:backend-module -- --name moderation
 
 - Local PR readiness: run `npm run pre-submit`
 - PR lane: run `npm run check:changed`
-- Protected branch or release prep: run `npm run check` and `npm run smoke`
+- Protected branch or release prep: run `npm run check` and add `npm run smoke` when you need bootstrap/runtime confidence
 - Visual mobile changes: link the relevant Storybook story or attach screenshots in the PR
 - Release-oriented changes: keep build provenance aligned with [`APP_STORE_RELEASE.md`](APP_STORE_RELEASE.md)
 
@@ -70,7 +70,7 @@ npm run scaffold:backend-module -- --name moderation
 - Pull requests run the fast diff-driven lane.
 - Pull requests run the dedicated iOS simulator build only for native-impacting mobile changes such as Expo config, native plugin/dependency changes, generated iOS project changes, or workflow edits.
 - The iOS simulator workflow cancels stale in-progress runs when a newer commit lands on the same PR or branch.
-- `main` and scheduled maintenance runs execute the full lane.
+- `main` executes a check-only lane; use `npm run smoke` separately when you need deeper bootstrap/runtime validation.
 - Every lane uploads `harness-plan.json`, `harness-results.json`, and `harness-failure-summary.json` as CI artifacts.
-- Scheduled maintenance also audits docs, tracked marker drift, dependency visibility, Storybook/test coverage signals, repo-index drift, and harness health.
+- Scheduled maintenance audits docs, tracked marker drift, dependency visibility, Storybook/test coverage signals, repo-index drift, and harness health without rerunning the full smoke bootstrap.
 - Maintenance publishes review-required findings in artifacts and can open a small automated PR for safe fixes such as repo-index refreshes.

@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: '0 16 * * 1'
 
+concurrency:
+  group: harness-maintenance-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   actions: read
   contents: write

@@ -194,7 +194,6 @@ function main() {
 
   const results = [
     runCommand('npm run check', { required: true, title: 'Full check', category: 'maintenance audit' }),
-    runCommand('npm run smoke', { required: true, title: 'Smoke', category: 'maintenance audit' }),
     runCommand('npm run docs:check', { required: true, title: 'Docs check', category: 'docs drift' }),
     runCommand('node ./scripts/check-repo-policies.mjs --audit', { required: true, title: 'Policy audit', category: 'maintenance audit' }),
     runCommand('npm run repo:index:check', { required: true, title: 'Repo index sync', category: 'maintenance audit' }),

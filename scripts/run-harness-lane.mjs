@@ -77,7 +77,9 @@ function main() {
   const selectedCommands =
     options.lane === 'full-main'
       ? ['npm run check', 'npm run smoke']
-      : ['npm run check'];
+      : options.lane === 'main-check'
+        ? ['npm run check']
+        : ['npm run check'];
   const { exitCode } = runHarnessSteps({
     lane: options.lane,
     selectedCommands,
