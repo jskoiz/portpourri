@@ -41,6 +41,11 @@ function prismaErrorToHttp(error: PrismaError): {
   }
 }
 
+/** Extract the pino-http trace ID from the request, if available. */
+function getTraceId(request: Request): string | undefined {
+  return (request as Request & { id?: string }).id;
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger('ExceptionFilter');
@@ -49,14 +54,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+    const traceId = getTraceId(request);
 
     // Handle Prisma-specific errors with appropriate HTTP status codes
     if (isPrismaError(exception)) {
       const { status, message } = prismaErrorToHttp(exception);
 
       this.logger.error(
-        `${request.method} ${request.url} ${status}: Prisma ${exception.code} – ${message}`,
-        exception instanceof Error ? (exception as Error).stack : undefined,
+        `${request.method} ${request.url} ${status}: Prisma ${exception.code} – ${message} [traceId=${traceId ?? 'n/a'}]`,
+        exception instanceof Error ? exception.stack : undefined,
       );
 
       response.status(status).json({ statusCode: status, message });
@@ -69,7 +75,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       exception instanceof Error ? exception.message : String(exception);
 
     this.logger.error(
-      `${request.method} ${request.url} ${status}: ${message}`,
+      `${request.method} ${request.url} ${status}: ${message} [traceId=${traceId ?? 'n/a'}]`,
       exception instanceof Error ? exception.stack : undefined,
     );
 
