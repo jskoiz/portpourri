@@ -1,8 +1,6 @@
 services:
   api:
-    build:
-      context: ../../backend
-      dockerfile: Dockerfile
+    image: ${API_IMAGE}
     container_name: brdg-api
     restart: unless-stopped
     env_file:

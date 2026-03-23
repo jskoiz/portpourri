@@ -4,7 +4,8 @@ const toNumber = (value: string | undefined, fallback: number): number => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const isTest = process.env.NODE_ENV === 'test';
+const appEnvironment = process.env.NODE_ENV || 'development';
+const isTest = appEnvironment === 'test';
 
 const apiPort = toNumber(process.env.PORT, 3000);
 const localApiBaseUrl = `http://127.0.0.1:${apiPort}`;
@@ -16,7 +17,7 @@ const allowedOrigins = (() => {
       .map((origin) => origin.trim())
       .filter(Boolean);
   }
-  if (process.env.NODE_ENV === 'production') {
+  if (appEnvironment === 'production') {
     throw new Error(
       'ALLOWED_ORIGINS environment variable is required in production. ' +
         'Set a comma-separated list of allowed origins (e.g. https://app.example.com).',
@@ -43,7 +44,7 @@ const databaseUrl = (() => {
   );
 })();
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = appEnvironment === 'production';
 const databaseConnectionLimit = toNumber(
   process.env.DATABASE_CONNECTION_LIMIT,
   10,
@@ -52,9 +53,14 @@ const databaseConnectionTimeout = toNumber(
   process.env.DATABASE_CONNECTION_TIMEOUT,
   10,
 );
+const buildGitSha = process.env.BUILD_GIT_SHA?.trim() || 'unknown';
+const buildImageTag = process.env.BUILD_IMAGE_TAG?.trim() || 'unknown';
+const buildTime = process.env.BUILD_TIME?.trim() || 'unknown';
+const buildSource = process.env.BUILD_SOURCE?.trim() || 'local';
 
 export const appConfig = {
   apiPort,
+  environment: appEnvironment,
   cors: {
     allowedOrigins,
   },
@@ -64,8 +70,16 @@ export const appConfig = {
     url: databaseUrl,
   },
   isProduction,
+  build: {
+    environment: appEnvironment,
+    gitSha: buildGitSha,
+    gitShortSha: buildGitSha === 'unknown' ? 'unknown' : buildGitSha.slice(0, 7),
+    imageTag: buildImageTag,
+    buildTime,
+    source: buildSource,
+  },
   docs: {
-    swaggerEnabled: process.env.NODE_ENV !== 'production',
+    swaggerEnabled: appEnvironment !== 'production',
   },
   auth: {
     bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),

@@ -30,6 +30,7 @@ const executionStepCatalog = {
     ['npm run test:root', FAILURE_CATEGORIES.tests, 'Root harness tests'],
   ],
   'npm run check:backend': [
+    ['node ./scripts/check-prisma-migration-safety.mjs', FAILURE_CATEGORIES.policyViolation, 'Prisma migration safety'],
     ['npm --prefix backend run typecheck', FAILURE_CATEGORIES.typecheck, 'Backend typecheck'],
     ['npm --prefix backend run check:boundaries', FAILURE_CATEGORIES.policyViolation, 'Backend policy check'],
     ['npm --prefix backend run test', FAILURE_CATEGORIES.tests, 'Backend tests'],

@@ -18,6 +18,7 @@ npm run dev:scenario -- ui-preview
 - Read runtime environment through [`src/config/app.config.ts`](src/config/app.config.ts); do not add new `process.env` reads in feature modules.
 - Preserve response shapes and seed/runtime assumptions used by the mobile app.
 - Keep domain boundaries explicit: `config/base -> persistence -> contracts -> domain/service -> transport -> app-shell`.
+- Backend production deploys are workflow-only. Use [`.github/workflows/deploy-backend.yml`](../.github/workflows/deploy-backend.yml) and the managed SSM/runtime scripts; do not deploy by copying source files onto the Lightsail host.
 - If a change touches bootstrap, migrations, seed data, scenario reset logic, or request wiring, validate it with `npm run smoke` from repo root.
 - Add or update controller/service specs when behavior changes.
 

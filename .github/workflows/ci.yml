@@ -14,6 +14,42 @@ permissions:
   contents: read
 
 jobs:
+  backend-migration-rehearsal:
+    name: Backend migration rehearsal
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: brdg_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d brdg_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: npm ci
+      - run: npm ci
+        working-directory: backend
+      - run: npm run rehearse:backend:legacy-migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/brdg_ci
+
   fast-pr:
     name: PR fast lane
     if: github.event_name == 'pull_request'

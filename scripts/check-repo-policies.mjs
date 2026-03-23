@@ -25,6 +25,7 @@ export const ACTIVE_DOCS = [
   'docs/STORYBOOK_WORKFLOW.md',
   'docs/FUNCTIONAL_MATRIX.md',
   'docs/APP_STORE_RELEASE.md',
+  'docs/DEPLOY_LIGHTSAIL.md',
 ];
 
 const mobileScreenLimits = new Map([

@@ -110,4 +110,48 @@ describe('appConfig', () => {
       ]);
     });
   });
+
+  describe('build provenance', () => {
+    it('defaults build metadata when image build args are missing', () => {
+      process.env.JWT_SECRET = 'test-secret';
+      process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+      process.env.NODE_ENV = 'test';
+      delete process.env.BUILD_GIT_SHA;
+      delete process.env.BUILD_IMAGE_TAG;
+      delete process.env.BUILD_TIME;
+      delete process.env.BUILD_SOURCE;
+
+      const config = loadConfig();
+      expect(config.build).toMatchObject({
+        environment: 'test',
+        gitSha: 'unknown',
+        gitShortSha: 'unknown',
+        imageTag: 'unknown',
+        buildTime: 'unknown',
+        source: 'local',
+      });
+    });
+
+    it('reads build metadata from env vars', () => {
+      process.env.JWT_SECRET = 'test-secret';
+      process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+      process.env.NODE_ENV = 'production';
+      process.env.ALLOWED_ORIGINS = 'https://brdg.social';
+      process.env.BUILD_GIT_SHA = 'abcdef1234567890';
+      process.env.BUILD_IMAGE_TAG = 'ghcr.io/jskoiz/brdg-api:abcdef1234567890';
+      process.env.BUILD_TIME = '2026-03-23T16:00:00.000Z';
+      process.env.BUILD_SOURCE =
+        'https://github.com/jskoiz/brdg/actions/runs/123456789';
+
+      const config = loadConfig();
+      expect(config.build).toMatchObject({
+        environment: 'production',
+        gitSha: 'abcdef1234567890',
+        gitShortSha: 'abcdef1',
+        imageTag: 'ghcr.io/jskoiz/brdg-api:abcdef1234567890',
+        buildTime: '2026-03-23T16:00:00.000Z',
+        source: 'https://github.com/jskoiz/brdg/actions/runs/123456789',
+      });
+    });
+  });
 });

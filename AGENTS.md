@@ -44,6 +44,7 @@ npm run release:ios:check
 - Prefer Storybook for isolated UI work. Use the seeded `ui-preview` runtime only for integrated validation.
 - For iOS simulator QA, install the dev client once with `npm run ios:install`, then prefer `npm run qa:ios` or `npm run qa:ios:reset` over rerunning `expo run:ios`. The scripts pick the latest available iPhone simulator unless `IOS_SIMULATOR_NAME` is set. Only rebuild with `npm run ios:install` when native dependencies, Expo config, or iOS-native files change.
 - `npm run dev:backend` is the preferred local backend entrypoint because it loads `backend/.env` before starting Nest.
+- Backend production deploys must go through [`.github/workflows/deploy-backend.yml`](.github/workflows/deploy-backend.yml). Do not rsync source trees or build backend images manually on the Lightsail host.
 - Use one Codex thread per task and one git worktree per active task. Prefer [`scripts/codex-worktree.sh`](scripts/codex-worktree.sh) for new worktrees.
 - Use `npm run symphony` from repo root for the repo-owned Linear orchestration flow. Keep it running as a long-lived operator process rather than starting a fresh manual Codex session per issue.
 
@@ -59,6 +60,7 @@ npm run release:ios:check
 - BRDG ships to TestFlight/App Store through local Xcode by default, even though the mobile app uses Expo and the repo contains `eas.json`.
 - Prefer [`scripts/release-ios.sh`](scripts/release-ios.sh) or `npm run release:ios` over ad hoc release commands, and assume `xcode` mode unless the user explicitly asks for `eas`.
 - Do not treat missing Expo auth as a blocker for the normal BRDG release path.
+- Treat backend production deploy provenance the same way as mobile releases: deploy only pushed `main` snapshots through the GitHub Actions workflow, and verify the running backend reports the expected git SHA and image tag after rollout.
 - Treat older TestFlight rollout notes as historical context only. When release state matters, prefer live App Store Connect state and the current release manifest over doc snapshots.
 - If local dev output and a shipped build disagree, inspect source and shipped artifacts before proposing fixes.
 - Preserve current bug fixes and API contracts when reapplying older UI states. Restore deltas selectively instead of blanket cherry-picks.

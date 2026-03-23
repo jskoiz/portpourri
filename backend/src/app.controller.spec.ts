@@ -23,6 +23,21 @@ describe('AppController', () => {
     });
   });
 
+  describe('GET /build-info', () => {
+    it('returns backend build provenance', () => {
+      expect(appController.getBuildInfo()).toEqual(
+        expect.objectContaining({
+          environment: expect.any(String),
+          apiBaseUrl: expect.any(String),
+          gitSha: expect.any(String),
+          imageTag: expect.any(String),
+          buildTime: expect.any(String),
+          source: expect.any(String),
+        }),
+      );
+    });
+  });
+
   describe('GET /health', () => {
     it('should return ok when DB is reachable', async () => {
       const json = jest.fn();
@@ -33,7 +48,16 @@ describe('AppController', () => {
 
       expect(status).toHaveBeenCalledWith(200);
       expect(json).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'ok', timestamp: expect.any(String) }),
+        expect.objectContaining({
+          status: 'ok',
+          timestamp: expect.any(String),
+          database: { status: 'ok' },
+          build: expect.objectContaining({
+            apiBaseUrl: expect.any(String),
+            gitSha: expect.any(String),
+            imageTag: expect.any(String),
+          }),
+        }),
       );
     });
 
@@ -50,7 +74,10 @@ describe('AppController', () => {
       expect(json).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'error',
-          error: 'Database connection failed',
+          database: {
+            status: 'error',
+            error: 'Database connection failed',
+          },
         }),
       );
     });

@@ -1,0 +1,334 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      git_sha:
+        description: Commit SHA or ref to deploy
+        required: false
+        default: main
+      dry_run:
+        description: Build, render config, and validate without touching the host
+        required: false
+        type: boolean
+        default: false
+      rollback_image_tag:
+        description: Existing GHCR image tag to redeploy instead of building a new image
+        required: false
+        default: ""
+
+concurrency:
+  group: deploy-backend-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
+env:
+  AWS_REGION: us-west-2
+  LIGHTSAIL_INSTANCE_NAME: codex-brdg-api
+  SSM_PREFIX: /brdg/prod/backend
+  API_HOSTNAME: api.brdg.social
+  DEPLOY_RUNTIME_DIR: /opt/brdg/runtime/api
+
+jobs:
+  deploy:
+    name: Build and deploy backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: brdg_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d brdg_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve target ref
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          target_ref="${GITHUB_SHA}"
+          dry_run="false"
+          rollback_tag=""
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            target_ref="${{ inputs.git_sha }}"
+            dry_run="${{ inputs.dry_run }}"
+            rollback_tag="${{ inputs.rollback_image_tag }}"
+          fi
+
+          git checkout --detach "$target_ref"
+
+          owner="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          target_sha="$(git rev-parse HEAD)"
+          build_time="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          workflow_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          image_ref="ghcr.io/${owner}/brdg-api:${target_sha}"
+
+          if [ -n "$rollback_tag" ]; then
+            image_ref="$rollback_tag"
+          fi
+
+          echo "target_sha=$target_sha" >> "$GITHUB_OUTPUT"
+          echo "build_time=$build_time" >> "$GITHUB_OUTPUT"
+          echo "workflow_url=$workflow_url" >> "$GITHUB_OUTPUT"
+          echo "image_ref=$image_ref" >> "$GITHUB_OUTPUT"
+          echo "owner=$owner" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$dry_run" >> "$GITHUB_OUTPUT"
+          echo "rollback_tag=$rollback_tag" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client jq
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Backend checks
+        run: npm run check:backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/brdg_ci
+          JWT_SECRET: 12345678901234567890123456789012
+          NODE_ENV: test
+
+      - name: Legacy migration rehearsal
+        run: npm run rehearse:backend:legacy-migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/brdg_ci
+
+      - name: Log in to GHCR
+        if: steps.meta.outputs.rollback_tag == ''
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push backend image
+        if: steps.meta.outputs.rollback_tag == ''
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_ref }}
+            ghcr.io/${{ steps.meta.outputs.owner }}/brdg-api:main
+          build-args: |
+            BUILD_GIT_SHA=${{ steps.meta.outputs.target_sha }}
+            BUILD_IMAGE_TAG=${{ steps.meta.outputs.image_ref }}
+            BUILD_TIME=${{ steps.meta.outputs.build_time }}
+            BUILD_SOURCE=${{ steps.meta.outputs.workflow_url }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Render runtime config from SSM
+        run: |
+          mkdir -p artifacts/backend-deploy/runtime/cloudflared
+          node ./scripts/render-backend-env.mjs \
+            --schema ./deploy/api/production.env.schema.json \
+            --ssm-prefix "${SSM_PREFIX}" \
+            --set "API_IMAGE=${{ steps.meta.outputs.image_ref }}" \
+            --output artifacts/backend-deploy/runtime/.env \
+            --cloudflared-credentials-output artifacts/backend-deploy/runtime/cloudflared/credentials.json \
+            --cloudflared-config-template ./deploy/api/cloudflared/config.yml \
+            --cloudflared-config-output artifacts/backend-deploy/runtime/cloudflared/config.yml
+          cp ./deploy/api/docker-compose.yml artifacts/backend-deploy/runtime/docker-compose.yml
+
+      - name: Validate rendered runtime env
+        run: npm run deploy:backend:validate-env -- --input artifacts/backend-deploy/runtime/.env
+
+      - name: Pull image for env validation
+        run: docker pull "${{ steps.meta.outputs.image_ref }}"
+
+      - name: Container config preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --env-file artifacts/backend-deploy/runtime/.env \
+            "${{ steps.meta.outputs.image_ref }}" \
+            node -e "require('./dist/src/config/app.config.js')"
+
+          invalid_env="${RUNNER_TEMP}/missing-allowed-origins.env"
+          grep -v '^ALLOWED_ORIGINS=' artifacts/backend-deploy/runtime/.env > "$invalid_env"
+          if docker run --rm --env-file "$invalid_env" "${{ steps.meta.outputs.image_ref }}" node -e "require('./dist/src/config/app.config.js')"; then
+            echo "Container preflight should fail when ALLOWED_ORIGINS is missing." >&2
+            exit 1
+          fi
+
+      - name: Write release manifest
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest = {
+              "gitSha": "${{ steps.meta.outputs.target_sha }}",
+              "imageTag": "${{ steps.meta.outputs.image_ref }}",
+              "buildTime": "${{ steps.meta.outputs.build_time }}",
+              "workflowRunUrl": "${{ steps.meta.outputs.workflow_url }}",
+              "expectedHostname": "${{ env.API_HOSTNAME }}",
+              "lightsailInstanceName": "${{ env.LIGHTSAIL_INSTANCE_NAME }}",
+              "dryRun": "${{ steps.meta.outputs.dry_run }}" == "true",
+              "rollbackImageTag": "${{ steps.meta.outputs.rollback_tag }}" or None,
+          }
+
+          Path("artifacts/backend-deploy").mkdir(parents=True, exist_ok=True)
+          Path("artifacts/backend-deploy/release-manifest.json").write_text(
+              json.dumps(manifest, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          Path("artifacts/backend-deploy/runtime/release-manifest.json").write_text(
+              json.dumps(manifest, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload deploy manifest
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-deploy-manifest
+          path: artifacts/backend-deploy/release-manifest.json
+
+      - name: Resolve Lightsail SSH access
+        if: steps.meta.outputs.dry_run != 'true'
+        id: ssh
+        shell: bash
+        run: |
+          set -euo pipefail
+          access_json="${RUNNER_TEMP}/lightsail-access.json"
+          key_path="${RUNNER_TEMP}/lightsail-key.pem"
+          cert_path="${RUNNER_TEMP}/lightsail-key-cert.pub"
+          known_hosts="${RUNNER_TEMP}/lightsail-known-hosts"
+
+          aws lightsail get-instance-access-details \
+            --instance-name "${LIGHTSAIL_INSTANCE_NAME}" \
+            --region "${AWS_REGION}" \
+            > "$access_json"
+
+          python3 - <<'PY' "$access_json" "$key_path" "$cert_path" "$known_hosts" "$GITHUB_OUTPUT"
+          import json
+          import pathlib
+          import sys
+
+          access_path, key_path, cert_path, known_hosts_path, output_path = sys.argv[1:6]
+          payload = json.loads(pathlib.Path(access_path).read_text())["accessDetails"]
+
+          pathlib.Path(key_path).write_text(payload["privateKey"], encoding="utf-8")
+          pathlib.Path(cert_path).write_text(payload["certKey"] + "\n", encoding="utf-8")
+          pathlib.Path(known_hosts_path).write_text(
+              "\n".join(
+                  f"{payload['ipAddress']} {entry['algorithm']} {entry['publicKey']}"
+                  for entry in payload["hostKeys"]
+              )
+              + "\n",
+              encoding="utf-8",
+          )
+          pathlib.Path(output_path).write_text(
+              pathlib.Path(output_path).read_text(encoding="utf-8")
+              + f"host={payload['ipAddress']}\n"
+              + f"user={payload['username']}\n"
+              + f"key={key_path}\n"
+              + f"cert={cert_path}\n"
+              + f"known_hosts={known_hosts_path}\n",
+              encoding="utf-8",
+          )
+          PY
+
+          chmod 600 "$key_path" "$cert_path"
+
+      - name: Upload runtime bundle to Lightsail
+        if: steps.meta.outputs.dry_run != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i "${{ steps.ssh.outputs.key }}" \
+            -o CertificateFile="${{ steps.ssh.outputs.cert }}" \
+            -o UserKnownHostsFile="${{ steps.ssh.outputs.known_hosts }}" \
+            -o StrictHostKeyChecking=yes \
+            -o IdentitiesOnly=yes \
+            "${{ steps.ssh.outputs.user }}@${{ steps.ssh.outputs.host }}" \
+            "mkdir -p '${DEPLOY_RUNTIME_DIR}/cloudflared'"
+
+          scp -i "${{ steps.ssh.outputs.key }}" \
+            -o CertificateFile="${{ steps.ssh.outputs.cert }}" \
+            -o UserKnownHostsFile="${{ steps.ssh.outputs.known_hosts }}" \
+            -o StrictHostKeyChecking=yes \
+            -o IdentitiesOnly=yes \
+            artifacts/backend-deploy/runtime/docker-compose.yml \
+            artifacts/backend-deploy/runtime/.env \
+            artifacts/backend-deploy/runtime/release-manifest.json \
+            "${{ steps.ssh.outputs.user }}@${{ steps.ssh.outputs.host }}:${DEPLOY_RUNTIME_DIR}/"
+
+          scp -i "${{ steps.ssh.outputs.key }}" \
+            -o CertificateFile="${{ steps.ssh.outputs.cert }}" \
+            -o UserKnownHostsFile="${{ steps.ssh.outputs.known_hosts }}" \
+            -o StrictHostKeyChecking=yes \
+            -o IdentitiesOnly=yes \
+            artifacts/backend-deploy/runtime/cloudflared/config.yml \
+            artifacts/backend-deploy/runtime/cloudflared/credentials.json \
+            "${{ steps.ssh.outputs.user }}@${{ steps.ssh.outputs.host }}:${DEPLOY_RUNTIME_DIR}/cloudflared/"
+
+      - name: Deploy on Lightsail
+        if: steps.meta.outputs.dry_run != 'true'
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ssh -i "${{ steps.ssh.outputs.key }}" \
+            -o CertificateFile="${{ steps.ssh.outputs.cert }}" \
+            -o UserKnownHostsFile="${{ steps.ssh.outputs.known_hosts }}" \
+            -o StrictHostKeyChecking=yes \
+            -o IdentitiesOnly=yes \
+            "${{ steps.ssh.outputs.user }}@${{ steps.ssh.outputs.host }}" \
+            "set -euo pipefail
+            cd '${DEPLOY_RUNTIME_DIR}'
+            echo '${GHCR_TOKEN}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+            docker compose pull api
+            docker compose up -d postgres cloudflared api
+            docker logout ghcr.io || true
+            curl -fsS http://127.0.0.1:3010/health >/tmp/brdg-health.json
+            docker compose ps"
+
+      - name: Verify hosted backend
+        if: steps.meta.outputs.dry_run != 'true'
+        run: npm run check:hosted-backend -- --api-base-url "https://${API_HOSTNAME}"
