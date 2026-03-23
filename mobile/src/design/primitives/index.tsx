@@ -11,6 +11,8 @@ export type { CardVariant } from './Card';
 export { Input } from './Input';
 export { Chip } from './Chip';
 export { StatePanel } from './StatePanel';
+export { SkeletonBox, SkeletonCircle, SkeletonTextLine } from './Skeleton';
+export type { SkeletonBoxProps, SkeletonCircleProps, SkeletonTextLineProps } from './Skeleton';
 
 export const AppStack = View;
 export const Inline = View;

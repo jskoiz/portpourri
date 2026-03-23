@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { StatePanel } from '../design/primitives';
+import { DiscoverySkeleton } from '../components/skeletons';
 import { useSheetController } from '../design/sheets/useSheetController';
 import { normalizeApiError } from '../api/errors';
 import type { User } from '../api/types';
@@ -67,7 +68,7 @@ export default function HomeScreen({ navigation }: MainTabScreenProps<'Discover'
   const activeFilterCount = countActiveFilters(currentFilters, filterState);
 
   if (isLoading) {
-    return <StatePanel title="Tuning your feed" description="Finding people who match your pace." loading />;
+    return <DiscoverySkeleton testID="discovery-skeleton" />;
   }
 
   if (errorMessage) {

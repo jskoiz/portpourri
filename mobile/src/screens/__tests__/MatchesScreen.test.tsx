@@ -1,4 +1,5 @@
 import React from 'react';
+import { act } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import MatchesScreen from '../MatchesScreen';
 
@@ -51,6 +52,7 @@ describe('MatchesScreen', () => {
   });
 
   it('renders the loading state while matches are being fetched', () => {
+    jest.useFakeTimers();
     mockUseMatches.mockReturnValue({
       error: null,
       isLoading: true,
@@ -60,8 +62,12 @@ describe('MatchesScreen', () => {
     });
 
     render(<MatchesScreen navigation={mockNavigation} route={{ key: 'Inbox-1', name: 'Inbox' } as any} />);
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
 
-    expect(screen.getByText('Loading conversations')).toBeTruthy();
+    expect(screen.getByTestId('chat-list-skeleton')).toBeTruthy();
+    jest.useRealTimers();
   });
 
   it('renders the empty state and routes back to discovery', async () => {

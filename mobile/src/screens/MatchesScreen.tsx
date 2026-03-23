@@ -8,6 +8,7 @@ import { Image } from 'expo-image';
 import { normalizeApiError } from '../api/errors';
 import type { Match } from '../api/types';
 import AppBackdrop from '../components/ui/AppBackdrop';
+import { ChatListSkeleton } from '../components/skeletons';
 import { StatePanel } from '../design/primitives';
 import { radii, spacing, typography } from '../theme/tokens';
 import { fontFamily } from '../lib/fonts';
@@ -166,7 +167,7 @@ export default function MatchesScreen({ navigation }: MainTabScreenProps<'Inbox'
       </View>
 
       {loading ? (
-        <StatePanel title="Loading conversations" loading />
+        <ChatListSkeleton testID="chat-list-skeleton" />
       ) : errorMessage ? (
         <StatePanel
           title="Couldn't load inbox"
