@@ -28,13 +28,14 @@ export default function ChatScreen({ navigation, route }: RootStackScreenProps<'
   const theme = useTheme();
   const { matchId, user, prefillMessage } = route.params;
   const [message, setMessage] = useState(prefillMessage?.trim() ?? '');
+  const [manualRefreshing, setManualRefreshing] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const quickActionsSheet = useSheetController();
   const reportSheet = useSheetController();
   const { block, isLoading: isBlocking } = useBlock({
     onSuccess: () => navigation.goBack(),
   });
-  const { connectionStatus, error, isTyping, loading, messages, refresh, refreshing, sendMessage, sending, emitTyping } = useChatThread(matchId);
+  const { connectionStatus, error, isTyping, loading, messages, refresh, sendMessage, sending, emitTyping } = useChatThread(matchId);
   const errorMessage = error ? normalizeApiError(error).message : null;
   const photoUrl = getPrimaryPhotoUri(user);
 
@@ -60,8 +61,17 @@ export default function ChatScreen({ navigation, route }: RootStackScreenProps<'
     }
   };
 
+  const handleManualRefresh = async () => {
+    try {
+      setManualRefreshing(true);
+      await refresh();
+    } finally {
+      setManualRefreshing(false);
+    }
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
       <AppBackdrop />
       <ChatHeader
         activityTag={getActivityTag(user)}
@@ -81,12 +91,12 @@ export default function ChatScreen({ navigation, route }: RootStackScreenProps<'
       {loading ? (
         <StatePanel title="Loading messages" loading />
       ) : errorMessage && messages.length === 0 ? (
-        <StatePanel title="Couldn't load messages" description={errorMessage} actionLabel="Retry" onAction={() => { void refresh(); }} />
+        <StatePanel title="Couldn't load messages" description={errorMessage} actionLabel="Retry" onAction={() => { void handleManualRefresh(); }} />
       ) : (
         <ChatMessageList
           messages={messages}
-          onRefresh={() => { void refresh(); }}
-          refreshing={refreshing}
+          onRefresh={() => { void handleManualRefresh(); }}
+          refreshing={manualRefreshing}
           theme={theme}
         />
       )}

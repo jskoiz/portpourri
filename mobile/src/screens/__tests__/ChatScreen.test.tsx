@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import ChatScreen from '../ChatScreen';
 
@@ -6,6 +7,8 @@ const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 const mockRefresh = jest.fn();
 const mockSendMessage = jest.fn();
+let safeAreaViewProps: Record<string, unknown> | null = null;
+let chatMessageListProps: Record<string, unknown> | null = null;
 
 const mockNavigation = { navigate: mockNavigate, goBack: mockGoBack } as any;
 const mockRoute = {
@@ -18,19 +21,35 @@ const mockRoute = {
   },
 };
 
+const mockChatThreadState = {
+  connectionStatus: 'connected',
+  error: null,
+  isTyping: false,
+  loading: false,
+  messages: [],
+  refresh: mockRefresh,
+  refreshing: false,
+  sendMessage: mockSendMessage,
+  sending: false,
+  emitTyping: jest.fn(),
+};
+
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaView: ({ children, ...props }: any) => {
+    safeAreaViewProps = props;
+    return <View>{children}</View>;
+  },
+}));
+
 jest.mock('../../features/chat/hooks/useChatThread', () => ({
-  useChatThread: () => ({
-    connectionStatus: 'connected',
-    error: null,
-    isTyping: false,
-    loading: false,
-    messages: [],
-    refresh: mockRefresh,
-    refreshing: false,
-    sendMessage: mockSendMessage,
-    sending: false,
-    emitTyping: jest.fn(),
-  }),
+  useChatThread: () => mockChatThreadState,
+}));
+
+jest.mock('../../features/chat/components/ChatMessageList', () => ({
+  ChatMessageList: (props: Record<string, unknown>) => {
+    chatMessageListProps = props;
+    return null;
+  },
 }));
 
 jest.mock('../../features/moderation/hooks/useBlock', () => ({
@@ -51,8 +70,22 @@ jest.mock('../../features/moderation/components/ReportSheet', () => ({
 describe('ChatScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    safeAreaViewProps = null;
+    chatMessageListProps = null;
     mockRefresh.mockResolvedValue(undefined);
     mockSendMessage.mockResolvedValue(undefined);
+    Object.assign(mockChatThreadState, {
+      connectionStatus: 'connected',
+      error: null,
+      isTyping: false,
+      loading: false,
+      messages: [],
+      refresh: mockRefresh,
+      refreshing: false,
+      sendMessage: mockSendMessage,
+      sending: false,
+      emitTyping: jest.fn(),
+    });
   });
 
   it('prefills the composer and sends via matchesApi', async () => {
@@ -80,5 +113,19 @@ describe('ChatScreen', () => {
 
     // Message should still be in the input so the user can retry
     expect(screen.getByDisplayValue('Coffee after the run?')).toBeTruthy();
+  });
+
+  it('adds the bottom safe area inset for the composer', () => {
+    render(<ChatScreen navigation={mockNavigation} route={mockRoute as any} />);
+
+    expect(safeAreaViewProps?.edges).toEqual(['top', 'bottom']);
+  });
+
+  it('keeps pull-to-refresh idle during background polling refetches', () => {
+    mockChatThreadState.refreshing = true;
+
+    render(<ChatScreen navigation={mockNavigation} route={mockRoute as any} />);
+
+    expect(chatMessageListProps?.refreshing).toBe(false);
   });
 });
