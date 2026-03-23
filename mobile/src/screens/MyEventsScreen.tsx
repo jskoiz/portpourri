@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -68,7 +68,8 @@ function formatDate(startsAt: string) {
       hour: '2-digit',
       minute: '2-digit',
     });
-  } catch {
+  } catch (err) {
+    console.warn('[MyEvents] formatDate failed for input:', startsAt, err);
     return 'Date TBD';
   }
 }
@@ -98,9 +99,14 @@ export default function MyEventsScreen({
   const events = normalizeEvents(rawEvents);
   const errorMessage = error ? normalizeApiError(error).message : null;
 
+  const lastFetchedAt = useRef(0);
   useFocusEffect(
     useCallback(() => {
-      void refetch();
+      const now = Date.now();
+      if (now - lastFetchedAt.current > 30_000) {
+        lastFetchedAt.current = now;
+        void refetch();
+      }
     }, [refetch]),
   );
 
