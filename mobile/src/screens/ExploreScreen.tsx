@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Share } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { normalizeApiError } from '../api/errors';
@@ -10,6 +10,9 @@ import { ACTIVITY_SPOTS, type ExploreCategory } from '../features/events/explore
 import { ExploreScreenContent } from '../features/events/explore/ExploreScreenContent';
 import { getEventSectionTitle, getSpotsSectionTitle, matchesEventCategory, matchesSpotCategory } from '../features/events/explore/explore.helpers';
 import { triggerImpactHaptic, triggerSelectionHaptic } from '../lib/interaction/feedback';
+
+/** Minimum ms between focus-triggered refetches to avoid excessive API calls. */
+const FOCUS_REFETCH_INTERVAL_MS = 30_000;
 
 function openMyEvents(navigation: MainTabScreenProps<'Explore'>['navigation']) {
   const parentNavigation = navigation.getParent?.();
@@ -26,10 +29,15 @@ export default function ExploreScreen({ navigation }: MainTabScreenProps<'Explor
   const [activeCategory, setActiveCategory] = useState<ExploreCategory>('All');
   const { events, error, isLoading, isRefetching, refetch } = useExploreEvents();
   const errorMessage = error ? normalizeApiError(error).message : null;
+  const lastFocusRefetchRef = useRef(0);
 
   useFocusEffect(
     useCallback(() => {
-      void refetch();
+      const now = Date.now();
+      if (now - lastFocusRefetchRef.current >= FOCUS_REFETCH_INTERVAL_MS) {
+        lastFocusRefetchRef.current = now;
+        void refetch();
+      }
     }, [refetch]),
   );
 
