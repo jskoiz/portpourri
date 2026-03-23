@@ -48,11 +48,11 @@ export function ChatQuickActionsSheet({
       <Text style={styles.quickActionSectionLabel}>Suggested openers</Text>
       {QUICK_ACTIONS.map((action) => (
         <Card key={action.key} style={styles.quickActionCard}>
-          <View style={styles.quickActionBody}>
+          <View style={styles.quickActionBody} accessibilityLabel={`${action.label}: ${action.message}`}>
             <Text style={styles.quickActionTitle}>{action.label}</Text>
             <Text style={styles.quickActionCopy}>{action.message}</Text>
             <Button
-              label="Use message"
+              label={`Use "${action.label}" message`}
               onPress={() => {
                 onClose();
                 onSelectMessage(action.message);

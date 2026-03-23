@@ -43,7 +43,12 @@ export function Card({
   const wrapInteractive = (content: React.ReactElement) => {
     if (!onPress) return content;
     return (
-      <Pressable onPress={onPress} onPressIn={handleCardPressIn} onPressOut={handleCardPressOut}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handleCardPressIn}
+        onPressOut={handleCardPressOut}
+        accessibilityRole="button"
+      >
         <Animated.View style={{ transform: [{ scale: cardScale }] }}>
           {content}
         </Animated.View>

@@ -25,10 +25,18 @@ export function StatePanel({
   const icon = isError ? 'alert-circle' : 'compass';
 
   return (
-    <View style={primitiveStyles.stateContainer}>
+    <View
+      style={primitiveStyles.stateContainer}
+      accessibilityRole={isError ? 'alert' : undefined}
+    >
       <Card style={primitiveStyles.statePanel}>
         {loading ? (
-          <ActivityIndicator size="large" color={theme.primary} style={primitiveStyles.loader} />
+          <ActivityIndicator
+            size="large"
+            color={theme.primary}
+            style={primitiveStyles.loader}
+            accessibilityLabel={`Loading: ${title}`}
+          />
         ) : (
           <View
             style={[

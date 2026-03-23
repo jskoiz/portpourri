@@ -58,6 +58,8 @@ export default function AppSelect({
       <Pressable
         accessibilityLabel={triggerAccessibilityLabel}
         accessibilityRole="button"
+        accessibilityHint="Double tap to open dropdown"
+        accessibilityState={{ expanded: open, disabled: disabled ?? false }}
         disabled={disabled}
         onPress={() => setOpen((current) => !current)}
         style={[
@@ -99,7 +101,8 @@ export default function AppSelect({
                   <Pressable
                     key={option.value}
                     accessibilityLabel={option.label}
-                    accessibilityRole="button"
+                    accessibilityRole="menuitem"
+                    accessibilityState={{ selected }}
                     onPress={() => {
                       onSelect(option.value);
                       setOpen(false);

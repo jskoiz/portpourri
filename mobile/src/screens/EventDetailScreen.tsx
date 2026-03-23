@@ -70,7 +70,7 @@ export function EventDetailView({
           {event.imageUrl ? (
             <Image source={{ uri: event.imageUrl }} style={styles.heroImage} contentFit="cover" accessibilityLabel={`Event image for ${event.title}`} />
           ) : (
-            <View style={[styles.heroImage, { backgroundColor: theme.surfaceElevated }]} />
+            <View style={[styles.heroImage, { backgroundColor: theme.surfaceElevated }]} accessibilityLabel="No event image" />
           )}
           <View style={styles.heroOverlay} />
 
@@ -79,7 +79,7 @@ export function EventDetailView({
           </View>
 
           {!!event.category && (
-            <View style={[styles.heroBadge, { backgroundColor: theme.primary }]}>
+            <View style={[styles.heroBadge, { backgroundColor: theme.primary }]} accessibilityLabel={`Category: ${event.category}`}>
               <Text style={[styles.heroBadgeText, { color: theme.white }]}>{event.category}</Text>
             </View>
           )}
@@ -96,9 +96,9 @@ export function EventDetailView({
               <Text style={[styles.hostLabel, { color: theme.textMuted }]}>Hosted by</Text>
               <Text style={[styles.hostName, { color: theme.textPrimary }]}>{event.host.firstName}</Text>
             </View>
-            <Pressable style={[styles.hostPill, { borderColor: theme.border, minHeight: 36 }]} accessibilityLabel="Open invite">
+            <View style={[styles.hostPill, { borderColor: theme.border, minHeight: 36 }]} accessibilityLabel="Open invite" accessibilityRole="text">
               <Text style={[styles.hostPillText, { color: theme.textSecondary }]}>Open invite</Text>
-            </Pressable>
+            </View>
           </View>
 
           <View style={styles.metaList}>
@@ -179,9 +179,10 @@ function MetaRow({
   sub?: string;
 }) {
   const theme = useTheme();
+  const fullLabel = sub ? `${label}, ${sub}` : label;
   return (
-    <View style={styles.metaRow}>
-      <View style={[styles.metaIconWrap, { backgroundColor: theme.surfaceElevated }]}>
+    <View style={styles.metaRow} accessibilityLabel={fullLabel}>
+      <View style={[styles.metaIconWrap, { backgroundColor: theme.surfaceElevated }]} importantForAccessibility="no-hide-descendants">
         <AppIcon name={icon} size={15} color={theme.primary} />
       </View>
       <View>

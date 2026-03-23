@@ -55,8 +55,12 @@ export function ProfileDetailHero({
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.heroFallback}
+          accessibilityLabel={`Avatar for ${firstName || 'profile'}`}
         >
-          <Text style={[styles.heroFallbackText, { color: theme.textMuted }]}>
+          <Text
+            style={[styles.heroFallbackText, { color: theme.textMuted }]}
+            importantForAccessibility="no"
+          >
             {firstName?.[0] || '?'}
           </Text>
         </LinearGradient>
@@ -116,7 +120,13 @@ export function ProfileDetailHero({
 
       <View style={styles.heroNameOverlay}>
         {intentDisplay && (
-          <View style={[styles.intentPill, { backgroundColor: theme.primarySubtle, borderColor: theme.primary }]}>
+          <View
+            style={[
+              styles.intentPill,
+              { backgroundColor: theme.primarySubtle, borderColor: theme.primary },
+            ]}
+            accessibilityLabel={`Intent: ${intentDisplay}`}
+          >
             <Text style={[styles.intentPillText, { color: theme.primary }]}>{intentDisplay}</Text>
           </View>
         )}
@@ -131,7 +141,10 @@ export function ProfileDetailHero({
         </View>
 
         {activityTags.length > 0 && (
-          <View style={styles.tagRow}>
+          <View
+            style={styles.tagRow}
+            accessibilityLabel={`Activities: ${activityTags.slice(0, 4).join(', ')}`}
+          >
             {activityTags.slice(0, 4).map((tag, index) => (
               <View
                 key={`${tag}-${index}`}
@@ -142,6 +155,7 @@ export function ProfileDetailHero({
                     borderColor: index % 2 === 0 ? 'rgba(139,170,122,0.24)' : 'rgba(196,168,130,0.24)',
                   },
                 ]}
+                importantForAccessibility="no"
               >
                 <Text
                   style={[
@@ -181,7 +195,12 @@ export function ProfileDetailInfo({
     <View style={styles.contentArea}>
       {!!bio && (
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: theme.primary }]}>About</Text>
+          <Text
+            style={[styles.sectionLabel, { color: theme.primary }]}
+            accessibilityRole="header"
+          >
+            About
+          </Text>
           <Text style={[styles.bio, { color: theme.textPrimary }]}>{bio}</Text>
         </View>
       )}
@@ -209,8 +228,16 @@ export function ProfileDetailInfo({
 
       {activityTags.length > 0 && (
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: theme.primary }]}>Movement Identity</Text>
-          <View style={styles.activityPills}>
+          <Text
+            style={[styles.sectionLabel, { color: theme.primary }]}
+            accessibilityRole="header"
+          >
+            Movement Identity
+          </Text>
+          <View
+            style={styles.activityPills}
+            accessibilityLabel={`Movement identity: ${activityTags.slice(0, 3).join(', ')}`}
+          >
             {activityTags.slice(0, 3).map((tag, index) => {
               const isAccent = index % 2 === 0;
               return (
@@ -223,6 +250,7 @@ export function ProfileDetailInfo({
                       borderColor: isAccent ? 'rgba(139,170,122,0.24)' : 'rgba(196,168,130,0.24)',
                     },
                   ]}
+                  importantForAccessibility="no"
                 >
                   <Text
                     style={[
@@ -299,9 +327,19 @@ function StructuredRow({ label, value }: ProfileDetailRow) {
   const theme = useTheme();
 
   return (
-    <View style={styles.structuredRow}>
-      <Text style={[styles.structuredLabel, { color: theme.textMuted }]}>{label}</Text>
-      <Text style={[styles.structuredValue, { color: theme.textPrimary }]}>{value}</Text>
+    <View style={styles.structuredRow} accessibilityLabel={`${label}: ${value}`}>
+      <Text
+        style={[styles.structuredLabel, { color: theme.textMuted }]}
+        importantForAccessibility="no"
+      >
+        {label}
+      </Text>
+      <Text
+        style={[styles.structuredValue, { color: theme.textPrimary }]}
+        importantForAccessibility="no"
+      >
+        {value}
+      </Text>
     </View>
   );
 }

@@ -47,8 +47,9 @@ export function ChatHeader({
               justifyContent: 'center',
             },
           ]}
+          accessibilityLabel={`Avatar for ${user?.firstName || 'match'}`}
         >
-          <Text style={{ color: theme.textPrimary, fontSize: 16, fontWeight: '700' }}>
+          <Text style={{ color: theme.textPrimary, fontSize: 16, fontWeight: '700' }} importantForAccessibility="no">
             {user?.firstName?.[0] || '?'}
           </Text>
         </View>
@@ -57,7 +58,7 @@ export function ChatHeader({
         <Text style={[styles.headerEyebrow, { color: theme.textMuted }]}>MATCH CONVERSATION</Text>
         <Text style={[styles.headerName, { color: theme.textPrimary }]}>{user?.firstName || 'Chat'}</Text>
         {activityTag ? (
-          <View style={[styles.headerTag, { backgroundColor: theme.primarySubtle, borderColor: theme.primary }]}>
+          <View style={[styles.headerTag, { backgroundColor: theme.primarySubtle, borderColor: theme.primary }]} accessibilityLabel={`Activity: ${activityTag}`}>
             <Text style={[styles.headerTagText, { color: theme.primary }]}>{activityTag}</Text>
           </View>
         ) : null}

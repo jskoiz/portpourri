@@ -40,13 +40,18 @@ export default function ProfileDetailScreen({
     return (
       <Screen>
         <AppBackButton onPress={() => navigation.goBack()} />
-        <StatePanel title="Profile not found" description="This profile is no longer available." />
+        <StatePanel
+          title="Profile not found"
+          description="This profile is no longer available."
+        />
       </Screen>
     );
   }
 
   const primaryPhoto = getPrimaryPhotoUri(user);
-  const activityTags: string[] = parseFavoriteActivities(user.fitnessProfile?.favoriteActivities);
+  const activityTags: string[] = parseFavoriteActivities(
+    user.fitnessProfile?.favoriteActivities,
+  );
 
   const intentFlags = [
     user.profile?.intentDating ? 'Dating' : null,
@@ -59,7 +64,9 @@ export default function ProfileDetailScreen({
   const structuredRows: ProfileDetailRow[] = [
     {
       label: 'Pace',
-      value: user.fitnessProfile?.intensityLevel ? `${user.fitnessProfile.intensityLevel}` : 'Not set',
+      value: user.fitnessProfile?.intensityLevel
+        ? `${user.fitnessProfile.intensityLevel}`
+        : 'Not set',
     },
     {
       label: 'Prefers',
@@ -122,7 +129,10 @@ export default function ProfileDetailScreen({
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <AppBackdrop />
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <ProfileDetailHero
           activityTags={activityTags}
           age={user.age}

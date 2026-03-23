@@ -98,6 +98,7 @@ export function AppBottomSheet({
         </View>
         <Pressable
           accessibilityLabel={`Close ${title}`}
+          accessibilityRole="button"
           onPress={handleRequestClose}
           hitSlop={8}
           style={({ pressed }) => [{ opacity: pressed ? 0.76 : 1 }]}

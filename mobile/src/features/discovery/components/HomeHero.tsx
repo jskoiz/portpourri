@@ -34,8 +34,8 @@ export function HomeHero({
   return (
     <View style={styles.topBar}>
       <View style={styles.heroHeaderRow}>
-        <View style={styles.headerCopy}>
-          <Text style={styles.greetingEyebrow}>{timeLabel}</Text>
+        <View style={styles.headerCopy} accessibilityRole="header">
+          <Text style={styles.greetingEyebrow} importantForAccessibility="no">{timeLabel}</Text>
           <Text style={[styles.greeting, { fontFamily: fontFamily.serifBold }]}>{greeting}</Text>
         </View>
 
@@ -47,8 +47,8 @@ export function HomeHero({
         />
       </View>
 
-      <View style={styles.heroSummaryRow}>
-        <View style={styles.intentBadgeWrap}>
+      <View style={styles.heroSummaryRow} accessibilityLabel={`${intentOption.label}. ${summaryLabel}`}>
+        <View style={styles.intentBadgeWrap} importantForAccessibility="no">
           <LinearGradient
             colors={[intentOption.color + '14', intentOption.color + '08']}
             style={styles.intentBadge}
@@ -59,7 +59,7 @@ export function HomeHero({
           </LinearGradient>
         </View>
 
-        <Text style={styles.heroSummaryText}>{summaryLabel}</Text>
+        <Text style={styles.heroSummaryText} importantForAccessibility="no">{summaryLabel}</Text>
       </View>
     </View>
   );

@@ -26,6 +26,7 @@ const ChatBubble = React.memo(function ChatBubble({
   theme: Theme;
 }) {
   const isMe = item.sender === 'me';
+  const senderLabel = isMe ? 'You' : 'Them';
   const eventId = parseEventInviteMessage(item.text);
 
   if (eventId) {
@@ -39,7 +40,7 @@ const ChatBubble = React.memo(function ChatBubble({
         />
       );
     }
-    // Fallback: render as a styled card placeholder if we don't have event data yet
+
     return (
       <EventInviteCard
         eventId={eventId}
@@ -60,9 +61,16 @@ const ChatBubble = React.memo(function ChatBubble({
         isMe ? styles.bubbleMe : styles.bubbleThem,
         { backgroundColor: isMe ? theme.textPrimary : theme.surface },
       ]}
-      accessibilityLabel={isMe ? `You said: ${item.text}` : `They said: ${item.text}`}
+      accessibilityLabel={`${senderLabel}: ${item.text}`}
     >
-      <Text style={[styles.bubbleText, { color: isMe ? theme.textInverse : theme.textPrimary }]}>{item.text}</Text>
+      <Text
+        style={[
+          styles.bubbleText,
+          { color: isMe ? theme.textInverse : theme.textPrimary },
+        ]}
+      >
+        {item.text}
+      </Text>
     </View>
   );
 });
@@ -99,9 +107,15 @@ export function ChatMessageList({
       showsVerticalScrollIndicator={false}
       windowSize={10}
       maxToRenderPerBatch={15}
-      removeClippedSubviews={true}
+      removeClippedSubviews
       initialNumToRender={20}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={theme.primary}
+        />
+      }
     />
   );
 }

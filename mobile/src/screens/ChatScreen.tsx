@@ -92,7 +92,10 @@ export default function ChatScreen({ navigation, route }: RootStackScreenProps<'
       )}
 
       {connectionStatus !== 'connected' ? (
-        <Text style={[styles.statusNote, { color: theme.textMuted }]}>
+        <Text
+          style={[styles.statusNote, { color: theme.textMuted }]}
+          accessibilityLiveRegion="polite"
+        >
           {connectionStatus === 'connecting'
             ? 'Connecting…'
             : connectionStatus === 'reconnecting'
@@ -104,7 +107,13 @@ export default function ChatScreen({ navigation, route }: RootStackScreenProps<'
         <Text style={[styles.statusNote, { color: theme.textMuted }]}>Typing…</Text>
       ) : null}
       {(sendError || errorMessage) && messages.length > 0 ? (
-        <Text style={[styles.errorNote, { color: theme.danger }]}>{sendError || errorMessage}</Text>
+        <Text
+          style={[styles.errorNote, { color: theme.danger }]}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="assertive"
+        >
+          {sendError || errorMessage}
+        </Text>
       ) : null}
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
