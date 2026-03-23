@@ -11,6 +11,7 @@ import { Button, StatePanel } from '../design/primitives';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
 import { useEventDetail } from '../features/events/hooks/useEventDetail';
+import { hapticSuccess } from '../lib/interaction/feedback';
 import type { RootStackScreenProps } from '../core/navigation/types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -141,6 +142,7 @@ export default function EventDetailScreen({
     if (!event || joining || event.joined) return;
     try {
       await joinEvent();
+      void hapticSuccess();
     } catch (err) {
       const normalized = normalizeApiError(err);
       Alert.alert(

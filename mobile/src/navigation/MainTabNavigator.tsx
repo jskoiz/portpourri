@@ -22,6 +22,7 @@ import { GlassView } from '../design/primitives/GlassView';
 import type { MainTabParamList } from '../core/navigation/types';
 import { useUnreadNotificationCount } from '../features/notifications/hooks/useUnreadNotificationCount';
 import { useTabBarVisibility } from './TabBarVisibilityContext';
+import { triggerSelectionHaptic } from '../lib/interaction/feedback';
 import { radii } from '../theme/tokens';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -93,6 +94,7 @@ function FloatingGlassTabBar({ state, descriptors, navigation }: BottomTabBarPro
                 canPreventDefault: true,
               });
               if (!isFocused && !event.defaultPrevented) {
+                void triggerSelectionHaptic();
                 navigation.navigate(route.name);
               }
             };

@@ -16,6 +16,7 @@ import {
   registerForPushNotifications,
   setupNotificationListeners,
 } from '../../lib/pushNotifications';
+import { loadHapticsPreference } from '../../lib/interaction/feedback';
 
 initSentry();
 installGlobalErrorHandler();
@@ -35,6 +36,9 @@ export function AppProviders({ children }: PropsWithChildren) {
     const bootstrapTask = InteractionManager.runAfterInteractions(() => {
       registerForPushNotifications().catch((error) => {
         console.warn('Push notification bootstrap failed:', error);
+      });
+      loadHapticsPreference().catch(() => {
+        // Non-critical — defaults to enabled.
       });
     });
 

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Pressable, RefreshControl, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ import {
 import { EditableField, PhotoManager, TagPill } from './ProfileSections';
 import type { PhotoOperationState } from '../hooks/usePhotoManager';
 import { getAvatarInitial, getPrimaryPhotoUri } from '../../../lib/profilePhotos';
+import { isHapticsEnabled, setHapticsEnabled, loadHapticsPreference } from '../../../lib/interaction/feedback';
 import type { LocationSuggestion } from '../../locations/locationSuggestions';
 
 function SettingsRow({
@@ -48,6 +49,38 @@ function SettingsRow({
       <Text style={styles.settingsLabel}>{label}</Text>
       <Text style={styles.settingsArrow} importantForAccessibility="no">{accessory}</Text>
     </TouchableOpacity>
+  );
+}
+
+function SettingsToggleRow({
+  icon,
+  label,
+  onValueChange,
+  testID,
+  value,
+}: {
+  icon: string;
+  label: string;
+  onValueChange: (value: boolean) => void;
+  testID?: string;
+  value: boolean;
+}) {
+  return (
+    <View
+      testID={testID}
+      style={[styles.settingsRow, { minHeight: 48 }]}
+      accessibilityLabel={label}
+    >
+      <Text style={styles.settingsIcon} importantForAccessibility="no">{icon}</Text>
+      <Text style={styles.settingsLabel}>{label}</Text>
+      <Switch
+        testID={testID ? `${testID}-switch` : undefined}
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: '#E0D8CF', true: '#C4A882' }}
+        thumbColor="#FFFFFF"
+      />
+    </View>
   );
 }
 
@@ -155,6 +188,17 @@ export function ProfileScreenContent({
   showBuildInfo: boolean;
   weeklyFrequencyBand: string;
 }) {
+  const [hapticsOn, setHapticsOn] = useState(isHapticsEnabled);
+
+  useEffect(() => {
+    loadHapticsPreference().then(setHapticsOn).catch(() => {});
+  }, []);
+
+  const handleToggleHaptics = (enabled: boolean) => {
+    setHapticsOn(enabled);
+    void setHapticsEnabled(enabled);
+  };
+
   const primaryPhoto = getPrimaryPhotoUri(profile);
   const isSaving = isSavingFitness || isSavingProfile;
   const buildRows = [
@@ -377,6 +421,8 @@ export function ProfileScreenContent({
             <SettingsRow icon="🔒" label="Privacy" onPress={() => Alert.alert('Coming Soon', 'This feature is not yet available.')} />
             <View style={styles.fieldDivider} />
             <SettingsRow icon="🔔" label="Notifications" onPress={() => navigation.navigate('Notifications')} />
+            <View style={styles.fieldDivider} />
+            <SettingsToggleRow testID="haptic-feedback-toggle" icon="📳" label="Haptic Feedback" value={hapticsOn} onValueChange={handleToggleHaptics} />
             <View style={styles.fieldDivider} />
             <SettingsRow testID="build-provenance-toggle" icon="🧾" label="Build provenance" accessory={showBuildInfo ? '⌄' : '›'} onPress={onToggleBuildInfo} />
             {showBuildInfo ? (
