@@ -21,12 +21,15 @@ function makeMockPrisma() {
     report: {
       findFirst: jest.fn().mockResolvedValue(null),
     },
+    notificationPreferences: {
+      findUnique: jest.fn(),
+    },
   } as unknown as PrismaService;
 }
 
 function makeMockPushService() {
   return {
-    sendPushNotification: jest.fn().mockResolvedValue(undefined),
+    sendPushNotification: jest.fn().mockResolvedValue({ outcome: 'delivered', pushToken: 'token' }),
   } as unknown as PushService;
 }
 
@@ -196,5 +199,84 @@ describe('NotificationsService', () => {
 
     expect(result).not.toBeNull();
     expect(prisma.notification.create).toHaveBeenCalled();
+  });
+
+  describe('isNotificationEnabled', () => {
+    it('returns true when no preferences row exists', async () => {
+      (prisma.notificationPreferences.findUnique as jest.Mock).mockResolvedValue(null);
+
+      const enabled = await service.isNotificationEnabled('user-1', 'match_created');
+      expect(enabled).toBe(true);
+    });
+
+    it('returns true when user has the preference enabled', async () => {
+      (prisma.notificationPreferences.findUnique as jest.Mock).mockResolvedValue({
+        matches: true,
+        messages: true,
+        likes: true,
+        eventReminders: true,
+        eventRsvps: true,
+        system: true,
+      });
+
+      const enabled = await service.isNotificationEnabled('user-1', 'match_created');
+      expect(enabled).toBe(true);
+    });
+
+    it('returns false when user has the preference disabled', async () => {
+      (prisma.notificationPreferences.findUnique as jest.Mock).mockResolvedValue({
+        matches: false,
+        messages: true,
+        likes: true,
+        eventReminders: true,
+        eventRsvps: true,
+        system: true,
+      });
+
+      const enabled = await service.isNotificationEnabled('user-1', 'match_created');
+      expect(enabled).toBe(false);
+    });
+
+    it('maps message_received to the messages preference', async () => {
+      (prisma.notificationPreferences.findUnique as jest.Mock).mockResolvedValue({
+        matches: true,
+        messages: false,
+        likes: true,
+        eventReminders: true,
+        eventRsvps: true,
+        system: true,
+      });
+
+      const enabled = await service.isNotificationEnabled('user-1', 'message_received');
+      expect(enabled).toBe(false);
+    });
+
+    it('maps like_received to the likes preference', async () => {
+      (prisma.notificationPreferences.findUnique as jest.Mock).mockResolvedValue({
+        matches: true,
+        messages: true,
+        likes: false,
+        eventReminders: true,
+        eventRsvps: true,
+        system: true,
+      });
+
+      const enabled = await service.isNotificationEnabled('user-1', 'like_received');
+      expect(enabled).toBe(false);
+    });
+
+    it('maps event_rsvp to the eventRsvps preference', async () => {
+      (prisma.notificationPreferences.findUnique as jest.Mock).mockResolvedValue({
+        matches: true,
+        messages: true,
+        likes: true,
+        eventReminders: true,
+        eventRsvps: false,
+        system: true,
+      });
+
+      const enabled = await service.isNotificationEnabled('user-1', 'event_rsvp');
+      expect(enabled).toBe(false);
+    });
   });
 });

@@ -227,6 +227,13 @@ export class AuthService {
     });
   }
 
+  async deregisterPushToken(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pushToken: null },
+    });
+  }
+
   private issueAuthToken(user: AuthenticatedUser): AuthResult {
     const userEmail = user.email?.trim() ?? '';
     const payload = { sub: user.id };

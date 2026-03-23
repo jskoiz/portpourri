@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEnum,
   IsObject,
   IsOptional,
@@ -27,4 +28,30 @@ export class EmitNotificationDto {
   @IsOptional()
   @IsObject()
   data?: Record<string, unknown>;
+}
+
+export class UpdateNotificationPreferencesDto {
+  @IsOptional()
+  @IsBoolean()
+  matches?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  messages?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  likes?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  eventReminders?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  eventRsvps?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  system?: boolean;
 }

@@ -20,6 +20,19 @@ const PUSH_ELIGIBLE_TYPES: ReadonlySet<NotificationType> = new Set([
   'event_rsvp',
 ]);
 
+/**
+ * Maps notification types to the corresponding preference field name
+ * on the NotificationPreferences model.
+ */
+const TYPE_TO_PREFERENCE_KEY: Record<NotificationType, string> = {
+  match_created: 'matches',
+  message_received: 'messages',
+  like_received: 'likes',
+  event_rsvp: 'eventRsvps',
+  event_reminder: 'eventReminders',
+  system: 'system',
+};
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -61,7 +74,7 @@ export class NotificationsService {
       },
     });
 
-    // Foundation hook for future APNS/FCM dispatch
+    // Fire-and-forget push dispatch
     this.dispatchPush(notification);
 
     return notification;
@@ -150,26 +163,67 @@ export class NotificationsService {
     return !!blockReport;
   }
 
+  /**
+   * Check if the user has opted in to push notifications for the given type.
+   * Returns true when no preferences row exists (all defaults are true).
+   */
+  async isNotificationEnabled(
+    userId: string,
+    type: NotificationType,
+  ): Promise<boolean> {
+    const prefs = await this.prisma.notificationPreferences.findUnique({
+      where: { userId },
+    });
+
+    if (!prefs) return true;
+
+    const key = TYPE_TO_PREFERENCE_KEY[type];
+    if (!key) return true;
+
+    return (prefs as Record<string, unknown>)[key] !== false;
+  }
+
   private async dispatchPush(notification: Notification): Promise<void> {
     if (!PUSH_ELIGIBLE_TYPES.has(notification.type as NotificationType)) {
       return;
     }
 
     try {
+      // Single query: fetch pushToken and preferences together
       const user = await this.prisma.user.findUnique({
         where: { id: notification.userId },
-        select: { pushToken: true },
+        select: {
+          pushToken: true,
+          notificationPreferences: true,
+        },
       });
 
       if (!user?.pushToken) {
         return;
       }
 
-      await this.pushService.sendPushNotification(
+      // Check user notification preferences before sending
+      const prefKey = TYPE_TO_PREFERENCE_KEY[notification.type as NotificationType];
+      if (
+        prefKey &&
+        user.notificationPreferences &&
+        (user.notificationPreferences as Record<string, unknown>)[prefKey] === false
+      ) {
+        this.logger.debug(
+          `Push skipped — user opted out type=${notification.type} userId=${notification.userId}`,
+        );
+        return;
+      }
+
+      const result = await this.pushService.sendPushNotification(
         user.pushToken,
         notification.title,
         notification.body,
         (notification.data as Record<string, unknown>) ?? undefined,
+      );
+
+      this.logger.debug(
+        `Push dispatch complete — outcome=${result.outcome} notificationId=${notification.id}`,
       );
     } catch (error) {
       this.logger.error(

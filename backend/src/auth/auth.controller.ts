@@ -83,4 +83,17 @@ export class AuthController {
   ): Promise<void> {
     await this.authService.registerPushToken(req.user.id, body.token);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete('push-token')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Deregister the push token for the authenticated user' })
+  @ApiNoContentResponse({ description: 'Push token deregistered successfully.' })
+  @ApiUnauthorizedResponse({ description: 'Authentication is required.' })
+  async deregisterPushToken(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<void> {
+    await this.authService.deregisterPushToken(req.user.id);
+  }
 }

@@ -193,6 +193,15 @@ export const matchesApi = {
     ),
 };
 
+export interface NotificationPreferences {
+  matches: boolean;
+  messages: boolean;
+  likes: boolean;
+  eventReminders: boolean;
+  eventRsvps: boolean;
+  system: boolean;
+}
+
 export const notificationsApi = {
   list: async () =>
     withErrorLogging("notifications", "list", () =>
@@ -206,6 +215,14 @@ export const notificationsApi = {
   markAllRead: async () =>
     withErrorLogging("notifications", "markAllRead", () =>
       client.post<{ updated: number }>("/notifications/mark-all-read"),
+    ),
+  getPreferences: async () =>
+    withErrorLogging("notifications", "getPreferences", () =>
+      client.get<NotificationPreferences>("/notifications/preferences"),
+    ),
+  updatePreferences: async (prefs: Partial<NotificationPreferences>) =>
+    withErrorLogging("notifications", "updatePreferences", () =>
+      client.put<NotificationPreferences>("/notifications/preferences", prefs),
     ),
 };
 

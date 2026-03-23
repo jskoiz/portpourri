@@ -4,6 +4,7 @@ import { authApi } from "../services/api";
 import { normalizeApiError } from "../api/errors";
 import { getToken, setToken, deleteToken } from "../api/tokenStorage";
 import { queryClient } from "../lib/query/queryClient";
+import { deregisterPushToken } from "../services/pushRegistration";
 import type { User } from "../api/types";
 
 interface LoginPayload {
@@ -73,6 +74,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    // Best-effort cleanup: do not block logout on a network round-trip.
+    void deregisterPushToken();
     queryClient.clear();
     await deleteToken();
     Sentry.setUser(null);
@@ -87,6 +90,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     try {
+      void deregisterPushToken();
       queryClient.clear();
       await deleteToken();
     } finally {

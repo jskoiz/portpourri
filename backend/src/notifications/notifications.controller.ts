@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Request,
   UseGuards,
@@ -24,8 +25,9 @@ import {
 } from '@nestjs/swagger';
 import { appConfig } from '../config/app.config';
 import { NotificationsService } from './notifications.service';
+import { NotificationPreferencesService } from './notification-preferences.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
-import { EmitNotificationDto } from './notifications.dto';
+import { EmitNotificationDto, UpdateNotificationPreferencesDto } from './notifications.dto';
 
 @Controller('notifications')
 @UseGuards(AuthGuard('jwt'))
@@ -33,7 +35,10 @@ import { EmitNotificationDto } from './notifications.dto';
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Authentication is required.' })
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly preferencesService: NotificationPreferencesService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List notifications for the current user' })
@@ -57,6 +62,23 @@ export class NotificationsController {
   async getUnreadCount(@Request() req: AuthenticatedRequest) {
     const count = await this.notificationsService.getUnreadCount(req.user.id);
     return { count };
+  }
+
+  @Get('preferences')
+  @ApiOperation({ summary: 'Get notification preferences for the current user' })
+  @ApiOkResponse({ description: 'Notification preferences returned.' })
+  async getPreferences(@Request() req: AuthenticatedRequest) {
+    return this.preferencesService.get(req.user.id);
+  }
+
+  @Put('preferences')
+  @ApiOperation({ summary: 'Update notification preferences for the current user' })
+  @ApiOkResponse({ description: 'Notification preferences updated.' })
+  async updatePreferences(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: UpdateNotificationPreferencesDto,
+  ) {
+    return this.preferencesService.upsert(req.user.id, body);
   }
 
   @Patch(':id/read')

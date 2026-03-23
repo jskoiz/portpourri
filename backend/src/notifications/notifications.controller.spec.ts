@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
+import { NotificationPreferencesService } from './notification-preferences.service';
 import { NotificationType } from '../common/enums';
 import { appConfig } from '../config/app.config';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
@@ -16,6 +17,11 @@ describe('NotificationsController', () => {
     create: jest.fn(),
   };
 
+  const preferencesServiceMock = {
+    get: jest.fn(),
+    upsert: jest.fn(),
+  };
+
   const req = { user: { id: 'user-1' } } as AuthenticatedRequest;
 
   const originalIsProduction = appConfig.isProduction;
@@ -27,6 +33,7 @@ describe('NotificationsController', () => {
       controllers: [NotificationsController],
       providers: [
         { provide: NotificationsService, useValue: notificationsServiceMock },
+        { provide: NotificationPreferencesService, useValue: preferencesServiceMock },
       ],
     }).compile();
 
@@ -127,5 +134,27 @@ describe('NotificationsController', () => {
       'user-1',
       expect.objectContaining({ type: NotificationType.System }),
     );
+  });
+
+  describe('preferences', () => {
+    it('delegates getPreferences to preferences service', async () => {
+      const prefs = { matches: true, messages: true, likes: true, eventReminders: true, eventRsvps: true, system: true };
+      preferencesServiceMock.get.mockResolvedValue(prefs);
+
+      const result = await controller.getPreferences(req);
+
+      expect(preferencesServiceMock.get).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(prefs);
+    });
+
+    it('delegates updatePreferences to preferences service', async () => {
+      const updated = { matches: false, messages: true, likes: true, eventReminders: true, eventRsvps: true, system: true };
+      preferencesServiceMock.upsert.mockResolvedValue(updated);
+
+      const result = await controller.updatePreferences(req, { matches: false });
+
+      expect(preferencesServiceMock.upsert).toHaveBeenCalledWith('user-1', { matches: false });
+      expect(result).toEqual(updated);
+    });
   });
 });

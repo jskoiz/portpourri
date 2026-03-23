@@ -22,6 +22,11 @@ jest.mock('../../lib/query/queryClient', () => ({
   queryClient: { clear: jest.fn() },
 }));
 
+const mockDeregisterPushToken = jest.fn().mockResolvedValue(undefined);
+jest.mock('../../services/pushRegistration', () => ({
+  deregisterPushToken: (...args: unknown[]) => mockDeregisterPushToken(...args),
+}));
+
 jest.mock('../../services/api', () => ({
   authApi: {
     login: jest.fn(),
@@ -87,6 +92,30 @@ describe('authStore', () => {
       expect(useAuthStore.getState().token).toBeNull();
       expect(useAuthStore.getState().user).toBeNull();
     });
+
+    it('does not wait for push-token deregistration before clearing the session', async () => {
+      mockAuthApi.deleteAccount.mockResolvedValueOnce({ data: undefined } as any);
+      mockDeleteToken.mockResolvedValueOnce(undefined);
+
+      let resolveDeregister: (() => void) | undefined;
+      const deregisterPromise = new Promise<void>((resolve) => {
+        resolveDeregister = resolve;
+      });
+      mockDeregisterPushToken.mockReturnValueOnce(deregisterPromise);
+
+      useAuthStore.setState({ token: 'tok', user: { id: 'u1' } });
+
+      const deleteAccountPromise = useAuthStore.getState().deleteAccount();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockDeleteToken).toHaveBeenCalled();
+      expect(useAuthStore.getState().token).toBeNull();
+      expect(useAuthStore.getState().user).toBeNull();
+
+      resolveDeregister?.();
+      await deleteAccountPromise;
+    });
   });
 
   describe('logout', () => {
@@ -100,6 +129,39 @@ describe('authStore', () => {
       expect(mockDeleteToken).toHaveBeenCalled();
       expect(useAuthStore.getState().token).toBeNull();
       expect(useAuthStore.getState().user).toBeNull();
+    });
+
+    it('deregisters push token before clearing session', async () => {
+      mockDeleteToken.mockResolvedValueOnce(undefined);
+
+      useAuthStore.setState({ token: 'tok', user: { id: 'u1' } });
+
+      await useAuthStore.getState().logout();
+
+      expect(mockDeregisterPushToken).toHaveBeenCalled();
+    });
+
+    it('does not wait for push-token deregistration before clearing session', async () => {
+      mockDeleteToken.mockResolvedValueOnce(undefined);
+
+      let resolveDeregister: (() => void) | undefined;
+      const deregisterPromise = new Promise<void>((resolve) => {
+        resolveDeregister = resolve;
+      });
+      mockDeregisterPushToken.mockReturnValueOnce(deregisterPromise);
+
+      useAuthStore.setState({ token: 'tok', user: { id: 'u1' } });
+
+      const logoutPromise = useAuthStore.getState().logout();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockDeleteToken).toHaveBeenCalled();
+      expect(useAuthStore.getState().token).toBeNull();
+      expect(useAuthStore.getState().user).toBeNull();
+
+      resolveDeregister?.();
+      await logoutPromise;
     });
   });
 

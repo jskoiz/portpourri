@@ -2,7 +2,15 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
-import client from '../api/client';
+import {
+  beginPushRegistration,
+  deregisterPushToken as deregisterStoredPushToken,
+  endPushRegistration,
+  getLastRegisteredPushToken,
+  markPushTokenRegistered,
+  registerPushToken as registerPushTokenWithBackend,
+  resetPushRegistrationState,
+} from '../services/pushRegistration';
 
 let notificationHandlerConfigured = false;
 
@@ -90,7 +98,15 @@ export async function getExpoPushToken(): Promise<string | null> {
  * Register the push token with the backend.
  */
 export async function registerPushToken(token: string): Promise<void> {
-  await client.post('/auth/push-token', { token });
+  await registerPushTokenWithBackend(token);
+}
+
+/**
+ * Deregister the push token from the backend.
+ * Safe to call even if no token was registered.
+ */
+export async function deregisterPushToken(): Promise<void> {
+  await deregisterStoredPushToken();
 }
 
 /**
@@ -113,18 +129,28 @@ export function setupNotificationListeners(
 /**
  * Full registration flow: request permissions, get token, send to backend.
  * Safe to call on every app foreground / login — idempotent on the backend.
+ * Handles token refresh by detecting when the token changes.
+ * Guards against race conditions from concurrent calls.
  */
 export async function registerForPushNotifications(): Promise<void> {
-  const granted = await requestPermissions();
-  if (!granted) return;
-
-  const token = await getExpoPushToken();
-  if (!token) return;
+  if (!beginPushRegistration()) return;
 
   try {
+    const granted = await requestPermissions();
+    if (!granted) return;
+
+    const token = await getExpoPushToken();
+    if (!token) return;
+
+    // Skip registration if the token hasn't changed
+    if (token === getLastRegisteredPushToken()) return;
+
     await registerPushToken(token);
+    markPushTokenRegistered(token);
   } catch (error) {
     console.warn('Failed to register push token with backend:', error);
+  } finally {
+    endPushRegistration();
   }
 }
 
@@ -135,4 +161,10 @@ export async function getLastNotificationResponseSafe() {
     console.warn('Failed to read last notification response:', error);
     return null;
   }
+}
+
+/** Reset internal state — useful for testing. */
+export function _resetForTesting(): void {
+  resetPushRegistrationState();
+  notificationHandlerConfigured = false;
 }

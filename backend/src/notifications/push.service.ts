@@ -6,6 +6,24 @@ import Expo, {
 } from 'expo-server-sdk';
 import { PrismaService } from '../prisma/prisma.service';
 
+/** Outcome categories for structured logging. */
+export type PushOutcome =
+  | 'delivered'
+  | 'token_invalid'
+  | 'device_not_registered'
+  | 'delivery_failed'
+  | 'send_error';
+
+export interface PushDeliveryResult {
+  outcome: PushOutcome;
+  pushToken: string;
+  error?: string;
+  attempt?: number;
+}
+
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 500;
+
 @Injectable()
 export class PushService {
   private readonly logger = new Logger(PushService.name);
@@ -20,10 +38,12 @@ export class PushService {
     title: string,
     body: string,
     data?: Record<string, unknown>,
-  ): Promise<void> {
+  ): Promise<PushDeliveryResult> {
     if (!Expo.isExpoPushToken(pushToken)) {
-      this.logger.warn(`Invalid Expo push token: ${pushToken}`);
-      return;
+      this.logger.warn(
+        `Invalid Expo push token — outcome=token_invalid token=${pushToken}`,
+      );
+      return { outcome: 'token_invalid', pushToken };
     }
 
     const message: ExpoPushMessage = {
@@ -34,21 +54,58 @@ export class PushService {
       data: data ?? {},
     };
 
-    try {
-      const tickets = await this.expo.sendPushNotificationsAsync([message]);
-      await this.handleTickets(tickets, pushToken);
-    } catch (error) {
-      this.logger.error(
-        `Failed to send push notification to ${pushToken}`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
+    return this.sendWithRetry(message, pushToken);
   }
 
+  private async sendWithRetry(
+    message: ExpoPushMessage,
+    pushToken: string,
+  ): Promise<PushDeliveryResult> {
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const tickets = await this.expo.sendPushNotificationsAsync([message]);
+        const result = await this.handleTickets(tickets, pushToken, attempt);
+        if (result) return result;
+
+        // Ticket had status 'ok'
+        this.logger.debug(
+          `Push delivered — outcome=delivered token=${pushToken} attempt=${attempt}`,
+        );
+        return { outcome: 'delivered', pushToken, attempt };
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+
+        if (attempt < MAX_RETRIES) {
+          const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+          this.logger.warn(
+            `Push send failed, retrying — attempt=${attempt}/${MAX_RETRIES} token=${pushToken} delay=${delay}ms error="${errMsg}"`,
+          );
+          await this.sleep(delay);
+          continue;
+        }
+
+        this.logger.error(
+          `Push send failed after ${MAX_RETRIES} attempts — outcome=send_error token=${pushToken} error="${errMsg}"`,
+          error instanceof Error ? error.stack : undefined,
+        );
+        return { outcome: 'send_error', pushToken, error: errMsg, attempt };
+      }
+    }
+
+    // Unreachable, but satisfies the compiler
+    return { outcome: 'send_error', pushToken };
+  }
+
+  /**
+   * Handle ticket responses. Returns a PushDeliveryResult if the ticket
+   * indicates a terminal error (device not registered, etc.), or null
+   * if the ticket was successful and the caller should report 'delivered'.
+   */
   private async handleTickets(
     tickets: ExpoPushTicket[],
     pushToken: string,
-  ): Promise<void> {
+    attempt: number,
+  ): Promise<PushDeliveryResult | null> {
     const receiptIds: ExpoPushReceiptId[] = [];
 
     for (const ticket of tickets) {
@@ -56,27 +113,41 @@ export class PushService {
         receiptIds.push(ticket.id);
       } else if (ticket.status === 'error') {
         this.logger.error(
-          `Push ticket error: ${ticket.message}`,
+          `Push ticket error — token=${pushToken} message="${ticket.message}" attempt=${attempt}`,
         );
+
         if (
           'details' in ticket &&
           ticket.details?.error === 'DeviceNotRegistered'
         ) {
           await this.clearPushToken(pushToken);
+          return {
+            outcome: 'device_not_registered',
+            pushToken,
+            error: ticket.message,
+            attempt,
+          };
         }
+
+        return {
+          outcome: 'delivery_failed',
+          pushToken,
+          error: ticket.message,
+          attempt,
+        };
       }
     }
 
-    // Check receipts after a short delay in production;
-    // for now we log receipt IDs for future receipt-checking jobs.
     if (receiptIds.length > 0) {
       this.logger.debug(`Push receipt IDs: ${receiptIds.join(', ')}`);
     }
+
+    return null;
   }
 
   private async clearPushToken(pushToken: string): Promise<void> {
     this.logger.warn(
-      `Clearing invalid push token: ${pushToken}`,
+      `Clearing invalid push token — outcome=device_not_registered token=${pushToken}`,
     );
 
     try {
@@ -90,5 +161,9 @@ export class PushService {
         error instanceof Error ? error.stack : String(error),
       );
     }
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
