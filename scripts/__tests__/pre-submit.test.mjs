@@ -7,6 +7,7 @@ import { buildValidationPlan } from '../check-changed.mjs';
 import { buildPreSubmitSteps } from '../pre-submit.mjs';
 import { collectTodoIntroductions } from '../check-todo-introductions.mjs';
 import { buildRepoIndex } from '../generate-repo-index.mjs';
+import { expandSelectedCommand } from '../harness-shared.mjs';
 import { scanTodoMarkers } from '../scan-todo-markers.mjs';
 
 test('pre-submit prepends docs, policy, and TODO guard before selected validation commands', () => {
@@ -18,6 +19,14 @@ test('pre-submit prepends docs, policy, and TODO guard before selected validatio
   assert.match(steps[2].command, /check-todo-introductions\.mjs --staged/);
   assert.equal(steps[3].command, 'npm run test:root');
   assert.equal(steps.length, 4);
+});
+
+test('full check expansion includes symphony validation', () => {
+  const steps = expandSelectedCommand('npm run check');
+  assert.deepEqual(
+    steps.map((step) => step.command),
+    ['npm run check:root', 'npm run check:backend', 'npm run check:mobile', 'npm run check:symphony'],
+  );
 });
 
 test('TODO introduction guard only flags newly added TODO-style markers', () => {

@@ -117,10 +117,22 @@ export interface LikeResponse {
   };
 }
 
+export interface PassResponse {
+  status: "passed" | "already_passed";
+}
+
 export interface UndoSwipeResponse {
   status: "undone" | "nothing_to_undo";
   action?: "like" | "pass";
   targetUserId?: string;
+  archivedMatchId?: string;
+}
+
+export interface SendMessageResponse {
+  id: string;
+  text: string;
+  sender: "me";
+  timestamp: string;
 }
 
 export interface ProfileCompletenessMissingItem {

@@ -32,7 +32,7 @@ npm run scaffold:backend-module -- --name moderation
 - `npm run check:changed`
   - chooses the smallest reasonable validation set from git diff, enforces Storybook co-updates for changed reusable mobile UI surfaces, and can emit machine-readable harness artifacts
 - `npm run check`
-  - full root, backend, and mobile validation
+  - full root, backend, mobile, and Symphony validation
 - `npm run smoke`
   - deterministic bootstrap plus seeded `ui-preview` runtime plus mobile launch prerequisites
 - `npm run repo:index`
@@ -67,10 +67,10 @@ npm run scaffold:backend-module -- --name moderation
 
 ## CI Shape
 
-- Pull requests run the fast diff-driven lane.
-- Pull requests run the dedicated iOS simulator build only for native-impacting mobile changes such as Expo config, native plugin/dependency changes, generated iOS project changes, or workflow edits.
-- The iOS simulator workflow cancels stale in-progress runs when a newer commit lands on the same PR or branch.
-- `main` executes a check-only lane; use `npm run smoke` separately when you need deeper bootstrap/runtime validation.
+- CI is manual-only via GitHub Actions `workflow_dispatch`; local harness commands are the primary validation path.
+- When CI is dispatched manually, it runs the fast diff-driven lane, the backend migration rehearsal lane, and the check-only lane so maintainers can still use Actions as an opt-in mirror of local validation.
+- The dedicated iOS simulator workflow still runs only for native-impacting mobile changes such as Expo config, native plugin/dependency changes, generated iOS project changes, or workflow edits.
+- Use `npm run smoke` locally when you need deeper bootstrap/runtime validation.
 - Every lane uploads `harness-plan.json`, `harness-results.json`, and `harness-failure-summary.json` as CI artifacts.
 - Scheduled maintenance audits docs, tracked marker drift, dependency visibility, Storybook/test coverage signals, repo-index drift, and harness health without rerunning the full smoke bootstrap.
 - Maintenance publishes review-required findings in artifacts and can open a small automated PR for safe fixes such as repo-index refreshes.

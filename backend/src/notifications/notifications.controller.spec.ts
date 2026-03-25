@@ -55,6 +55,35 @@ describe('NotificationsController', () => {
     expect(result).toEqual([]);
   });
 
+  it('clamps invalid take values before delegating list', async () => {
+    notificationsServiceMock.list.mockResolvedValue([]);
+
+    await controller.list(req, '0');
+    expect(notificationsServiceMock.list).toHaveBeenLastCalledWith('user-1', 1, undefined);
+
+    await controller.list(req, '-5');
+    expect(notificationsServiceMock.list).toHaveBeenLastCalledWith('user-1', 1, undefined);
+
+    await controller.list(req, '250');
+    expect(notificationsServiceMock.list).toHaveBeenLastCalledWith('user-1', 100, undefined);
+  });
+
+  it('clamps zero take to the minimum page size', async () => {
+    notificationsServiceMock.list.mockResolvedValue([]);
+
+    await expect(controller.list(req, '0')).resolves.toEqual([]);
+
+    expect(notificationsServiceMock.list).toHaveBeenCalledWith('user-1', 1, undefined);
+  });
+
+  it('caps take at 100 before delegating list', async () => {
+    notificationsServiceMock.list.mockResolvedValue([]);
+
+    await expect(controller.list(req, '250', 'cursor-1')).resolves.toEqual([]);
+
+    expect(notificationsServiceMock.list).toHaveBeenCalledWith('user-1', 100, 'cursor-1');
+  });
+
   it('delegates markRead to notifications service', async () => {
     const notification = { id: 'n-1', readAt: new Date() };
     notificationsServiceMock.markRead.mockResolvedValue(notification);

@@ -13,6 +13,8 @@ describe('EventsController', () => {
     detail: jest.fn(),
     create: jest.fn(),
     rsvp: jest.fn(),
+    invite: jest.fn(),
+    getInvites: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -86,6 +88,34 @@ describe('EventsController', () => {
       attendeesCount: 6,
     });
     expect(eventsServiceMock.rsvp).toHaveBeenCalledWith('event-1', 'user-1');
+  });
+
+  it('delegates invite to events service', async () => {
+    const req = {
+      user: { id: 'user-1', email: 'u@example.com' },
+    } as AuthenticatedRequest;
+    const payload = { matchId: 'match-1', message: 'Want to join?' };
+    const invite = { id: 'invite-1', status: 'pending' };
+    eventsServiceMock.invite.mockResolvedValue(invite);
+
+    await expect(controller.invite('event-1', payload, req)).resolves.toEqual(invite);
+    expect(eventsServiceMock.invite).toHaveBeenCalledWith(
+      'event-1',
+      'user-1',
+      'match-1',
+      'Want to join?',
+    );
+  });
+
+  it('delegates getInvites to events service', async () => {
+    const req = {
+      user: { id: 'user-1', email: 'u@example.com' },
+    } as AuthenticatedRequest;
+    const invites = [{ id: 'invite-1', status: 'pending' }];
+    eventsServiceMock.getInvites.mockResolvedValue(invites);
+
+    await expect(controller.getInvites('event-1', req)).resolves.toEqual(invites);
+    expect(eventsServiceMock.getInvites).toHaveBeenCalledWith('event-1', 'user-1');
   });
 
   it('delegates myEvents to events service', async () => {

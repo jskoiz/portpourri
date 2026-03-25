@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EventCategory } from '@prisma/client';
 import { EventsService } from './events.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -12,6 +12,12 @@ const eventRsvpFindUnique = jest.fn();
 const eventRsvpUpsert = jest.fn();
 const eventRsvpCount = jest.fn();
 const eventRsvpFindMany = jest.fn();
+const eventInviteUpsert = jest.fn();
+const eventInviteFindMany = jest.fn();
+const matchFindUnique = jest.fn();
+const matchUpdate = jest.fn();
+const messageCreate = jest.fn();
+const userFindUnique = jest.fn();
 const notificationsCreate = jest.fn().mockResolvedValue(undefined);
 
 const prisma = {
@@ -25,6 +31,20 @@ const prisma = {
     upsert: eventRsvpUpsert,
     count: eventRsvpCount,
     findMany: eventRsvpFindMany,
+  },
+  eventInvite: {
+    upsert: eventInviteUpsert,
+    findMany: eventInviteFindMany,
+  },
+  match: {
+    findUnique: matchFindUnique,
+    update: matchUpdate,
+  },
+  message: {
+    create: messageCreate,
+  },
+  user: {
+    findUnique: userFindUnique,
   },
 } as unknown as PrismaService;
 
@@ -299,6 +319,128 @@ describe('EventsService', () => {
       const result = await service.myEvents('user-nobody');
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('invite', () => {
+    beforeEach(() => {
+      eventFindUnique.mockResolvedValue(baseEvent);
+      matchFindUnique.mockResolvedValue({
+        id: 'match-1',
+        userAId: 'host-1',
+        userBId: 'user-2',
+        isBlocked: false,
+      });
+      eventInviteUpsert.mockResolvedValue({
+        id: 'invite-1',
+        status: 'pending',
+        event: baseEvent,
+      });
+      messageCreate.mockResolvedValue({});
+      matchUpdate.mockResolvedValue({});
+      userFindUnique.mockResolvedValue({ firstName: 'Alice' });
+    });
+
+    it('creates an invite and returns the mapped event payload', async () => {
+      const result = await service.invite('event-1', 'host-1', 'match-1', 'Join us');
+
+      expect(eventInviteUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { eventId_inviteeId: { eventId: 'event-1', inviteeId: 'user-2' } },
+        }),
+      );
+      expect(messageCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            matchId: 'match-1',
+            senderId: 'host-1',
+            type: 'EVENT_INVITE',
+          }),
+        }),
+      );
+      expect(result).toEqual({
+        id: 'invite-1',
+        status: 'pending',
+        event: {
+          id: 'event-1',
+          title: 'Morning Run',
+          location: 'Central Park',
+          startsAt: baseEvent.startsAt,
+          endsAt: baseEvent.endsAt,
+          category: baseEvent.category,
+          host: baseEvent.host,
+          attendeesCount: 5,
+        },
+      });
+    });
+
+    it('rejects invites when the user is not part of the match', async () => {
+      matchFindUnique.mockResolvedValueOnce({
+        id: 'match-1',
+        userAId: 'someone-else',
+        userBId: 'user-2',
+        isBlocked: false,
+      });
+
+      await expect(
+        service.invite('event-1', 'host-1', 'match-1'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rejects invites when the conversation is blocked', async () => {
+      matchFindUnique.mockResolvedValueOnce({
+        id: 'match-1',
+        userAId: 'host-1',
+        userBId: 'user-2',
+        isBlocked: true,
+      });
+
+      await expect(
+        service.invite('event-1', 'host-1', 'match-1'),
+      ).rejects.toThrow('This conversation is no longer available');
+    });
+  });
+
+  describe('getInvites', () => {
+    it('returns invites for the host ordered by createdAt', async () => {
+      eventFindUnique.mockResolvedValueOnce({ hostId: 'host-1' });
+      eventInviteFindMany.mockResolvedValueOnce([
+        {
+          id: 'invite-1',
+          status: 'pending',
+          createdAt: new Date('2026-06-01T09:00:00Z'),
+          inviter: { id: 'host-1', firstName: 'Alice' },
+          invitee: { id: 'user-2', firstName: 'Bob' },
+        },
+      ]);
+
+      const result = await service.getInvites('event-1', 'host-1');
+
+      expect(eventInviteFindMany).toHaveBeenCalledWith({
+        where: { eventId: 'event-1' },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          inviter: { select: { id: true, firstName: true } },
+          invitee: { select: { id: true, firstName: true } },
+        },
+      });
+      expect(result).toEqual([
+        {
+          id: 'invite-1',
+          status: 'pending',
+          createdAt: new Date('2026-06-01T09:00:00Z'),
+          inviter: { id: 'host-1', firstName: 'Alice' },
+          invitee: { id: 'user-2', firstName: 'Bob' },
+        },
+      ]);
+    });
+
+    it('rejects invite listing for non-host users', async () => {
+      eventFindUnique.mockResolvedValueOnce({ hostId: 'host-1' });
+
+      await expect(service.getInvites('event-1', 'user-2')).rejects.toThrow(
+        'Only the event host can view invites',
+      );
     });
   });
 });

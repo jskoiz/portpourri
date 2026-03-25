@@ -10,6 +10,10 @@ interface GraphqlResponse<T> {
 
 interface IssuesQueryPayload {
   issues: {
+    pageInfo: {
+      hasNextPage: boolean;
+      endCursor: string | null;
+    };
     nodes: Array<{
       id: string;
       identifier: string;
@@ -57,59 +61,85 @@ export class LinearTracker {
   }
 
   async listIssuesForStates(projectSlug: string, states: string[]): Promise<Issue[]> {
-    const data = await this.query<IssuesQueryPayload>(
-      `
-        query SymphonyIssues($projectSlug: String!, $states: [String!]) {
-          issues(
-            first: 100
-            filter: {
-              project: { slugId: { eq: $projectSlug } }
-              state: { name: { in: $states } }
-            }
-          ) {
-            nodes {
+    const issues: Issue[] = [];
+    let cursor: string | null = null;
+    const issueQuery = `
+      query SymphonyIssues($projectSlug: String!, $states: [String!], $cursor: String) {
+        issues(
+          first: 100
+          after: $cursor
+          filter: {
+            project: { slugId: { eq: $projectSlug } }
+            state: { name: { in: $states } }
+          }
+        ) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          nodes {
+            id
+            identifier
+            title
+            description
+            priority
+            branchName
+            url
+            createdAt
+            updatedAt
+            state {
               id
-              identifier
-              title
-              description
-              priority
-              branchName
-              url
-              createdAt
-              updatedAt
-              state {
-                id
+              name
+              type
+            }
+            labels {
+              nodes {
                 name
-                type
-              }
-              labels {
-                nodes {
-                  name
-                }
               }
             }
           }
         }
-      `,
-      {
+      }
+    `;
+
+    do {
+      const data: IssuesQueryPayload = await this.query<IssuesQueryPayload>(issueQuery, {
         projectSlug,
         states,
-      },
-    );
+        cursor,
+      });
 
-    return data.issues.nodes.map((issue) => ({
-      id: issue.id,
-      identifier: issue.identifier,
-      title: issue.title,
-      description: issue.description,
-      priority: issue.priority,
-      branchName: issue.branchName,
-      url: issue.url,
-      createdAt: issue.createdAt,
-      updatedAt: issue.updatedAt,
-      state: issue.state,
-      labels: issue.labels?.nodes.map((label) => label.name.toLowerCase()) ?? [],
-    }));
+      issues.push(
+        ...data.issues.nodes.map((issue: IssuesQueryPayload['issues']['nodes'][number]) => ({
+          id: issue.id,
+          identifier: issue.identifier,
+          title: issue.title,
+          description: issue.description,
+          priority: issue.priority,
+          branchName: issue.branchName,
+          url: issue.url,
+          createdAt: issue.createdAt,
+          updatedAt: issue.updatedAt,
+          state: issue.state,
+          labels: issue.labels?.nodes.map((label: { name: string }) => label.name.toLowerCase()) ?? [],
+        })),
+      );
+
+      if (!data.issues.pageInfo.hasNextPage) {
+        break;
+      }
+      cursor = data.issues.pageInfo.endCursor;
+      if (!cursor) {
+        this.logger.warn('linear.pagination_missing_cursor', {
+          projectSlug,
+          states,
+          issueCount: issues.length,
+        });
+        break;
+      }
+    } while (true);
+
+    return issues;
   }
 
   async listActiveIssues(projectSlug: string, activeStates: string[]): Promise<Issue[]> {

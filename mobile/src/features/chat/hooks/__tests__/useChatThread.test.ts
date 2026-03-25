@@ -131,18 +131,26 @@ describe('useChatThread', () => {
     const { unmount } = renderHook(() => useChatThread('match-1'));
 
     await waitFor(() => {
-      expect(mockConnectSocket).toHaveBeenCalled();
+      expect(mockSocket.on).toHaveBeenCalledWith('connect', expect.any(Function));
     });
 
     unmount();
 
     expect(mockSocket.emit).toHaveBeenCalledWith('leave:match', { matchId: 'match-1' });
-    expect(mockSocket.off).toHaveBeenCalledWith('connect');
-    expect(mockSocket.off).toHaveBeenCalledWith('disconnect');
-    expect(mockSocket.off).toHaveBeenCalledWith('message:new');
-    expect(mockSocket.off).toHaveBeenCalledWith('typing:start');
-    expect(mockSocket.off).toHaveBeenCalledWith('typing:stop');
-    expect(mockSocket.off).toHaveBeenCalledWith('connect_error');
+    expect(mockSocket.off).toHaveBeenCalledWith('connect', expect.any(Function));
+    expect(mockSocket.off).toHaveBeenCalledWith('disconnect', expect.any(Function));
+    expect(mockSocket.off).toHaveBeenCalledWith('reconnect', expect.any(Function));
+    expect(mockSocket.off).toHaveBeenCalledWith('message:new', expect.any(Function));
+    expect(mockSocket.off).toHaveBeenCalledWith('typing:start', expect.any(Function));
+    expect(mockSocket.off).toHaveBeenCalledWith('typing:stop', expect.any(Function));
+    expect(mockSocket.off).toHaveBeenCalledWith('connect_error', expect.any(Function));
+    expect(mockSocket.off).not.toHaveBeenCalledWith('connect');
+    expect(mockSocket.off).not.toHaveBeenCalledWith('disconnect');
+    expect(mockSocket.off).not.toHaveBeenCalledWith('reconnect');
+    expect(mockSocket.off).not.toHaveBeenCalledWith('message:new');
+    expect(mockSocket.off).not.toHaveBeenCalledWith('typing:start');
+    expect(mockSocket.off).not.toHaveBeenCalledWith('typing:stop');
+    expect(mockSocket.off).not.toHaveBeenCalledWith('connect_error');
   });
 
   it('exposes emitTyping that emits to socket', async () => {
@@ -179,5 +187,26 @@ describe('useChatThread', () => {
     await waitFor(() => {
       expect(mockSocket.emit).toHaveBeenCalledWith('join:match', { matchId: 'match-1' });
     });
+  });
+
+  it('emits typing:stop on unmount when a typing session is active', async () => {
+    mockSocket.connected = true;
+    mockGetSocket.mockReturnValue(mockSocket);
+
+    const { result, unmount } = renderHook(() => useChatThread('match-1'));
+
+    await waitFor(() => {
+      expect(mockConnectSocket).toHaveBeenCalled();
+    });
+
+    act(() => {
+      result.current.emitTyping();
+    });
+
+    expect(mockSocket.emit).toHaveBeenCalledWith('typing:start', { matchId: 'match-1' });
+
+    unmount();
+
+    expect(mockSocket.emit).toHaveBeenCalledWith('typing:stop', { matchId: 'match-1' });
   });
 });

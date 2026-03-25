@@ -28,6 +28,7 @@ const harnessSensitivePatterns = [
   /^package\.json$/,
   /^backend\/package\.json$/,
   /^mobile\/package\.json$/,
+  /^symphony\/package\.json$/,
   /^scripts\/.+\.mjs$/,
   /^\.github\/workflows\//,
 ];
@@ -57,6 +58,7 @@ export function buildValidationPlan(files) {
   const changedFiles = normalizeList(files);
   const hasBackend = changedFiles.some((filePath) => filePath.startsWith('backend/'));
   const hasMobile = changedFiles.some((filePath) => filePath.startsWith('mobile/'));
+  const hasSymphony = changedFiles.some((filePath) => filePath.startsWith('symphony/'));
   const hasHarness = includesMatch(changedFiles, harnessSensitivePatterns);
   const hasDocs = changedFiles.some((filePath) =>
     filePath === 'AGENTS.md' ||
@@ -72,7 +74,7 @@ export function buildValidationPlan(files) {
 
   if (changedFiles.length === 0) {
     commands.push('npm run check:root');
-  } else if (hasHarness || (hasBackend && hasMobile)) {
+  } else if (hasHarness || [hasBackend, hasMobile, hasSymphony].filter(Boolean).length > 1) {
     commands.push('npm run check');
   } else {
     if (hasDocs) {
@@ -84,7 +86,10 @@ export function buildValidationPlan(files) {
     if (hasMobile) {
       commands.push('npm run check:mobile');
     }
-    if (!hasDocs && !hasBackend && !hasMobile) {
+    if (hasSymphony) {
+      commands.push('npm run check:symphony');
+    }
+    if (!hasDocs && !hasBackend && !hasMobile && !hasSymphony) {
       commands.push('npm run check:root');
     }
   }

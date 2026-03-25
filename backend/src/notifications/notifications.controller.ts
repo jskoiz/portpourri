@@ -24,6 +24,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { appConfig } from '../config/app.config';
+import { parseTake } from '../common/pagination.util';
 import { NotificationsService } from './notifications.service';
 import { NotificationPreferencesService } from './notification-preferences.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
@@ -48,10 +49,9 @@ export class NotificationsController {
     @Query('take') take?: string,
     @Query('cursor') cursor?: string,
   ) {
-    const parsedTake = take ? Number.parseInt(take, 10) : NaN;
     return this.notificationsService.list(
       req.user.id,
-      Number.isNaN(parsedTake) ? 50 : Math.min(parsedTake, 100),
+      parseTake(take, 50),
       cursor || undefined,
     );
   }

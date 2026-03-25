@@ -1,4 +1,4 @@
-import { matchesApi, notificationsApi, profileApi } from '../api';
+import { discoveryApi, matchesApi, notificationsApi, profileApi } from '../api';
 import client from '../../api/client';
 import * as observability from '../../api/observability';
 
@@ -70,13 +70,20 @@ describe('matchesApi', () => {
 
   describe('sendMessage', () => {
     it('returns response on success', async () => {
-      mockClient.post.mockResolvedValueOnce({ data: {} });
+      const message = {
+        id: 'msg-1',
+        text: 'hello',
+        sender: 'me' as const,
+        timestamp: '2026-01-01T00:00:00Z',
+      };
+      mockClient.post.mockResolvedValueOnce({ data: message });
 
-      await matchesApi.sendMessage('match-1', 'hello');
+      const result = await matchesApi.sendMessage('match-1', 'hello');
 
       expect(mockClient.post).toHaveBeenCalledWith('/matches/match-1/messages', {
         content: 'hello',
       });
+      expect(result.data).toEqual(message);
       expect(mockLogApiFailure).not.toHaveBeenCalled();
     });
 
@@ -90,6 +97,54 @@ describe('matchesApi', () => {
         networkError,
         { matchId: 'match-1' },
       );
+    });
+  });
+});
+
+describe('discoveryApi', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('pass', () => {
+    it('returns pass status on success', async () => {
+      mockClient.post.mockResolvedValueOnce({ data: { status: 'passed' } });
+
+      const result = await discoveryApi.pass('user-2');
+
+      expect(mockClient.post).toHaveBeenCalledWith('/discovery/pass/user-2');
+      expect(result.data).toEqual({ status: 'passed' });
+      expect(mockLogApiFailure).not.toHaveBeenCalled();
+    });
+
+    it('logs failure with target user context and rethrows on error', async () => {
+      mockClient.post.mockRejectedValueOnce(networkError);
+
+      await expect(discoveryApi.pass('user-2')).rejects.toThrow('Network Error');
+      expect(mockLogApiFailure).toHaveBeenCalledWith(
+        'discovery',
+        'pass',
+        networkError,
+        { targetUserId: 'user-2' },
+      );
+    });
+  });
+
+  describe('undo', () => {
+    it('returns archived match metadata when provided', async () => {
+      const undoResponse = {
+        status: 'undone',
+        action: 'like',
+        targetUserId: 'user-2',
+        archivedMatchId: 'match-archived-1',
+      };
+      mockClient.post.mockResolvedValueOnce({ data: undoResponse });
+
+      const result = await discoveryApi.undo();
+
+      expect(mockClient.post).toHaveBeenCalledWith('/discovery/undo');
+      expect(result.data).toEqual(undoResponse);
+      expect(result.data.archivedMatchId).toBe('match-archived-1');
     });
   });
 });

@@ -6,7 +6,7 @@ const scriptPath = fileURLToPath(import.meta.url);
 const scriptDir = path.dirname(scriptPath);
 const repoRoot = path.resolve(scriptDir, '..');
 const markdownRoots = ['docs', '.github'];
-const extraMarkdownFiles = ['AGENTS.md', 'backend/AGENTS.md', 'mobile/AGENTS.md', 'backend/README.md'];
+const extraMarkdownFiles = ['AGENTS.md', 'backend/AGENTS.md', 'mobile/AGENTS.md', 'backend/README.md', 'WORKFLOW.md'];
 const packageFiles = ['package.json', 'backend/package.json', 'mobile/package.json'];
 
 function walkMarkdownFiles(rootDir, relativeDir) {

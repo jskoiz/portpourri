@@ -15,9 +15,11 @@ import type {
   EventSummary,
   LikeResponse,
   Match,
+  PassResponse,
   ProfileCompletenessResponse,
   ReportPayload,
   ReportResponse,
+  SendMessageResponse,
   UpdateFitnessPayload,
   UpdatePhotoPayload,
   UpdateProfilePayload,
@@ -158,7 +160,7 @@ export const discoveryApi = {
     ),
   pass: async (userId: string) =>
     withErrorLogging("discovery", "pass", () =>
-      client.post<void>(`/discovery/pass/${userId}`),
+      client.post<PassResponse>(`/discovery/pass/${userId}`),
       { targetUserId: userId },
     ),
   like: async (userId: string) =>
@@ -188,7 +190,7 @@ export const matchesApi = {
     ),
   sendMessage: async (matchId: string, content: string) =>
     withErrorLogging("matches", "sendMessage", () =>
-      client.post<ChatMessage>(`/matches/${matchId}/messages`, { content }),
+      client.post<SendMessageResponse>(`/matches/${matchId}/messages`, { content }),
       { matchId },
     ),
 };

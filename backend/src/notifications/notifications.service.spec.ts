@@ -97,6 +97,20 @@ describe('NotificationsService', () => {
     });
   });
 
+  it('applies the upper bound and cursor when listing notifications', async () => {
+    (prisma.notification.findMany as jest.Mock).mockResolvedValue([]);
+
+    await service.list('user-1', 250, 'cursor-1');
+
+    expect(prisma.notification.findMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1' },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      skip: 1,
+      cursor: { id: 'cursor-1' },
+    });
+  });
+
   it('marks a single notification as read', async () => {
     const existing = { id: 'n-1', userId: 'user-1', read: false, readAt: null };
     (prisma.notification.findFirst as jest.Mock).mockResolvedValue(existing);

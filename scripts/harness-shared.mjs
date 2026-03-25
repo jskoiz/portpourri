@@ -23,6 +23,7 @@ const executionStepCatalog = {
     ['npm run check:root', FAILURE_CATEGORIES.docsDrift, 'Root harness checks'],
     ['npm run check:backend', FAILURE_CATEGORIES.typecheck, 'Backend validation'],
     ['npm run check:mobile', FAILURE_CATEGORIES.typecheck, 'Mobile validation'],
+    ['npm run check:symphony', FAILURE_CATEGORIES.typecheck, 'Symphony validation'],
   ],
   'npm run check:root': [
     ['npm run docs:check', FAILURE_CATEGORIES.docsDrift, 'Docs drift check'],

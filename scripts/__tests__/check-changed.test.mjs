@@ -21,6 +21,19 @@ test('cross-stack changes select the full check lane', () => {
   assert.deepEqual(plan.commands, ['npm run check']);
 });
 
+test('symphony-only changes select symphony checks', () => {
+  const plan = buildValidationPlan(['symphony/src/workflow.ts']);
+  assert.deepEqual(plan.commands, ['npm run check:symphony']);
+});
+
+test('cross-stack changes including symphony still select the full check lane', () => {
+  const plan = buildValidationPlan([
+    'mobile/src/features/profile/hooks/useProfile.ts',
+    'symphony/src/workflow.ts',
+  ]);
+  assert.deepEqual(plan.commands, ['npm run check']);
+});
+
 test('smoke-sensitive changes append smoke validation', () => {
   const plan = buildValidationPlan(['backend/prisma/schema.prisma']);
   assert.deepEqual(plan.commands, ['npm run check:backend', 'npm run smoke']);
