@@ -112,14 +112,7 @@ public struct SnapshotService: Sendable {
                     isWorktreeLike: resolved.isWorktreeLike
                 )
             }
-            .sorted { lhs, rhs in
-                let lhsWatched = lhs.ports.filter(watchedPorts.contains).count
-                let rhsWatched = rhs.ports.filter(watchedPorts.contains).count
-                if lhsWatched == rhsWatched {
-                    return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
-                }
-                return lhsWatched > rhsWatched
-            }
+            .sorted { Self.compareProjects(lhs: $0, rhs: $1, watchedPorts: watchedPorts) }
 
         let watchedStatuses = watchedPorts.sorted().map { port in
             self.statusForWatchedPort(port, trackedProcesses: tracked)
@@ -203,6 +196,29 @@ public struct SnapshotService: Sendable {
             isNodeFamily: process.isNodeFamily,
             toolLabel: commandName
         )
+    }
+
+    private static func compareProjects(lhs: ProjectSnapshot, rhs: ProjectSnapshot, watchedPorts: [Int]) -> Bool {
+        let lhsWatched = lhs.ports.filter { watchedPorts.contains($0) }.count
+        let rhsWatched = rhs.ports.filter { watchedPorts.contains($0) }.count
+        if lhsWatched != rhsWatched {
+            return lhsWatched > rhsWatched
+        }
+
+        let nameComparison = lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName)
+        if nameComparison != .orderedSame {
+            return nameComparison == .orderedAscending
+        }
+
+        if lhs.isWorktreeLike != rhs.isWorktreeLike {
+            return lhs.isWorktreeLike == false
+        }
+
+        if lhs.projectRoot != rhs.projectRoot {
+            return lhs.projectRoot < rhs.projectRoot
+        }
+
+        return lhs.ports.lexicographicallyPrecedes(rhs.ports)
     }
 }
 
