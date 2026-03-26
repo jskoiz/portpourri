@@ -104,6 +104,10 @@ export const appConfig = {
     profileDir: 'public/uploads/profile',
     profilePublicBaseUrl: `${assetBaseUrl}/uploads/profile`,
   },
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: toNumber(process.env.REDIS_PORT, 6379),
+  },
   scripts: {
     apiBaseUrl,
   },

@@ -2,6 +2,49 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { VerificationService } from './verification.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { appConfig } from '../config/app.config';
+import Redis from 'ioredis';
+
+// ── In-memory Redis mock ────────────────────────────────────────────────────
+
+function createRedisMock() {
+  const store = new Map<string, { value: string; expiresAt: number | null }>();
+
+  const mock = {
+    get: jest.fn(async (key: string) => {
+      const entry = store.get(key);
+      if (!entry) return null;
+      if (entry.expiresAt !== null && entry.expiresAt < Date.now()) {
+        store.delete(key);
+        return null;
+      }
+      return entry.value;
+    }),
+    set: jest.fn(async (key: string, value: string, ...args: unknown[]) => {
+      let expiresAt: number | null = null;
+      // Parse EX argument: set(key, value, 'EX', seconds)
+      if (args[0] === 'EX' && typeof args[1] === 'number') {
+        expiresAt = Date.now() + args[1] * 1000;
+      }
+      store.set(key, { value, expiresAt });
+      return 'OK';
+    }),
+    del: jest.fn(async (key: string) => {
+      return store.delete(key) ? 1 : 0;
+    }),
+    quit: jest.fn(async () => 'OK'),
+    /** Test helper: clear the store between tests */
+    __clear: () => store.clear(),
+    /** Test helper: inspect raw store */
+    __store: store,
+  };
+
+  return mock as unknown as jest.Mocked<Redis> & {
+    __clear: () => void;
+    __store: Map<string, { value: string; expiresAt: number | null }>;
+  };
+}
+
+// ── Test suite ──────────────────────────────────────────────────────────────
 
 const userUpdate = jest.fn();
 const userFindUnique = jest.fn();
@@ -15,6 +58,7 @@ const prisma = {
 
 describe('VerificationService', () => {
   let service: VerificationService;
+  let redisMock: ReturnType<typeof createRedisMock>;
 
   beforeEach(() => {
     userUpdate.mockReset();
@@ -25,7 +69,9 @@ describe('VerificationService', () => {
       hasVerifiedEmail: false,
       hasVerifiedPhone: false,
     });
-    service = new VerificationService(prisma);
+
+    redisMock = createRedisMock();
+    service = VerificationService.createWithRedis(prisma, redisMock as unknown as Redis);
   });
 
   // ── start ────────────────────────────────────────────────────────────────────
@@ -38,6 +84,17 @@ describe('VerificationService', () => {
       expect(result.channel).toBe('email');
       expect(result.maskedTarget).toMatch(/^a\*\*\*@example\.com$/);
       expect(result.devCode).toMatch(/^\d{6}$/);
+    });
+
+    it('stores the code in Redis with TTL', async () => {
+      await service.start('user-1', 'email', 'alice@example.com');
+
+      expect(redisMock.set).toHaveBeenCalledWith(
+        'verification:user-1:email',
+        expect.any(String),
+        'EX',
+        600,
+      );
     });
 
     it('rejects start when the user does not exist', async () => {
@@ -212,26 +269,13 @@ describe('VerificationService', () => {
         phoneNumber: null,
       });
 
-      // Simulate two concurrent confirm calls – both start before either resolves.
-      let resolveFirst!: () => void;
-      userUpdate
-        .mockImplementationOnce(
-          () =>
-            new Promise<void>((res) => {
-              resolveFirst = res;
-            }),
-        )
-        .mockResolvedValueOnce({});
+      userUpdate.mockResolvedValue({});
 
-      const first = service.confirm('user-1', 'email', devCode!);
-      const second = service.confirm('user-1', 'email', devCode!);
-
-      await Promise.resolve();
-
-      // Let the first DB call finish.
-      resolveFirst();
-
-      const [r1, r2] = await Promise.all([first, second]);
+      // Both calls run concurrently; the atomic redis.del ensures only one wins.
+      const [r1, r2] = await Promise.all([
+        service.confirm('user-1', 'email', devCode!),
+        service.confirm('user-1', 'email', devCode!),
+      ]);
 
       // Only one of the two concurrent calls should succeed.
       const successes = [r1, r2].filter((r) => r.verified === true).length;
@@ -283,6 +327,19 @@ describe('VerificationService', () => {
       const retry = await service.confirm('user-1', 'email', devCode!);
       expect(retry).toEqual({ verified: true });
       expect(userUpdate).toHaveBeenCalledTimes(2);
+    });
+
+    it('removes the key from Redis when the code is consumed', async () => {
+      const { devCode } = await service.start('user-1', 'email', 'alice@example.com');
+      userFindUnique.mockResolvedValue({
+        email: 'alice@example.com',
+        phoneNumber: null,
+      });
+      userUpdate.mockResolvedValue({});
+
+      await service.confirm('user-1', 'email', devCode!);
+
+      expect(redisMock.del).toHaveBeenCalledWith('verification:user-1:email');
     });
   });
 
