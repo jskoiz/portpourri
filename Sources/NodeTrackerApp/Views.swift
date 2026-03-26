@@ -143,31 +143,24 @@ private struct CompactHeader: View {
     let showsAllOtherListeners: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("NodeWatcher")
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                    Text(self.useSampleData ? "Sample data mode" : self.relativeUpdatedText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("NodeWatcher")
+                    .font(.title3)
+                    .fontWeight(.semibold)
                 Spacer()
+                Text(self.useSampleData ? "Sample data mode" : self.relativeUpdatedText)
+                    .font(.caption)
+                    .foregroundStyle(Readability.secondaryText)
                 if self.isRefreshing {
                     ProgressView()
                         .controlSize(.small)
                 }
             }
 
-            HStack(spacing: 18) {
-                HeaderMetric(value: self.snapshot.summary.nodeProjectCount, title: "Projects")
-                HeaderMetric(value: self.snapshot.summary.watchedBusyCount, title: "Watched busy")
-                HeaderMetric(
-                    value: self.visibleOtherCount,
-                    title: self.showsAllOtherListeners ? "Other listeners" : "Blocked"
-                )
-            }
+            self.summaryLine
+                .font(.subheadline)
+                .foregroundStyle(.primary)
         }
     }
 
@@ -178,22 +171,18 @@ private struct CompactHeader: View {
         formatter.unitsStyle = .short
         return "Updated \(formatter.localizedString(fromTimeInterval: -elapsed))"
     }
-}
 
-private struct HeaderMetric: View {
-    let value: Int
-    let title: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(verbatim: String(self.value))
-                .font(.title3)
-                .fontWeight(.semibold)
-            Text(self.title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    private var summaryLine: Text {
+        let lastLabel = self.showsAllOtherListeners ? "other listeners" : "blocked"
+        return Text("\(self.snapshot.summary.nodeProjectCount)")
+            .fontWeight(.semibold)
+        + Text(" projects  ·  ")
+        + Text("\(self.snapshot.summary.watchedBusyCount)")
+            .fontWeight(.semibold)
+        + Text(" watched busy  ·  ")
+        + Text("\(self.visibleOtherCount)")
+            .fontWeight(.semibold)
+        + Text(" \(lastLabel)")
     }
 }
 
@@ -214,11 +203,11 @@ private struct WatchedPortsSection: View {
             if self.statuses.isEmpty {
                 Text("All \(self.store.snapshot.watchedPorts.count) watched ports are free.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Readability.secondaryText)
             } else {
                 Text("Blue means one of your Node apps is using the port. Orange means another app is blocking it.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Readability.secondaryText)
 
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(self.statuses.enumerated()), id: \.element.id) { index, status in
@@ -293,7 +282,7 @@ private struct WatchedPortRow: View {
                         .lineLimit(1)
                     Text(DisplayText.watchedPortExplanation(self.status))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Readability.secondaryText)
                         .lineLimit(1)
                 }
 
@@ -303,7 +292,7 @@ private struct WatchedPortRow: View {
 
                 Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Readability.secondaryText)
             }
             .contentShape(Rectangle())
         }
@@ -339,6 +328,21 @@ private struct WatchedPortDetails: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if self.status.isConflict, let suggestedPort = self.store.nextAvailablePort(after: self.status.port) {
+                HStack(spacing: 8) {
+                    Text("Suggested free port")
+                        .font(.caption)
+                        .foregroundStyle(Readability.secondaryText)
+                    Text(verbatim: String(suggestedPort))
+                        .font(.system(.caption, design: .monospaced))
+                        .fontWeight(.semibold)
+                    InlineAccentButton("Copy", tone: .node) {
+                        self.store.copySuggestedPort(after: self.status.port)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+
             if !self.projects.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(self.projects.enumerated()), id: \.element.id) { index, project in
@@ -361,7 +365,7 @@ private struct WatchedPortDetails: View {
                             CompactRowDivider()
                                 .padding(.vertical, 8)
                         }
-                        ProcessDetailRow(store: self.store, process: process)
+                        ProcessDetailRow(store: self.store, process: process, portContext: self.status.port)
                     }
                 }
             }
@@ -393,7 +397,7 @@ private struct ProjectDetailBlock: View {
 
             Text(DisplayText.path(self.project.projectRoot))
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Readability.secondaryText)
                 .lineLimit(1)
                 .truncationMode(.middle)
 
@@ -404,7 +408,7 @@ private struct ProjectDetailBlock: View {
                         CompactRowDivider()
                             .padding(.vertical, 8)
                     }
-                    ProcessDetailRow(store: self.store, process: process, showPortBadges: false)
+                    ProcessDetailRow(store: self.store, process: process, showPortBadges: false, portContext: self.project.ports.first)
                 }
             }
         }
@@ -415,11 +419,13 @@ private struct ProcessDetailRow: View {
     @ObservedObject var store: NodeTrackerStore
     let process: TrackedProcessSnapshot
     let showPortBadges: Bool
+    let portContext: Int?
 
-    init(store: NodeTrackerStore, process: TrackedProcessSnapshot, showPortBadges: Bool = false) {
+    init(store: NodeTrackerStore, process: TrackedProcessSnapshot, showPortBadges: Bool = false, portContext: Int? = nil) {
         self.store = store
         self.process = process
         self.showPortBadges = showPortBadges
+        self.portContext = portContext
     }
 
     var body: some View {
@@ -431,13 +437,13 @@ private struct ProcessDetailRow: View {
                 Spacer()
                 Text(self.metaText)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Readability.secondaryText)
             }
 
             if let detail = DisplayText.processDetail(self.process.process) {
                 Text(detail)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Readability.secondaryText)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
@@ -449,12 +455,17 @@ private struct ProcessDetailRow: View {
                 if let firstListener = self.process.listeners.first {
                     Text(firstListener.hostScope.label)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Readability.secondaryText)
                 }
                 Spacer(minLength: 8)
             }
 
             HStack(spacing: 12) {
+                if let resolution = self.primaryResolution {
+                    InlineAccentButton(resolution.title, tone: resolution.tone) {
+                        self.run(resolution)
+                    }
+                }
                 if self.canReveal {
                     InlineTextButton("Reveal") {
                         self.store.reveal(path: self.process.process.cwd)
@@ -480,28 +491,28 @@ private struct ProcessDetailRow: View {
     }
 
     private var canReveal: Bool {
-        self.hasMeaningfulDirectory
+        ProcessActionPolicy.hasMeaningfulDirectory(self.process)
     }
 
     private var canOpenTerminal: Bool {
-        self.process.process.isNodeFamily && self.hasMeaningfulDirectory
+        self.process.process.isNodeFamily && ProcessActionPolicy.hasMeaningfulDirectory(self.process)
     }
 
     private var canTerminate: Bool {
-        if self.process.process.isNodeFamily {
-            return true
-        }
-        guard self.hasMeaningfulDirectory else { return false }
-        let command = self.process.process.commandLine
-        if command.hasPrefix("/System/") || command.hasPrefix("/usr/") || command.hasPrefix("/Applications/") {
-            return false
-        }
-        return true
+        ProcessActionPolicy.canTerminate(self.process)
     }
 
-    private var hasMeaningfulDirectory: Bool {
-        guard let cwd = self.process.process.cwd, cwd != "/" else { return false }
-        return FileManager.default.fileExists(atPath: cwd)
+    private var primaryResolution: ResolutionAction? {
+        ResolutionAdvisor.primaryAction(for: self.process, portContext: self.portContext)
+    }
+
+    private func run(_ action: ResolutionAction) {
+        switch action.kind {
+        case .terminate:
+            self.store.terminate(process: self.process)
+        case let .openApplication(path):
+            self.store.openApplication(at: path)
+        }
     }
 }
 
@@ -672,10 +683,10 @@ private struct DisclosureToggle: View {
                 Spacer()
                 Text(self.countText)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Readability.secondaryText)
                 Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Readability.secondaryText)
             }
             .contentShape(Rectangle())
         }
@@ -695,8 +706,8 @@ private struct CompactSectionHeader: View {
             if let trailing {
                 Text(trailing)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+                    .foregroundStyle(Readability.secondaryText)
+                }
         }
     }
 }
@@ -724,9 +735,9 @@ private enum AccentTone {
         case .neutral:
             return Color.primary.opacity(0.08)
         case .node:
-            return Color.blue.opacity(0.16)
+            return Color(nsColor: .systemBlue).opacity(0.20)
         case .warning:
-            return Color.orange.opacity(0.18)
+            return Color(nsColor: .systemOrange).opacity(0.24)
         }
     }
 
@@ -735,11 +746,15 @@ private enum AccentTone {
         case .neutral:
             return .primary
         case .node:
-            return .blue
+            return Color(nsColor: NSColor(calibratedRed: 0.06, green: 0.33, blue: 0.74, alpha: 1))
         case .warning:
-            return .orange
+            return Color(nsColor: NSColor(calibratedRed: 0.70, green: 0.33, blue: 0.04, alpha: 1))
         }
     }
+}
+
+private enum Readability {
+    static let secondaryText = Color.primary.opacity(0.78)
 }
 
 private struct PortBadge: View {
@@ -775,9 +790,9 @@ private struct StatusTag: View {
     var body: some View {
         Text(self.text)
             .font(.caption2)
-            .fontWeight(.medium)
+            .fontWeight(.semibold)
             .foregroundStyle(self.tone.foreground)
-            .padding(.horizontal, 7)
+            .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(self.tone.fill, in: Capsule())
     }
@@ -796,9 +811,105 @@ private struct InlineTextButton: View {
         Button(action: self.action) {
             Text(self.title)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Readability.secondaryText)
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct InlineAccentButton: View {
+    let title: String
+    let tone: AccentTone
+    let action: () -> Void
+
+    init(_ title: String, tone: AccentTone, action: @escaping () -> Void) {
+        self.title = title
+        self.tone = tone
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: self.action) {
+            Text(self.title)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(self.tone.foreground)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(self.tone.fill, in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private enum ProcessActionPolicy {
+    static func hasMeaningfulDirectory(_ process: TrackedProcessSnapshot) -> Bool {
+        guard let cwd = process.process.cwd, cwd != "/" else { return false }
+        return FileManager.default.fileExists(atPath: cwd)
+    }
+
+    static func canTerminate(_ process: TrackedProcessSnapshot) -> Bool {
+        if process.process.isNodeFamily {
+            return true
+        }
+
+        guard hasMeaningfulDirectory(process) else { return false }
+
+        let command = process.process.commandLine
+        if command.hasPrefix("/System/") || command.hasPrefix("/usr/") || command.hasPrefix("/Applications/") {
+            return false
+        }
+
+        return true
+    }
+}
+
+private struct ResolutionAction {
+    enum Kind {
+        case terminate
+        case openApplication(String)
+    }
+
+    let title: String
+    let tone: AccentTone
+    let kind: Kind
+}
+
+private enum ResolutionAdvisor {
+    static func primaryAction(for process: TrackedProcessSnapshot, portContext: Int?) -> ResolutionAction? {
+        let command = process.process.commandLine
+        let lowercasedCommand = command.lowercased()
+        let tool = process.process.toolLabel.lowercased()
+
+        if process.process.isNodeFamily, portContext != nil {
+            return ResolutionAction(title: "Free port", tone: .node, kind: .terminate)
+        }
+
+        if tool == "ssh" || lowercasedCommand.hasPrefix("ssh ") {
+            return ResolutionAction(title: "Stop tunnel", tone: .warning, kind: .terminate)
+        }
+
+        if let bundlePath = self.applicationBundlePath(from: command),
+           bundlePath.localizedCaseInsensitiveContains("/Docker.app") {
+            return ResolutionAction(title: "Open Docker", tone: .warning, kind: .openApplication(bundlePath))
+        }
+
+        if ProcessActionPolicy.canTerminate(process) {
+            return ResolutionAction(title: "Stop blocker", tone: .warning, kind: .terminate)
+        }
+
+        return nil
+    }
+
+    private static func applicationBundlePath(from commandLine: String) -> String? {
+        let pattern = #"(/[^ ]+?\.app)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(commandLine.startIndex..<commandLine.endIndex, in: commandLine)
+        guard let match = regex.firstMatch(in: commandLine, range: range),
+              let resultRange = Range(match.range(at: 1), in: commandLine) else {
+            return nil
+        }
+        return String(commandLine[resultRange])
     }
 }
 
