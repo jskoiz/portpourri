@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ReportCategory, ReportStatus } from '@prisma/client';
+import { NotificationType } from '../common/enums';
 
 @Injectable()
 export class ModerationService {
@@ -87,7 +88,7 @@ export class ModerationService {
     // Moderation hook: notify moderation inbox (future queue/webhook)
     void this.notifications
       .create(reporterId, {
-        type: 'system',
+        type: NotificationType.System,
         title: 'Report submitted',
         body: 'Thanks. Our team will review this report.',
         data: { reportId: report.id },
@@ -156,7 +157,7 @@ export class ModerationService {
 
     void this.notifications
       .create(actorId, {
-        type: 'system',
+        type: NotificationType.System,
         title: 'User blocked',
         body: 'You will no longer see this person.',
         data: { matchId, targetUserId },

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosHeaders } from 'axios';
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { env } from '../config/env';
 import { handleUnauthorized } from './authSession';
@@ -20,16 +20,44 @@ client.interceptors.request.use(
         // Only inject the stored token when the caller has not already supplied an
         // Authorization header.  This lets call-sites pass an explicit token (e.g.
         // authApi.me) without having it silently overwritten by the interceptor.
-        if (!config.headers.Authorization) {
+        if (!hasAuthorizationHeader(config.headers)) {
             const token = await getToken();
             if (token) {
-                config.headers.Authorization = `Bearer ${token}`;
+                setAuthorizationHeader(config.headers, `Bearer ${token}`);
             }
         }
         return config;
     },
     (error) => Promise.reject(error)
 );
+
+function hasAuthorizationHeader(
+    headers: InternalAxiosRequestConfig['headers'] | undefined,
+): boolean {
+    if (!headers) return false;
+
+    if (headers instanceof AxiosHeaders) {
+        return headers.has('Authorization');
+    }
+
+    const headerBag = headers as Record<string, unknown>;
+    return Boolean(headerBag.Authorization || headerBag.authorization);
+}
+
+function setAuthorizationHeader(
+    headers: InternalAxiosRequestConfig['headers'] | undefined,
+    value: string,
+) {
+    if (!headers) return;
+
+    if (headers instanceof AxiosHeaders) {
+        headers.set('Authorization', value);
+        return;
+    }
+
+    const headerBag = headers as Record<string, unknown>;
+    headerBag.Authorization = value;
+}
 
 // ---------------------------------------------------------------------------
 // Auto-retry for 429 on idempotent GET requests

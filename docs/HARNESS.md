@@ -79,7 +79,7 @@ npm run scaffold:backend-module -- --name moderation
 - CI is manual-only via GitHub Actions `workflow_dispatch`; local harness commands are the primary validation path.
 - When CI is dispatched manually, it runs the fast diff-driven lane, the backend migration rehearsal lane, and the check-only lane so maintainers can still use Actions as an opt-in mirror of local validation.
 - The dedicated iOS simulator workflow still runs only for native-impacting mobile changes such as Expo config, native plugin/dependency changes, generated iOS project changes, or workflow edits.
-- Use `npm run smoke` locally when you need deeper bootstrap/runtime validation.
+- Use `npm run smoke` locally when you need deeper bootstrap/runtime validation, especially after backend auth/discovery/events/matches/notifications/profile changes or matching mobile chat/discovery/events/profile screen changes.
 - Every lane uploads `harness-plan.json`, `harness-results.json`, and `harness-failure-summary.json` as CI artifacts.
 - Scheduled maintenance audits docs, tracked marker drift, dependency visibility, Storybook/test coverage signals, repo-index drift, and harness health without rerunning the full smoke bootstrap.
 - Maintenance publishes review-required findings in artifacts and can open a small automated PR for safe fixes such as repo-index refreshes.

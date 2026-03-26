@@ -1,5 +1,6 @@
 import {
   buildNotificationSections,
+  getNotificationMeta,
   getNotificationGroup,
 } from '../notificationPresentation';
 import { resolveNotificationNavigation } from '../notificationNavigation';
@@ -61,6 +62,76 @@ describe('notification helpers', () => {
           user: { id: 'user-2', firstName: 'Match' },
         },
       },
+    });
+  });
+
+  it('resolves message notifications with sender fallback details', () => {
+    const result = resolveNotificationNavigation(
+      buildNotification({
+        type: 'message_received',
+        data: { matchId: 'match-2', senderId: 'user-3' },
+      }),
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      target: {
+        route: 'Chat',
+        params: {
+          matchId: 'match-2',
+          user: { id: 'user-3', firstName: 'Message' },
+        },
+      },
+    });
+  });
+
+  it('resolves event reminders to event detail', () => {
+    const result = resolveNotificationNavigation(
+      buildNotification({
+        type: 'event_reminder',
+        data: { eventId: 'event-9' },
+      }),
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      target: {
+        route: 'EventDetail',
+        params: {
+          eventId: 'event-9',
+        },
+      },
+    });
+  });
+
+  it('resolves event invites to chat using the sender context', () => {
+    const result = resolveNotificationNavigation(
+      buildNotification({
+        type: 'event_reminder',
+        data: {
+          type: 'event_invite',
+          matchId: 'match-9',
+          senderId: 'user-4',
+        },
+      }),
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      target: {
+        route: 'Chat',
+        params: {
+          matchId: 'match-9',
+          user: { id: 'user-4', firstName: 'Match' },
+        },
+      },
+    });
+  });
+
+  it('renders event invites with chat styling', () => {
+    expect(getNotificationMeta('event_invite')).toEqual({
+      icon: 'calendar',
+      color: '#8BAA7A',
     });
   });
 

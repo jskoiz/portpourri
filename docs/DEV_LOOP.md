@@ -50,6 +50,8 @@ This verifies:
 3. The seeded `ui-preview` runtime resets cleanly against the running backend using one pinned `SMOKE_NOW_ISO` anchor for seed and scenario timing
 4. Mobile launch prerequisites (`expo-doctor` + `typecheck`)
 
+Use the smoke run any time you change backend auth, discovery, events, matches, notifications, or profile code, or the mobile chat/discovery/events/profile screens that depend on those flows.
+
 `npm run smoke` expects to own the configured local backend port for the duration of the run. Stop any existing listener on the resolved `API_PORT` or `PORT` value first; if neither is set, smoke defaults to `3010`. The script writes bootstrap, backend, and scenario logs to `/tmp` and will fail fast if the port is already occupied.
 
 ## Validation commands used before ship

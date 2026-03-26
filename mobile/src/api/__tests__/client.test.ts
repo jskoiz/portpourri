@@ -64,6 +64,15 @@ describe('client request interceptor', () => {
     expect(result.headers.Authorization).toBe('Bearer caller-token');
   });
 
+  it('does NOT overwrite an explicit authorization header when header casing differs', async () => {
+    mockSecureStore.getItemAsync.mockResolvedValueOnce('stored-token');
+
+    const result = await runRequestInterceptor({ headers: { authorization: 'Bearer caller-token' } });
+
+    expect(mockSecureStore.getItemAsync).not.toHaveBeenCalled();
+    expect(result.headers.authorization).toBe('Bearer caller-token');
+  });
+
   it('leaves headers unchanged when no token is in storage and none is supplied', async () => {
     mockSecureStore.getItemAsync.mockResolvedValueOnce(null);
 

@@ -120,7 +120,7 @@ export default function AppNavigator() {
     }
 
     const result = handleNotificationNavigation(
-      data as NotificationData,
+      data as unknown as NotificationData,
       navigationRef.current,
     );
     if (result.ok) {
@@ -179,7 +179,7 @@ export default function AppNavigator() {
           | NotificationData
           | undefined;
         if (data) {
-          routeNotificationTap(data as Record<string, unknown>);
+          routeNotificationTap(data as unknown as Record<string, unknown>);
         }
       });
     });

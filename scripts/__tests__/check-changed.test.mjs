@@ -15,7 +15,7 @@ test('empty change sets still select root checks', () => {
 
 test('backend-only changes select backend checks', () => {
   const plan = buildValidationPlan(['backend/src/profile/profile.service.ts']);
-  assert.deepEqual(plan.commands, ['npm run check:backend']);
+  assert.deepEqual(plan.commands, ['npm run check:backend', 'npm run smoke']);
 });
 
 test('docs-plus-backend changes keep root checks ahead of backend checks', () => {
@@ -31,7 +31,7 @@ test('cross-stack changes select the full check lane', () => {
     'backend/src/profile/profile.service.ts',
     'mobile/src/features/profile/hooks/useProfile.ts',
   ]);
-  assert.deepEqual(plan.commands, ['npm run check']);
+  assert.deepEqual(plan.commands, ['npm run check', 'npm run smoke']);
 });
 
 test('harness-sensitive root script changes select the full check lane', () => {
@@ -49,7 +49,7 @@ test('cross-stack changes including symphony still select the full check lane', 
     'mobile/src/features/profile/hooks/useProfile.ts',
     'symphony/src/workflow.ts',
   ]);
-  assert.deepEqual(plan.commands, ['npm run check']);
+  assert.deepEqual(plan.commands, ['npm run check', 'npm run smoke']);
 });
 
 test('smoke-sensitive changes append smoke validation', () => {
@@ -64,9 +64,21 @@ test('scenario reset changes append smoke validation to backend checks', () => {
   assert.equal(plan.requiresSmoke, true);
 });
 
+test('integrated backend flow changes append smoke validation', () => {
+  const plan = buildValidationPlan(['backend/src/auth/auth.service.ts']);
+  assert.deepEqual(plan.commands, ['npm run check:backend', 'npm run smoke']);
+  assert.equal(plan.requiresSmoke, true);
+});
+
 test('smoke runner changes append smoke validation to root checks', () => {
   const plan = buildValidationPlan(['scripts/smoke-e2e.sh']);
   assert.deepEqual(plan.commands, ['npm run check:root', 'npm run smoke']);
+  assert.equal(plan.requiresSmoke, true);
+});
+
+test('integrated mobile flow changes append smoke validation', () => {
+  const plan = buildValidationPlan(['mobile/src/screens/ProfileScreen.tsx']);
+  assert.deepEqual(plan.commands, ['npm run check:mobile', 'npm run smoke']);
   assert.equal(plan.requiresSmoke, true);
 });
 

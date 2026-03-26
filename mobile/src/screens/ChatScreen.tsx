@@ -95,7 +95,8 @@ export default function ChatScreen({ navigation, route }: RootStackScreenProps<'
       ) : (
         <ChatMessageList
           messages={messages}
-          onRefresh={handleManualRefresh}
+onNavigateToEvent={(eventId) => navigation.navigate('EventDetail', { eventId })}
+          onRefresh={() => { void handleManualRefresh(); }}
           refreshing={manualRefreshing}
           theme={theme}
         />

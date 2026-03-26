@@ -134,7 +134,7 @@ export function useChatThread(matchId: string) {
       if (cancelled) return;
       setConnectionStatus('disconnected');
 
-      sseDisconnect = await connectMatchMessageStream(matchId, {
+      const nextDisconnect = await connectMatchMessageStream(matchId, {
         onStatus: (status) => {
           if (cancelled) return;
           if (status === 'connected') {
@@ -156,13 +156,22 @@ export function useChatThread(matchId: string) {
           startPolling();
         },
       });
+      if (cancelled) {
+        nextDisconnect();
+        return;
+      }
+
+      sseDisconnect = nextDisconnect;
     };
 
     const setupWebSocket = async () => {
       try {
         setConnectionStatus('connecting');
         const socket = await connectSocket();
-        if (cancelled) return;
+        if (cancelled) {
+          socket.disconnect();
+          return;
+        }
 
         const handleConnect = () => {
           if (cancelled) return;

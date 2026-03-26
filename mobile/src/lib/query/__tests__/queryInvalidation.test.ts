@@ -1,4 +1,6 @@
 import { createTestQueryClient } from '../../testing/queryTestHarness';
+import { QueryObserver } from '@tanstack/react-query';
+import { waitFor } from '@testing-library/react-native';
 import {
   invalidateQueryScopes,
   queryInvalidationScopes,
@@ -65,6 +67,23 @@ describe('query invalidation helpers', () => {
   });
 
   it('invalidates all event caches with one family key and keeps the refetch type narrow', async () => {
+    const queryClient = createTestQueryClient();
+    const listKey = queryKeys.events.list();
+    const mineKey = queryKeys.events.mine();
+    const detailKey = queryKeys.events.detail('event-1');
+
+    queryClient.setQueryData(listKey, []);
+    queryClient.setQueryData(mineKey, []);
+    queryClient.setQueryData(detailKey, { id: 'event-1' });
+
+    await invalidateQueryScopes(queryClient, queryInvalidationScopes.eventWrite);
+
+    expect(isInvalidated(queryClient, listKey)).toBe(true);
+    expect(isInvalidated(queryClient, mineKey)).toBe(true);
+    expect(isInvalidated(queryClient, detailKey)).toBe(true);
+  });
+
+  it('marks all event caches as invalidated using the eventWrite scope with inactive refetch', async () => {
     const queryClient = createTestQueryClient();
     const listKey = queryKeys.events.list();
     const mineKey = queryKeys.events.mine();

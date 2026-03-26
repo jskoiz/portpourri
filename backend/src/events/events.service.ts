@@ -171,6 +171,10 @@ export class EventsService {
       throw new NotFoundException('Event not found');
     }
 
+    if (userId && (await this.blockService.isBlocked(userId, event.host.id))) {
+      throw new ForbiddenException('This event is no longer available');
+    }
+
     return mapEventSummary(event as typeof event & EventWithRsvps);
   }
 
@@ -244,7 +248,7 @@ export class EventsService {
   }
 
   async rsvp(eventId: string, userId: string) {
-    const currentUser = await this.getActiveUser(userId);
+const currentUser = await this.getActiveUser(userId);
     const event = await this.detail(eventId, userId, currentUser);
 
     const countBefore = await this.prisma.eventRsvp.count({
@@ -454,7 +458,7 @@ export class EventsService {
         buildEventInviteNotification(
           eventId,
           userId,
-          inviter?.firstName ?? 'Someone',
+          currentUser.firstName,
           event.title,
           matchId,
         ),

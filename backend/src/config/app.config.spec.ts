@@ -155,7 +155,7 @@ describe('appConfig', () => {
     });
   });
 
-  describe('local URL fallbacks', () => {
+describe('local URL fallbacks', () => {
     it('uses the local port for script, seed, and upload URLs when no overrides are set', () => {
       process.env.JWT_SECRET = 'test-secret';
       process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
@@ -197,6 +197,28 @@ describe('appConfig', () => {
       expect(config.uploads.profilePublicBaseUrl).toBe(
         'https://assets.brdg.test/uploads/profile',
       );
+    });
+  });
+
+  describe('auth', () => {
+    it('falls back to the default bcrypt rounds when BCRYPT_ROUNDS is invalid', () => {
+      process.env.JWT_SECRET = 'test-secret';
+      process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+      process.env.NODE_ENV = 'test';
+      process.env.BCRYPT_ROUNDS = 'not-a-number';
+
+      const config = loadConfig();
+      expect(config.auth.bcryptRounds).toBe(12);
+    });
+
+    it('uses positive integer bcrypt rounds from the environment', () => {
+      process.env.JWT_SECRET = 'test-secret';
+      process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+      process.env.NODE_ENV = 'test';
+      process.env.BCRYPT_ROUNDS = '14';
+
+      const config = loadConfig();
+      expect(config.auth.bcryptRounds).toBe(14);
     });
   });
 });

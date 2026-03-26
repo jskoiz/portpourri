@@ -19,6 +19,7 @@ import { collectStorybookCoverageViolations } from './check-repo-policies.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 
+
 export function listStagedChangedFiles() {
   const staged = runGit(['diff', '--cached', '--name-only', '--diff-filter=ACMR']).split('\n');
   return normalizeList(staged);

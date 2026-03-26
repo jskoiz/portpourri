@@ -1,6 +1,7 @@
 import { STORAGE_KEYS } from '../constants/storage';
 import { storage } from './storage';
 import { queryClient } from '../lib/query/queryClient';
+import * as Sentry from '@sentry/react-native';
 
 type UnauthorizedHandler = () => void | Promise<void>;
 
@@ -26,6 +27,7 @@ export async function handleUnauthorized() {
     await storage.deleteItemAsync(STORAGE_KEYS.accessToken);
     await unauthorizedHandler?.();
   } finally {
+    Sentry.setUser(null);
     isHandlingUnauthorized = false;
   }
 }

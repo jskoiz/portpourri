@@ -35,7 +35,7 @@ export class NotificationsService {
       }
     }
 
-    const normalizedData = normalizeNotificationData(payload.type, payload.data);
+    const normalizedData = normalizeNotificationData(payload.type, payload.data as Record<string, unknown> | undefined);
     const payloadIssues = getNotificationPayloadIssues(payload.type, normalizedData);
     if (payloadIssues.length > 0) {
       this.logger.warn(

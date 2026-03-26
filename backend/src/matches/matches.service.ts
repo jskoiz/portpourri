@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MatchesRealtimeService } from './matches-realtime.service';
 import { map, Observable } from 'rxjs';
 import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../common/enums';
 
 @Injectable()
 export class MatchesService {
@@ -146,7 +147,7 @@ export class MatchesService {
         : {}),
     });
 
-    return messages.reverse().map((msg) => ({
+    return messages.map((msg) => ({
       id: msg.id,
       text: msg.body,
       sender: msg.senderId === userId ? 'me' : 'them',
@@ -212,7 +213,7 @@ export class MatchesService {
     const recipientId =
       match.userAId === userId ? match.userBId : match.userAId;
     void this.notifications.create(recipientId, {
-      type: 'message_received',
+      type: NotificationType.MessageReceived,
       title: 'New message',
       body: trimmedContent,
       data: { matchId, senderId: userId },

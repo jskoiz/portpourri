@@ -420,5 +420,51 @@ describe('NotificationsService', () => {
       const enabled = await service.isNotificationEnabled('user-1', NotificationType.EventInvite);
       expect(enabled).toBe(false);
     });
+
+    it('maps event_reminder to the eventReminders preference', async () => {
+      (prisma.notificationPreferences.findUnique as jest.Mock).mockResolvedValue({
+        matches: true,
+        messages: true,
+        likes: true,
+        eventReminders: false,
+        eventRsvps: true,
+        system: true,
+      });
+
+      const enabled = await service.isNotificationEnabled('user-1', NotificationType.EventReminder);
+      expect(enabled).toBe(false);
+    });
+  });
+
+  describe('dispatchPush', () => {
+    it('sends push notifications for event reminders', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        pushToken: 'ExponentPushToken[abc]',
+        notificationPreferences: {
+          matches: true,
+          messages: true,
+          likes: true,
+          eventReminders: true,
+          eventRsvps: true,
+          system: true,
+        },
+      });
+
+      await (service as any).dispatchPush({
+        id: 'notif-1',
+        userId: 'user-1',
+        type: 'event_reminder',
+        title: 'Event invite',
+        body: 'Join us',
+        data: { type: 'event_invite', eventId: 'event-1', matchId: 'match-1' },
+      });
+
+      expect(pushService.sendPushNotification).toHaveBeenCalledWith(
+        'ExponentPushToken[abc]',
+        'Event invite',
+        'Join us',
+        { type: 'event_invite', eventId: 'event-1', matchId: 'match-1' },
+      );
+    });
   });
 });

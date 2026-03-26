@@ -6,11 +6,12 @@ const ANDROID_EMULATOR_API_URL = "http://10.0.2.2:3010";
 const explicitApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 const developmentFallbackUrl =
   process.env.EXPO_PUBLIC_DEV_LAN_API_URL?.trim() ||
-  Platform.select({
+  Platform?.select?.({
     ios: IOS_SIMULATOR_API_URL,
     android: ANDROID_EMULATOR_API_URL,
     default: IOS_SIMULATOR_API_URL,
-  });
+  }) ||
+  IOS_SIMULATOR_API_URL;
 
 const apiUrl = explicitApiUrl || (__DEV__ ? developmentFallbackUrl : null);
 

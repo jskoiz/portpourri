@@ -82,7 +82,10 @@ const NotifRow = memo(function NotifRow({
       {!isRead ? (
         <TouchableOpacity
           style={styles.dismissBtn}
-          onPress={() => onMarkRead(notif.id)}
+          onPress={(event) => {
+            event?.stopPropagation?.();
+            onMarkRead(notif.id);
+          }}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           activeOpacity={0.6}
           accessibilityRole="button"

@@ -91,8 +91,8 @@ describe('ChatScreen', () => {
   it('prefills the composer and sends via matchesApi', async () => {
     render(<ChatScreen navigation={mockNavigation} route={mockRoute as any} />);
 
-    const input = await screen.findByDisplayValue('Coffee after the run?');
-    fireEvent(input, 'submitEditing');
+    expect(screen.getByDisplayValue('Coffee after the run?')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Send message'));
 
     await waitFor(() => {
       expect(mockSendMessage).toHaveBeenCalledWith('Coffee after the run?');
@@ -127,5 +127,15 @@ describe('ChatScreen', () => {
     render(<ChatScreen navigation={mockNavigation} route={mockRoute as any} />);
 
     expect(chatMessageListProps?.refreshing).toBe(false);
+  });
+
+  it('passes event navigation through to the chat message list', () => {
+    render(<ChatScreen navigation={mockNavigation} route={mockRoute as any} />);
+
+    expect(chatMessageListProps?.onNavigateToEvent).toEqual(expect.any(Function));
+
+    (chatMessageListProps?.onNavigateToEvent as (eventId: string) => void)('event-9');
+
+    expect(mockNavigate).toHaveBeenCalledWith('EventDetail', { eventId: 'event-9' });
   });
 });

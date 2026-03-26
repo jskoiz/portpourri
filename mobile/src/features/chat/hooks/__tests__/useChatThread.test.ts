@@ -292,4 +292,53 @@ describe('useChatThread', () => {
 
     expect(mockSocket.emit).toHaveBeenCalledWith('typing:stop', { matchId: 'match-1' });
   });
+
+  it('disconnects a late websocket connection when the thread unmounts first', async () => {
+    mockGetSocket.mockReturnValue(null);
+
+    let resolveSocket!: (socket: typeof mockSocket) => void;
+    mockConnectSocket.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSocket = resolve;
+      }) as Promise<typeof mockSocket>,
+    );
+
+    const { unmount } = renderHook(() => useChatThread('match-1'));
+
+    unmount();
+
+    await act(async () => {
+      resolveSocket(mockSocket);
+      await Promise.resolve();
+    });
+
+    expect(mockSocketDisconnect).toHaveBeenCalled();
+  });
+
+  it('closes a late SSE connection when the thread unmounts first', async () => {
+    mockConnectSocket.mockRejectedValueOnce(new Error('WS failed'));
+
+    let resolveDisconnect!: (disconnect: () => void) => void;
+    mockConnectMatchMessageStream.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveDisconnect = resolve;
+      }) as Promise<() => void>,
+    );
+
+    const { unmount } = renderHook(() => useChatThread('match-1'));
+
+    await waitFor(() => {
+      expect(mockConnectMatchMessageStream).toHaveBeenCalled();
+    });
+
+    unmount();
+
+    const sseDisconnect = jest.fn();
+    await act(async () => {
+      resolveDisconnect(sseDisconnect);
+      await Promise.resolve();
+    });
+
+    expect(sseDisconnect).toHaveBeenCalled();
+  });
 });

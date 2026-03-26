@@ -1,4 +1,4 @@
-import { discoveryApi, matchesApi, notificationsApi, profileApi } from '../api';
+import { discoveryApi, eventsApi, matchesApi, notificationsApi, profileApi } from '../api';
 import client from '../../api/client';
 import * as observability from '../../api/observability';
 
@@ -120,6 +120,36 @@ describe('discoveryApi', () => {
     jest.clearAllMocks();
   });
 
+  describe('feed', () => {
+    it('serializes discovery filters into backend query params', async () => {
+      mockClient.get.mockResolvedValueOnce({ data: [] });
+
+      const filters: Parameters<typeof discoveryApi.feed>[0] = {
+        distanceKm: 24,
+        minAge: 22,
+        maxAge: 38,
+        goals: ['strength', 'mobility'],
+        intensity: ['moderate', 'high'],
+        availability: ['morning', 'evening'],
+      };
+
+      const result = await discoveryApi.feed(filters);
+
+      expect(mockClient.get).toHaveBeenCalledWith('/discovery/feed', {
+        params: {
+          distanceKm: 24,
+          minAge: 22,
+          maxAge: 38,
+          goals: 'strength,mobility',
+          intensity: 'moderate,high',
+          availability: 'morning,evening',
+        },
+      });
+      expect(result.data).toEqual([]);
+      expect(mockLogApiFailure).not.toHaveBeenCalled();
+    });
+  });
+
   describe('pass', () => {
     it('returns pass status on success', async () => {
       mockClient.post.mockResolvedValueOnce({ data: { status: 'passed' } });
@@ -233,6 +263,27 @@ describe('notificationsApi', () => {
   });
 });
 
+describe('eventsApi', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('invite', () => {
+    it('omits the optional message when no invite copy is provided', async () => {
+      mockClient.post.mockResolvedValueOnce({ data: { status: 'sent' } });
+
+      const result = await eventsApi.invite('event-1', 'match-1');
+
+      expect(mockClient.post).toHaveBeenCalledWith(
+        '/events/event-1/invite',
+        { matchId: 'match-1' },
+      );
+      expect(result.data).toEqual({ status: 'sent' });
+      expect(mockLogApiFailure).not.toHaveBeenCalled();
+    });
+  });
+});
+
 describe('profileApi', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -311,10 +362,7 @@ describe('profileApi', () => {
   describe('uploadPhoto', () => {
     it('passes multipart payload and forwards upload progress', async () => {
       const onProgress = jest.fn();
-      mockClient.post.mockImplementationOnce(async (_url, _body, config) => {
-        config?.onUploadProgress?.({ loaded: 45, total: 90 } as any);
-        return { data: { id: 'photo-1' } };
-      });
+      mockClient.post.mockResolvedValueOnce({ data: { id: 'photo-1' } });
 
       await profileApi.uploadPhoto({
         uri: 'file:///tmp/photo.jpg',
@@ -322,6 +370,11 @@ describe('profileApi', () => {
         fileName: 'photo.jpg',
         onProgress,
       });
+
+      const uploadConfig = mockClient.post.mock.calls[0]?.[2] as {
+        onUploadProgress?: (event: { loaded: number; total?: number }) => void;
+      };
+      uploadConfig?.onUploadProgress?.({ loaded: 45, total: 90 });
 
       expect(mockClient.post).toHaveBeenCalledWith(
         '/profile/photos',
@@ -333,6 +386,25 @@ describe('profileApi', () => {
       );
       expect(onProgress).toHaveBeenCalledWith(50);
       expect(mockLogApiFailure).not.toHaveBeenCalled();
+    });
+
+    it('clamps upload progress and ignores progress events without totals', async () => {
+      const onProgress = jest.fn();
+      mockClient.post.mockResolvedValueOnce({ data: { id: 'photo-2' } });
+
+      await profileApi.uploadPhoto({
+        uri: 'file:///tmp/photo.jpg',
+        onProgress,
+      });
+
+      const uploadConfig = mockClient.post.mock.calls[0]?.[2] as {
+        onUploadProgress?: (event: { loaded: number; total?: number }) => void;
+      };
+      uploadConfig?.onUploadProgress?.({ loaded: 240, total: 100 });
+      uploadConfig?.onUploadProgress?.({ loaded: 30 });
+
+      expect(onProgress).toHaveBeenCalledWith(100);
+      expect(onProgress).toHaveBeenCalledTimes(1);
     });
   });
 

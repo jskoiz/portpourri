@@ -2,11 +2,16 @@ import { handleUnauthorized, setUnauthorizedHandler } from '../authSession';
 import { useAuthStore } from '../../store/authStore';
 import { STORAGE_KEYS } from '../../constants/storage';
 import { storage } from '../storage';
+import * as Sentry from '@sentry/react-native';
 
 jest.mock('../storage', () => ({
   storage: {
     deleteItemAsync: jest.fn(),
   },
+}));
+
+jest.mock('@sentry/react-native', () => ({
+  setUser: jest.fn(),
 }));
 
 describe('authSession', () => {
@@ -38,6 +43,7 @@ describe('authSession', () => {
       STORAGE_KEYS.accessToken,
     );
     expect(clearSession).toHaveBeenCalledTimes(1);
+    expect(Sentry.setUser).toHaveBeenCalledWith(null);
     expect(useAuthStore.getState().token).toBeNull();
     expect(useAuthStore.getState().user).toBeNull();
 
@@ -48,5 +54,6 @@ describe('authSession', () => {
     await handleUnauthorized();
 
     expect(storage.deleteItemAsync).toHaveBeenCalledWith(STORAGE_KEYS.accessToken);
+    expect(Sentry.setUser).toHaveBeenCalledWith(null);
   });
 });

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -509,6 +510,10 @@ export class DiscoveryService {
       throw new NotFoundException('User not found');
     }
 
+    if (await this.blockService.isBlocked(userId, targetUserId)) {
+      throw new ForbiddenException('This user is no longer available');
+    }
+
     const result = await this.prisma.$transaction(async (tx) => {
       const existingLike = await tx.like.findUnique({
         where: {
@@ -682,6 +687,10 @@ export class DiscoveryService {
         }),
       );
       throw new NotFoundException('User not found');
+    }
+
+    if (await this.blockService.isBlocked(userId, targetUserId)) {
+      throw new ForbiddenException('This user is no longer available');
     }
 
     const result = await this.prisma.$transaction(async (tx) => {

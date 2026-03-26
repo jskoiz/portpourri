@@ -4,6 +4,15 @@ const toNumber = (value: string | undefined, fallback: number): number => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const toPositiveInteger = (
+  value: string | undefined,
+  fallback: number,
+): number => {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+};
+
 const appEnvironment = process.env.NODE_ENV || 'development';
 const isTest = appEnvironment === 'test';
 
@@ -82,7 +91,7 @@ export const appConfig = {
     swaggerEnabled: appEnvironment !== 'production',
   },
   auth: {
-    bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
+    bcryptRounds: toPositiveInteger(process.env.BCRYPT_ROUNDS, 12),
   },
   jwt: {
     secret: jwtSecret,

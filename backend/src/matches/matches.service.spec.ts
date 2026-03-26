@@ -243,7 +243,14 @@ describe('MatchesService realtime', () => {
     });
     expect(jest.mocked(notifications.create)).toHaveBeenCalledWith(
       'user-2',
-      expect.objectContaining({ body: 'hey' }),
+      expect.objectContaining({
+        body: 'hey',
+        data: expect.objectContaining({
+          type: 'message_received',
+          matchId: 'match-1',
+          senderId: 'user-1',
+        }),
+      }),
     );
   });
 
@@ -309,7 +316,7 @@ describe('MatchesService realtime', () => {
     expect(jest.mocked(prisma.message.create)).not.toHaveBeenCalled();
   });
 
-  it('returns messages in ascending chronological order', async () => {
+  it('returns messages in newest-first order for the inverted chat list', async () => {
     const older = {
       id: 'msg-1',
       body: 'first',
@@ -338,8 +345,8 @@ describe('MatchesService realtime', () => {
     const messages = await service.getMessages('match-1', 'user-1');
 
     expect(messages).toHaveLength(2);
-    expect(messages[0].id).toBe('msg-1');
-    expect(messages[1].id).toBe('msg-2');
+    expect(messages[0].id).toBe('msg-2');
+    expect(messages[1].id).toBe('msg-1');
   });
 
   it('rejects message sends for non-existent matches with a not-found error', async () => {
