@@ -91,6 +91,31 @@ function runReleaseCheck(repoRoot) {
   });
 }
 
+test('release-ios keeps explicit environment overrides instead of clobbering them from .env.production', () => {
+  const repoRoot = createFixture();
+  const result = run('bash', ['scripts/release-ios.sh', '--check-only', '--mode', 'xcode'], {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      PATH: `${path.join(repoRoot, 'bin')}:${process.env.PATH}`,
+      IOS_BUILD_NUMBER: '13',
+      ASC_LIVE_BUILD_NUMBER: '12',
+      ASC_BUILD_NUMBER_VERIFIED_AT: '2026-03-26T12:23:48Z',
+    },
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+
+  const manifestPath = path.join(repoRoot, 'mobile/build/ios-release-manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert.equal(manifest.iosBuildNumber, '13');
+  assert.equal(manifest.appStoreConnectLiveBuildNumber, '12');
+  assert.equal(
+    manifest.appStoreConnectBuildNumberVerifiedAt,
+    '2026-03-26T12:23:48Z',
+  );
+});
+
 test('release-ios check-only writes a provenance-rich manifest without tagging', () => {
   const repoRoot = createFixture();
   const result = runReleaseCheck(repoRoot);

@@ -116,15 +116,56 @@ detect_xcode_scheme() {
 
 load_env_file() {
   local env_file="$1"
+  local tracked_var
+  local tracked_vars=(
+    APP_ENV
+    APP_VERSION
+    EXPO_PUBLIC_APP_NAME
+    EXPO_PUBLIC_APP_SLUG
+    EXPO_PUBLIC_API_URL
+    IOS_BUNDLE_IDENTIFIER
+    IOS_BUILD_NUMBER
+    ANDROID_PACKAGE
+    ANDROID_VERSION_CODE
+    IOS_DEVELOPMENT_TEAM
+    ASC_API_KEY_ID
+    ASC_API_ISSUER_ID
+    ASC_API_KEY_PATH
+    ASC_LIVE_BUILD_NUMBER
+    ASC_BUILD_NUMBER_VERIFIED_AT
+    EAS_PROJECT_ID
+    SENTRY_ORG
+    SENTRY_PROJECT
+    SENTRY_AUTH_TOKEN
+    SENTRY_ALLOW_FAILURE
+    SENTRY_DISABLE_AUTO_UPLOAD
+    BRDG_BUILD_DATE
+  )
+  local existing_var_name
 
   if [[ ! -f "$env_file" ]]; then
     return
   fi
 
+  for tracked_var in "${tracked_vars[@]}"; do
+    if [[ -n "${!tracked_var+x}" ]]; then
+      existing_var_name="BRDG_ENV_PRESET_${tracked_var}"
+      printf -v "$existing_var_name" '%s' "${!tracked_var}"
+    fi
+  done
+
   set -a
   # shellcheck disable=SC1090
   source "$env_file"
   set +a
+
+  for tracked_var in "${tracked_vars[@]}"; do
+    existing_var_name="BRDG_ENV_PRESET_${tracked_var}"
+    if [[ -n "${!existing_var_name+x}" ]]; then
+      export "$tracked_var=${!existing_var_name}"
+      unset "$existing_var_name"
+    fi
+  done
 }
 
 while [[ $# -gt 0 ]]; do
