@@ -201,9 +201,21 @@ final class NodeTrackerStore: ObservableObject {
         self.clipboardNotice = "\(label) copied"
     }
 
+    func copySuggestedPort(after port: Int) {
+        guard let suggestedPort = self.nextAvailablePort(after: port) else {
+            self.lastError = "No free port found"
+            return
+        }
+        self.copyText(String(suggestedPort), label: "Suggested port")
+    }
+
     func reveal(path: String?) {
         guard let path else { return }
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+    }
+
+    func openApplication(at path: String) {
+        NSWorkspace.shared.open(URL(fileURLWithPath: path))
     }
 
     func openTerminal(path: String?) {
@@ -231,6 +243,26 @@ final class NodeTrackerStore: ObservableObject {
         } else {
             self.lastError = "Failed to terminate PID \(process.process.pid)"
         }
+    }
+
+    func nextAvailablePort(after port: Int) -> Int? {
+        let occupiedPorts = Set(self.snapshot.allProcesses.flatMap(\.ports))
+        let lowerBound = max(port + 1, 1024)
+
+        if lowerBound <= 65_535 {
+            for candidate in lowerBound...65_535 where !occupiedPorts.contains(candidate) {
+                return candidate
+            }
+        }
+
+        let upperFallback = min(max(port, 1024), 65_535)
+        if upperFallback > 1024 {
+            for candidate in 1024..<upperFallback where !occupiedPorts.contains(candidate) {
+                return candidate
+            }
+        }
+
+        return nil
     }
 
     private func settingsDidChange() {
