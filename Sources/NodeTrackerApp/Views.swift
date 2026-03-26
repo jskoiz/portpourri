@@ -15,9 +15,20 @@ struct PopoverRootView: View {
         let busyWatchedPorts = self.store.snapshot.watchedPorts
             .filter(\.isBusy)
             .sorted(by: DisplayText.compareWatchedPorts)
+        let busyWatchedPortSet = Set(busyWatchedPorts.map(\.port))
+        let otherActiveProjects = SnapshotDetails.projectsExcludingPorts(
+            self.store.snapshot.projects,
+            excludedPorts: busyWatchedPortSet
+        )
+        let extraOtherListeners = self.settings.showNonNodeListeners
+            ? SnapshotDetails.processesExcludingPorts(
+                visibleOtherProcesses,
+                excludedPorts: busyWatchedPortSet
+            )
+            : []
 
         ScrollView {
-            CompactPanel {
+            VStack(alignment: .leading, spacing: 14) {
                 CompactHeader(
                     snapshot: self.store.snapshot,
                     isRefreshing: self.store.isRefreshing,
@@ -28,34 +39,35 @@ struct PopoverRootView: View {
 
                 CompactDivider()
 
-                BusyWatchedPortsSection(
+                WatchedPortsSection(
+                    store: self.store,
                     statuses: busyWatchedPorts,
-                    totalCount: self.store.snapshot.watchedPorts.count
+                    visibleOtherProcesses: visibleOtherProcesses
                 )
 
-                if self.settings.groupMode == .project, !self.store.snapshot.projects.isEmpty {
+                if !otherActiveProjects.isEmpty {
                     CompactDivider()
-                    ProjectGroupsView(store: self.store)
-                } else if self.settings.groupMode == .port, !self.store.snapshot.allProcesses.isEmpty {
-                    CompactDivider()
-                    PortGroupsView(store: self.store)
+                    AdditionalNodePortsSection(projects: otherActiveProjects)
                 }
 
-                if !visibleOtherProcesses.isEmpty {
+                if !extraOtherListeners.isEmpty {
                     CompactDivider()
-                    OtherListenersSection(store: self.store, processes: visibleOtherProcesses)
+                    OtherListenersSection(processes: extraOtherListeners)
                 }
             }
-            .padding(12)
+            .padding(16)
         }
-        .background(Color.clear)
+        .background(Color(nsColor: .windowBackgroundColor))
         .overlay(alignment: .bottomTrailing) {
             if let notice = self.store.clipboardNotice {
                 Text(notice)
                     .font(.caption)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(.thinMaterial, in: Capsule())
+                    .background(Color(nsColor: .windowBackgroundColor), in: Capsule())
+                    .overlay(
+                        Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                    )
                     .padding()
                     .onAppear {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
@@ -94,10 +106,10 @@ private struct CompactHeader: View {
 
             HStack(spacing: 18) {
                 HeaderMetric(value: self.snapshot.summary.nodeProjectCount, title: "Projects")
-                HeaderMetric(value: self.snapshot.summary.watchedBusyCount, title: "Busy watched")
+                HeaderMetric(value: self.snapshot.summary.watchedBusyCount, title: "Watched busy")
                 HeaderMetric(
                     value: self.visibleOtherCount,
-                    title: self.showsAllOtherListeners ? "Other listeners" : "Conflicts"
+                    title: self.showsAllOtherListeners ? "Other listeners" : "Blocked"
                 )
             }
         }
@@ -129,9 +141,12 @@ private struct HeaderMetric: View {
     }
 }
 
-private struct BusyWatchedPortsSection: View {
+private struct WatchedPortsSection: View {
+    @ObservedObject var store: NodeTrackerStore
     let statuses: [WatchedPortStatus]
-    let totalCount: Int
+    let visibleOtherProcesses: [TrackedProcessSnapshot]
+
+    @State private var expandedPort: Int?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -141,53 +156,102 @@ private struct BusyWatchedPortsSection: View {
             )
 
             if self.statuses.isEmpty {
-                Text("All \(self.totalCount) watched ports are free.")
+                Text("All \(self.store.snapshot.watchedPorts.count) watched ports are free.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Text("\(max(self.totalCount - self.statuses.count, 0)) free of \(self.totalCount) watched ports.")
+                Text("Blue means one of your Node apps is using the port. Orange means another app is blocking it.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                CompactSurface {
-                    let statuses = self.statuses
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(statuses.enumerated()), id: \.element.id) { index, status in
-                            if index > 0 {
-                                CompactRowDivider()
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(self.statuses.enumerated()), id: \.element.id) { index, status in
+                        if index > 0 {
+                            CompactRowDivider()
+                        }
+
+                        WatchedPortRow(
+                            status: status,
+                            isExpanded: self.expandedPort == status.port
+                        ) {
+                            if self.expandedPort == status.port {
+                                self.expandedPort = nil
+                            } else {
+                                self.expandedPort = status.port
                             }
-                            BusyPortRow(status: status)
-                                .padding(.vertical, 8)
+                        }
+                        .padding(.vertical, 9)
+
+                        if self.expandedPort == status.port {
+                            WatchedPortDetails(
+                                store: self.store,
+                                status: status,
+                                projects: SnapshotDetails.projects(
+                                    for: status.port,
+                                    from: self.store.snapshot.projects
+                                ),
+                                otherProcesses: SnapshotDetails.processes(
+                                    for: status.port,
+                                    from: self.visibleOtherProcesses
+                                )
+                            )
+                            .padding(.leading, 18)
+                            .padding(.top, 2)
+                            .padding(.bottom, 12)
                         }
                     }
                 }
             }
         }
+        .onAppear {
+            self.syncExpandedPort()
+        }
+        .onChange(of: self.statuses.map(\.port)) {
+            self.syncExpandedPort()
+        }
+    }
+
+    private func syncExpandedPort() {
+        if let expandedPort, self.statuses.contains(where: { $0.port == expandedPort }) {
+            return
+        }
+        self.expandedPort = self.statuses.first?.port
     }
 }
 
-private struct BusyPortRow: View {
+private struct WatchedPortRow: View {
     let status: WatchedPortStatus
+    let isExpanded: Bool
+    let action: () -> Void
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
-            PortBadge(port: self.status.port, tone: self.tone)
+        Button(action: self.action) {
+            HStack(alignment: .center, spacing: 10) {
+                PortBadge(port: self.status.port, tone: self.tone)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(DisplayText.watchedPortSummary(self.status))
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .lineLimit(1)
-                Text(DisplayText.watchedPortDetail(self.status))
-                    .font(.caption)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(DisplayText.watchedPortHeadline(self.status))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Text(DisplayText.watchedPortExplanation(self.status))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 10)
+
+                StatusTag(text: self.tagText, tone: self.tone)
+
+                Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
             }
-
-            Spacer(minLength: 8)
-
-            StatusTag(text: self.tagText, tone: self.tone)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 
     private var tone: AccentTone {
@@ -202,208 +266,134 @@ private struct BusyPortRow: View {
 
     private var tagText: String {
         if self.status.isConflict {
-            return "Conflict"
+            return "Blocked"
         }
         if self.status.isNodeOwned {
-            return "Node"
+            return "Node app"
         }
-        return "Busy"
+        return "In use"
     }
 }
 
-private struct ProjectGroupsView: View {
+private struct WatchedPortDetails: View {
     @ObservedObject var store: NodeTrackerStore
+    let status: WatchedPortStatus
+    let projects: [ProjectSnapshot]
+    let otherProcesses: [TrackedProcessSnapshot]
 
     var body: some View {
-        let projects = self.sortedProjects()
-
         VStack(alignment: .leading, spacing: 10) {
-            CompactSectionHeader(title: "Projects", trailing: "\(projects.count)")
-            ForEach(projects) { project in
-                ProjectGroup(store: self.store, project: project)
+            if !self.projects.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(self.projects.enumerated()), id: \.element.id) { index, project in
+                        if index > 0 {
+                            CompactRowDivider()
+                                .padding(.vertical, 8)
+                        }
+                        ProjectDetailBlock(store: self.store, project: project)
+                    }
+                }
+            }
+
+            if !self.otherProcesses.isEmpty {
+                if !self.projects.isEmpty {
+                    CompactRowDivider()
+                }
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(self.otherProcesses.enumerated()), id: \.element.id) { index, process in
+                        if index > 0 {
+                            CompactRowDivider()
+                                .padding(.vertical, 8)
+                        }
+                        ProcessDetailRow(store: self.store, process: process)
+                    }
+                }
             }
         }
-    }
-
-    private func sortedProjects() -> [ProjectSnapshot] {
-        let watchedPorts = Set(self.store.settings.watchedPorts)
-        return self.store.snapshot.projects.sorted { lhs, rhs in
-            let lhsWatched = lhs.ports.filter(watchedPorts.contains).count
-            let rhsWatched = rhs.ports.filter(watchedPorts.contains).count
-            if lhsWatched != rhsWatched {
-                return lhsWatched > rhsWatched
-            }
-
-            let nameComparison = lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName)
-            if nameComparison != .orderedSame {
-                return nameComparison == .orderedAscending
-            }
-
-            if lhs.isWorktreeLike != rhs.isWorktreeLike {
-                return lhs.isWorktreeLike == false
-            }
-
-            if lhs.projectRoot != rhs.projectRoot {
-                return lhs.projectRoot < rhs.projectRoot
-            }
-
-            return lhs.ports.lexicographicallyPrecedes(rhs.ports)
+        .padding(.leading, 12)
+        .overlay(alignment: .leading) {
+            Rectangle()
+                .fill(Color.primary.opacity(0.08))
+                .frame(width: 1)
         }
     }
 }
 
-private struct ProjectGroup: View {
+private struct ProjectDetailBlock: View {
     @ObservedObject var store: NodeTrackerStore
     let project: ProjectSnapshot
 
     var body: some View {
-        CompactSurface {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(self.project.displayName)
-                        .font(.headline)
-                    if self.project.isWorktreeLike {
-                        StatusTag(text: "worktree", tone: .warning)
-                    }
-                    Spacer()
-                    PortBadgeRow(ports: self.project.ports)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(self.project.displayName)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                if self.project.isWorktreeLike {
+                    StatusTag(text: "worktree", tone: .warning)
                 }
+                Spacer()
+            }
 
-                Text(DisplayText.path(self.project.projectRoot))
+            Text(DisplayText.path(self.project.projectRoot))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+
+            let processes = SnapshotDetails.sortedProcesses(self.project.processes)
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(processes.enumerated()), id: \.element.id) { index, process in
+                    if index > 0 {
+                        CompactRowDivider()
+                            .padding(.vertical, 8)
+                    }
+                    ProcessDetailRow(store: self.store, process: process, showPortBadges: false)
+                }
+            }
+        }
+    }
+}
+
+private struct ProcessDetailRow: View {
+    @ObservedObject var store: NodeTrackerStore
+    let process: TrackedProcessSnapshot
+    let showPortBadges: Bool
+
+    init(store: NodeTrackerStore, process: TrackedProcessSnapshot, showPortBadges: Bool = false) {
+        self.store = store
+        self.process = process
+        self.showPortBadges = showPortBadges
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(self.process.process.toolLabel)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Spacer()
+                Text(self.metaText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let detail = DisplayText.processDetail(self.process.process) {
+                Text(detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
-
-                let processes = self.sortedProcesses()
-                if !processes.isEmpty {
-                    CompactRowDivider()
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(processes.enumerated()), id: \.element.id) { index, process in
-                            if index > 0 {
-                                CompactRowDivider()
-                            }
-                            ProcessCompactRow(store: self.store, process: process)
-                                .padding(.vertical, 8)
-                        }
-                    }
-                }
             }
-        }
-    }
-
-    private func sortedProcesses() -> [TrackedProcessSnapshot] {
-        self.project.processes.sorted { lhs, rhs in
-            let lhsPort = lhs.ports.min() ?? .max
-            let rhsPort = rhs.ports.min() ?? .max
-            if lhsPort != rhsPort {
-                return lhsPort < rhsPort
-            }
-
-            let labelComparison = lhs.process.toolLabel.localizedCaseInsensitiveCompare(rhs.process.toolLabel)
-            if labelComparison != .orderedSame {
-                return labelComparison == .orderedAscending
-            }
-
-            return lhs.process.pid < rhs.process.pid
-        }
-    }
-}
-
-private struct PortGroupsView: View {
-    @ObservedObject var store: NodeTrackerStore
-
-    var body: some View {
-        let groups = self.groupedPorts()
-
-        VStack(alignment: .leading, spacing: 10) {
-            CompactSectionHeader(title: "Ports", trailing: "\(groups.count)")
-            ForEach(groups, id: \.port) { group in
-                CompactSurface {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Text("Port \(String(group.port))")
-                                .font(.headline)
-                            Spacer()
-                            StatusTag(text: "\(group.processes.count)", tone: .neutral)
-                        }
-
-                        CompactRowDivider()
-
-                        let processes = self.sortedProcesses(group.processes)
-                        VStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(processes.enumerated()), id: \.element.id) { index, process in
-                                if index > 0 {
-                                    CompactRowDivider()
-                                }
-                                ProcessCompactRow(store: self.store, process: process)
-                                    .padding(.vertical, 8)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func groupedPorts() -> [(port: Int, processes: [TrackedProcessSnapshot])] {
-        let grouped = Dictionary(grouping: self.store.snapshot.allProcesses.flatMap { process in
-            process.ports.map { ($0, process) }
-        }, by: \.0)
-
-        return grouped.keys.sorted().map { port in
-            (port, grouped[port]?.map(\.1) ?? [])
-        }
-    }
-
-    private func sortedProcesses(_ processes: [TrackedProcessSnapshot]) -> [TrackedProcessSnapshot] {
-        processes.sorted { lhs, rhs in
-            let lhsPort = lhs.ports.min() ?? .max
-            let rhsPort = rhs.ports.min() ?? .max
-            if lhsPort != rhsPort {
-                return lhsPort < rhsPort
-            }
-
-            let labelComparison = lhs.process.toolLabel.localizedCaseInsensitiveCompare(rhs.process.toolLabel)
-            if labelComparison != .orderedSame {
-                return labelComparison == .orderedAscending
-            }
-
-            return lhs.process.pid < rhs.process.pid
-        }
-    }
-}
-
-private struct ProcessCompactRow: View {
-    @ObservedObject var store: NodeTrackerStore
-    let process: TrackedProcessSnapshot
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(self.process.process.toolLabel)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                Spacer()
-                Text(self.pidAndUptime)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Text(DisplayText.command(self.process.process))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .textSelection(.enabled)
-                .lineLimit(1)
-                .truncationMode(.middle)
 
             HStack(spacing: 8) {
-                PortBadgeRow(ports: self.process.ports)
+                if self.showPortBadges {
+                    PortBadgeRow(ports: self.process.ports)
+                }
                 if let firstListener = self.process.listeners.first {
                     Text(firstListener.hostScope.label)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
                 }
                 Spacer(minLength: 8)
             }
@@ -429,7 +419,7 @@ private struct ProcessCompactRow: View {
         }
     }
 
-    private var pidAndUptime: String {
+    private var metaText: String {
         "PID \(self.process.process.pid) \u{00B7} \(self.process.process.uptime)"
     }
 
@@ -456,6 +446,125 @@ private struct ProcessCompactRow: View {
     private var hasMeaningfulDirectory: Bool {
         guard let cwd = self.process.process.cwd, cwd != "/" else { return false }
         return FileManager.default.fileExists(atPath: cwd)
+    }
+}
+
+private struct AdditionalNodePortsSection: View {
+    let projects: [ProjectSnapshot]
+    @State private var isExpanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            DisclosureToggle(
+                title: "Other active Node ports",
+                countText: "\(self.projects.count)",
+                isExpanded: self.$isExpanded
+            )
+
+            if self.isExpanded {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(self.sortedProjects().enumerated()), id: \.element.id) { index, project in
+                        if index > 0 {
+                            CompactRowDivider()
+                        }
+                        ActiveProjectSummaryRow(project: project)
+                            .padding(.vertical, 8)
+                    }
+                }
+            }
+        }
+    }
+
+    private func sortedProjects() -> [ProjectSnapshot] {
+        SnapshotDetails.sortedProjects(self.projects)
+    }
+}
+
+private struct ActiveProjectSummaryRow: View {
+    let project: ProjectSnapshot
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            PortBadgeRow(ports: project.ports)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Text(self.project.displayName)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    if self.project.isWorktreeLike {
+                        StatusTag(text: "worktree", tone: .warning)
+                    }
+                }
+                Text(DisplayText.path(self.project.projectRoot))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Text(DisplayText.toolsSummary(self.project.processes))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+private struct OtherListenersSection: View {
+    let processes: [TrackedProcessSnapshot]
+    @State private var isExpanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            DisclosureToggle(
+                title: "Other listeners",
+                countText: "\(self.processes.count)",
+                isExpanded: self.$isExpanded
+            )
+
+            if self.isExpanded {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(SnapshotDetails.sortedProcesses(self.processes).enumerated()), id: \.element.id) { index, process in
+                        if index > 0 {
+                            CompactRowDivider()
+                        }
+                        OtherListenerSummaryRow(process: process)
+                            .padding(.vertical, 8)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct OtherListenerSummaryRow: View {
+    let process: TrackedProcessSnapshot
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            PortBadgeRow(ports: self.process.ports)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(self.process.process.toolLabel)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                if let detail = DisplayText.processDetail(self.process.process) {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            Text("PID \(self.process.process.pid)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 
@@ -491,89 +600,30 @@ private struct ProcessActionsMenu: View {
     }
 }
 
-private struct OtherListenersSection: View {
-    @ObservedObject var store: NodeTrackerStore
-    let processes: [TrackedProcessSnapshot]
+private struct DisclosureToggle: View {
+    let title: String
+    let countText: String
+    @Binding var isExpanded: Bool
 
     var body: some View {
-        let processes = self.sortedProcesses()
-
-        VStack(alignment: .leading, spacing: 10) {
-            CompactSectionHeader(
-                title: self.store.settings.showNonNodeListeners ? "Other listeners" : "Conflicts",
-                trailing: "\(processes.count)"
-            )
-
-            if !self.store.settings.showNonNodeListeners {
-                Text("Showing watched-port conflicts only.")
+        Button {
+            self.isExpanded.toggle()
+        } label: {
+            HStack(alignment: .firstTextBaseline) {
+                Text(self.title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text(self.countText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
-
-            CompactSurface {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(processes.enumerated()), id: \.element.id) { index, process in
-                        if index > 0 {
-                            CompactRowDivider()
-                        }
-                        ProcessCompactRow(store: self.store, process: process)
-                            .padding(.vertical, 8)
-                    }
-                }
-            }
+            .contentShape(Rectangle())
         }
-    }
-
-    private func sortedProcesses() -> [TrackedProcessSnapshot] {
-        self.processes.sorted { lhs, rhs in
-            if lhs.isWatchedConflict != rhs.isWatchedConflict {
-                return lhs.isWatchedConflict && !rhs.isWatchedConflict
-            }
-
-            let lhsPort = lhs.ports.min() ?? .max
-            let rhsPort = rhs.ports.min() ?? .max
-            if lhsPort != rhsPort {
-                return lhsPort < rhsPort
-            }
-
-            let labelComparison = lhs.process.toolLabel.localizedCaseInsensitiveCompare(rhs.process.toolLabel)
-            if labelComparison != .orderedSame {
-                return labelComparison == .orderedAscending
-            }
-
-            return lhs.process.pid < rhs.process.pid
-        }
-    }
-}
-
-private struct CompactPanel<Content: View>: View {
-    let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            self.content
-        }
-        .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-    }
-}
-
-private struct CompactSurface<Content: View>: View {
-    let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-
-    var body: some View {
-        self.content
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .buttonStyle(.plain)
     }
 }
 
@@ -598,7 +648,6 @@ private struct CompactSectionHeader: View {
 private struct CompactDivider: View {
     var body: some View {
         Divider()
-            .padding(.vertical, 12)
     }
 }
 
@@ -619,9 +668,9 @@ private enum AccentTone {
         case .neutral:
             return Color.primary.opacity(0.08)
         case .node:
-            return Color.blue.opacity(0.14)
+            return Color.blue.opacity(0.16)
         case .warning:
-            return Color.orange.opacity(0.16)
+            return Color.orange.opacity(0.18)
         }
     }
 
@@ -697,6 +746,107 @@ private struct InlineTextButton: View {
     }
 }
 
+private enum SnapshotDetails {
+    static func processes(for port: Int, from processes: [TrackedProcessSnapshot]) -> [TrackedProcessSnapshot] {
+        sortedProcesses(processes.compactMap { self.process($0, matching: port) })
+    }
+
+    static func projects(for port: Int, from projects: [ProjectSnapshot]) -> [ProjectSnapshot] {
+        sortedProjects(projects.compactMap { project in
+            let processes = project.processes.compactMap { self.process($0, matching: port) }
+            guard !processes.isEmpty else { return nil }
+            return ProjectSnapshot(
+                projectRoot: project.projectRoot,
+                displayName: project.displayName,
+                processes: processes,
+                ports: [port],
+                isWorktreeLike: project.isWorktreeLike
+            )
+        })
+    }
+
+    static func projectsExcludingPorts(_ projects: [ProjectSnapshot], excludedPorts: Set<Int>) -> [ProjectSnapshot] {
+        sortedProjects(projects.compactMap { project in
+            let processes = project.processes.compactMap { self.process($0, excluding: excludedPorts) }
+            guard !processes.isEmpty else { return nil }
+            let ports = Array(Set(processes.flatMap(\.ports))).sorted()
+            return ProjectSnapshot(
+                projectRoot: project.projectRoot,
+                displayName: project.displayName,
+                processes: processes,
+                ports: ports,
+                isWorktreeLike: project.isWorktreeLike
+            )
+        })
+    }
+
+    static func processesExcludingPorts(_ processes: [TrackedProcessSnapshot], excludedPorts: Set<Int>) -> [TrackedProcessSnapshot] {
+        sortedProcesses(processes.compactMap { self.process($0, excluding: excludedPorts) })
+    }
+
+    static func sortedProjects(_ projects: [ProjectSnapshot]) -> [ProjectSnapshot] {
+        projects.sorted { lhs, rhs in
+            let lhsPort = lhs.ports.min() ?? .max
+            let rhsPort = rhs.ports.min() ?? .max
+            if lhsPort != rhsPort {
+                return lhsPort < rhsPort
+            }
+
+            let nameComparison = lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName)
+            if nameComparison != .orderedSame {
+                return nameComparison == .orderedAscending
+            }
+
+            if lhs.isWorktreeLike != rhs.isWorktreeLike {
+                return lhs.isWorktreeLike == false
+            }
+
+            return lhs.projectRoot < rhs.projectRoot
+        }
+    }
+
+    static func sortedProcesses(_ processes: [TrackedProcessSnapshot]) -> [TrackedProcessSnapshot] {
+        processes.sorted { lhs, rhs in
+            let lhsPort = lhs.ports.min() ?? .max
+            let rhsPort = rhs.ports.min() ?? .max
+            if lhsPort != rhsPort {
+                return lhsPort < rhsPort
+            }
+
+            let labelComparison = lhs.process.toolLabel.localizedCaseInsensitiveCompare(rhs.process.toolLabel)
+            if labelComparison != .orderedSame {
+                return labelComparison == .orderedAscending
+            }
+
+            return lhs.process.pid < rhs.process.pid
+        }
+    }
+
+    private static func process(_ process: TrackedProcessSnapshot, matching port: Int) -> TrackedProcessSnapshot? {
+        let listeners = process.listeners.filter { $0.port == port }
+        let ports = process.ports.filter { $0 == port }
+        guard !ports.isEmpty else { return nil }
+        return TrackedProcessSnapshot(
+            process: process.process,
+            listeners: listeners,
+            ports: ports,
+            isWatchedConflict: process.isWatchedConflict
+        )
+    }
+
+    private static func process(_ process: TrackedProcessSnapshot, excluding excludedPorts: Set<Int>) -> TrackedProcessSnapshot? {
+        let listeners = process.listeners.filter { !excludedPorts.contains($0.port) }
+        let ports = process.ports.filter { !excludedPorts.contains($0) }
+        guard !ports.isEmpty else { return nil }
+        return TrackedProcessSnapshot(
+            process: process.process,
+            listeners: listeners,
+            ports: Array(Set(ports)).sorted(),
+            isWatchedConflict: process.isWatchedConflict
+        )
+    }
+}
+
 private enum DisplayText {
     static func compareWatchedPorts(_ lhs: WatchedPortStatus, _ rhs: WatchedPortStatus) -> Bool {
         if lhs.isConflict != rhs.isConflict {
@@ -712,33 +862,63 @@ private enum DisplayText {
         NSString(string: path).abbreviatingWithTildeInPath
     }
 
-    static func watchedPortSummary(_ status: WatchedPortStatus) -> String {
-        guard status.isBusy else { return "Free" }
+    static func watchedPortHeadline(_ status: WatchedPortStatus) -> String {
+        let owner = self.watchedPortOwner(status)
+        if status.isConflict {
+            return "Blocked by \(owner)"
+        }
+        if status.isNodeOwned {
+            return "Used by \(owner)"
+        }
+        return "In use by \(owner)"
+    }
+
+    static func watchedPortExplanation(_ status: WatchedPortStatus) -> String {
+        if status.isConflict {
+            return "Another app is already using this watched port"
+        }
+        if status.isNodeOwned {
+            return "A Node process is currently using this watched port"
+        }
+        return "This watched port is already in use"
+    }
+
+    static func processDetail(_ process: ProcessSnapshot) -> String? {
+        let command = self.command(process)
+        let executablePath = self.executablePath(process.commandLine)
+
+        if command.localizedCaseInsensitiveCompare(process.toolLabel) == .orderedSame {
+            if executablePath != command {
+                return executablePath
+            }
+            return nil
+        }
+
+        return command
+    }
+
+    static func toolsSummary(_ processes: [TrackedProcessSnapshot]) -> String {
+        let tools = Array(Set(processes.map(\.process.toolLabel))).sorted()
+        return tools.joined(separator: " • ")
+    }
+
+    private static func watchedPortOwner(_ status: WatchedPortStatus) -> String {
         let owners = status.ownerSummary
             .split(separator: ",")
             .map { stripPID(from: $0.trimmingCharacters(in: .whitespacesAndNewlines)) }
 
         guard let firstOwner = owners.first, !firstOwner.isEmpty else {
-            return "In use"
+            return "another process"
         }
 
         if owners.count == 1 {
             return firstOwner
         }
+
         return "\(firstOwner) +\(owners.count - 1)"
     }
 
-    static func watchedPortDetail(_ status: WatchedPortStatus) -> String {
-        if status.isConflict {
-            return "Non-Node listener on a watched port"
-        }
-        if status.isNodeOwned {
-            return "Node process on a watched port"
-        }
-        return status.ownerSummary
-    }
-
-    static func command(_ process: ProcessSnapshot) -> String {
+    private static func command(_ process: ProcessSnapshot) -> String {
         let normalized = normalizeCommand(process.commandLine, cwd: process.cwd)
         let tokens = normalized
             .split(whereSeparator: \.isWhitespace)
@@ -764,6 +944,14 @@ private enum DisplayText {
         return command
             .replacingOccurrences(of: cwdWithSlash, with: "")
             .replacingOccurrences(of: cwd, with: ".")
+    }
+
+    private static func executablePath(_ commandLine: String) -> String {
+        let token = commandLine.split(whereSeparator: \.isWhitespace).first.map(String.init) ?? commandLine
+        if token.hasPrefix("/") {
+            return path(token)
+        }
+        return token
     }
 
     private static func basename(_ token: String) -> String {

@@ -45,10 +45,11 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         self.popover.behavior = .semitransient
         self.popover.delegate = self
         self.popover.animates = true
-        self.popover.contentSize = NSSize(width: 388, height: 520)
-        self.popover.contentViewController = NSHostingController(
-            rootView: PopoverRootView(store: self.store)
-        )
+        self.popover.appearance = NSAppearance(named: .aqua)
+        self.popover.contentSize = NSSize(width: 404, height: 520)
+        let hostingController = NSHostingController(rootView: PopoverRootView(store: self.store))
+        hostingController.view.appearance = NSAppearance(named: .aqua)
+        self.popover.contentViewController = hostingController
     }
 
     private func installOutsideClickMonitors() {
@@ -100,6 +101,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         if self.popover.isShown {
             self.closePopover()
         } else {
+            NSApp.activate(ignoringOtherApps: true)
             self.popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             self.store.setPopoverPresented(true)
         }
