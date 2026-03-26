@@ -7,6 +7,9 @@ import { triggerErrorHaptic, triggerSuccessHaptic } from '../../../lib/interacti
 import { showToast } from '../../../store/toastStore';
 import { buildSchedulePreferences, parseFavoriteActivities } from '../components/profile.helpers';
 
+const PARTIAL_SAVE_ERROR =
+  'Profile basics were saved, but fitness settings could not be saved. Please try again.';
+
 function toggleValue(values: string[], nextValue: string) {
   return values.includes(nextValue)
     ? values.filter((value) => value !== nextValue)
@@ -82,6 +85,8 @@ export function useProfileEditor({
     }
 
     setError(null);
+    let basicsSaved = false;
+    let fitnessSaved = false;
     try {
       await updateProfile({
         bio: bio.trim(),
@@ -92,6 +97,7 @@ export function useProfileEditor({
         intentWorkout,
         intentFriends,
       });
+      basicsSaved = true;
       await updateFitness({
         intensityLevel,
         weeklyFrequencyBand,
@@ -100,12 +106,19 @@ export function useProfileEditor({
         prefersMorning: selectedSchedule.includes('Morning'),
         prefersEvening: selectedSchedule.includes('Evening'),
       });
+      fitnessSaved = true;
       void triggerSuccessHaptic();
       showToast('Profile saved', 'success');
       setEditMode(false);
       await refetch();
     } catch (err) {
       void triggerErrorHaptic();
+      if (basicsSaved && !fitnessSaved) {
+        await refetch().catch(() => undefined);
+        setError(PARTIAL_SAVE_ERROR);
+        return;
+      }
+
       setError(normalizeApiError(err).message);
     }
   };

@@ -16,6 +16,7 @@ interface PendingVerification {
   target: string;
   code: string;
   expiresAt: Date;
+  inFlight?: boolean;
 }
 
 @Injectable()
@@ -53,42 +54,66 @@ export class VerificationService {
 
     if (
       !pending ||
+      pending.inFlight ||
       pending.expiresAt.getTime() < Date.now() ||
       pending.code !== code
     ) {
       return { verified: false };
     }
 
-    // Delete before awaiting to prevent a concurrent request with the same
-    // code from also passing the guard and double-verifying.
-    this.pending.delete(key);
+    const lockedPending: PendingVerification = {
+      ...pending,
+      inFlight: true,
+    };
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        email: true,
-        phoneNumber: true,
-      },
-    });
+    // Lock this code during the confirmation attempt so concurrent requests
+    // fail fast without consuming the pending code on retryable failures.
+    this.pending.set(key, lockedPending);
 
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+    const restorePending = () => {
+      if (this.pending.get(key) === lockedPending) {
+        this.pending.set(key, pending);
+      }
+    };
 
-    const storedTarget =
-      channel === 'email'
-        ? user.email?.trim().toLowerCase()
-        : user.phoneNumber?.trim();
-    const pendingTarget =
-      channel === 'email'
-        ? pending.target.trim().toLowerCase()
-        : pending.target.trim();
-
-    if (!storedTarget || storedTarget !== pendingTarget) {
-      return { verified: false };
-    }
+    const consumePending = () => {
+      if (this.pending.get(key) === lockedPending) {
+        this.pending.delete(key);
+      }
+    };
 
     try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          email: true,
+          phoneNumber: true,
+        },
+      });
+
+      if (!user) {
+        restorePending();
+        throw new NotFoundException('User not found');
+      }
+
+      const storedTarget =
+        channel === 'email'
+          ? user.email?.trim().toLowerCase()
+          : user.phoneNumber?.trim();
+      const pendingTarget =
+        channel === 'email'
+          ? pending.target.trim().toLowerCase()
+          : pending.target.trim();
+
+      if (!storedTarget || storedTarget !== pendingTarget) {
+        restorePending();
+        return { verified: false };
+      }
+
+      if (this.pending.get(key) !== lockedPending) {
+        return { verified: false };
+      }
+
       if (channel === 'email') {
         await this.prisma.user.update({
           where: { id: userId },
@@ -100,7 +125,11 @@ export class VerificationService {
           data: { hasVerifiedPhone: true },
         });
       }
+
+      consumePending();
+      return { verified: true };
     } catch (error: unknown) {
+      restorePending();
       if (
         typeof error === 'object' &&
         error !== null &&
@@ -111,8 +140,6 @@ export class VerificationService {
       }
       throw error;
     }
-
-    return { verified: true };
   }
 
   async status(userId: string) {

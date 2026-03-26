@@ -13,13 +13,35 @@ import * as jwt from 'jsonwebtoken';
 import { appConfig } from '../config/app.config';
 import { MatchesService } from './matches.service';
 
-interface JwtPayload {
+type AuthTokenPayload = jwt.JwtPayload & {
   sub: string;
-  email: string;
-}
+};
 
 interface AuthenticatedSocket extends Socket {
-  data: { userId: string; email: string };
+  data: { userId: string };
+}
+
+function extractToken(client: Socket): string | undefined {
+  const authToken = (client.handshake.auth as { token?: unknown } | undefined)?.token;
+  if (typeof authToken === 'string' && authToken.length > 0) {
+    return authToken;
+  }
+
+  const queryToken = client.handshake.query?.token;
+  if (typeof queryToken === 'string' && queryToken.length > 0) {
+    return queryToken;
+  }
+
+  const authorization = client.handshake.headers?.authorization;
+  if (typeof authorization === 'string' && authorization.startsWith('Bearer ')) {
+    return authorization.slice('Bearer '.length);
+  }
+
+  return undefined;
+}
+
+function isAuthTokenPayload(payload: string | jwt.JwtPayload): payload is AuthTokenPayload {
+  return typeof payload !== 'string' && typeof payload.sub === 'string' && payload.sub.length > 0;
 }
 
 @WebSocketGateway({ namespace: '/chat', cors: true })
@@ -33,17 +55,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
-      const token =
-        (client.handshake.auth as { token?: string })?.token ||
-        client.handshake.query?.token as string ||
-        client.handshake.headers?.authorization?.replace('Bearer ', '');
+      const token = extractToken(client);
 
       if (!token) {
         throw new UnauthorizedException('Missing authentication token');
       }
 
-      const payload = jwt.verify(token, appConfig.jwt.secret) as JwtPayload;
-      client.data = { userId: payload.sub, email: payload.email };
+      const payload = jwt.verify(token, appConfig.jwt.secret);
+      if (!isAuthTokenPayload(payload)) {
+        throw new UnauthorizedException('Invalid authentication token');
+      }
+
+      client.data = { userId: payload.sub };
       this.logger.debug(`Client connected: ${client.id} (user: ${payload.sub})`);
     } catch {
       this.logger.warn(`Connection rejected: ${client.id}`);

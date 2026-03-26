@@ -16,7 +16,8 @@ describe('VerificationService', () => {
   let service: VerificationService;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    userUpdate.mockReset();
+    userFindUnique.mockReset();
     service = new VerificationService(prisma);
   });
 
@@ -167,7 +168,7 @@ describe('VerificationService', () => {
       expect(userUpdate).toHaveBeenCalledTimes(1);
     });
 
-    it('returns verified:false when the pending target does not match stored contact data', async () => {
+    it('restores the pending entry after target mismatch so the code can be retried', async () => {
       const { devCode } = service.start('user-1', 'email', 'alice@example.com');
       expect(devCode).toBeDefined();
       userFindUnique.mockResolvedValue({
@@ -179,6 +180,37 @@ describe('VerificationService', () => {
 
       expect(result).toEqual({ verified: false });
       expect(userUpdate).not.toHaveBeenCalled();
+
+      userFindUnique.mockResolvedValueOnce({
+        email: 'alice@example.com',
+        phoneNumber: null,
+      });
+      userUpdate.mockResolvedValueOnce({});
+
+      const retry = await service.confirm('user-1', 'email', devCode!);
+      expect(retry).toEqual({ verified: true });
+      expect(userUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it('restores the pending entry after update failure so the code can be retried', async () => {
+      const { devCode } = service.start('user-1', 'email', 'alice@example.com');
+      expect(devCode).toBeDefined();
+      userFindUnique.mockResolvedValue({
+        email: 'alice@example.com',
+        phoneNumber: null,
+      });
+      userUpdate.mockRejectedValueOnce(new Error('temporary failure'));
+
+      await expect(service.confirm('user-1', 'email', devCode!)).rejects.toThrow(
+        'temporary failure',
+      );
+      expect(userUpdate).toHaveBeenCalledTimes(1);
+
+      userUpdate.mockResolvedValueOnce({});
+
+      const retry = await service.confirm('user-1', 'email', devCode!);
+      expect(retry).toEqual({ verified: true });
+      expect(userUpdate).toHaveBeenCalledTimes(2);
     });
   });
 

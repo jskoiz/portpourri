@@ -27,11 +27,13 @@ describe('ChatGateway', () => {
   let matchesService: jest.Mocked<MatchesService>;
   let mockServer: any;
 
-  const validToken = jwt.sign(
-    { sub: 'user-1', email: 'user@test.com' },
-    appConfig.jwt.secret,
-    { expiresIn: '1h' },
-  );
+  const createToken = (
+    payload: Record<string, unknown>,
+    expiresIn: jwt.SignOptions['expiresIn'] = '1h',
+  ) =>
+    jwt.sign(payload, appConfig.jwt.secret, { expiresIn });
+
+  const validToken = createToken({ sub: 'user-1' });
 
   beforeEach(() => {
     matchesService = {
@@ -56,8 +58,7 @@ describe('ChatGateway', () => {
 
       await gateway.handleConnection(socket);
 
-      expect(socket.data.userId).toBe('user-1');
-      expect(socket.data.email).toBe('user@test.com');
+      expect(socket.data).toEqual({ userId: 'user-1' });
       expect(socket.disconnect).not.toHaveBeenCalled();
     });
 
@@ -68,7 +69,7 @@ describe('ChatGateway', () => {
 
       await gateway.handleConnection(socket);
 
-      expect(socket.data.userId).toBe('user-1');
+      expect(socket.data).toEqual({ userId: 'user-1' });
       expect(socket.disconnect).not.toHaveBeenCalled();
     });
 
@@ -83,7 +84,7 @@ describe('ChatGateway', () => {
 
       await gateway.handleConnection(socket);
 
-      expect(socket.data.userId).toBe('user-1');
+      expect(socket.data).toEqual({ userId: 'user-1' });
       expect(socket.disconnect).not.toHaveBeenCalled();
     });
 
@@ -112,11 +113,7 @@ describe('ChatGateway', () => {
     });
 
     it('rejects a client with an expired token', async () => {
-      const expiredToken = jwt.sign(
-        { sub: 'user-1', email: 'user@test.com' },
-        appConfig.jwt.secret,
-        { expiresIn: '0s' },
-      );
+      const expiredToken = createToken({ sub: 'user-1' }, '0s');
 
       const socket = createMockSocket({
         handshake: { auth: { token: expiredToken }, query: {}, headers: {} },
@@ -128,12 +125,25 @@ describe('ChatGateway', () => {
 
       expect(socket.disconnect).toHaveBeenCalledWith(true);
     });
+
+    it('rejects a client when the token does not include a subject', async () => {
+      const socket = createMockSocket({
+        handshake: { auth: { token: createToken({ role: 'user' }) }, query: {}, headers: {} },
+      });
+
+      await gateway.handleConnection(socket);
+
+      expect(socket.emit).toHaveBeenCalledWith('error', {
+        message: 'Authentication failed',
+      });
+      expect(socket.disconnect).toHaveBeenCalledWith(true);
+    });
   });
 
   describe('handleJoinMatch', () => {
     it('joins the room when user has match access', async () => {
       const socket = createMockSocket();
-      socket.data = { userId: 'user-1', email: 'user@test.com' };
+      socket.data = { userId: 'user-1' };
 
       await gateway.handleJoinMatch(socket, { matchId: 'match-1' });
 
@@ -144,7 +154,7 @@ describe('ChatGateway', () => {
 
     it('rejects join when user does not have match access', async () => {
       const socket = createMockSocket();
-      socket.data = { userId: 'user-1', email: 'user@test.com' };
+      socket.data = { userId: 'user-1' };
       matchesService.getMessages.mockRejectedValueOnce(new Error('Access denied'));
 
       await gateway.handleJoinMatch(socket, { matchId: 'match-1' });
@@ -170,7 +180,7 @@ describe('ChatGateway', () => {
   describe('handleLeaveMatch', () => {
     it('leaves the room', async () => {
       const socket = createMockSocket();
-      socket.data = { userId: 'user-1', email: 'user@test.com' };
+      socket.data = { userId: 'user-1' };
 
       await gateway.handleLeaveMatch(socket, { matchId: 'match-1' });
 
@@ -182,7 +192,7 @@ describe('ChatGateway', () => {
   describe('handleSendMessage', () => {
     it('persists and broadcasts the message to the room', async () => {
       const socket = createMockSocket();
-      socket.data = { userId: 'user-1', email: 'user@test.com' };
+      socket.data = { userId: 'user-1' };
       const savedMessage = {
         id: 'msg-1',
         text: 'hello',
@@ -210,7 +220,7 @@ describe('ChatGateway', () => {
 
     it('emits error when sendMessage fails', async () => {
       const socket = createMockSocket();
-      socket.data = { userId: 'user-1', email: 'user@test.com' };
+      socket.data = { userId: 'user-1' };
       matchesService.sendMessage.mockRejectedValueOnce(new Error('Access denied'));
 
       await gateway.handleSendMessage(socket, {

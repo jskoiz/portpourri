@@ -80,6 +80,7 @@ export default function RetryableError({ error, onRetry, hideRetry }: RetryableE
                     disabled={isWaiting}
                     accessibilityRole="button"
                     accessibilityLabel="Retry"
+                    accessibilityState={{ disabled: isWaiting }}
                     style={[
                         styles.button,
                         { backgroundColor: isWaiting ? theme.borderSoft : theme.primary },

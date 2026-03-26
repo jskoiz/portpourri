@@ -50,6 +50,9 @@ export function useNotifications() {
           current.map((item) => (item.id === id ? updated : item)),
       );
     },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: getNotificationList() });
+    },
   });
 
   const markAllRead = useMutation({

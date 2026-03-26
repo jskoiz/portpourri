@@ -1,5 +1,5 @@
 import React from 'react';
-import { act } from 'react';
+import { Animated } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { SkeletonBox, SkeletonCircle, SkeletonTextLine } from '../../design/primitives';
 import { DiscoverySkeleton } from '../skeletons/DiscoverySkeleton';
@@ -7,12 +7,23 @@ import { ProfileDetailSkeleton } from '../skeletons/ProfileDetailSkeleton';
 import { ChatListSkeleton } from '../skeletons/ChatListSkeleton';
 import { EventsSkeleton } from '../skeletons/EventsSkeleton';
 
-// The shimmer animation fires async Animated updates; use fake timers
-// and flush them inside act() so React doesn't warn.
-beforeEach(() => jest.useFakeTimers());
+const animationHandle = {
+  start: jest.fn(),
+  stop: jest.fn(),
+};
+
+beforeAll(() => {
+  jest.spyOn(Animated, 'timing').mockReturnValue(animationHandle as never);
+  jest.spyOn(Animated, 'sequence').mockImplementation((animations) => animations as never);
+  jest.spyOn(Animated, 'loop').mockReturnValue(animationHandle as never);
+});
+
 afterEach(() => {
-  act(() => { jest.runOnlyPendingTimers(); });
-  jest.useRealTimers();
+  jest.clearAllMocks();
+});
+
+afterAll(() => {
+  jest.restoreAllMocks();
 });
 
 describe('skeleton primitives', () => {
@@ -21,6 +32,11 @@ describe('skeleton primitives', () => {
       <SkeletonBox testID="skel-box" width={100} height={20} />,
     );
     expect(getByTestId('skel-box')).toBeTruthy();
+  });
+
+  it('exposes a loading accessibility label for skeleton placeholders', () => {
+    const { getByLabelText } = render(<SkeletonBox testID="skel-box" />);
+    expect(getByLabelText('Loading placeholder')).toBeTruthy();
   });
 
   it('renders SkeletonCircle without crashing', () => {

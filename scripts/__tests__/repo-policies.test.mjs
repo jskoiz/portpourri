@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   collectRepoPolicyViolations,
+  collectCoverageAudit,
   collectStorybookCoverageViolations,
 } from '../check-repo-policies.mjs';
 
@@ -77,6 +78,72 @@ test('storybook coverage rule only blocks reusable mobile UI changes without sto
     'mobile/src/components/ui/AppBackButton.tsx',
   ]);
   assert.equal(violations.length, 1);
+});
+
+test('coverage audit recognizes existing story aliases', () => {
+  const { storybookGaps } = collectCoverageAudit({
+    'mobile/src/components/skeletons/ChatListSkeleton.tsx': '',
+    'mobile/src/components/skeletons/DiscoverySkeleton.tsx': '',
+    'mobile/src/components/skeletons/EventsSkeleton.tsx': '',
+    'mobile/src/components/skeletons/ProfileDetailSkeleton.tsx': '',
+    'mobile/src/components/ui/RetryableError.tsx': '',
+    'mobile/src/components/ui/ToastOverlay.tsx': '',
+    'mobile/src/components/withBoundary.tsx': '',
+    'mobile/src/features/discovery/components/DiscoveryNudgeCard.tsx': '',
+    'mobile/src/features/onboarding/components/ActivitiesStep.tsx': '',
+    'mobile/src/features/onboarding/components/WelcomeStep.tsx': '',
+    'mobile/src/features/profile/components/CompletenessBar.tsx': '',
+    'mobile/src/stories/HomeScreenContent.stories.tsx': '',
+    'mobile/src/stories/OnboardingSteps.stories.tsx': '',
+    'mobile/src/stories/ProfileScreenContent.stories.tsx': '',
+    'mobile/src/stories/RetryableError.stories.tsx': '',
+    'mobile/src/stories/Skeleton.stories.tsx': '',
+    'mobile/src/stories/Toast.stories.tsx': '',
+    'mobile/src/stories/Feedback.stories.tsx': '',
+  });
+
+  assert.deepEqual(storybookGaps, []);
+});
+
+test('coverage audit recognizes existing test aliases', () => {
+  const { storybookGaps, testGaps } = collectCoverageAudit({
+    'mobile/src/components/LoadingState.tsx': '',
+    'mobile/src/components/withBoundary.tsx': '',
+    'mobile/src/components/skeletons/EventsSkeleton.tsx': '',
+    'mobile/src/components/ui/RetryableError.tsx': '',
+    'mobile/src/components/ui/ToastOverlay.tsx': '',
+    'mobile/src/design/primitives/Input.tsx': '',
+    'mobile/src/design/primitives/Skeleton.tsx': '',
+    'mobile/src/design/primitives/StatePanel.tsx': '',
+    'mobile/src/features/chat/components/ChatHeader.tsx': '',
+    'mobile/src/features/chat/components/ChatMessageList.tsx': '',
+    'mobile/src/features/moderation/components/ReportSheet.tsx': '',
+    'mobile/src/features/onboarding/components/ReadyStep.tsx': '',
+    'mobile/src/features/profile/components/CompletenessBar.tsx': '',
+    'mobile/src/stories/ChatThread.stories.tsx': '',
+    'mobile/src/stories/Feedback.stories.tsx': '',
+    'mobile/src/stories/Input.stories.tsx': '',
+    'mobile/src/stories/OnboardingSteps.stories.tsx': '',
+    'mobile/src/stories/ProfileScreenContent.stories.tsx': '',
+    'mobile/src/stories/RetryableError.stories.tsx': '',
+    'mobile/src/stories/Skeleton.stories.tsx': '',
+    'mobile/src/stories/StatePanel.stories.tsx': '',
+    'mobile/src/stories/Toast.stories.tsx': '',
+    'mobile/src/components/__tests__/LoadingState.test.tsx': '',
+    'mobile/src/components/__tests__/RetryableError.test.tsx': '',
+    'mobile/src/components/__tests__/ToastOverlay.test.tsx': '',
+    'mobile/src/components/__tests__/withBoundary.test.tsx': '',
+    'mobile/src/components/__tests__/skeletons.test.tsx': '',
+    'mobile/src/design/__tests__/primitives.test.tsx': '',
+    'mobile/src/features/chat/components/__tests__/ChatHeader.test.tsx': '',
+    'mobile/src/features/chat/__tests__/ChatMessageList.accessibility.test.tsx': '',
+    'mobile/src/features/moderation/components/__tests__/ReportSheet.test.tsx': '',
+    'mobile/src/features/profile/components/__tests__/CompletenessBar.test.tsx': '',
+    'mobile/src/screens/__tests__/OnboardingScreen.test.tsx': '',
+  });
+
+  assert.deepEqual(storybookGaps, ['mobile/src/features/moderation/components/ReportSheet.tsx']);
+  assert.deepEqual(testGaps, []);
 });
 
 test('flags backend layer violations when domain code imports transport code', () => {
