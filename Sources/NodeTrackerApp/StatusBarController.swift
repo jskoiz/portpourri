@@ -2,6 +2,7 @@ import AppKit
 import Combine
 import NodeTrackerCore
 import SwiftUI
+import UserNotifications
 
 @MainActor
 final class StatusBarController: NSObject, NSPopoverDelegate {
@@ -11,6 +12,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
     private var cancellables: Set<AnyCancellable> = []
     private var localEventMonitor: Any?
     private var globalEventMonitor: Any?
+    private var hotkeyMonitor: Any?
 
     init(store: NodeTrackerStore) {
         self.store = store
@@ -19,6 +21,8 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         self.configureStatusItem()
         self.configurePopover()
         self.installOutsideClickMonitors()
+        self.installGlobalHotkey()
+        self.configureNotifications()
         self.observeStore()
         self.updateStatusImage()
     }
@@ -38,7 +42,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         button.action = #selector(self.togglePopover(_:))
         button.target = self
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-        button.toolTip = "NodeWatcher"
+        button.toolTip = "NodeWatcher (\u{2303}\u{21E7}P)"
     }
 
     private func configurePopover() {
@@ -46,9 +50,12 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         self.popover.delegate = self
         self.popover.animates = true
         self.popover.appearance = NSAppearance(named: .aqua)
-        self.popover.contentSize = NSSize(width: 404, height: 520)
-        let hostingController = NSHostingController(rootView: PopoverRootView(store: self.store))
+        self.popover.contentSize = NSSize(width: 400, height: 100)
+        let rootView = PopoverRootView(store: self.store)
+        let hostingController = NSHostingController(rootView: rootView)
         hostingController.view.appearance = NSAppearance(named: .aqua)
+        // Let the view size itself; cap at a max height
+        hostingController.sizingOptions = [.preferredContentSize]
         self.popover.contentViewController = hostingController
     }
 
@@ -69,6 +76,43 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
             guard let self, self.popover.isShown else { return }
             self.closePopover()
         }
+    }
+
+    private func installGlobalHotkey() {
+        self.hotkeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            // Ctrl+Shift+P
+            guard event.modifierFlags.contains([.control, .shift]),
+                  event.charactersIgnoringModifiers?.lowercased() == "p" else { return }
+            Task { @MainActor in
+                self?.togglePopoverFromHotkey()
+            }
+        }
+
+        // Also handle when the app is in the foreground
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.modifierFlags.contains([.control, .shift]),
+                  event.charactersIgnoringModifiers?.lowercased() == "p" else { return event }
+            Task { @MainActor in
+                self?.togglePopoverFromHotkey()
+            }
+            return nil
+        }
+    }
+
+    private func configureNotifications() {
+        guard Bundle.main.bundleIdentifier != nil else { return }
+        UNUserNotificationCenter.current().delegate = self
+
+        let copyAction = UNNotificationAction(
+            identifier: "COPY_PORT",
+            title: "Copy suggested port"
+        )
+        let category = UNNotificationCategory(
+            identifier: "PORT_CONFLICT",
+            actions: [copyAction],
+            intentIdentifiers: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([category])
     }
 
     private func observeStore() {
@@ -101,10 +145,23 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         if self.popover.isShown {
             self.closePopover()
         } else {
-            NSApp.activate(ignoringOtherApps: true)
-            self.popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            self.store.setPopoverPresented(true)
+            self.showPopover()
         }
+    }
+
+    private func togglePopoverFromHotkey() {
+        if self.popover.isShown {
+            self.closePopover()
+        } else {
+            self.showPopover()
+        }
+    }
+
+    private func showPopover() {
+        guard let button = self.statusItem.button else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        self.popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        self.store.setPopoverPresented(true)
     }
 
     func popoverDidClose(_ notification: Notification) {
@@ -168,45 +225,84 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
     }
 }
 
+extension StatusBarController: UNUserNotificationCenterDelegate {
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        if response.actionIdentifier == "COPY_PORT" || response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+            let userInfo = response.notification.request.content.userInfo
+            if let suggestedPort = userInfo["suggestedPort"] as? Int, suggestedPort > 0 {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(String(suggestedPort), forType: .string)
+            }
+        }
+        completionHandler()
+    }
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
+    }
+}
+
 enum StatusChipRenderer {
     static func image(for summary: SnapshotSummary) -> NSImage {
-        let size = NSSize(width: 28, height: 18)
+        let conflicts = summary.watchedNonNodeConflictCount
+        let size = NSSize(width: conflicts > 0 ? 28 : 18, height: 18)
         let image = NSImage(size: size)
         image.lockFocus()
 
-        let topRect = NSRect(x: 2, y: 9, width: 20, height: 5)
-        let bottomRect = NSRect(x: 2, y: 3, width: 20, height: 4)
-        drawBar(
-            in: topRect,
-            filledSegments: min(summary.nodeProjectCount, 5),
-            color: NSColor.systemBlue
-        )
-        drawBar(
-            in: bottomRect,
-            filledSegments: min(summary.watchedBusyCount, 5),
-            color: summary.watchedNonNodeConflictCount > 0 ? NSColor.systemOrange : NSColor.systemTeal
-        )
+        // Draw "N" glyph
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .center
 
-        if summary.watchedNonNodeConflictCount > 0 {
-            let dotRect = NSRect(x: 23, y: 10, width: 4, height: 4)
+        let hasActivity = summary.nodeProjectCount > 0 || summary.watchedBusyCount > 0
+        let glyphColor: NSColor = hasActivity ? .controlTextColor : .tertiaryLabelColor
+
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 12, weight: .bold),
+            .foregroundColor: glyphColor,
+            .paragraphStyle: paragraphStyle,
+        ]
+        let glyph = NSAttributedString(string: "N", attributes: attrs)
+        let glyphSize = glyph.size()
+        let glyphRect = NSRect(
+            x: (18 - glyphSize.width) / 2,
+            y: (size.height - glyphSize.height) / 2,
+            width: glyphSize.width,
+            height: glyphSize.height
+        )
+        glyph.draw(in: glyphRect)
+
+        // Draw red badge for conflicts
+        if conflicts > 0 {
+            let badgeSize: CGFloat = 12
+            let badgeRect = NSRect(x: size.width - badgeSize, y: size.height - badgeSize, width: badgeSize, height: badgeSize)
             NSColor.systemOrange.setFill()
-            NSBezierPath(ovalIn: dotRect).fill()
+            NSBezierPath(ovalIn: badgeRect).fill()
+
+            let badgeAttrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 8, weight: .bold),
+                .foregroundColor: NSColor.white,
+                .paragraphStyle: paragraphStyle,
+            ]
+            let badgeText = NSAttributedString(string: "\(min(conflicts, 9))", attributes: badgeAttrs)
+            let badgeTextSize = badgeText.size()
+            let badgeTextRect = NSRect(
+                x: badgeRect.midX - badgeTextSize.width / 2,
+                y: badgeRect.midY - badgeTextSize.height / 2,
+                width: badgeTextSize.width,
+                height: badgeTextSize.height
+            )
+            badgeText.draw(in: badgeTextRect)
         }
 
         image.unlockFocus()
         return image
-    }
-
-    private static func drawBar(in rect: NSRect, filledSegments: Int, color: NSColor) {
-        let segmentGap: CGFloat = 1
-        let segmentWidth = (rect.width - 4 * segmentGap) / 5
-
-        for index in 0..<5 {
-            let x = rect.minX + CGFloat(index) * (segmentWidth + segmentGap)
-            let segmentRect = NSRect(x: x, y: rect.minY, width: segmentWidth, height: rect.height)
-            let path = NSBezierPath(roundedRect: segmentRect, xRadius: 1.5, yRadius: 1.5)
-            (index < filledSegments ? color : NSColor.quaternaryLabelColor).setFill()
-            path.fill()
-        }
     }
 }

@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UserNotifications
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -12,12 +13,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        self.requestNotificationPermissions()
         self.store.start()
         self.statusBarController = StatusBarController(store: self.store)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         self.store.stop()
+    }
+
+    private func requestNotificationPermissions() {
+        guard Bundle.main.bundleIdentifier != nil else { return }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 }
 
