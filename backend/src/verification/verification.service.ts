@@ -3,37 +3,79 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  OnModuleDestroy,
 } from '@nestjs/common';
 import { randomInt } from 'crypto';
+import Redis from 'ioredis';
 import { PrismaService } from '../prisma/prisma.service';
 import { appConfig } from '../config/app.config';
 
-/** Verification code lives for 10 minutes. */
-const VERIFICATION_TTL_MS = 10 * 60 * 1000;
+/** Verification code lives for 10 minutes (in seconds for Redis TTL). */
+const VERIFICATION_TTL_S = 10 * 60;
 /** Minimum value (inclusive) for a 6-digit verification code. */
 const CODE_MIN = 100_000;
 /** Maximum value (exclusive) for a 6-digit verification code. */
 const CODE_MAX = 1_000_000;
 /** Maximum wrong-code attempts before a pending challenge is discarded. */
 const MAX_CONFIRM_ATTEMPTS = 5;
+/** Redis key prefix for verification codes. */
+const KEY_PREFIX = 'verification:';
 
 interface PendingVerification {
   userId: string;
   channel: 'email' | 'phone';
   target: string;
   code: string;
-  expiresAt: Date;
+  expiresAt: number; // epoch ms – kept for compatibility with confirm logic
   attemptsRemaining: number;
-  inFlight?: boolean;
 }
 
 @Injectable()
-export class VerificationService {
+export class VerificationService implements OnModuleDestroy {
   private readonly logger = new Logger(VerificationService.name);
-  // TODO: Replace in-memory Map with Redis or database for horizontal scaling
-  private pending = new Map<string, PendingVerification>();
+  private readonly redis: Redis;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {
+    this.redis = new Redis({
+      host: appConfig.redis.host,
+      port: appConfig.redis.port,
+      // Avoid noisy reconnect logs in test environments
+      lazyConnect: appConfig.environment === 'test',
+    });
+  }
+
+  /** Allow injecting a mock/test Redis instance. */
+  static createWithRedis(prisma: PrismaService, redis: Redis): VerificationService {
+    const svc = new VerificationService(prisma);
+    // Replace the auto-created Redis instance with the provided one
+    (svc as unknown as { redis: Redis }).redis = redis;
+    return svc;
+  }
+
+  async onModuleDestroy() {
+    await this.redis.quit();
+  }
+
+  private redisKey(userId: string, channel: string): string {
+    return `${KEY_PREFIX}${userId}:${channel}`;
+  }
+
+  private async getPending(key: string): Promise<PendingVerification | null> {
+    const raw = await this.redis.get(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as PendingVerification;
+  }
+
+  private async setPending(key: string, data: PendingVerification): Promise<void> {
+    // Compute remaining TTL from expiresAt so we don't extend the window
+    const remainingMs = data.expiresAt - Date.now();
+    if (remainingMs <= 0) {
+      await this.redis.del(key);
+      return;
+    }
+    const remainingS = Math.ceil(remainingMs / 1000);
+    await this.redis.set(key, JSON.stringify(data), 'EX', remainingS);
+  }
 
   async start(userId: string, channel: 'email' | 'phone', target: string) {
     const user = await this.prisma.user.findUnique({
@@ -68,15 +110,16 @@ export class VerificationService {
     }
 
     const code = randomInt(CODE_MIN, CODE_MAX).toString();
-    const key = `${userId}:${channel}`;
-    this.pending.set(key, {
+    const key = this.redisKey(userId, channel);
+    const pending: PendingVerification = {
       userId,
       channel,
       target: normalizedTarget,
       code,
-      expiresAt: new Date(Date.now() + VERIFICATION_TTL_MS),
+      expiresAt: Date.now() + VERIFICATION_TTL_S * 1000,
       attemptsRemaining: MAX_CONFIRM_ATTEMPTS,
-    });
+    };
+    await this.redis.set(key, JSON.stringify(pending), 'EX', VERIFICATION_TTL_S);
 
     // In production, dispatch via real SMS/email provider and never return the code.
     const isDev = !appConfig.isProduction;
@@ -89,25 +132,21 @@ export class VerificationService {
   }
 
   async confirm(userId: string, channel: 'email' | 'phone', code: string) {
-    const key = `${userId}:${channel}`;
-    const pending = this.pending.get(key);
+    const key = this.redisKey(userId, channel);
+    const pending = await this.getPending(key);
 
-    if (
-      !pending ||
-      pending.inFlight ||
-      pending.expiresAt.getTime() < Date.now()
-    ) {
-      if (pending && pending.expiresAt.getTime() < Date.now()) {
-        this.pending.delete(key);
+    if (!pending || pending.expiresAt < Date.now()) {
+      if (pending) {
+        await this.redis.del(key);
       }
       return { verified: false };
     }
 
     if (pending.code !== code) {
       if (pending.attemptsRemaining <= 1) {
-        this.pending.delete(key);
+        await this.redis.del(key);
       } else {
-        this.pending.set(key, {
+        await this.setPending(key, {
           ...pending,
           attemptsRemaining: pending.attemptsRemaining - 1,
         });
@@ -115,26 +154,13 @@ export class VerificationService {
       return { verified: false };
     }
 
-    const lockedPending: PendingVerification = {
-      ...pending,
-      inFlight: true,
-    };
-
-    // Lock this code during the confirmation attempt so concurrent requests
-    // fail fast without consuming the pending code on retryable failures.
-    this.pending.set(key, lockedPending);
-
-    const restorePending = () => {
-      if (this.pending.get(key) === lockedPending) {
-        this.pending.set(key, pending);
-      }
-    };
-
-    const consumePending = () => {
-      if (this.pending.get(key) === lockedPending) {
-        this.pending.delete(key);
-      }
-    };
+    // Delete the pending entry atomically before doing the DB update
+    // to prevent concurrent confirmations.
+    const deleted = await this.redis.del(key);
+    if (deleted === 0) {
+      // Another concurrent request already consumed it
+      return { verified: false };
+    }
 
     try {
       const user = await this.prisma.user.findUnique({
@@ -146,7 +172,8 @@ export class VerificationService {
       });
 
       if (!user) {
-        restorePending();
+        // Restore the pending entry so the code can be retried
+        await this.setPending(key, pending);
         throw new NotFoundException('User not found');
       }
 
@@ -160,11 +187,8 @@ export class VerificationService {
           : pending.target.trim();
 
       if (!storedTarget || storedTarget !== pendingTarget) {
-        restorePending();
-        return { verified: false };
-      }
-
-      if (this.pending.get(key) !== lockedPending) {
+        // Restore pending so the user can retry after fixing their profile
+        await this.setPending(key, pending);
         return { verified: false };
       }
 
@@ -180,10 +204,10 @@ export class VerificationService {
         });
       }
 
-      consumePending();
       return { verified: true };
     } catch (error: unknown) {
-      restorePending();
+      // Restore pending entry on transient failures so the code can be retried
+      await this.setPending(key, pending);
       if (
         typeof error === 'object' &&
         error !== null &&
