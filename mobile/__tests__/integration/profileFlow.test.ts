@@ -101,7 +101,6 @@ describe('Profile flow integration', () => {
     const { result } = renderHook(() =>
       useProfileEditor({
         profile: fakeUser,
-        refetch: jest.fn().mockResolvedValue(undefined),
         updateProfile: mockUpdateProfileFn,
         updateFitness: mockUpdateFitnessFn,
       }),
@@ -154,7 +153,6 @@ describe('Profile flow integration', () => {
     const { result } = renderHook(() =>
       useProfileEditor({
         profile: fakeUser,
-        refetch: jest.fn().mockResolvedValue(undefined),
         updateProfile: jest.fn(),
         updateFitness: jest.fn(),
       }),
@@ -310,7 +308,6 @@ describe('Profile flow integration', () => {
     const { result } = renderHook(() =>
       useProfileEditor({
         profile: fakeUser,
-        refetch: jest.fn().mockResolvedValue(undefined),
         updateProfile: jest.fn(),
         updateFitness: jest.fn(),
       }),

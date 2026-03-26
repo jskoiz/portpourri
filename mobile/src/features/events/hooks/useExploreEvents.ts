@@ -3,6 +3,8 @@ import type { EventSummary } from '../../../api/types';
 import { eventsApi } from '../../../services/api';
 import { queryKeys } from '../../../lib/query/queryKeys';
 
+const EMPTY_EVENTS: EventSummary[] = [];
+
 export function useExploreEvents() {
   const query = useQuery({
     queryKey: queryKeys.events.list(),
@@ -13,6 +15,6 @@ export function useExploreEvents() {
 
   return {
     ...query,
-    events: query.data || [],
+    events: query.data ?? EMPTY_EVENTS,
   };
 }

@@ -71,6 +71,10 @@ describe('SignupScreen', () => {
 
     expect(await screen.findByText('Enter a valid email.')).toBeTruthy();
     expect(screen.getByText('Use at least 8 characters.')).toBeTruthy();
+    expect(screen.getByLabelText('Email').props.accessibilityState).toEqual({
+      disabled: false,
+      invalid: true,
+    });
 
     fireEvent.changeText(screen.getByPlaceholderText('you@example.com'), 'Jordan@example.com');
     fireEvent.changeText(screen.getByPlaceholderText('At least 8 characters'), 'password123');

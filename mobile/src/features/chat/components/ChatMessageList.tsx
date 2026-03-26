@@ -1,6 +1,7 @@
 import React from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import type { ChatMessage } from '../../../api/types';
+import { StatePanel } from '../../../design/primitives';
 import type { Theme } from '../../../theme/tokens';
 import { chatStyles as styles } from './chat.styles';
 import { EventInviteCard } from './EventInviteCard';
@@ -113,6 +114,10 @@ export function ChatMessageList({
   return (
     <FlatList
       data={messages}
+      extraData={eventInvites}
+      accessibilityRole="list"
+      accessibilityLabel="Conversation messages"
+      accessibilityHint="Newest messages appear at the bottom"
       renderItem={({ item }) => (
         <ChatBubble
           eventInvites={eventInvites}
@@ -123,12 +128,23 @@ export function ChatMessageList({
       )}
       keyExtractor={(item) => item.id}
       inverted
-      contentContainerStyle={styles.listContent}
       showsVerticalScrollIndicator={false}
       windowSize={10}
       maxToRenderPerBatch={15}
       removeClippedSubviews
       initialNumToRender={20}
+      ListEmptyComponent={
+        <View style={styles.emptyState}>
+          <StatePanel
+            title="No messages yet"
+            description="Send the first hello or share a plan to start the thread."
+          />
+        </View>
+      }
+      contentContainerStyle={[
+        styles.listContent,
+        messages.length === 0 ? styles.listContentEmpty : null,
+      ]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}

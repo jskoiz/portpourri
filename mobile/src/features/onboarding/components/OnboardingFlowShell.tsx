@@ -30,7 +30,17 @@ export function OnboardingFlowShell({
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       <AppBackdrop />
-      <View style={[styles.progressTrack, { backgroundColor: theme.border }]}>
+      <View
+        style={[styles.progressTrack, { backgroundColor: theme.border }]}
+        accessibilityRole="progressbar"
+        accessibilityLabel="Onboarding progress"
+        accessibilityValue={{
+          min: 0,
+          max: 100,
+          now: Math.min(100, Math.max(0, Math.round(progress * 100))),
+          text: `${Math.round(progress * 100)}% complete`,
+        }}
+      >
         <Animated.View
           style={[
             styles.progressFill,
@@ -49,7 +59,7 @@ export function OnboardingFlowShell({
       ) : null}
 
       <View style={styles.shellHeader}>
-        <Text style={[styles.chapterLabel, { color: theme.accent }]}>{chapter}</Text>
+        <Text style={[styles.chapterLabel, { color: theme.accent }]} accessibilityRole="header">{chapter}</Text>
       </View>
 
       <Animated.View style={{ flex: 1, opacity: contentOpacity }}>

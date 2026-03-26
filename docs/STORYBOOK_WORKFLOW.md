@@ -9,6 +9,7 @@ This document is the canonical workflow for Storybook usage. Keep other docs sho
 Use Storybook first when the task is primarily:
 
 - visual styling, spacing, typography, or color work
+- accessibility-sensitive component states or semantics that can be reviewed without real navigation or backend data
 - component and module composition
 - bottom-sheet shell work
 - empty, loading, error, selected, disabled, or long-content states
@@ -65,7 +66,7 @@ The seeded `ui-preview` runtime remains the canonical place to validate that the
 - Visual-only mobile changes should add or update a Storybook story in the same task.
 - Reusable UI changes under `mobile/src/components`, `mobile/src/design`, or `mobile/src/features/**/components` should update Storybook in the same diff unless the PR template explains why Storybook is not the right surface.
 - If a visual change also affects behavior or contracts, add the story and then validate the integrated flow in the app runtime.
-- If behavior changes are not covered by existing tests, add tests or document why tests were not added.
+- If behavior or accessibility semantics change and are not covered by existing tests, add tests or document why tests were not added.
 
 ## Recommended Review Flow
 

@@ -39,6 +39,7 @@ export function IntentStep({ data, goNext, insets, setValue, theme }: Onboarding
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
                 accessibilityLabel={`${opt.title}. ${opt.sub}`}
+                accessibilityHint={selected ? 'Selected' : 'Double tap to choose this option'}
               >
                 <View style={[styles.intentCardIconWrap, { backgroundColor: selected ? theme.primarySubtle : theme.surfaceElevated }]}>
                   <AppIcon name={opt.icon} size={18} color={selected ? theme.primary : theme.textSecondary} />

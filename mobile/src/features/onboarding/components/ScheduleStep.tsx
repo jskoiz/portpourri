@@ -33,6 +33,7 @@ export function ScheduleStep({ data, goNext, insets, setValue, theme, toggleArra
               accessibilityRole="checkbox"
               accessibilityState={{ checked: selected }}
               accessibilityLabel={opt.label}
+              accessibilityHint={selected ? 'Selected' : 'Double tap to toggle'}
             >
               <View style={[styles.scheduleIconWrap, { backgroundColor: selected ? theme.accentSubtle : theme.surfaceElevated }]}>
                 <AppIcon name={opt.icon} size={16} color={selected ? theme.accent : theme.textSecondary} />

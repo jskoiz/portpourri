@@ -1,6 +1,5 @@
 import React from 'react';
 import { Alert, ScrollView } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { normalizeApiError } from '../api/errors';
 import type { RootStackScreenProps } from '../core/navigation/types';
@@ -15,9 +14,6 @@ import { getPrimaryPhotoUri } from '../lib/profilePhotos';
 import { ReportSheet } from '../features/moderation/components/ReportSheet';
 import { useBlock } from '../features/moderation/hooks/useBlock';
 import { showBlockConfirmation } from '../features/moderation/components/BlockConfirmation';
-import { isBlockedUserId } from '../lib/moderation/blockedUsers';
-import { profileApi } from '../services/api';
-import { queryKeys } from '../lib/query/queryKeys';
 import {
   ProfileDetailActions,
   ProfileDetailHero,
@@ -25,17 +21,15 @@ import {
   type ProfileDetailRow,
 } from '../features/profile/components/ProfileDetailSections';
 import { profileDetailStyles as styles } from '../features/profile/components/profileDetail.styles';
+import { useTheme } from '../theme/useTheme';
 
 export default function ProfileDetailScreen({
   navigation,
   route,
 }: RootStackScreenProps<'ProfileDetail'>) {
   const insets = useSafeAreaInsets();
-  const { user, userId } = route.params;
-  const requestedUserId = userId ?? user?.id;
-  const blockedRequestedUser = requestedUserId
-    ? isBlockedUserId(requestedUserId)
-    : false;
+  const theme = useTheme();
+  const { user } = route.params;
   const { matches } = useMatches();
   const { passUser, likeUser, isActing } = useDiscoveryActions();
   const submitting = isActing;
@@ -43,16 +37,10 @@ export default function ProfileDetailScreen({
   const { block, isLoading: isBlocking } = useBlock({
     onSuccess: () => navigation.goBack(),
   });
-  const publicProfileQuery = useQuery({
-    enabled: Boolean(requestedUserId) && !blockedRequestedUser,
-    queryKey: queryKeys.profile.public(requestedUserId ?? 'unknown'),
-    queryFn: async () => (await profileApi.getPublicProfile(requestedUserId!)).data,
-    retry: false,
-  });
 
-  if (!requestedUserId) {
+  if (!user) {
     return (
-      <Screen>
+      <Screen backgroundColor={theme.background}>
         <AppBackButton onPress={() => navigation.goBack()} />
         <StatePanel
           title="Profile not found"
@@ -62,49 +50,15 @@ export default function ProfileDetailScreen({
     );
   }
 
-  if (blockedRequestedUser) {
-    return (
-      <Screen>
-        <AppBackButton onPress={() => navigation.goBack()} />
-        <StatePanel
-          title="Profile unavailable"
-          description="This profile can no longer be viewed."
-        />
-      </Screen>
-    );
-  }
-
-  if (publicProfileQuery.isLoading) {
-    return (
-      <Screen>
-        <AppBackButton onPress={() => navigation.goBack()} />
-        <StatePanel title="Loading profile" loading />
-      </Screen>
-    );
-  }
-
-  const resolvedUser = publicProfileQuery.data ?? null;
-  if (publicProfileQuery.error || !resolvedUser) {
-    return (
-      <Screen>
-        <AppBackButton onPress={() => navigation.goBack()} />
-        <StatePanel
-          title="Profile not found"
-          description="This profile is no longer available."
-        />
-      </Screen>
-    );
-  }
-
-  const primaryPhoto = getPrimaryPhotoUri(resolvedUser);
+  const primaryPhoto = getPrimaryPhotoUri(user);
   const activityTags: string[] = parseFavoriteActivities(
-    resolvedUser.fitnessProfile?.favoriteActivities,
+    user.fitnessProfile?.favoriteActivities,
   );
 
   const intentFlags = [
-    resolvedUser.profile?.intentDating ? 'Dating' : null,
-    resolvedUser.profile?.intentWorkout ? 'Training partner' : null,
-    resolvedUser.profile?.intentFriends ? 'Friends' : null,
+    user.profile?.intentDating ? 'Dating' : null,
+    user.profile?.intentWorkout ? 'Training partner' : null,
+    user.profile?.intentFriends ? 'Friends' : null,
   ].filter(Boolean);
 
   const intentDisplay = intentFlags.length > 0 ? intentFlags.join(' + ') : null;
@@ -112,8 +66,8 @@ export default function ProfileDetailScreen({
   const structuredRows: ProfileDetailRow[] = [
     {
       label: 'Pace',
-      value: resolvedUser.fitnessProfile?.intensityLevel
-        ? `${resolvedUser.fitnessProfile.intensityLevel}`
+      value: user.fitnessProfile?.intensityLevel
+        ? `${user.fitnessProfile.intensityLevel}`
         : 'Not set',
     },
     {
@@ -127,9 +81,8 @@ export default function ProfileDetailScreen({
   ];
 
   const handleBlock = () => {
-    if (isBlocking) return;
     showBlockConfirmation(() => {
-      void block({ blockedUserId: resolvedUser.id });
+      void block({ blockedUserId: user.id });
     });
   };
 
@@ -140,7 +93,7 @@ export default function ProfileDetailScreen({
   const handleSuggestActivity = () => {
     const firstActivity = activityTags[0] || 'a workout';
     const suggestion = `Let's plan ${firstActivity} together.`;
-    const existingMatch = matches.find((match) => match.user.id === resolvedUser.id);
+    const existingMatch = matches.find((match) => match.user.id === user.id);
 
     if (!existingMatch) {
       Alert.alert(
@@ -159,7 +112,7 @@ export default function ProfileDetailScreen({
 
   const handlePass = async () => {
     try {
-      await passUser(resolvedUser.id);
+      await passUser(user.id);
       navigation.goBack();
     } catch (error) {
       Alert.alert('Could not pass profile', normalizeApiError(error).message);
@@ -168,7 +121,7 @@ export default function ProfileDetailScreen({
 
   const handleLike = async () => {
     try {
-      await likeUser(resolvedUser.id);
+      await likeUser(user.id);
       navigation.goBack();
     } catch (error) {
       Alert.alert('Could not like profile', normalizeApiError(error).message);
@@ -184,9 +137,9 @@ export default function ProfileDetailScreen({
       >
         <ProfileDetailHero
           activityTags={activityTags}
-          age={resolvedUser.age}
-          city={resolvedUser.profile?.city}
-          firstName={resolvedUser.firstName}
+          age={user.age}
+          city={user.profile?.city}
+          firstName={user.firstName}
           intentDisplay={intentDisplay}
           onBack={() => navigation.goBack()}
           onBlock={handleBlock}
@@ -195,11 +148,11 @@ export default function ProfileDetailScreen({
         />
         <ProfileDetailInfo
           activityTags={activityTags}
-          bio={resolvedUser.profile?.bio}
+          bio={user.profile?.bio}
           disabled={isBusy}
           onSuggestActivity={handleSuggestActivity}
           structuredRows={structuredRows}
-          weeklyFrequencyBand={resolvedUser.fitnessProfile?.weeklyFrequencyBand}
+          weeklyFrequencyBand={user.fitnessProfile?.weeklyFrequencyBand}
         />
       </ScrollView>
       <ProfileDetailActions
@@ -212,7 +165,7 @@ export default function ProfileDetailScreen({
       <ReportSheet
         controller={reportSheet.sheetProps}
         onClose={reportSheet.close}
-        reportedUserId={resolvedUser.id}
+        reportedUserId={user.id}
       />
     </SafeAreaView>
   );

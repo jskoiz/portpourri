@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Share } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { normalizeApiError } from '../api/errors';
@@ -30,19 +30,59 @@ export default function ExploreScreen({ navigation }: MainTabScreenProps<'Explor
   const { events, error, isLoading, isRefetching, refetch } = useExploreEvents();
   const errorMessage = error ? normalizeApiError(error).message : null;
   const lastFocusRefetchRef = useRef(0);
+  const refetchRef = useRef(refetch);
 
   useFocusEffect(
     useCallback(() => {
       const now = Date.now();
       if (now - lastFocusRefetchRef.current >= FOCUS_REFETCH_INTERVAL_MS) {
         lastFocusRefetchRef.current = now;
-        void refetch();
+        void refetchRef.current();
       }
-    }, [refetch]),
+    }, []),
   );
 
-  const filteredEvents = events.filter((event) => matchesEventCategory(event, activeCategory));
-  const filteredSpots = ACTIVITY_SPOTS.filter((spot) => matchesSpotCategory(spot, activeCategory));
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
+
+  const filteredEvents = useMemo(
+    () => events.filter((event) => matchesEventCategory(event, activeCategory)),
+    [activeCategory, events],
+  );
+  const filteredSpots = useMemo(
+    () => ACTIVITY_SPOTS.filter((spot) => matchesSpotCategory(spot, activeCategory)),
+    [activeCategory],
+  );
+  const handleInvite = useCallback((event?: typeof events[number]) => {
+    const message = event
+      ? `Join me for ${event.title} on BRDG${event.location ? ` at ${event.location}` : ''}.`
+      : "Join me on BRDG. Let's move together.";
+    void Share.share({ message }).catch((err) => {
+      console.warn('[ExploreScreen] Share failed:', err);
+    });
+  }, []);
+  const handleOpenCreate = useCallback(() => {
+    void triggerImpactHaptic();
+    navigation.navigate('Create');
+  }, [navigation]);
+  const handleOpenEvent = useCallback((eventId: string, event: (typeof events)[number]) => {
+    navigation.navigate('EventDetail', { eventId, event });
+  }, [navigation]);
+  const handleOpenMyEvents = useCallback(() => {
+    void triggerImpactHaptic();
+    openMyEvents(navigation);
+  }, [navigation]);
+  const handlePressNotifications = useCallback(() => {
+    navigation.navigate('Notifications');
+  }, [navigation]);
+  const handleRefresh = useCallback(() => {
+    void refetchRef.current();
+  }, []);
+  const handleSelectCategory = useCallback((category: ExploreCategory) => {
+    void triggerSelectionHaptic();
+    setActiveCategory(category);
+  }, []);
 
   return (
     <ExploreScreenContent
@@ -53,31 +93,13 @@ export default function ExploreScreen({ navigation }: MainTabScreenProps<'Explor
       events={filteredEvents}
       isLoading={isLoading}
       isRefreshing={isRefetching}
-      onInvite={(event) => {
-        const message = event
-          ? `Join me for ${event.title} on BRDG${event.location ? ` at ${event.location}` : ''}.`
-          : "Join me on BRDG. Let's move together.";
-        void Share.share({ message }).catch((err) => {
-          console.warn('[ExploreScreen] Share failed:', err);
-        });
-      }}
-      onOpenCreate={() => {
-        void triggerImpactHaptic();
-        navigation.navigate('Create');
-      }}
-      onOpenEvent={(eventId, event) => navigation.navigate('EventDetail', { eventId, event })}
-      onOpenMyEvents={() => {
-        void triggerImpactHaptic();
-        openMyEvents(navigation);
-      }}
-      onPressNotifications={() => navigation.navigate('Notifications')}
-      onRefresh={() => {
-        void refetch();
-      }}
-      onSelectCategory={(category) => {
-        void triggerSelectionHaptic();
-        setActiveCategory(category);
-      }}
+      onInvite={handleInvite}
+      onOpenCreate={handleOpenCreate}
+      onOpenEvent={handleOpenEvent}
+      onOpenMyEvents={handleOpenMyEvents}
+      onPressNotifications={handlePressNotifications}
+      onRefresh={handleRefresh}
+      onSelectCategory={handleSelectCategory}
       showCommunity={activeCategory === 'All' || activeCategory === 'Community'}
       showEvents={activeCategory === 'All' || activeCategory === 'Events' || activeCategory === 'Trails' || activeCategory === 'Gyms'}
       showSpots={activeCategory === 'All' || activeCategory === 'Trails' || activeCategory === 'Gyms' || activeCategory === 'Spots'}

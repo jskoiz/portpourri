@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { StatePanel } from '../design/primitives';
+import { Screen, StatePanel } from '../design/primitives';
 import { DiscoverySkeleton } from '../components/skeletons';
 import { useSheetController } from '../design/sheets/useSheetController';
 import { normalizeApiError } from '../api/errors';
@@ -15,6 +15,7 @@ import {
   triggerSheetCommitHaptic,
   triggerSuccessHaptic,
 } from '../lib/interaction/feedback';
+import { useTheme } from '../theme/useTheme';
 import {
   buildDiscoveryFilters,
   countActiveFilters,
@@ -39,6 +40,7 @@ function toggleValue<T extends string>(current: T[], value: T) {
 }
 
 export default function HomeScreen({ navigation }: MainTabScreenProps<'Discover'>) {
+  const theme = useTheme();
   const user = useAuthStore((state) => state.user);
   const isAuthLoaded = useAuthStore((state) => !state.isLoading);
   const { unreadCount } = useUnreadNotificationCount();
@@ -70,20 +72,26 @@ export default function HomeScreen({ navigation }: MainTabScreenProps<'Discover'
   const activeFilterCount = countActiveFilters(currentFilters, appliedFilterState);
 
   if (isLoading) {
-    return <DiscoverySkeleton testID="discovery-skeleton" />;
+    return (
+      <Screen backgroundColor={theme.background} padding={0}>
+        <DiscoverySkeleton testID="discovery-skeleton" />
+      </Screen>
+    );
   }
 
   if (errorMessage) {
     return (
-      <StatePanel
-        title="Couldn't load discovery"
-        description={errorMessage}
-        actionLabel="Try again"
-        onAction={() => {
-          void refetch();
-        }}
-        isError
-      />
+      <Screen backgroundColor={theme.background}>
+        <StatePanel
+          title="Couldn't load discovery"
+          description={errorMessage}
+          actionLabel="Try again"
+          onAction={() => {
+            void refetch();
+          }}
+          isError
+        />
+      </Screen>
     );
   }
 

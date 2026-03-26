@@ -27,6 +27,12 @@ export const chatStyles = StyleSheet.create({
   },
   headerTagText: { fontSize: 10, fontWeight: '700' },
   listContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
+  listContentEmpty: { flexGrow: 1 },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
+  },
   bubble: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,

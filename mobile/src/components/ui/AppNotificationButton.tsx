@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { triggerLightImpactHaptic } from '../../lib/interaction/feedback';
 import { useTheme } from '../../theme/useTheme';
 import { lightTheme, radii } from '../../theme/tokens';
 import AppIcon from './AppIcon';
@@ -23,10 +24,14 @@ export default function AppNotificationButton({
   return (
     <Pressable
       testID={testID}
-      onPress={onPress}
+      onPress={() => {
+        void triggerLightImpactHaptic();
+        onPress();
+      }}
       accessibilityRole="button"
       accessibilityLabel={unreadCount > 0 ? `${badgeLabel} unread notifications` : 'Notifications'}
-      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      accessibilityHint="Opens notifications"
+      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       style={({ pressed }) => [
         styles.button,
         { opacity: pressed ? 0.82 : 1 },
@@ -47,6 +52,8 @@ const styles = StyleSheet.create({
   button: {
     width: 44,
     height: 44,
+    minWidth: 44,
+    minHeight: 44,
     borderRadius: radii.pill,
     backgroundColor: lightTheme.surface,
     alignItems: 'center',

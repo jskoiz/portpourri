@@ -22,7 +22,18 @@ export function CompletenessBar({ score, missing, onPressMissing }: Completeness
   const barColor = score >= 60 ? SUCCESS : PRIMARY;
 
   return (
-    <View style={styles.wrapper} testID="completeness-bar">
+    <View
+      style={styles.wrapper}
+      testID="completeness-bar"
+      accessibilityRole="progressbar"
+      accessibilityLabel="Profile completeness"
+      accessibilityValue={{
+        min: 0,
+        max: 100,
+        now: Math.min(score, 100),
+        text: `${Math.min(score, 100)}% complete`,
+      }}
+    >
       <Card style={styles.card}>
         <View style={styles.header}>
           <Text style={styles.title}>Complete your profile</Text>

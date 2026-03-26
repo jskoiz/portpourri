@@ -23,11 +23,14 @@ export function StatePanel({
 }) {
   const theme = useTheme();
   const icon = isError ? 'alert-circle' : 'compass';
+  const accessibilitySummary = [title, description].filter(Boolean).join('. ');
 
   return (
     <View
       style={primitiveStyles.stateContainer}
       accessibilityRole={isError ? 'alert' : undefined}
+      accessibilityLiveRegion={isError ? 'assertive' : 'polite'}
+      accessibilityLabel={accessibilitySummary}
     >
       <Card style={primitiveStyles.statePanel}>
         {loading ? (
@@ -36,6 +39,7 @@ export function StatePanel({
             color={theme.primary}
             style={primitiveStyles.loader}
             accessibilityLabel={`Loading: ${title}`}
+            accessibilityRole="progressbar"
           />
         ) : (
           <View

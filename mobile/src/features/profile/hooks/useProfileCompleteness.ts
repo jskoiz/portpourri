@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
+import type { ProfileCompletenessMissingItem } from '../../../api/types';
 import { discoveryApi } from '../../../services/api';
 import { queryKeys } from '../../../lib/query/queryKeys';
+
+const EMPTY_MISSING: ProfileCompletenessMissingItem[] = [];
 
 export function useProfileCompleteness() {
   const query = useQuery({
@@ -14,6 +17,6 @@ export function useProfileCompleteness() {
     score: query.data?.score ?? 0,
     total: query.data?.total ?? 0,
     earned: query.data?.earned ?? 0,
-    missing: query.data?.missing ?? [],
+    missing: query.data?.missing ?? EMPTY_MISSING,
   };
 }

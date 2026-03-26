@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, Text } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { KeyboardAvoidingView, Platform, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBackdrop from '../components/ui/AppBackdrop';
-import { StatePanel } from '../design/primitives';
+import { Screen, StatePanel } from '../design/primitives';
 import { normalizeApiError } from '../api/errors';
 import { useChatThread } from '../features/chat/hooks/useChatThread';
 import { ChatComposer } from '../features/chat/components/ChatComposer';
@@ -30,59 +30,109 @@ export default function ChatScreen({ navigation, route }: RootStackScreenProps<'
   const [message, setMessage] = useState(prefillMessage?.trim() ?? '');
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const refreshRef = React.useRef<() => Promise<unknown>>(async () => undefined);
+  const sendMessageRef = React.useRef<(text: string) => Promise<unknown>>(async () => undefined);
+  const emitTypingRef = React.useRef<() => void>(() => undefined);
   const quickActionsSheet = useSheetController();
   const reportSheet = useSheetController();
-  const { block, isLoading: isBlocking } = useBlock({
+  const { block } = useBlock({
     onSuccess: () => navigation.goBack(),
   });
   const { connectionStatus, error, isTyping, loading, messages, refresh, sendMessage, sending, emitTyping } = useChatThread(matchId);
   const errorMessage = error ? normalizeApiError(error).message : null;
   const photoUrl = getPrimaryPhotoUri(user);
+  const prefillText = useMemo(() => prefillMessage?.trim() ?? '', [prefillMessage]);
 
   useEffect(() => {
-    if (prefillMessage?.trim()) {
-      setMessage(prefillMessage.trim());
-    }
-  }, [prefillMessage]);
+    refreshRef.current = refresh;
+  }, [refresh]);
+  useEffect(() => {
+    sendMessageRef.current = sendMessage;
+  }, [sendMessage]);
+  useEffect(() => {
+    emitTypingRef.current = emitTyping;
+  }, [emitTyping]);
 
+  useEffect(() => {
+    if (prefillText) {
+      setMessage(prefillText);
+    }
+  }, [prefillText]);
+
+  const handleManualRefresh = useCallback(async () => {
+    try {
+      setManualRefreshing(true);
+      await refreshRef.current();
+    } finally {
+      setManualRefreshing(false);
+    }
+  }, []);
   const handleSendMessage = useCallback(async () => {
-    if (!message.trim() || sending) return;
     const text = message.trim();
+    if (!text || sending) return;
 
     try {
       setSendError(null);
       void triggerImpactHaptic();
-      await sendMessage(text);
-      setMessage('');  // Only clear on success
+      await sendMessageRef.current(text);
+      setMessage(''); // Only clear on success
     } catch (err) {
       void triggerWarningHaptic();
       setSendError(normalizeApiError(err).message);
       // message stays in the input for retry
     }
-  }, [message, sendMessage, sending]);
+  }, [message, sending]);
+  const handleBack = useCallback(() => navigation.goBack(), [navigation]);
+  const handleBlock = useCallback(() => {
+    showBlockConfirmation(() => {
+      void block({ blockedUserId: user.id });
+    });
+  }, [block, user.id]);
+  const handleOpenQuickActions = useCallback(() => quickActionsSheet.open(), [quickActionsSheet.open]);
+  const handleReport = useCallback(() => reportSheet.open(), [reportSheet.open]);
+  const handleChangeMessage = useCallback((text: string) => {
+    setMessage(text);
+    if (text.length > 0) emitTypingRef.current();
+  }, []);
+  const handleSelectMessage = useCallback((nextMessage: string) => {
+    void triggerSheetCommitHaptic();
+    setMessage(nextMessage);
+  }, []);
 
-  const handleManualRefresh = useCallback(async () => {
-    try {
-      setManualRefreshing(true);
-      await refresh();
-    } finally {
-      setManualRefreshing(false);
-    }
-  }, [refresh]);
+  if (loading || (errorMessage && messages.length === 0)) {
+    return (
+      <Screen backgroundColor={theme.background} padding={0}>
+        <ChatHeader
+          activityTag={getActivityTag(user)}
+          onBack={handleBack}
+          onBlock={handleBlock}
+          onOpenQuickActions={handleOpenQuickActions}
+          onReport={handleReport}
+          photoUrl={photoUrl}
+          theme={theme}
+          user={user}
+        />
+        <StatePanel
+          title={loading ? 'Loading messages' : "Couldn't load messages"}
+          description={loading ? undefined : errorMessage ?? undefined}
+          actionLabel={loading ? undefined : 'Retry'}
+          onAction={loading ? undefined : handleManualRefresh}
+          isError={Boolean(errorMessage)}
+          loading={loading}
+        />
+      </Screen>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
       <AppBackdrop />
       <ChatHeader
         activityTag={getActivityTag(user)}
-        onBack={() => navigation.goBack()}
-        onBlock={() => {
-          showBlockConfirmation(() => {
-            void block({ blockedUserId: user.id });
-          });
-        }}
-        onOpenQuickActions={quickActionsSheet.open}
-        onReport={reportSheet.open}
+        onBack={handleBack}
+        onBlock={handleBlock}
+        onOpenQuickActions={handleOpenQuickActions}
+        onReport={handleReport}
         photoUrl={photoUrl}
         theme={theme}
         user={user}
@@ -95,7 +145,7 @@ export default function ChatScreen({ navigation, route }: RootStackScreenProps<'
       ) : (
         <ChatMessageList
           messages={messages}
-onNavigateToEvent={(eventId) => navigation.navigate('EventDetail', { eventId })}
+          onNavigateToEvent={(eventId) => navigation.navigate('EventDetail', { eventId })}
           onRefresh={() => { void handleManualRefresh(); }}
           refreshing={manualRefreshing}
           theme={theme}
@@ -115,7 +165,9 @@ onNavigateToEvent={(eventId) => navigation.navigate('EventDetail', { eventId })}
         </Text>
       ) : null}
       {isTyping ? (
-        <Text style={[styles.statusNote, { color: theme.textMuted }]}>Typing…</Text>
+        <Text style={[styles.statusNote, { color: theme.textMuted }]}>
+          Typing…
+        </Text>
       ) : null}
       {(sendError || errorMessage) && messages.length > 0 ? (
         <Text
@@ -130,10 +182,7 @@ onNavigateToEvent={(eventId) => navigation.navigate('EventDetail', { eventId })}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
         <ChatComposer
           message={message}
-          onChangeMessage={(text) => {
-            setMessage(text);
-            if (text.length > 0) emitTyping();
-          }}
+          onChangeMessage={handleChangeMessage}
           onSend={handleSendMessage}
           sending={sending}
           theme={theme}
@@ -142,10 +191,7 @@ onNavigateToEvent={(eventId) => navigation.navigate('EventDetail', { eventId })}
       <ChatQuickActionsSheet
         controller={quickActionsSheet.sheetProps}
         onClose={quickActionsSheet.close}
-        onSelectMessage={(nextMessage) => {
-          void triggerSheetCommitHaptic();
-          setMessage(nextMessage);
-        }}
+        onSelectMessage={handleSelectMessage}
       />
       <ReportSheet
         controller={reportSheet.sheetProps}

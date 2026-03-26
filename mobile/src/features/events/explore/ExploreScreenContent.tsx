@@ -14,7 +14,7 @@ import { ExploreQuickActionsSheet } from './ExploreQuickActionsSheet';
 import { getEventEmptyDescription } from './explore.helpers';
 import { exploreStyles as styles } from './explore.styles';
 
-export function ExploreScreenContent({
+export const ExploreScreenContent = React.memo(function ExploreScreenContent({
   activeCategory,
   currentUserId,
   errorMessage,
@@ -173,4 +173,4 @@ export function ExploreScreenContent({
       />
     </SafeAreaView>
   );
-}
+});

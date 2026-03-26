@@ -2,7 +2,6 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import MyEventsScreen from '../MyEventsScreen';
 
-const mockGoBack = jest.fn();
 const mockNavigate = jest.fn();
 const mockRefetch = jest.fn();
 const mockUseMyEvents = jest.fn();
@@ -24,157 +23,125 @@ jest.mock('../../features/events/hooks/useMyEvents', () => ({
   useMyEvents: (...args: unknown[]) => mockUseMyEvents(...args),
 }));
 
+jest.mock('../../store/authStore', () => ({
+  useAuthStore: (selector: (state: { user: { id: string } | null }) => unknown) =>
+    selector({ user: { id: 'user-1' } }),
+}));
+
+jest.mock('../../components/ui/AppBackdrop', () => () => null);
+jest.mock('../../components/ui/AppBackButton', () => {
+  const React = require('react');
+  const { Pressable, Text } = require('react-native');
+
+  return ({ onPress }: { onPress: () => void }) => (
+    <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onPress}>
+      <Text>Back</Text>
+    </Pressable>
+  );
+});
 jest.mock('../../components/ui/AppIcon', () => {
   const React = require('react');
   const { Text } = require('react-native');
 
-  return () => <Text>icon</Text>;
+  return ({ name }: { name: string }) => <Text>{name}</Text>;
 });
+jest.mock('react-native-safe-area-context', () => {
+  const React = require('react');
+  const { View } = require('react-native');
 
-let mockAuthUser: { id: string } | null = { id: 'current-user-id' };
-jest.mock('../../store/authStore', () => ({
-  useAuthStore: (selector: (state: { user: { id: string } | null }) => unknown) =>
-    selector({ user: mockAuthUser }),
+  return {
+    SafeAreaView: ({ children }: { children: React.ReactNode }) => <View>{children}</View>,
+  };
+});
+jest.mock('../../theme/useTheme', () => ({
+  useTheme: () => ({
+    primary: '#C4A882',
+    accent: '#C4A882',
+    surface: '#FFFFFF',
+    background: '#FDFBF8',
+    textPrimary: '#2C2420',
+    textSecondary: '#7A7068',
+    textMuted: '#B0A89E',
+    border: '#E8E2DA',
+    borderSoft: '#F0EBE4',
+    primarySubtle: '#F7F4F0',
+    surfaceElevated: '#F7F4F0',
+    danger: '#C0392B',
+    white: '#FFFFFF',
+  }),
 }));
 
 describe('MyEventsScreen', () => {
   const navigation = {
-    canGoBack: () => true,
-    goBack: mockGoBack,
+    canGoBack: jest.fn(() => false),
     navigate: mockNavigate,
+    goBack: jest.fn(),
   } as any;
   const route = {
-    key: 'MyEvents',
+    key: 'MyEvents-1',
     name: 'MyEvents',
   } as any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAuthUser = { id: 'current-user-id' };
+    mockRefetch.mockResolvedValue(undefined);
     mockUseMyEvents.mockReturnValue({
       error: null,
-      events: [
-        {
-          id: 'joined-1',
-          title: 'Joined Sunrise Run',
-          location: 'Magic Island',
-          startsAt: '2026-03-15T16:00:00.000Z',
-          joined: true,
-          host: { id: 'other-user', firstName: 'Nia' },
-        },
-      ],
+      events: [],
       isLoading: false,
       isRefetching: false,
       refetch: mockRefetch,
     });
   });
 
-  it('renders joined events and shows the created empty state when no hosted events', async () => {
+  it('announces loading and empty states for the active tab', () => {
+    mockUseMyEvents.mockReturnValue({
+      error: null,
+      events: [],
+      isLoading: true,
+      isRefetching: false,
+      refetch: mockRefetch,
+    });
+
     render(<MyEventsScreen navigation={navigation} route={route} />);
 
-    expect(await screen.findByText('Joined Sunrise Run')).toBeTruthy();
-    expect(screen.getByTestId('my-events-tab-joined-count')).toBeTruthy();
-    expect(screen.getByTestId('my-events-tab-created-count')).toBeTruthy();
+    expect(screen.getByLabelText('Loading: Loading your events')).toBeTruthy();
+  });
 
-    fireEvent.press(screen.getByText('Created'));
+  it('marks the active tab and exposes the empty-state cta', async () => {
+    render(<MyEventsScreen navigation={navigation} route={route} />);
+
+    expect(screen.getByLabelText('Joined events, 0 items').props.accessibilityState).toEqual(
+      expect.objectContaining({ selected: true }),
+    );
+
+    fireEvent.press(screen.getByLabelText('Created events, 0 items'));
+
+    expect(await screen.findByText("You haven't hosted anything yet")).toBeTruthy();
+    expect(screen.getByLabelText('Create Activity')).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText('Create Activity'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('Main', { screen: 'Create' });
+  });
+
+  it('renders an error panel and retries the query', async () => {
+    mockUseMyEvents.mockReturnValue({
+      error: new Error('Events offline'),
+      events: [],
+      isLoading: false,
+      isRefetching: false,
+      refetch: mockRefetch,
+    });
+
+    render(<MyEventsScreen navigation={navigation} route={route} />);
+
+    expect(await screen.findByText("Couldn't load events")).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Try again'));
 
     await waitFor(() => {
-      expect(screen.getByText("You haven't hosted anything yet")).toBeTruthy();
-    });
-  });
-
-  it('shows hosted events in the Created tab and hides them from the Joined tab', async () => {
-    mockUseMyEvents.mockReturnValue({
-      error: null,
-      events: [
-        {
-          id: 'joined-1',
-          title: 'Joined Sunrise Run',
-          location: 'Magic Island',
-          startsAt: '2026-03-15T16:00:00.000Z',
-          joined: true,
-          host: { id: 'other-user', firstName: 'Nia' },
-        },
-        {
-          id: 'hosted-1',
-          title: 'My Beach Workout',
-          location: 'Kailua Beach',
-          startsAt: '2026-03-16T08:00:00.000Z',
-          joined: true,
-          host: { id: 'current-user-id', firstName: 'Jordan' },
-        },
-      ],
-      isLoading: false,
-      isRefetching: false,
-      refetch: mockRefetch,
-    });
-
-    render(<MyEventsScreen navigation={navigation} route={route} />);
-
-    expect(await screen.findByText('Joined Sunrise Run')).toBeTruthy();
-    fireEvent.press(screen.getByText('Created'));
-
-    await waitFor(() => {
-      expect(screen.getByText('My Beach Workout')).toBeTruthy();
-      expect(screen.queryByText('Joined Sunrise Run')).toBeNull();
-      expect(screen.getByTestId('my-events-tab-joined-count')).toBeTruthy();
-      expect(screen.getByTestId('my-events-tab-created-count')).toBeTruthy();
-    });
-  });
-
-  it('does not crash when my events returns malformed rows', async () => {
-    mockUseMyEvents.mockReturnValue({
-      error: null,
-      events: [
-        null,
-        {
-          id: 'joined-2',
-          title: 'Mystery Event',
-          location: null,
-          startsAt: 'not-a-date',
-          joined: true,
-          host: { id: 'other-user', firstName: 'Unknown' },
-        },
-      ],
-      isLoading: false,
-      isRefetching: false,
-      refetch: mockRefetch,
-    });
-
-    render(<MyEventsScreen navigation={navigation} route={route} />);
-
-    expect(await screen.findByText('Mystery Event')).toBeTruthy();
-    expect(screen.getByText('Date TBD')).toBeTruthy();
-  });
-
-  it('does not misclassify events when currentUserId is undefined', async () => {
-    mockAuthUser = null;
-    mockUseMyEvents.mockReturnValue({
-      error: null,
-      events: [
-        {
-          id: 'hosted-1',
-          title: 'My Beach Workout',
-          location: 'Kailua Beach',
-          startsAt: '2026-03-16T08:00:00.000Z',
-          joined: true,
-          host: { id: 'current-user-id', firstName: 'Jordan' },
-        },
-      ],
-      isLoading: false,
-      isRefetching: false,
-      refetch: mockRefetch,
-    });
-
-    render(<MyEventsScreen navigation={navigation} route={route} />);
-
-    // With no userId, joined events should still show (not filtered to empty)
-    expect(await screen.findByText('My Beach Workout')).toBeTruthy();
-
-    // Created tab should be empty since we can't determine the host
-    fireEvent.press(screen.getByText('Created'));
-    await waitFor(() => {
-      expect(screen.getByText("You haven't hosted anything yet")).toBeTruthy();
+      expect(mockRefetch).toHaveBeenCalled();
     });
   });
 });

@@ -32,6 +32,7 @@ export function ActivitiesStep({ data, goNext, insets, setValue, theme, toggleAr
               accessibilityRole="checkbox"
               accessibilityState={{ checked: selected }}
               accessibilityLabel={act.label}
+              accessibilityHint={selected ? 'Selected' : 'Double tap to toggle'}
             >
               <View style={[styles.activityIconWrap, { backgroundColor: selected ? theme.primarySubtle : theme.surfaceElevated }]}>
                 <AppIcon name={act.icon} size={16} color={selected ? theme.primary : theme.textSecondary} />

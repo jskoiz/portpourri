@@ -71,7 +71,11 @@ describe('ProfileDetailSections', () => {
       />,
     );
 
-    fireEvent.press(screen.getByLabelText('More options'));
+    const menuButton = screen.UNSAFE_getByProps({ accessibilityLabel: 'More options' });
+    fireEvent.press(menuButton);
+    expect(screen.UNSAFE_getByProps({ accessibilityLabel: 'More options' }).props.accessibilityState).toEqual(
+      expect.objectContaining({ expanded: true }),
+    );
     fireEvent.press(screen.getByText('Report'));
 
     expect(onReport).toHaveBeenCalledTimes(1);

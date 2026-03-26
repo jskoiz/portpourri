@@ -33,6 +33,10 @@ Recommended product priorities:
   * Make transient mobile failure UX single-owner so generic API toasts do not overlap with inline retry surfaces.
   * Add request-scoped correlation IDs so discovery, events, push, and realtime logs can be tied together locally during failure triage.
   * Continue retiring ad hoc mobile warning paths outside the normalized API and boundary flows.
+* **UX accessibility and interaction hardening**
+  * Continue the mobile UX/a11y sweep after the current shared-primitive pass.
+  * Prioritize deeper redesign work for auth/onboarding and dense feed/detail surfaces: `LoginScreen`, `SignupScreen`, `OnboardingScreen`, `HomeScreen`, `ExploreScreen`, `CreateScreen`, `MatchesScreen`, `MyEventsScreen`, `EventDetailScreen`, `NotificationsScreen`, and `ProfileDetailScreen`.
+  * Keep Storybook previews and focused interaction/accessibility tests moving with each screen pass.
 
 This file remains a historical roadmap, but if it is updated again, Phase 4 should be organized around event conversion and re-engagement rather than the old "connection update" backlog below.
 
@@ -108,6 +112,7 @@ To reach a fully functional MVP that delivers on the "Connect through movement" 
 *   [ ] **Event conversion**: improve invite/share flows and chat-to-event planning.
 *   [ ] **Trust & profile quality**: completeness, moderation/reporting, verification cues.
 *   [ ] **Settings & retention polish**: account management, privacy controls, and targeted UX refinement.
+*   [ ] **UX/a11y redesign follow-up**: continue the primary-flow sweep with deeper screen-level passes for auth, onboarding, discovery, events, notifications, and profile detail while keeping Storybook/test coverage in the diff.
 
 ---
 

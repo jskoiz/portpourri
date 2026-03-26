@@ -25,6 +25,10 @@ describe('LoginScreen', () => {
 
     expect(await screen.findByText('Email is required.')).toBeTruthy();
     expect(screen.getByText('Password is required.')).toBeTruthy();
+    expect(screen.getByLabelText('Email').props.accessibilityState).toEqual({
+      disabled: false,
+      invalid: true,
+    });
     expect(mockLogin).not.toHaveBeenCalled();
   });
 
@@ -55,5 +59,6 @@ describe('LoginScreen', () => {
     fireEvent.press(screen.getByText('Sign in'));
 
     expect(await screen.findByText('Invalid credentials')).toBeTruthy();
+    expect(screen.getByLabelText('Invalid credentials').props.accessibilityRole).toBe('alert');
   });
 });

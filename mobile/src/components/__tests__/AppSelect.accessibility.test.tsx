@@ -66,7 +66,7 @@ describe('AppSelect accessibility', () => {
       />,
     );
     fireEvent.press(getByLabelText('Time: Morning'));
-    const items = getAllByRole('menuitem');
+    const items = getAllByRole('menuitemradio');
     expect(items).toHaveLength(3);
     // First option is selected
     expect(items[0].props.accessibilityState).toEqual(

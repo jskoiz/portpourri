@@ -51,6 +51,14 @@ describe('ChatHeader', () => {
     expect(baseProps.onOpenQuickActions).toHaveBeenCalledTimes(1);
   });
 
+  it('labels the overflow menu button with a hint for screen readers', () => {
+    render(<ChatHeader {...baseProps} />);
+
+    expect(screen.UNSAFE_getByProps({ accessibilityLabel: 'More options' }).props.accessibilityHint).toBe(
+      'Opens conversation options',
+    );
+  });
+
   it('calls back when the back button is pressed', () => {
     render(<ChatHeader {...baseProps} />);
 

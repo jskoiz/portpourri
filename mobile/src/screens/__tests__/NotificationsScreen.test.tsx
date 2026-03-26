@@ -172,12 +172,43 @@ describe('NotificationsScreen', () => {
   it('loads notifications and marks an item as read', async () => {
     renderScreen();
 
-    const title = screen.getByText('New message');
-    fireEvent.press(title);
+    const row = await screen.findByText('New message');
+    const accessibleRow = screen.UNSAFE_getByProps({
+      accessibilityLabel: 'New message. Meet me for coffee after?',
+    });
+    expect(accessibleRow.props.accessibilityHint).toBe('Opens the notification and marks it as read');
+    expect(accessibleRow.props.accessibilityValue).toEqual({ text: 'Unread' });
+    fireEvent.press(row);
 
     await waitFor(() => {
       expect(mockMarkRead).toHaveBeenCalledWith('notif-1');
     });
+  });
+
+  it('announces loading and empty states', () => {
+    mockUseNotifications.mockReturnValue({
+      ...baseNotificationState,
+      notifications: [],
+      isLoading: true,
+      unreadCount: 0,
+    });
+
+    render(<NotificationsScreen navigation={mockNavigation} route={{ key: 'Notifications-1', name: 'Notifications' } as any} />);
+
+    expect(screen.getByLabelText('Loading: Loading notifications')).toBeTruthy();
+  });
+
+  it('renders the empty state when there are no notifications', () => {
+    mockUseNotifications.mockReturnValue({
+      ...baseNotificationState,
+      notifications: [],
+      unreadCount: 0,
+    });
+
+    render(<NotificationsScreen navigation={mockNavigation} route={{ key: 'Notifications-1', name: 'Notifications' } as any} />);
+
+    expect(screen.getByText('No notifications')).toBeTruthy();
+    expect(screen.getByText("You'll see matches, messages, and event updates here.")).toBeTruthy();
   });
 
   it('navigates match notifications to chat', async () => {
@@ -286,6 +317,33 @@ describe('NotificationsScreen', () => {
         user: { id: 'user-8', firstName: 'Event' },
       });
     });
+  });
+
+  it('announces already-read notification rows differently', async () => {
+    mockUseNotifications.mockReturnValue({
+      ...baseNotificationState,
+      notifications: [
+        {
+          id: 'notif-1',
+          userId: 'user-1',
+          type: 'match_created',
+          title: 'Already read',
+          body: 'You matched earlier',
+          readAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          data: { matchId: 'match-3', withUserId: 'user-4' },
+        },
+      ],
+      unreadCount: 0,
+    });
+
+    render(<NotificationsScreen navigation={mockNavigation} route={{ key: 'Notifications-1', name: 'Notifications' } as any} />);
+
+    const accessibleRow = screen.UNSAFE_getByProps({
+      accessibilityLabel: 'Already read. You matched earlier',
+    });
+    expect(accessibleRow.props.accessibilityHint).toBe('Opens the notification');
+    expect(accessibleRow.props.accessibilityValue).toEqual({ text: 'Read' });
   });
 
   it('navigates like notifications to profile detail', async () => {

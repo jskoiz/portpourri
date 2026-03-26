@@ -48,6 +48,7 @@ export function ProfileDetailHero({
           style={styles.heroImage}
           contentFit="cover"
           accessibilityLabel={`Photo of ${firstName || 'profile'}`}
+          accessibilityRole="image"
         />
       ) : (
         <LinearGradient
@@ -56,6 +57,7 @@ export function ProfileDetailHero({
           end={{ x: 1, y: 1 }}
           style={styles.heroFallback}
           accessibilityLabel={`Avatar for ${firstName || 'profile'}`}
+          accessibilityRole="image"
         >
           <Text
             style={[styles.heroFallbackText, { color: theme.textMuted }]}
@@ -81,13 +83,15 @@ export function ProfileDetailHero({
           onPress={() => setMenuVisible((v) => !v)}
           accessibilityRole="button"
           accessibilityLabel="More options"
+          accessibilityHint={menuVisible ? 'Closes the profile actions menu' : 'Opens profile actions'}
+          accessibilityState={{ expanded: menuVisible }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={styles.overflowButton}
         >
           <AppIcon name="more-vertical" size={18} color={theme.textPrimary} />
         </Pressable>
         {menuVisible && (
-          <Modal transparent animationType="none" visible onRequestClose={dismissMenu}>
+          <Modal transparent animationType="none" visible onRequestClose={dismissMenu} accessibilityViewIsModal>
             <Pressable style={styles.overflowBackdrop} onPress={dismissMenu}>
               <View style={styles.overflowMenu}>
                 <Pressable
@@ -96,7 +100,8 @@ export function ProfileDetailHero({
                     onReport();
                   }}
                   style={styles.overflowMenuItem}
-                  accessibilityRole="menuitem"
+                  accessibilityRole="button"
+                  accessibilityLabel="Report profile"
                 >
                   <AppIcon name="flag" size={16} color={theme.textPrimary} />
                   <Text style={[styles.overflowMenuText, { color: theme.textPrimary }]}>Report</Text>
@@ -107,7 +112,8 @@ export function ProfileDetailHero({
                     onBlock();
                   }}
                   style={styles.overflowMenuItem}
-                  accessibilityRole="menuitem"
+                  accessibilityRole="button"
+                  accessibilityLabel="Block profile"
                 >
                   <AppIcon name="slash" size={16} color={theme.danger} />
                   <Text style={[styles.overflowMenuText, { color: theme.danger }]}>Block</Text>

@@ -33,6 +33,7 @@ export function SocialStep({ data, goNext, insets, setValue, theme }: Onboarding
               accessibilityRole="radio"
               accessibilityState={{ selected }}
               accessibilityLabel={`${opt.label}. ${opt.subtitle}`}
+              accessibilityHint={selected ? 'Selected' : 'Double tap to choose this comfort level'}
             >
               <View style={[styles.socialCardIconWrap, { backgroundColor: selected ? theme.primarySubtle : theme.surfaceElevated }]}>
                 <AppIcon name={opt.icon} size={16} color={selected ? theme.primary : theme.textSecondary} />

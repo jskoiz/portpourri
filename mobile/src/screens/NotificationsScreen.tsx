@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   RefreshControl,
   SectionList,
@@ -28,11 +28,11 @@ import {
 import { resolveNotificationNavigation } from '../features/notifications/notificationNavigation';
 import type { RootStackScreenProps } from '../core/navigation/types';
 
-const NOTIFICATION_REFRESH_INTERVAL_MS = 60_000;
+const FOCUS_REFETCH_INTERVAL_MS = 30_000;
 
 // ─── NotifRow ─────────────────────────────────────────────────────────────────
 
-const NotifRow = memo(function NotifRow({
+const NotifRow = React.memo(function NotifRow({
   notif,
   theme,
   onMarkRead,
@@ -66,10 +66,11 @@ const NotifRow = memo(function NotifRow({
       activeOpacity={0.85}
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${body}`}
-      accessibilityHint={isRead ? 'Already read' : 'Tap to mark as read'}
+      accessibilityHint={isRead ? 'Opens the notification' : 'Opens the notification and marks it as read'}
+      accessibilityValue={{ text: isRead ? 'Read' : 'Unread' }}
     >
       {/* Icon */}
-      <View style={[styles.notifIconWrap, { backgroundColor: color + '20' }]}>
+      <View style={[styles.notifIconWrap, { backgroundColor: color + '20' }]} importantForAccessibility="no">
         <AppIcon name={icon} size={18} color={color} />
       </View>
 
@@ -90,6 +91,7 @@ const NotifRow = memo(function NotifRow({
           activeOpacity={0.6}
           accessibilityRole="button"
           accessibilityLabel="Mark as read"
+          accessibilityHint="Marks this notification as read"
         >
           <AppIcon name="check" size={16} color={color} />
         </TouchableOpacity>
@@ -122,17 +124,28 @@ export default function NotificationsScreen({
   } = useNotifications();
   const errorMessage =
     actionError ?? (error ? normalizeApiError(error).message : null);
-  const lastFocusedAt = useRef(0);
+  const lastFocusRefetchRef = useRef(0);
+  const refetchRef = useRef(refetch);
+  const sections = useMemo(() => buildNotificationSections(notifs), [notifs]);
+  const handleBack = useCallback(() => navigation.goBack(), [navigation]);
+  const handleRetry = useCallback(() => {
+    setActionError(null);
+    void refetchRef.current();
+  }, []);
+
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
 
   useFocusEffect(
     useCallback(() => {
       setActionError(null);
       const now = Date.now();
-      if (now - lastFocusedAt.current >= NOTIFICATION_REFRESH_INTERVAL_MS) {
-        lastFocusedAt.current = now;
-        void refetch();
+      if (now - lastFocusRefetchRef.current >= FOCUS_REFETCH_INTERVAL_MS) {
+        lastFocusRefetchRef.current = now;
+        void refetchRef.current();
       }
-    }, [refetch]),
+    }, []),
   );
 
   const handleMarkRead = useCallback(async (id: string) => {
@@ -152,11 +165,6 @@ export default function NotificationsScreen({
       setActionError(normalizeApiError(err).message);
     }
   }, [markAllRead]);
-
-  const handleRetry = useCallback(() => {
-    setActionError(null);
-    void refetch();
-  }, [refetch]);
 
   const handleNavigate = useCallback((notif: AppNotification) => {
     setActionError(null);
@@ -178,24 +186,17 @@ export default function NotificationsScreen({
 
     navigation.navigate('ProfileDetail', result.target.params);
   }, [navigation]);
-  const sections = useMemo(() => buildNotificationSections(notifs), [notifs]);
-  const renderNotification = useCallback(
-    ({ item }: { item: AppNotification }) => (
-      <NotifRow
-        notif={item}
-        theme={theme}
-        onMarkRead={handleMarkRead}
-        onNavigate={handleNavigate}
-      />
-    ),
-    [handleMarkRead, handleNavigate, theme],
-  );
-  const renderSectionHeader = useCallback(
-    ({ section: { title } }: { section: { title: string } }) => (
-      <Text style={[styles.groupLabel, { color: theme.textMuted }]}>{title}</Text>
-    ),
-    [theme.textMuted],
-  );
+  const renderItem = useCallback(({ item }: { item: AppNotification }) => (
+    <NotifRow
+      notif={item}
+      theme={theme}
+      onMarkRead={handleMarkRead}
+      onNavigate={handleNavigate}
+    />
+  ), [handleMarkRead, handleNavigate, theme]);
+  const renderSectionHeader = useCallback(({ section: { title } }: { section: { title: string } }) => (
+    <Text style={[styles.groupLabel, { color: theme.textMuted }]} accessibilityRole="header">{title}</Text>
+  ), [theme]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -203,7 +204,7 @@ export default function NotificationsScreen({
 
       {/* Header */}
       <View style={styles.header}>
-        <AppBackButton onPress={() => navigation.goBack()} />
+        <AppBackButton onPress={handleBack} />
         <View style={styles.headerCopy}>
           <Text style={[styles.eyebrow, { color: theme.accent }]}>NOTIFICATIONS</Text>
           <Text style={[styles.title, { color: theme.textPrimary }]} accessibilityRole="header">Notifications</Text>
@@ -214,6 +215,7 @@ export default function NotificationsScreen({
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Mark all notifications as read"
+            accessibilityHint="Marks every notification in this list as read"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             style={{ minHeight: 44, justifyContent: 'center' }}
           >
@@ -233,7 +235,7 @@ export default function NotificationsScreen({
           isError
         />
       ) : notifs.length === 0 ? (
-        <View style={styles.emptyState}>
+        <View style={styles.emptyState} accessibilityLiveRegion="polite">
           <View style={[styles.emptyIconWrap, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
             <AppIcon name="bell" size={24} color={theme.primary} />
           </View>
@@ -246,11 +248,11 @@ export default function NotificationsScreen({
         <SectionList
           sections={sections}
           keyExtractor={(item) => item.id}
-          renderItem={renderNotification}
+          renderItem={renderItem}
           renderSectionHeader={renderSectionHeader}
           ListHeaderComponent={
             actionError ? (
-              <View style={styles.routeError}>
+              <View style={styles.routeError} accessibilityRole="alert" accessibilityLiveRegion="assertive">
                 <Text style={[styles.routeErrorText, { color: theme.danger }]}>
                   {actionError}
                 </Text>

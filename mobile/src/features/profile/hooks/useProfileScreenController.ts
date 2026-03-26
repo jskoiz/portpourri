@@ -21,7 +21,6 @@ export function useProfileScreenController() {
 
   const editor = useProfileEditor({
     profile: profileQuery.profile,
-    refetch: profileQuery.refetch,
     updateFitness: profileQuery.updateFitness,
     updateProfile: profileQuery.updateProfile,
   });

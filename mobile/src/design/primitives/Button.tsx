@@ -1,7 +1,8 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  AccessibilityInfo,
   Pressable,
   type StyleProp,
   Text,
@@ -35,13 +36,44 @@ export function Button({
 }) {
   const theme = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
+  const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
   const isDisabled = disabled || loading;
   const isGlass = variant === 'glass' || variant === 'glassProminent';
 
+  useEffect(() => {
+    let mounted = true;
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => {
+        if (mounted) {
+          setReduceMotionEnabled(enabled);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setReduceMotionEnabled(false);
+        }
+      });
+
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', (enabled) => {
+      setReduceMotionEnabled(enabled);
+    });
+
+    return () => {
+      mounted = false;
+      subscription?.remove?.();
+    };
+  }, []);
+
   const handlePressIn = () => {
+    if (reduceMotionEnabled) {
+      return;
+    }
     Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
   };
   const handlePressOut = () => {
+    if (reduceMotionEnabled) {
+      return;
+    }
     Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
   };
 
@@ -98,7 +130,7 @@ export function Button({
   };
 
   const sizeStyle: ViewStyle = size === 'sm'
-    ? { minHeight: 38, paddingHorizontal: 16 }
+    ? { minHeight: 44, paddingHorizontal: 16 }
     : {};
 
   const buttonContent = (
@@ -119,9 +151,10 @@ export function Button({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={isDisabled}
+        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         accessibilityRole="button"
         accessibilityLabel={label}
-        accessibilityState={{ disabled: isDisabled ?? false }}
+        accessibilityState={{ disabled: isDisabled ?? false, busy: loading ?? false }}
         style={({ pressed }) => [{ opacity: isDisabled ? 0.48 : pressed ? 0.85 : 1 }]}
       >
         <Animated.View style={[{ transform: [{ scale }] }, style]}>
@@ -146,9 +179,10 @@ export function Button({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={isDisabled}
+      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled: isDisabled ?? false }}
+      accessibilityState={{ disabled: isDisabled ?? false, busy: loading ?? false }}
       style={({ pressed }) => [{ opacity: isDisabled ? 0.48 : pressed ? 0.88 : 1 }]}
     >
       <Animated.View style={[primitiveStyles.buttonBase, getContainerStyle(), sizeStyle, { transform: [{ scale }] }, style]}>

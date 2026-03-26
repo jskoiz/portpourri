@@ -47,7 +47,6 @@ describe('useProfileEditor', () => {
   it('preserves unsaved fitness draft when basics save but fitness fails', async () => {
     const updateProfile = jest.fn().mockResolvedValue(undefined);
     const updateFitness = jest.fn().mockRejectedValue(new Error('Fitness save failed'));
-    const refetch = jest.fn().mockResolvedValue(undefined);
     const profile = makeProfile();
 
     const { result, rerender } = renderHook<
@@ -57,7 +56,6 @@ describe('useProfileEditor', () => {
       ({ currentProfile }) =>
         useProfileEditor({
           profile: currentProfile as never,
-          refetch,
           updateProfile,
           updateFitness,
         }),
@@ -125,13 +123,11 @@ describe('useProfileEditor', () => {
   it('exits edit mode without mutating when nothing changed', async () => {
     const updateProfile = jest.fn().mockResolvedValue(undefined);
     const updateFitness = jest.fn().mockResolvedValue(undefined);
-    const refetch = jest.fn().mockResolvedValue(undefined);
     const profile = makeProfile();
 
     const { result } = renderHook(() =>
       useProfileEditor({
         profile: profile as never,
-        refetch,
         updateProfile,
         updateFitness,
       }),
@@ -158,7 +154,6 @@ describe('useProfileEditor', () => {
   it('keeps the local draft when profile data changes mid-edit', async () => {
     const updateProfile = jest.fn().mockResolvedValue(undefined);
     const updateFitness = jest.fn().mockResolvedValue(undefined);
-    const refetch = jest.fn().mockResolvedValue(undefined);
     const profile = makeProfile();
 
     const { result, rerender } = renderHook<
@@ -168,7 +163,6 @@ describe('useProfileEditor', () => {
       ({ currentProfile }) =>
         useProfileEditor({
           profile: currentProfile as never,
-          refetch,
           updateProfile,
           updateFitness,
         }),
@@ -207,13 +201,11 @@ describe('useProfileEditor', () => {
   it('treats refresh failure after save as a warning toast instead of an error state', async () => {
     const updateProfile = jest.fn().mockResolvedValue(undefined);
     const updateFitness = jest.fn().mockResolvedValue(undefined);
-    const refetch = jest.fn().mockRejectedValue(new Error('Refresh failed'));
     const profile = makeProfile();
 
     const { result } = renderHook(() =>
       useProfileEditor({
         profile: profile as never,
-        refetch,
         updateProfile,
         updateFitness,
       }),
@@ -252,13 +244,11 @@ describe('useProfileEditor', () => {
   it('clears saved coordinates when the user replaces a selected city with freeform text', async () => {
     const updateProfile = jest.fn().mockResolvedValue(undefined);
     const updateFitness = jest.fn().mockResolvedValue(undefined);
-    const refetch = jest.fn().mockResolvedValue(undefined);
     const profile = makeProfile();
 
     const { result } = renderHook(() =>
       useProfileEditor({
         profile: profile as never,
-        refetch,
         updateProfile,
         updateFitness,
       }),

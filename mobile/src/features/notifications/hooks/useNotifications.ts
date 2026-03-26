@@ -4,6 +4,8 @@ import { notificationsApi } from '../../../services/api';
 import type { AppNotification } from '../../../api/types';
 import { queryKeys } from '../../../lib/query/queryKeys';
 
+const EMPTY_NOTIFICATIONS: AppNotification[] = [];
+
 function getNotificationList() {
   return queryKeys.notifications.list();
 }
@@ -24,7 +26,7 @@ export function useNotifications() {
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: getNotificationList() });
       const previous =
-        queryClient.getQueryData<AppNotification[]>(getNotificationList()) || [];
+        queryClient.getQueryData<AppNotification[]>(getNotificationList()) || EMPTY_NOTIFICATIONS;
 
       queryClient.setQueryData<AppNotification[]>(
         getNotificationList(),
@@ -53,6 +55,9 @@ export function useNotifications() {
           current.map((item) => (item.id === id ? updated : item)),
       );
     },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: getNotificationList() });
+    },
   });
 
   const markAllRead = useMutation({
@@ -60,7 +65,7 @@ export function useNotifications() {
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: getNotificationList() });
       const previous =
-        queryClient.getQueryData<AppNotification[]>(getNotificationList()) || [];
+        queryClient.getQueryData<AppNotification[]>(getNotificationList()) || EMPTY_NOTIFICATIONS;
       const now = new Date().toISOString();
 
       queryClient.setQueryData<AppNotification[]>(
@@ -78,9 +83,12 @@ export function useNotifications() {
         queryClient.setQueryData(getNotificationList(), context.previous);
       }
     },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: getNotificationList() });
+    },
   });
 
-  const notifications = query.data || [];
+  const notifications = query.data ?? EMPTY_NOTIFICATIONS;
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.readAt).length,
     [notifications],

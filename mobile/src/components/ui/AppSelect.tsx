@@ -6,8 +6,10 @@ import {
   StyleSheet,
   Text,
   View,
+  type AccessibilityRole,
   ViewStyle,
 } from 'react-native';
+import { triggerLightImpactHaptic, triggerSelectionHaptic } from '../../lib/interaction/feedback';
 import { useTheme } from '../../theme/useTheme';
 import { lightTheme, radii, spacing, typography } from '../../theme/tokens';
 
@@ -61,7 +63,10 @@ export default function AppSelect({
         accessibilityHint="Double tap to open dropdown"
         accessibilityState={{ expanded: open, disabled: disabled ?? false }}
         disabled={disabled}
-        onPress={() => setOpen((current) => !current)}
+        onPress={() => {
+          void triggerLightImpactHaptic();
+          setOpen((current) => !current);
+        }}
         style={[
           styles.trigger,
           {
@@ -101,9 +106,10 @@ export default function AppSelect({
                   <Pressable
                     key={option.value}
                     accessibilityLabel={option.label}
-                    accessibilityRole="menuitem"
+                    accessibilityRole={'menuitemradio' as AccessibilityRole}
                     accessibilityState={{ selected }}
                     onPress={() => {
+                      void triggerSelectionHaptic();
                       onSelect(option.value);
                       setOpen(false);
                     }}
@@ -188,6 +194,8 @@ const styles = StyleSheet.create({
   option: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   optionText: {
     fontSize: typography.body,

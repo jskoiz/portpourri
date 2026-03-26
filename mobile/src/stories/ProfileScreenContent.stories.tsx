@@ -38,66 +38,55 @@ function ProfileScreenContentStory({
 
   return (
     <ProfileScreenContent
-      account={{
-        deletingAccount: false,
-        onConfirmDeleteAccount: () => undefined,
-        onLogout: () => undefined,
-      }}
-      completeness={{
-        score: 80,
-        missing: [],
-      }}
-      editor={{
-        bio: profile.profile?.bio ?? '',
-        city: profile.profile?.city ?? '',
-        editMode,
-        errorMessage,
-        intensityLevel: profile.fitnessProfile?.intensityLevel ?? 'moderate',
-        intentDating: true,
-        intentFriends: false,
-        intentWorkout: true,
-        isSaving,
-        knownLocationSuggestions: [
-          createLocationSuggestion('Honolulu', 'Oahu', 'curated'),
-          createLocationSuggestion('Kakaako', 'Honolulu neighborhood', 'curated'),
-        ],
-        onCancelEdit: () => undefined,
-        onPrimaryAction: () => undefined,
-        onSelectCitySuggestion: () => undefined,
-        onSetBio: () => undefined,
-        onSetCity: () => undefined,
-        onSetIntensityLevel: () => undefined,
-        onSetIntentDating: () => undefined,
-        onSetIntentFriends: () => undefined,
-        onSetIntentWorkout: () => undefined,
-        onSetPrimaryGoal: () => undefined,
-        onSetSelectedActivities: () => undefined,
-        onSetSelectedSchedule: () => undefined,
-        onSetWeeklyFrequencyBand: () => undefined,
-        primaryGoal: profile.fitnessProfile?.primaryGoal ?? 'connection',
-        selectedActivities: ['Running', 'Yoga', 'Hiking'],
-        selectedSchedule: ['Morning', 'Weekends'],
-        weeklyFrequencyBand: profile.fitnessProfile?.weeklyFrequencyBand ?? '3-4',
-      }}
+      deletingAccount={false}
+      onConfirmDeleteAccount={() => undefined}
+      onLogout={() => undefined}
+      completenessScore={80}
+      completenessMissing={[]}
+      bio={profile.profile?.bio ?? ''}
+      city={profile.profile?.city ?? ''}
+      editMode={editMode}
+      errorMessage={errorMessage}
+      intensityLevel={profile.fitnessProfile?.intensityLevel ?? 'moderate'}
+      intentDating={true}
+      intentFriends={false}
+      intentWorkout={true}
+      isSavingProfile={isSaving}
+      isSavingFitness={false}
+      knownLocationSuggestions={[
+        createLocationSuggestion('Honolulu', 'Oahu', 'curated'),
+        createLocationSuggestion('Kakaako', 'Honolulu neighborhood', 'curated'),
+      ]}
+      onCancelEdit={() => undefined}
+      onSave={() => undefined}
+      onSelectCitySuggestion={() => undefined}
+      onSetBio={() => undefined}
+      onSetCity={() => undefined}
+      onSetIntensityLevel={() => undefined}
+      onSetIntentDating={() => undefined}
+      onSetIntentFriends={() => undefined}
+      onSetIntentWorkout={() => undefined}
+      onSetPrimaryGoal={() => undefined}
+      onSetSelectedActivities={() => undefined}
+      onSetSelectedSchedule={() => undefined}
+      onSetWeeklyFrequencyBand={() => undefined}
+      primaryGoal={profile.fitnessProfile?.primaryGoal ?? 'connection'}
+      selectedActivities={['Running', 'Yoga', 'Hiking']}
+      selectedSchedule={['Morning', 'Weekends']}
+      weeklyFrequencyBand={profile.fitnessProfile?.weeklyFrequencyBand ?? '3-4'}
       isRefetching={false}
       onRefresh={() => undefined}
-      photos={{
-        editingPhotos: Boolean(photoOperation),
-        onDeletePhoto: () => undefined,
-        onMakePrimaryPhoto: () => undefined,
-        onMovePhotoLeft: () => undefined,
-        onMovePhotoRight: () => undefined,
-        onUploadPhoto: () => undefined,
-        photoOperation,
-      }}
+      editingPhotos={Boolean(photoOperation)}
+      onDeletePhoto={() => undefined}
+      onMakePrimaryPhoto={() => undefined}
+      onMovePhotoLeft={() => undefined}
+      onMovePhotoRight={() => undefined}
+      onUploadPhoto={() => undefined}
+      photoOperation={photoOperation}
+      navigation={{ navigate: () => undefined }}
       profile={profile}
-      settings={{
-        hapticsOn: true,
-        onOpenNotifications: () => undefined,
-        onToggleBuildInfo: () => undefined,
-        onToggleHaptics: () => undefined,
-        showBuildInfo,
-      }}
+      onToggleBuildInfo={() => undefined}
+      showBuildInfo={showBuildInfo}
     />
   );
 }

@@ -1,36 +1,12 @@
 import React from 'react';
-import { Image, Pressable, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Pressable, Text, TextInput, View } from 'react-native';
 import type { TextInputProps } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import type { ProfileCompletenessMissingItem, User } from '../../../api/types';
-import { LocationField } from '../../../components/form/LocationField';
-import { SheetSelectField } from '../../../components/form/SheetSelectField';
+import type { UserPhoto } from '../../../api/types';
+import AppIcon from '../../../components/ui/AppIcon';
 import { Button, Card, Chip } from '../../../design/primitives';
-import { getAvatarInitial, getPrimaryPhotoUri } from '../../../lib/profilePhotos';
-import type { LocationSuggestion } from '../../locations/locationSuggestions';
-import type { PhotoOperationState } from '../hooks/usePhotoManager';
 import { profileStyles as styles } from './profile.styles';
-import {
-  ACTIVITY_OPTIONS,
-  INTENSITY_OPTIONS,
-  PRIMARY_GOAL_OPTIONS,
-  SCHEDULE_OPTIONS,
-  WEEKLY_FREQUENCY_OPTIONS,
-} from './profile.helpers';
-import { CompletenessBar } from './CompletenessBar';
-import { PhotoManager } from './ProfilePhotoSection';
-import { ProfileSettingsSection as ProfileSettingsCard } from './ProfileSettingsSection';
-
-export { PhotoManager } from './ProfilePhotoSection';
-
-function Section({ children, eyebrow }: { children: React.ReactNode; eyebrow: string }) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionEyebrow}>{eyebrow}</Text>
-      {children}
-    </View>
-  );
-}
+import type { PhotoOperationState } from '../hooks/usePhotoManager';
+import { getVisibleOrderedPhotos } from '../hooks/profilePhotoHelpers';
 
 export function TagPill({
   color = '#C4A882',
@@ -88,6 +64,8 @@ export function EditableField({
           autoCapitalize={multiline ? 'sentences' : 'none'}
           multiline={multiline}
           textAlignVertical={multiline ? 'top' : 'center'}
+          accessibilityLabel={label}
+          accessibilityHint={multiline ? `Edit ${label.toLowerCase()} details` : `Edit ${label.toLowerCase()}`}
           {...inputProps}
         />
       ) : (
@@ -99,367 +77,207 @@ export function EditableField({
   );
 }
 
-export function ProfileHeroSection({
-  primaryGoal,
-  profile,
+function PhotoActionButton({
+  destructive = false,
+  disabled,
+  icon,
+  label,
+  onPress,
 }: {
-  primaryGoal: string;
-  profile: User;
+  destructive?: boolean;
+  disabled: boolean;
+  icon: string;
+  label: string;
+  onPress: () => void;
 }) {
-  const primaryPhoto = getPrimaryPhotoUri(profile);
+  const iconColor = destructive
+    ? disabled ? 'rgba(201,112,112,0.34)' : '#C97070'
+    : disabled ? 'rgba(0,0,0,0.22)' : '#5C544C';
 
   return (
-    <View style={styles.hero}>
-      <View style={styles.heroPhotoWrap}>
-        {primaryPhoto ? (
-          <Image source={{ uri: primaryPhoto }} style={styles.heroPhoto} accessibilityLabel="Your profile photo" />
-        ) : (
-          <LinearGradient colors={['#C4A882', '#B8A9C4']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroFallback}>
-            <Text style={styles.heroFallbackText}>{getAvatarInitial(profile.firstName)}</Text>
-          </LinearGradient>
-        )}
-        <LinearGradient colors={['transparent', '#FDFBF8']} style={styles.heroOverlay}>
-          <View style={styles.heroCopyCard}>
-            <Text style={styles.heroName} accessibilityRole="header">
-              {profile.firstName}
-              {profile.age ? `, ${profile.age}` : ''}
-            </Text>
-            {primaryGoal ? (
-              <View style={styles.intentBadge}>
-                <Text style={styles.intentBadgeText}>
-                  {PRIMARY_GOAL_OPTIONS.find((option) => option.value === primaryGoal)?.label ?? primaryGoal}
+      <Pressable
+      disabled={disabled}
+      onPress={onPress}
+      hitSlop={8}
+      style={[
+        styles.photoActionButton,
+        destructive ? styles.photoActionButtonDanger : null,
+        disabled ? styles.photoActionButtonDisabled : null,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      accessibilityHint={destructive ? 'Removes this photo from your profile' : `Double tap to ${label.toLowerCase()}`}
+    >
+      <AppIcon name={icon} size={16} color={iconColor} />
+    </Pressable>
+  );
+}
+
+export function PhotoManager({
+  canEdit,
+  isBusy,
+  onDelete,
+  onMakePrimary,
+  onMoveLeft,
+  onMoveRight,
+  onUpload,
+  operation,
+  photos,
+}: {
+  canEdit: boolean;
+  isBusy: boolean;
+  onDelete: (photoId: string) => void;
+  onMakePrimary: (photoId: string) => void;
+  onMoveLeft: (photoId: string) => void;
+  onMoveRight: (photoId: string) => void;
+  onUpload: () => void;
+  operation: PhotoOperationState;
+  photos: UserPhoto[];
+}) {
+  const visiblePhotos = getVisibleOrderedPhotos(photos);
+  const primaryPhoto = visiblePhotos.find((photo) => photo.isPrimary) ?? visiblePhotos[0];
+  const secondaryPhotos = primaryPhoto
+    ? visiblePhotos.filter((photo) => photo.id !== primaryPhoto.id)
+    : [];
+  const uploadLabel = operation?.type === 'upload'
+    ? operation.label
+    : 'Upload a square photo. You can crop before it uploads.';
+  const clampedProgress = operation?.type === 'upload'
+    ? Math.round(Math.min(Math.max(operation.progress, 0), 100))
+    : 0;
+  const renderPhotoCard = (
+    photo: UserPhoto,
+    orderedIndex: number,
+    isFeaturedCard = false,
+  ) => {
+    const isPrimaryPhoto = photo.isPrimary;
+    const isActive = operation?.photoId === photo.id;
+    const slotLabel = isPrimaryPhoto ? 'Primary photo' : `Photo ${orderedIndex + 1}`;
+    const slotDescription = isPrimaryPhoto
+      ? 'Shows first in your profile'
+      : 'Order decides what shows next';
+
+    return (
+      <View
+        key={photo.id}
+        style={[
+          styles.photoGalleryCardShell,
+          isFeaturedCard
+            ? styles.photoGalleryCardShellPrimary
+            : styles.photoGalleryCardShellSecondary,
+          isActive ? styles.photoCardActive : null,
+        ]}
+      >
+        <View style={styles.photoGalleryCard}>
+          <View style={styles.photoMedia}>
+            <Image
+              source={{ uri: photo.storageKey }}
+              style={[
+                styles.photoGalleryImage,
+                isFeaturedCard
+                  ? styles.photoGalleryImagePrimary
+                  : styles.photoGalleryImageSecondary,
+              ]}
+            />
+            <View style={styles.photoBadgeRow}>
+              <View style={[styles.photoSlotPill, isPrimaryPhoto ? styles.photoPrimaryPill : null]}>
+                <Text style={[styles.photoSlotPillText, isPrimaryPhoto ? styles.photoPrimaryPillText : null]}>
+                  {isPrimaryPhoto ? 'Primary' : `#${orderedIndex + 1}`}
                 </Text>
               </View>
-            ) : null}
-            <Text style={styles.heroLocation}>{profile.profile?.city || 'Location not set'}</Text>
+            </View>
           </View>
-        </LinearGradient>
+          <View style={styles.photoMeta}>
+            <View style={styles.photoHeaderMeta}>
+              <Text style={styles.photoLabel}>{slotLabel}</Text>
+              <Text style={styles.photoSlotText}>{slotDescription}</Text>
+            </View>
+            {isActive ? (
+              <View style={styles.photoInlineStatus}>
+                <AppIcon
+                  name={operation.type === 'delete' ? 'trash-2' : operation.type === 'reorder' ? 'move' : 'star'}
+                  size={14}
+                  color="#C4A882"
+                />
+                <Text style={styles.photoInlineStatusText}>{operation.label}</Text>
+              </View>
+            ) : null}
+            {canEdit ? (
+              <View style={styles.photoActionsCompact}>
+                <PhotoActionButton
+                  disabled={isBusy || orderedIndex === 0}
+                  icon="arrow-left"
+                  label="Move photo earlier"
+                  onPress={() => onMoveLeft(photo.id)}
+                />
+                <PhotoActionButton
+                  disabled={isBusy || orderedIndex === visiblePhotos.length - 1}
+                  icon="arrow-right"
+                  label="Move photo later"
+                  onPress={() => onMoveRight(photo.id)}
+                />
+                {!isPrimaryPhoto ? (
+                  <PhotoActionButton
+                    disabled={isBusy}
+                    icon="star"
+                    label="Make primary photo"
+                    onPress={() => onMakePrimary(photo.id)}
+                  />
+                ) : null}
+                <PhotoActionButton
+                  destructive
+                  disabled={isBusy}
+                  icon="trash-2"
+                  label="Remove photo"
+                  onPress={() => onDelete(photo.id)}
+                />
+              </View>
+            ) : null}
+          </View>
+        </View>
       </View>
-    </View>
-  );
-}
+    );
+  };
 
-export function ProfileHeaderSection({
-  completenessMissing,
-  completenessScore,
-  editMode,
-  errorMessage,
-  isSaving,
-  onCancelEdit,
-  onPrimaryAction,
-}: {
-  completenessMissing: ProfileCompletenessMissingItem[];
-  completenessScore: number;
-  editMode: boolean;
-  errorMessage: string | null;
-  isSaving: boolean;
-  onCancelEdit: () => void;
-  onPrimaryAction: () => void;
-}) {
   return (
-    <>
-      <CompletenessBar
-        score={completenessScore}
-        missing={completenessMissing}
-        onPressMissing={() => {
-          if (!editMode) onPrimaryAction();
-        }}
-      />
-
-      <View style={styles.editBar}>
-        <Pressable
-          onPress={onPrimaryAction}
-          disabled={isSaving}
-          style={[styles.editBtnWrap, editMode ? styles.editBtnActive : null]}
-          accessibilityRole="button"
-          accessibilityLabel={editMode ? 'Save profile' : 'Edit profile'}
-          accessibilityState={{ disabled: isSaving }}
-        >
-          <Text style={[styles.editBtnText, editMode ? styles.editBtnTextActive : null]}>
-            {isSaving ? 'Saving...' : editMode ? 'Save' : 'Edit Profile'}
-          </Text>
-        </Pressable>
-        {editMode ? (
-          <Pressable onPress={onCancelEdit} style={styles.cancelBtn}>
-            <Text style={styles.cancelBtnText}>Cancel</Text>
-          </Pressable>
+    <View style={styles.photoManager}>
+      <View style={styles.photoIntro}>
+        <Text style={styles.photoIntroTitle} accessibilityRole="header">Lead with a clear first photo</Text>
+        <Text style={styles.photoIntroBody}>{uploadLabel}</Text>
+        {operation?.type === 'upload' ? (
+          <View style={styles.photoProgressTrack} accessibilityRole="progressbar" accessibilityLabel="Photo upload progress" accessibilityValue={{ min: 0, max: 100, now: clampedProgress, text: `${clampedProgress}%` }}>
+            <View style={[styles.photoProgressFill, { width: `${Math.max(clampedProgress, 6)}%` }]} />
+          </View>
         ) : null}
       </View>
-
-      {errorMessage ? (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{errorMessage}</Text>
-        </View>
-      ) : null}
-    </>
-  );
-}
-
-export function ProfileBasicsSection({
-  bio,
-  city,
-  editMode,
-  knownLocationSuggestions,
-  onSelectCitySuggestion,
-  onSetBio,
-  onSetCity,
-}: {
-  bio: string;
-  city: string;
-  editMode: boolean;
-  knownLocationSuggestions: LocationSuggestion[];
-  onSelectCitySuggestion: (suggestion: LocationSuggestion) => void;
-  onSetBio: (value: string) => void;
-  onSetCity: (value: string) => void;
-}) {
-  return (
-    <Section eyebrow="Profile basics">
-      <Card style={styles.fieldsCard}>
-        {editMode ? (
-          <LocationField
-            kind="city"
-            label="City"
-            knownSuggestions={knownLocationSuggestions}
-            value={city}
-            onChangeText={onSetCity}
-            onSelectSuggestion={onSelectCitySuggestion}
-            placeholder="Honolulu"
-            sheetTitle="Choose your city"
-            sheetSubtitle="Use recent places, known BRDG spots, or curated city suggestions."
-          />
+      <View style={styles.photoGrid}>
+        {visiblePhotos.length === 0 ? (
+          <Card style={styles.photoEmptyCard}>
+            <Text style={styles.photoEmptyTitle}>No photos yet</Text>
+            <Text style={styles.photoEmptyBody}>Add one strong headshot first, then use the rest to show movement and context.</Text>
+          </Card>
         ) : (
-          <EditableField label="City" value={city} onChangeText={onSetCity} placeholder="Honolulu" editMode={false} />
+          <>
+            {primaryPhoto ? renderPhotoCard(primaryPhoto, visiblePhotos.indexOf(primaryPhoto), true) : null}
+            {secondaryPhotos.length > 0 ? (
+              <View style={styles.photoSecondaryGrid}>
+                {secondaryPhotos.map((photo) =>
+                  renderPhotoCard(photo, visiblePhotos.indexOf(photo)),
+                )}
+              </View>
+            ) : null}
+          </>
         )}
-        <View style={styles.fieldDivider} />
-        <EditableField
-          label="Bio"
-          value={bio}
-          onChangeText={onSetBio}
-          placeholder="Write a short bio"
-          editMode={editMode}
-          multiline
-          inputProps={{
-            autoCorrect: true,
-            maxLength: 280,
-            returnKeyType: 'done',
-            scrollEnabled: false,
-          }}
+      </View>
+      {canEdit ? (
+        <Button
+          label={operation?.type === 'upload' ? operation.label : isBusy ? 'Working…' : 'Add photo'}
+          onPress={onUpload}
+          disabled={isBusy}
+          variant="secondary"
         />
-      </Card>
-    </Section>
-  );
-}
-
-export function ProfileIntentSection({
-  editMode,
-  intentDating,
-  intentFriends,
-  intentWorkout,
-  onSetIntentDating,
-  onSetIntentFriends,
-  onSetIntentWorkout,
-}: {
-  editMode: boolean;
-  intentDating: boolean;
-  intentFriends: boolean;
-  intentWorkout: boolean;
-  onSetIntentDating: (value: boolean) => void;
-  onSetIntentFriends: (value: boolean) => void;
-  onSetIntentWorkout: (value: boolean) => void;
-}) {
-  return (
-    <Section eyebrow="Intent">
-      <View style={styles.tagCloud}>
-        <TagPill label="Dating" selected={intentDating} onPress={() => onSetIntentDating(!intentDating)} color="#D4A59A" interactive={editMode} />
-        <TagPill label="Workout" selected={intentWorkout} onPress={() => onSetIntentWorkout(!intentWorkout)} color="#C4A882" interactive={editMode} />
-        <TagPill label="Friends" selected={intentFriends} onPress={() => onSetIntentFriends(!intentFriends)} color="#8BAA7A" interactive={editMode} />
-      </View>
-    </Section>
-  );
-}
-
-export function ProfilePhotosSection(props: React.ComponentProps<typeof PhotoManager>) {
-  return (
-    <Section eyebrow="Photos">
-      <PhotoManager {...props} />
-    </Section>
-  );
-}
-
-export function ProfileMovementSection({
-  editMode,
-  onSetSelectedActivities,
-  selectedActivities,
-}: {
-  editMode: boolean;
-  onSetSelectedActivities: (value: string) => void;
-  selectedActivities: string[];
-}) {
-  return (
-    <Section eyebrow="Movement Identity">
-      <View style={styles.tagCloud}>
-        {ACTIVITY_OPTIONS.map(({ label, value, color }) => (
-          <TagPill
-            key={value}
-            label={label}
-            selected={selectedActivities.includes(value)}
-            onPress={() => editMode && onSetSelectedActivities(value)}
-            color={color}
-            interactive={editMode}
-          />
-        ))}
-      </View>
-    </Section>
-  );
-}
-
-export function ProfileFitnessSection({
-  editMode,
-  intensityLevel,
-  onSetIntensityLevel,
-  onSetPrimaryGoal,
-  onSetWeeklyFrequencyBand,
-  primaryGoal,
-  weeklyFrequencyBand,
-}: {
-  editMode: boolean;
-  intensityLevel: string;
-  onSetIntensityLevel: (value: string) => void;
-  onSetPrimaryGoal: (value: string) => void;
-  onSetWeeklyFrequencyBand: (value: string) => void;
-  primaryGoal: string;
-  weeklyFrequencyBand: string;
-}) {
-  return (
-    <Section eyebrow="Fitness Profile">
-      <Card style={styles.fieldsCard}>
-        {editMode ? (
-          <SheetSelectField
-            label="Intensity"
-            placeholder="Choose an intensity"
-            options={INTENSITY_OPTIONS}
-            value={intensityLevel}
-            onSelect={onSetIntensityLevel}
-            sheetTitle="Choose your training intensity"
-          />
-        ) : (
-          <EditableField label="Intensity" value={intensityLevel} onChangeText={onSetIntensityLevel} placeholder="moderate" editMode={false} />
-        )}
-        <View style={styles.fieldDivider} />
-        {editMode ? (
-          <SheetSelectField
-            label="Days / week"
-            placeholder="Choose your weekly rhythm"
-            options={WEEKLY_FREQUENCY_OPTIONS}
-            value={weeklyFrequencyBand}
-            onSelect={onSetWeeklyFrequencyBand}
-            sheetTitle="How often do you move?"
-          />
-        ) : (
-          <EditableField label="Days / week" value={weeklyFrequencyBand} onChangeText={onSetWeeklyFrequencyBand} placeholder="3-4" editMode={false} />
-        )}
-        <View style={styles.fieldDivider} />
-        {editMode ? (
-          <SheetSelectField
-            label="Primary goal"
-            placeholder="Choose your primary goal"
-            options={PRIMARY_GOAL_OPTIONS}
-            value={primaryGoal}
-            onSelect={onSetPrimaryGoal}
-            sheetTitle="Choose your primary goal"
-          />
-        ) : (
-          <EditableField label="Primary goal" value={primaryGoal} onChangeText={onSetPrimaryGoal} placeholder="health" editMode={false} />
-        )}
-      </Card>
-    </Section>
-  );
-}
-
-export function ProfileScheduleSection({
-  editMode,
-  onSetSelectedSchedule,
-  selectedSchedule,
-}: {
-  editMode: boolean;
-  onSetSelectedSchedule: (value: string) => void;
-  selectedSchedule: string[];
-}) {
-  return (
-    <Section eyebrow="Schedule">
-      <View style={styles.tagCloud}>
-        {SCHEDULE_OPTIONS.map((tag) => (
-          <TagPill
-            key={tag}
-            label={tag}
-            selected={selectedSchedule.includes(tag)}
-            onPress={() => editMode && onSetSelectedSchedule(tag)}
-            color="#8BAA7A"
-            interactive={editMode}
-          />
-        ))}
-      </View>
-    </Section>
-  );
-}
-
-export function ProfileSettingsSection({
-  buildRows,
-  hapticsOn,
-  onOpenNotifications,
-  onToggleBuildInfo,
-  onToggleHaptics,
-  showBuildInfo,
-}: {
-  buildRows: Array<{ label: string; value: string }>;
-  hapticsOn: boolean;
-  onOpenNotifications: () => void;
-  onToggleBuildInfo: () => void;
-  onToggleHaptics: (value: boolean) => void;
-  showBuildInfo: boolean;
-}) {
-  return (
-    <Section eyebrow="Settings">
-      <ProfileSettingsCard
-        buildRows={buildRows}
-        hapticsOn={hapticsOn}
-        onOpenNotifications={onOpenNotifications}
-        onToggleBuildInfo={onToggleBuildInfo}
-        onToggleHaptics={onToggleHaptics}
-        showBuildInfo={showBuildInfo}
-      />
-    </Section>
-  );
-}
-
-export function ProfileDangerSection({
-  deletingAccount,
-  onConfirmDeleteAccount,
-  onLogout,
-}: {
-  deletingAccount: boolean;
-  onConfirmDeleteAccount: () => void;
-  onLogout: () => void;
-}) {
-  return (
-    <>
-      <Section eyebrow="Account deletion">
-        <Card style={styles.dangerCard}>
-          <Text style={styles.dangerTitle}>Delete your account</Text>
-          <Text style={styles.dangerBody}>This permanently deletes your profile and all data.</Text>
-          <Button label={deletingAccount ? 'Deleting...' : 'Delete account'} onPress={onConfirmDeleteAccount} disabled={deletingAccount} variant="danger" style={styles.deleteAccountBtn} />
-        </Card>
-      </Section>
-
-      <TouchableOpacity
-        onPress={onLogout}
-        style={[styles.logoutBtn, { minHeight: 48 }]}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel="Log out"
-      >
-        <Text style={styles.logoutText}>Log out</Text>
-      </TouchableOpacity>
-    </>
+      ) : null}
+    </View>
   );
 }

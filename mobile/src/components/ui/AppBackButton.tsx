@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
 import { GlassView } from '../../design/primitives/GlassView';
+import { triggerLightImpactHaptic } from '../../lib/interaction/feedback';
 import { lightTheme } from '../../theme/tokens';
 
 interface AppBackButtonProps {
@@ -13,7 +14,10 @@ interface AppBackButtonProps {
 export default function AppBackButton({ label, onPress, disabled, style }: AppBackButtonProps) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        void triggerLightImpactHaptic();
+        onPress();
+      }}
       disabled={disabled}
       style={({ pressed }) => [
         {
@@ -24,7 +28,8 @@ export default function AppBackButton({ label, onPress, disabled, style }: AppBa
       testID="back-button"
       accessibilityRole="button"
       accessibilityLabel={label ?? 'Back'}
-      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      accessibilityState={{ disabled: disabled ?? false }}
+      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
     >
       <GlassView tier="thin" borderRadius={20} style={styles.button}>
         <Text style={styles.arrow}>←</Text>

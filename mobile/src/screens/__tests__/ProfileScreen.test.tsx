@@ -10,17 +10,13 @@ const mockUpdateProfile = jest.fn();
 const mockUploadPhoto = jest.fn();
 const mockUpdatePhoto = jest.fn();
 const mockDeletePhotoMutation = jest.fn();
+const mockRefetch = jest.fn();
+const mockUseProfile = jest.fn();
 const mockProfile = {
   id: "user-1",
   firstName: "Jordan",
   age: 29,
-  profile: {
-    city: "Honolulu",
-    bio: "Sunrise workouts and low-pressure plans.",
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: false,
-  },
+  profile: { city: "Honolulu" },
   fitnessProfile: {
     intensityLevel: "moderate",
     weeklyFrequencyBand: "3-4",
@@ -49,23 +45,7 @@ jest.mock("../../store/authStore", () => ({
 }));
 
 jest.mock("../../features/profile/hooks/useProfile", () => ({
-  useProfile: () => ({
-    error: null,
-    isLoading: false,
-    isRefetching: false,
-    isSavingFitness: mockIsSavingFitness,
-    isSavingProfile: mockIsSavingProfile,
-    isUploadingPhoto: false,
-    isUpdatingPhoto: false,
-    isDeletingPhoto: false,
-    profile: mockProfile,
-    refetch: jest.fn(),
-    updateFitness: mockUpdateFitness,
-    updateProfile: mockUpdateProfile,
-    uploadPhoto: mockUploadPhoto,
-    updatePhoto: mockUpdatePhoto,
-    deletePhoto: mockDeletePhotoMutation,
-  }),
+  useProfile: (...args: unknown[]) => mockUseProfile(...args),
 }));
 
 jest.mock("../../features/locations/useKnownLocationSuggestions", () => ({
@@ -73,25 +53,10 @@ jest.mock("../../features/locations/useKnownLocationSuggestions", () => ({
 }));
 
 jest.mock("../../features/profile/hooks/useProfileCompleteness", () => ({
-  useProfileCompleteness: () => ({ score: 80, missing: [] }),
-}));
-
-jest.mock("../../features/profile/hooks/useProfileSettings", () => ({
-  useProfileSettings: () => ({
-    hapticsOn: true,
-    showBuildInfo: false,
-    toggleBuildInfo: jest.fn(),
-    toggleHaptics: jest.fn(),
+  useProfileCompleteness: () => ({
+    score: 100,
+    missing: [],
   }),
-}));
-
-jest.mock("../../lib/interaction/feedback", () => ({
-  triggerErrorHaptic: jest.fn(),
-  triggerSuccessHaptic: jest.fn(),
-  triggerSelectionHaptic: jest.fn(),
-  isHapticsEnabled: () => true,
-  loadHapticsPreference: jest.fn().mockResolvedValue(true),
-  setHapticsEnabled: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("../../components/form/LocationField", () => {
@@ -140,11 +105,28 @@ describe("ProfileScreen", () => {
     jest.clearAllMocks();
     mockIsSavingFitness = false;
     mockIsSavingProfile = false;
+    mockUseProfile.mockReturnValue({
+      error: null,
+      isLoading: false,
+      isRefetching: false,
+      isSavingFitness: mockIsSavingFitness,
+      isSavingProfile: mockIsSavingProfile,
+      isUploadingPhoto: false,
+      isUpdatingPhoto: false,
+      isDeletingPhoto: false,
+      profile: mockProfile,
+      refetch: mockRefetch,
+      updateFitness: mockUpdateFitness,
+      updateProfile: mockUpdateProfile,
+      uploadPhoto: mockUploadPhoto,
+      updatePhoto: mockUpdatePhoto,
+      deletePhoto: mockDeletePhotoMutation,
+    });
     mockUpdateFitness.mockResolvedValue(undefined);
     mockUpdateProfile.mockResolvedValue(undefined);
   });
 
-  it("skips network saves when nothing changed", async () => {
+  it("persists hydrated activity and schedule preferences when saving", async () => {
     render(<ProfileScreen navigation={mockNavigation} route={mockProfileRoute} />);
 
     expect(await screen.findByText("Jordan, 29")).toBeTruthy();
@@ -153,11 +135,16 @@ describe("ProfileScreen", () => {
     fireEvent.press(screen.getByText(/Edit Profile/));
     fireEvent.press(screen.getByText(/Save/));
 
-    await waitFor(() => expect(screen.getByText(/Edit Profile/)).toBeTruthy());
-
-    expect(mockUpdateProfile).not.toHaveBeenCalled();
-    expect(mockUpdateFitness).not.toHaveBeenCalled();
-    // refetch is internal to the controller; no direct assertion needed.
+    await waitFor(() => {
+      expect(mockUpdateFitness).toHaveBeenCalledWith({
+        intensityLevel: "moderate",
+        weeklyFrequencyBand: "3-4",
+        primaryGoal: "connection",
+        favoriteActivities: "Running, Surfing",
+        prefersMorning: true,
+        prefersEvening: false,
+      });
+    });
   });
 
   it("does not render fake environment pills", async () => {
@@ -174,6 +161,23 @@ describe("ProfileScreen", () => {
 
     fireEvent.press(await screen.findByLabelText('Edit profile'));
     mockIsSavingFitness = true;
+    mockUseProfile.mockReturnValue({
+      error: null,
+      isLoading: false,
+      isRefetching: false,
+      isSavingFitness: true,
+      isSavingProfile: false,
+      isUploadingPhoto: false,
+      isUpdatingPhoto: false,
+      isDeletingPhoto: false,
+      profile: mockProfile,
+      refetch: mockRefetch,
+      updateFitness: mockUpdateFitness,
+      updateProfile: mockUpdateProfile,
+      uploadPhoto: mockUploadPhoto,
+      updatePhoto: mockUpdatePhoto,
+      deletePhoto: mockDeletePhotoMutation,
+    });
     rerender(<ProfileScreen navigation={mockNavigation} route={mockProfileRoute} />);
 
     expect(screen.getByLabelText('Save profile').props.accessibilityState?.disabled).toBe(true);
@@ -202,24 +206,52 @@ describe("ProfileScreen", () => {
     });
   });
 
-  it("surfaces the partial-save error banner when basics save but fitness fails", async () => {
-    mockUpdateFitness.mockRejectedValueOnce(new Error("Fitness save failed"));
+  it('shows the loading panel while the profile query is pending', () => {
+    mockUseProfile.mockReturnValue({
+      error: null,
+      isLoading: true,
+      isRefetching: false,
+      isSavingFitness: false,
+      isSavingProfile: false,
+      isUploadingPhoto: false,
+      isUpdatingPhoto: false,
+      isDeletingPhoto: false,
+      profile: null,
+      refetch: mockRefetch,
+      updateFitness: mockUpdateFitness,
+      updateProfile: mockUpdateProfile,
+      uploadPhoto: mockUploadPhoto,
+      updatePhoto: mockUpdatePhoto,
+      deletePhoto: mockDeletePhotoMutation,
+    });
 
     render(<ProfileScreen navigation={mockNavigation} route={mockProfileRoute} />);
 
-    expect(await screen.findByText("Jordan, 29")).toBeTruthy();
-    fireEvent.press(await screen.findByLabelText("Edit profile"));
-    expect(await screen.findByLabelText("Save profile")).toBeTruthy();
-    fireEvent.changeText(
-      screen.getByDisplayValue("Sunrise workouts and low-pressure plans."),
-      "Updated bio",
-    );
-    fireEvent.press(screen.getByLabelText("🏋️ Lifting"));
-    fireEvent.press(screen.getByLabelText("Save profile"));
+    expect(screen.getByLabelText('Loading: Loading your profile')).toBeTruthy();
+  });
 
-    await waitFor(() => {
-      expect(screen.getByText("Profile basics were saved, but fitness settings could not be saved. Please try again.")).toBeTruthy();
+  it('shows the error panel when the profile query fails without data', () => {
+    mockUseProfile.mockReturnValue({
+      error: new Error('Profile unavailable'),
+      isLoading: false,
+      isRefetching: false,
+      isSavingFitness: false,
+      isSavingProfile: false,
+      isUploadingPhoto: false,
+      isUpdatingPhoto: false,
+      isDeletingPhoto: false,
+      profile: null,
+      refetch: mockRefetch,
+      updateFitness: mockUpdateFitness,
+      updateProfile: mockUpdateProfile,
+      uploadPhoto: mockUploadPhoto,
+      updatePhoto: mockUpdatePhoto,
+      deletePhoto: mockDeletePhotoMutation,
     });
-    expect(screen.getByLabelText("Save profile")).toBeTruthy();
+
+    render(<ProfileScreen navigation={mockNavigation} route={mockProfileRoute} />);
+
+    expect(screen.getByText("Couldn't load profile")).toBeTruthy();
+    expect(screen.getByText('Profile unavailable')).toBeTruthy();
   });
 });

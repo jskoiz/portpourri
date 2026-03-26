@@ -45,6 +45,11 @@ describe('ChatComposer', () => {
     fireEvent.press(screen.getByLabelText('Send message'));
     expect(onSend).not.toHaveBeenCalled();
 
+    expect(screen.getByLabelText('Send message').props.accessibilityState).toEqual(
+      expect.objectContaining({ disabled: true }),
+    );
+    expect(screen.getByLabelText('Message input').props.accessibilityHint).toBe('Type your message here');
+
     fireEvent.changeText(screen.getByLabelText('Message input'), 'See you at the trail?');
     expect(onChangeMessage).toHaveBeenCalledWith('See you at the trail?');
   });
@@ -65,6 +70,9 @@ describe('ChatComposer', () => {
 
     fireEvent.press(screen.getByLabelText('Send message'));
 
+    expect(screen.getByLabelText('Send message').props.accessibilityState).toEqual(
+      expect.objectContaining({ disabled: false }),
+    );
     expect(onSend).toHaveBeenCalledTimes(1);
   });
 });

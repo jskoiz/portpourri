@@ -36,6 +36,7 @@ export function FrequencyStep({ data, goNext, insets, setValue, theme }: Onboard
               accessibilityRole="radio"
               accessibilityState={{ selected }}
               accessibilityLabel={`${opt.label} per week. ${opt.subtitle}`}
+              accessibilityHint={selected ? 'Selected' : 'Double tap to choose this training rhythm'}
             >
               <Text style={[styles.largeCardLabel, { color: selected ? theme.primary : theme.textPrimary }]}>
                 {opt.label}

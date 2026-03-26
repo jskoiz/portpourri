@@ -13,13 +13,13 @@ npm run feature:new -- --name "Example Feature"
 
 ## Working Rules
 
-- Start visual work in Storybook. Use the seeded app runtime only when navigation, auth, persistence, or server data is part of the change.
+- Start visual or accessibility-sensitive UI work in Storybook. Use the seeded app runtime only when navigation, auth, persistence, or server data is part of the change.
 - For iOS simulator validation, prefer the installed dev-client loop (`npm run qa:ios` / `npm run qa:ios:reset`) and rebuild with `npm run ios:install` only when native code or app config changed. The scripts choose the latest available iPhone simulator unless `IOS_SIMULATOR_NAME` is set.
 - Screens should not import the raw API client directly. Server reads and mutations belong in feature hooks or service adapters.
 - Keep the mobile dependency direction legible: `foundation -> data -> shared-ui -> feature -> screen -> app-shell`.
 - Keep environment access centralized in [`src/config/env.ts`](src/config/env.ts).
 - Reusable UI changes under `src/components`, `src/design`, or `src/features/**/components` should ship with a Storybook update in the same diff unless the PR explains why Storybook is the wrong surface.
-- Add or update tests when component behavior changes, not just visual styling.
+- Add or update tests when component behavior or accessibility semantics change, not just visual styling.
 
 ## References
 

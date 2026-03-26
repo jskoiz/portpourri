@@ -32,6 +32,7 @@ export function EnvironmentStep({ data, goNext, insets, setValue, theme, toggleA
               accessibilityRole="checkbox"
               accessibilityState={{ checked: selected }}
               accessibilityLabel={env.label}
+              accessibilityHint={selected ? 'Selected' : 'Double tap to toggle'}
             >
               <View style={[styles.activityIconWrap, { backgroundColor: selected ? theme.accentSubtle : theme.surfaceElevated }]}>
                 <AppIcon name={env.icon} size={16} color={selected ? theme.accent : theme.textSecondary} />

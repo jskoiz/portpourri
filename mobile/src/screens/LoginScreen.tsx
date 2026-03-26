@@ -41,7 +41,7 @@ export function LoginScreenView({
         <Text style={[styles.eyebrow, { color: theme.accent }]}>BRDG</Text>
       </GlassView>
       <Text style={styles.wordmark}>BRDG</Text>
-      <Text style={[styles.headline, { color: theme.textPrimary }]}>
+      <Text style={[styles.headline, { color: theme.textPrimary }]} accessibilityRole="header">
         Connect through movement.
       </Text>
       <Text style={[styles.tagline, { color: theme.textMuted }]}>
@@ -66,7 +66,7 @@ export function LoginScreenView({
       card={(
         <GlassView tier="frosted" borderRadius={radii.xxl} specularHighlight style={styles.formCard}>
           <Text style={[styles.formEyebrow, { color: theme.textMuted }]}>SIGN IN</Text>
-          <Text style={[styles.formTitle, { color: theme.textPrimary }]}>Welcome back</Text>
+          <Text style={[styles.formTitle, { color: theme.textPrimary }]} accessibilityRole="header">Welcome back</Text>
           <ControlledInputField
             control={control}
             name="email"
@@ -106,7 +106,12 @@ export function LoginScreenView({
           />
 
           {submitError ? (
-            <View style={[styles.errorBanner, { backgroundColor: theme.dangerSubtle, borderColor: theme.danger }]}>
+            <View
+              style={[styles.errorBanner, { backgroundColor: theme.dangerSubtle, borderColor: theme.danger }]}
+              accessibilityRole="alert"
+              accessibilityLiveRegion="assertive"
+              accessibilityLabel={submitError}
+            >
               <Text style={[styles.errorBannerText, { color: theme.danger }]}>{submitError}</Text>
             </View>
           ) : null}

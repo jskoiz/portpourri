@@ -22,6 +22,13 @@ describe('CompletenessBar', () => {
     );
 
     expect(getByTestId('completeness-bar')).toBeTruthy();
+    expect(getByTestId('completeness-bar').props.accessibilityRole).toBe('progressbar');
+    expect(getByTestId('completeness-bar').props.accessibilityValue).toEqual({
+      min: 0,
+      max: 100,
+      now: 0,
+      text: '0% complete',
+    });
     expect(getByText('0%')).toBeTruthy();
     expect(getByText('Complete your profile')).toBeTruthy();
     expect(getByText('Add a bio')).toBeTruthy();

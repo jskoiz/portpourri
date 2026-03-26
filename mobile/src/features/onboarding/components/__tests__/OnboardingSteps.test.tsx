@@ -53,6 +53,7 @@ describe('onboarding steps', () => {
       />,
     );
 
+    expect(screen.getByLabelText('Training Partner. Find your perfect training companion').props.accessibilityHint).toBe('Double tap to choose this option');
     fireEvent.press(screen.getByLabelText('Training Partner. Find your perfect training companion'));
 
     expect(setValue).toHaveBeenCalledWith('intent', 'workout');
@@ -75,7 +76,9 @@ describe('onboarding steps', () => {
     fireEvent.press(screen.getByLabelText('Lifting'));
 
     expect(setValue).toHaveBeenCalledWith('activities', ['lifting']);
-    expect(screen.getByLabelText('Continue').props.accessibilityState).toEqual({ disabled: true });
+    expect(screen.getByLabelText('Continue').props.accessibilityState).toEqual(
+      expect.objectContaining({ disabled: true }),
+    );
   });
 
   it('syncs the frequency fields from a single choice', () => {
@@ -116,7 +119,9 @@ describe('onboarding steps', () => {
     fireEvent.press(screen.getByLabelText('Small Group. 3–5 people, tight-knit'));
 
     expect(setValue).toHaveBeenCalledWith('socialComfort', 'small-group');
-    expect(screen.getByLabelText('Continue').props.accessibilityState).toEqual({ disabled: true });
+    expect(screen.getByLabelText('Continue').props.accessibilityState).toEqual(
+      expect.objectContaining({ disabled: true }),
+    );
   });
 
   it('renders the summary and ready states', () => {
@@ -152,9 +157,9 @@ describe('onboarding steps', () => {
       />,
     );
 
-    expect(screen.getByLabelText('Setting up your profile…').props.accessibilityState).toEqual({
-      disabled: true,
-    });
+    expect(screen.getByLabelText('Setting up your profile…').props.accessibilityState).toEqual(
+      expect.objectContaining({ disabled: true, busy: true }),
+    );
 
     render(
       <ReadyStep

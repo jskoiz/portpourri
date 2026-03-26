@@ -9,7 +9,7 @@ import { eventsApi } from '../services/api';
 import AppBackButton from '../components/ui/AppBackButton';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import AppIcon from '../components/ui/AppIcon';
-import { Button, StatePanel } from '../design/primitives';
+import { Button, Screen, StatePanel } from '../design/primitives';
 import { useAuthStore } from '../store/authStore';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
@@ -61,16 +61,24 @@ export function EventDetailView({
 }: EventDetailViewProps) {
   const theme = useTheme();
 
-  if (isLoading) return <StatePanel title="Loading event" loading />;
+  if (isLoading) {
+    return (
+      <Screen backgroundColor={theme.background}>
+        <StatePanel title="Loading event" loading />
+      </Screen>
+    );
+  }
   if (errorMessage || !event) {
     return (
-      <StatePanel
-        title="Couldn't load event"
-        description={errorMessage ?? 'Event not found'}
-        actionLabel="Try again"
-        onAction={onRefresh}
-        isError
-      />
+      <Screen backgroundColor={theme.background}>
+        <StatePanel
+          title="Couldn't load event"
+          description={errorMessage ?? 'Event not found'}
+          actionLabel="Try again"
+          onAction={onRefresh}
+          isError
+        />
+      </Screen>
     );
   }
 

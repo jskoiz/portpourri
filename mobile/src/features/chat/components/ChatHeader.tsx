@@ -35,7 +35,7 @@ export function ChatHeader({
     <GlassView tier="medium" borderRadius={0} style={styles.header}>
       <AppBackButton onPress={onBack} style={styles.backBtn} />
       {photoUrl ? (
-        <Image source={{ uri: photoUrl }} style={[styles.headerAvatar, { borderColor: theme.primary }]} contentFit="cover" accessibilityLabel={`Photo of ${user?.firstName || 'match'}`} />
+        <Image source={{ uri: photoUrl }} style={[styles.headerAvatar, { borderColor: theme.primary }]} contentFit="cover" accessibilityLabel={`Photo of ${user?.firstName || 'match'}`} accessibilityRole="image" />
       ) : (
         <View
           style={[
@@ -48,6 +48,7 @@ export function ChatHeader({
             },
           ]}
           accessibilityLabel={`Avatar for ${user?.firstName || 'match'}`}
+          accessibilityRole="image"
         >
           <Text style={{ color: theme.textPrimary, fontSize: 16, fontWeight: '700' }} importantForAccessibility="no">
             {user?.firstName?.[0] || '?'}
@@ -56,7 +57,7 @@ export function ChatHeader({
       )}
       <View style={styles.headerInfo}>
         <Text style={[styles.headerEyebrow, { color: theme.textMuted }]}>MATCH CONVERSATION</Text>
-        <Text style={[styles.headerName, { color: theme.textPrimary }]}>{user?.firstName || 'Chat'}</Text>
+        <Text style={[styles.headerName, { color: theme.textPrimary }]} accessibilityRole="header">{user?.firstName || 'Chat'}</Text>
         {activityTag ? (
           <View style={[styles.headerTag, { backgroundColor: theme.primarySubtle, borderColor: theme.primary }]} accessibilityLabel={`Activity: ${activityTag}`}>
             <Text style={[styles.headerTagText, { color: theme.primary }]}>{activityTag}</Text>
@@ -68,7 +69,8 @@ export function ChatHeader({
           onPress={() => setMenuVisible((v) => !v)}
           accessibilityRole="button"
           accessibilityLabel="More options"
-          accessibilityHint="Opens conversation options"
+          accessibilityHint={menuVisible ? 'Closes conversation options' : 'Opens conversation options'}
+          accessibilityState={{ expanded: menuVisible }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <GlassView tier="thin" borderRadius={19} style={styles.quickActionTriggerGlass}>
@@ -76,13 +78,14 @@ export function ChatHeader({
           </GlassView>
         </Pressable>
         {menuVisible && (
-          <Modal transparent animationType="none" visible onRequestClose={dismissMenu}>
+          <Modal transparent animationType="none" visible onRequestClose={dismissMenu} accessibilityViewIsModal>
             <Pressable style={headerMenuStyles.backdrop} onPress={dismissMenu}>
               <View style={[headerMenuStyles.menu, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                 <Pressable
                   onPress={() => { setMenuVisible(false); onOpenQuickActions(); }}
                   style={headerMenuStyles.menuItem}
-                  accessibilityRole="menuitem"
+                  accessibilityRole="button"
+                  accessibilityLabel="Quick actions"
                 >
                   <AppIcon name="zap" size={16} color={theme.textPrimary} />
                   <Text style={[headerMenuStyles.menuItemText, { color: theme.textPrimary }]}>Quick actions</Text>
@@ -91,7 +94,8 @@ export function ChatHeader({
                   <Pressable
                     onPress={() => { setMenuVisible(false); onReport(); }}
                     style={headerMenuStyles.menuItem}
-                    accessibilityRole="menuitem"
+                    accessibilityRole="button"
+                    accessibilityLabel="Report conversation"
                   >
                     <AppIcon name="flag" size={16} color={theme.textPrimary} />
                     <Text style={[headerMenuStyles.menuItemText, { color: theme.textPrimary }]}>Report</Text>
@@ -101,7 +105,8 @@ export function ChatHeader({
                   <Pressable
                     onPress={() => { setMenuVisible(false); onBlock(); }}
                     style={headerMenuStyles.menuItem}
-                    accessibilityRole="menuitem"
+                    accessibilityRole="button"
+                    accessibilityLabel="Block conversation"
                   >
                     <AppIcon name="slash" size={16} color={theme.danger} />
                     <Text style={[headerMenuStyles.menuItemText, { color: theme.danger }]}>Block</Text>

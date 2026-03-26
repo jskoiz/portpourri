@@ -87,12 +87,16 @@ export function triggerImpactHaptic(
   return run(() => Haptics.impactAsync(style));
 }
 
-export function triggerSheetOpenHaptic() {
+export function triggerLightImpactHaptic() {
   return triggerImpactHaptic(Haptics.ImpactFeedbackStyle.Light);
 }
 
+export function triggerSheetOpenHaptic() {
+  return triggerLightImpactHaptic();
+}
+
 export function triggerSheetDismissHaptic() {
-  return triggerImpactHaptic(Haptics.ImpactFeedbackStyle.Light);
+  return triggerLightImpactHaptic();
 }
 
 export function triggerSheetCommitHaptic() {
