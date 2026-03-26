@@ -1,6 +1,5 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
+import { createQueryTestHarness } from '../../../../lib/testing/queryTestHarness';
 import { useMyEvents } from '../useMyEvents';
 
 const mockMine = jest.fn();
@@ -11,16 +10,6 @@ jest.mock('../../../../services/api', () => ({
   },
 }));
 
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  });
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: queryClient }, children);
-}
-
 describe('useMyEvents', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -30,9 +19,8 @@ describe('useMyEvents', () => {
     const events = [{ id: 'e1', title: 'My Yoga' }];
     mockMine.mockResolvedValue({ data: events });
 
-    const { result } = renderHook(() => useMyEvents(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useMyEvents(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -42,9 +30,8 @@ describe('useMyEvents', () => {
   it('returns empty array on API failure', async () => {
     mockMine.mockRejectedValue(new Error('Network error'));
 
-    const { result } = renderHook(() => useMyEvents(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useMyEvents(), { wrapper });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
 
@@ -54,9 +41,8 @@ describe('useMyEvents', () => {
   it('starts in loading state', () => {
     mockMine.mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderHook(() => useMyEvents(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useMyEvents(), { wrapper });
 
     expect(result.current.isLoading).toBe(true);
     expect(result.current.events).toEqual([]);

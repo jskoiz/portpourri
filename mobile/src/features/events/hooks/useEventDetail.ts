@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { eventsApi } from '../../../services/api';
 import type { EventDetail } from '../../../api/types';
 import { queryKeys } from '../../../lib/query/queryKeys';
+import { invalidateEventSurfaces } from '../../../lib/query/queryInvalidation';
 import { showToast } from '../../../store/toastStore';
 
 export function useEventDetail(eventId: string) {
@@ -41,8 +42,7 @@ export function useEventDetail(eventId: string) {
           ? { ...current, joined: true, attendeesCount: result.attendeesCount }
           : undefined,
       );
-      void queryClient.invalidateQueries({ queryKey: queryKeys.events.mine });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.events.list });
+      void invalidateEventSurfaces(queryClient);
       showToast('RSVP confirmed!', 'success');
     },
   });

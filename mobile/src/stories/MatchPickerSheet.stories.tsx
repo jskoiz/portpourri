@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
 import React from 'react';
 import { View } from 'react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '../design/primitives';
 import { useSheetController } from '../design/sheets/useSheetController';
 import { MatchPickerSheet } from '../features/chat/components/MatchPickerSheet';
@@ -33,42 +33,25 @@ const seededMatches: Match[] = [
   },
 ];
 
-function createQueryClient(matches: Match[]) {
-  const client = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-        refetchOnMount: false,
-        refetchOnReconnect: false,
-        refetchOnWindowFocus: false,
-        staleTime: Infinity,
-      },
-    },
-  });
-
-  client.setQueryData(queryKeys.matches.list, matches);
-  return client;
-}
-
 function MatchPickerSheetStory({ matches }: { matches: Match[] }) {
   const sheet = useSheetController();
-  const queryClient = React.useMemo(() => createQueryClient(matches), [matches]);
+  const queryClient = useQueryClient();
+
+  queryClient.setQueryData(queryKeys.matches.list, matches);
 
   React.useEffect(() => {
     sheet.open();
   }, [sheet.open]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <View style={{ flex: 1, justifyContent: 'flex-end', padding: 20 }}>
-        <Button label="Open match picker" onPress={sheet.open} variant="secondary" />
-        <MatchPickerSheet
-          controller={sheet.sheetProps}
-          onClose={sheet.close}
-          onSelectMatch={() => undefined}
-        />
-      </View>
-    </QueryClientProvider>
+    <View style={{ flex: 1, justifyContent: 'flex-end', padding: 20 }}>
+      <Button label="Open match picker" onPress={sheet.open} variant="secondary" />
+      <MatchPickerSheet
+        controller={sheet.sheetProps}
+        onClose={sheet.close}
+        onSelectMatch={() => undefined}
+      />
+    </View>
   );
 }
 

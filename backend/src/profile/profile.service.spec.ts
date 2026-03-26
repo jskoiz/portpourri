@@ -230,6 +230,92 @@ describe('ProfileService', () => {
     expect(result!.age).toBeGreaterThan(0);
   });
 
+  describe('getProfileCompleteness', () => {
+    const makeCompleteUser = (overrides: Record<string, unknown> = {}) => ({
+      id: 'user-1',
+      firstName: 'Casey',
+      birthdate: new Date('1998-06-15T00:00:00.000Z'),
+      profile: {
+        bio: 'This is a bio that is definitely long enough to pass the check.',
+        city: 'Honolulu',
+      },
+      fitnessProfile: {
+        primaryGoal: 'strength',
+        intensityLevel: IntensityLevel.INTERMEDIATE,
+        prefersMorning: true,
+        prefersEvening: false,
+      },
+      photos: [
+        { id: 'p1', storageKey: 'p1.jpg' },
+        { id: 'p2', storageKey: 'p2.jpg' },
+      ],
+      ...overrides,
+    });
+
+    it('returns a full completeness payload for a complete profile', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(makeCompleteUser());
+
+      const result = await service.getProfileCompleteness('user-1');
+
+      expect(result).toEqual({
+        score: 100,
+        total: 8,
+        earned: 8,
+        prompts: [],
+        missing: [],
+      });
+    });
+
+    it('returns the full missing checklist for a missing profile', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+
+      const result = await service.getProfileCompleteness('ghost');
+
+      expect(result).toEqual({
+        score: 0,
+        total: 8,
+        earned: 0,
+        prompts: ['Complete your profile setup.'],
+        missing: expect.arrayContaining([
+          expect.objectContaining({
+            field: 'firstName',
+            label: 'Add your first name',
+            route: 'EditProfile',
+          }),
+          expect.objectContaining({
+            field: 'photos',
+            label: 'Add more photos',
+            route: 'EditPhotos',
+          }),
+        ]),
+      });
+    });
+
+    it('returns a partial score and the unmet profile prompts', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(
+        makeCompleteUser({
+          profile: { bio: null, city: 'Honolulu' },
+          photos: [],
+        }),
+      );
+
+      const result = await service.getProfileCompleteness('user-1');
+
+      expect(result.score).toBe(75);
+      expect(result.earned).toBe(6);
+      expect(result.total).toBe(8);
+      expect(result.prompts).toEqual(
+        expect.arrayContaining([
+          'Write a bio (20+ chars) so people know your vibe.',
+          'Upload at least 2 profile photos.',
+        ]),
+      );
+      expect(result.missing.map((item) => item.field)).toEqual(
+        expect.arrayContaining(['bio', 'photos']),
+      );
+    });
+  });
+
   it('uploads photos with deterministic ordering', async () => {
     photoStorageMock.saveProfilePhoto.mockResolvedValue({
       storageKey: 'http://local/photo-1.jpg',

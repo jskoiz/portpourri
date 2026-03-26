@@ -88,7 +88,7 @@ Start with [`REPO_MAP.md`](./REPO_MAP.md) for fast navigation and [`HARNESS.md`]
 - Discovery filters, explore actions, create substeps, and chat quick actions now share a common bottom-sheet presentation layer.
 - Mobile profile editing is split between basic profile fields (`PUT /profile`) and fitness fields (`PUT /profile/fitness`), with a unified screen-level save UX.
 - Profile photo uploads and mutations are handled through the backend `profile` module and invalidated through React Query so discovery, matches, chat, and profile detail refresh consistently.
-- The current planning direction after Phase 3 is to build on this foundation with event conversion/re-engagement flows, not to introduce a second parallel interaction system.
+- The current planning direction is to build on this foundation with event conversion/re-engagement flows, not to introduce a second parallel interaction system.
 
 ## Refactor intent
 

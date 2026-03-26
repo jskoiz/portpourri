@@ -2,13 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { User, UserProfile } from '../../../api/types';
 import { profileApi } from '../../../services/api';
 import { queryKeys } from '../../../lib/query/queryKeys';
+import { invalidateProfileSurfaces } from '../../../lib/query/queryInvalidation';
 import { useAuthStore } from '../../../store/authStore';
-
-function invalidateProfileSurfaces(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: queryKeys.profile.current });
-  void queryClient.invalidateQueries({ queryKey: queryKeys.discovery.feed({}) });
-  void queryClient.invalidateQueries({ queryKey: queryKeys.matches.list });
-}
 
 /** Sync the returned User back into authStore so screens reading authStore.user stay current. */
 function syncUserToAuthStore(response: { data: User }) {
@@ -42,20 +37,20 @@ export function useProfile() {
     mutationFn: profileApi.updateFitness,
     onSuccess: (response) => {
       syncUserToAuthStore(response);
-      invalidateProfileSurfaces(queryClient);
+      void invalidateProfileSurfaces(queryClient);
     },
   });
   const updateProfile = useMutation({
     mutationFn: profileApi.updateProfile,
     onSuccess: (response) => {
       syncUserProfileToAuthStore(response);
-      invalidateProfileSurfaces(queryClient);
+      void invalidateProfileSurfaces(queryClient);
     },
   });
   const uploadPhoto = useMutation({
     mutationFn: profileApi.uploadPhoto,
     onSuccess: () => {
-      invalidateProfileSurfaces(queryClient);
+      void invalidateProfileSurfaces(queryClient);
     },
   });
   const updatePhoto = useMutation({
@@ -67,13 +62,13 @@ export function useProfile() {
       payload: Parameters<typeof profileApi.updatePhoto>[1];
     }) => profileApi.updatePhoto(photoId, payload),
     onSuccess: () => {
-      invalidateProfileSurfaces(queryClient);
+      void invalidateProfileSurfaces(queryClient);
     },
   });
   const deletePhoto = useMutation({
     mutationFn: profileApi.deletePhoto,
     onSuccess: () => {
-      invalidateProfileSurfaces(queryClient);
+      void invalidateProfileSurfaces(queryClient);
     },
   });
 

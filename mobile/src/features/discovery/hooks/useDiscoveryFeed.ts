@@ -9,6 +9,7 @@ import {
   type DiscoveryFiltersInput,
 } from '../../../services/api';
 import { queryKeys } from '../../../lib/query/queryKeys';
+import { invalidateDiscoverySurfaces } from '../../../lib/query/queryInvalidation';
 
 function createFeedKey(filters?: DiscoveryFiltersInput) {
   return queryKeys.discovery.feed(filters ?? {});
@@ -61,7 +62,7 @@ export function useDiscoveryFeed(filters?: DiscoveryFiltersInput) {
   const undo = useMutation({
     mutationFn: async () => (await discoveryApi.undo()).data as UndoSwipeResponse,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: feedKey });
+      void invalidateDiscoverySurfaces(queryClient);
     },
   });
 

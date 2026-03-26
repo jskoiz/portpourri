@@ -1,6 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
+import { createQueryTestHarness } from '../../../../lib/testing/queryTestHarness';
 import { useNotifications } from '../useNotifications';
 import { queryKeys } from '../../../../lib/query/queryKeys';
 
@@ -15,19 +14,6 @@ jest.mock('../../../../services/api', () => ({
     markAllRead: (...args: unknown[]) => mockMarkAllRead(...args),
   },
 }));
-
-function createTestHarness() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  const wrapper = ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: queryClient }, children);
-
-  return { queryClient, wrapper };
-}
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
@@ -52,7 +38,7 @@ describe('useNotifications', () => {
     ];
     mockList.mockResolvedValue({ data: notifications });
 
-    const { wrapper } = createTestHarness();
+    const { wrapper } = createQueryTestHarness();
     const { result } = renderHook(() => useNotifications(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -64,7 +50,7 @@ describe('useNotifications', () => {
   it('returns empty notifications on API failure', async () => {
     mockList.mockRejectedValue(new Error('Network error'));
 
-    const { wrapper } = createTestHarness();
+    const { wrapper } = createQueryTestHarness();
     const { result } = renderHook(() => useNotifications(), { wrapper });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -76,7 +62,7 @@ describe('useNotifications', () => {
   it('starts in loading state', () => {
     mockList.mockReturnValue(new Promise(() => {}));
 
-    const { wrapper } = createTestHarness();
+    const { wrapper } = createQueryTestHarness();
     const { result } = renderHook(() => useNotifications(), { wrapper });
 
     expect(result.current.isLoading).toBe(true);
@@ -93,7 +79,7 @@ describe('useNotifications', () => {
       title: 'Match!',
       readAt: '2026-01-01T00:00:00Z',
     };
-    const { queryClient, wrapper } = createTestHarness();
+    const { queryClient, wrapper } = createQueryTestHarness();
     const invalidateSpy = jest
       .spyOn(queryClient, 'invalidateQueries')
       .mockResolvedValue(undefined as never);
@@ -122,7 +108,7 @@ describe('useNotifications', () => {
       { id: 'n1', title: 'Match!', readAt: null },
       { id: 'n2', title: 'Like', readAt: '2026-01-01T00:00:00Z' },
     ];
-    const { queryClient, wrapper } = createTestHarness();
+    const { queryClient, wrapper } = createQueryTestHarness();
     const invalidateSpy = jest
       .spyOn(queryClient, 'invalidateQueries')
       .mockResolvedValue(undefined as never);
@@ -153,7 +139,7 @@ describe('useNotifications', () => {
       { id: 'n1', title: 'Match!', readAt: null },
       { id: 'n2', title: 'Like', readAt: null },
     ];
-    const { queryClient, wrapper } = createTestHarness();
+    const { queryClient, wrapper } = createQueryTestHarness();
     const invalidateSpy = jest
       .spyOn(queryClient, 'invalidateQueries')
       .mockResolvedValue(undefined as never);
@@ -188,7 +174,7 @@ describe('useNotifications', () => {
       { id: 'n1', title: 'Match!', readAt: null },
       { id: 'n2', title: 'Like', readAt: null },
     ];
-    const { queryClient, wrapper } = createTestHarness();
+    const { queryClient, wrapper } = createQueryTestHarness();
     const invalidateSpy = jest
       .spyOn(queryClient, 'invalidateQueries')
       .mockResolvedValue(undefined as never);

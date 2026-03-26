@@ -6,7 +6,7 @@ import { Button, Card } from '../../../design/primitives';
 import { useTheme } from '../../../theme/useTheme';
 import { radii, spacing, typography } from '../../../theme/tokens';
 import { eventsApi } from '../../../services/api';
-import { queryKeys } from '../../../lib/query/queryKeys';
+import { invalidateEventSurfaces } from '../../../lib/query/queryInvalidation';
 import type { EventInviteResponse } from '../../../api/types';
 
 export type EventInviteCardStatus = 'pending' | 'accepted' | 'expired';
@@ -53,8 +53,7 @@ export function EventInviteCard({
   const rsvpMutation = useMutation({
     mutationFn: async () => (await eventsApi.rsvp(eventId)).data,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.events.mine });
+      void invalidateEventSurfaces(queryClient);
     },
   });
 

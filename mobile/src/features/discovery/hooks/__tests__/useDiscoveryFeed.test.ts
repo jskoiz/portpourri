@@ -1,6 +1,6 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { createQueryTestHarness } from '../../../../lib/testing/queryTestHarness';
+import { queryKeys } from '../../../../lib/query/queryKeys';
 import { useDiscoveryFeed } from '../useDiscoveryFeed';
 
 const mockFeed = jest.fn();
@@ -17,17 +17,6 @@ jest.mock('../../../../services/api', () => ({
   },
 }));
 
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: queryClient }, children);
-}
-
 describe('useDiscoveryFeed', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -40,9 +29,8 @@ describe('useDiscoveryFeed', () => {
     ];
     mockFeed.mockResolvedValue({ data: users });
 
-    const { result } = renderHook(() => useDiscoveryFeed(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useDiscoveryFeed(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -52,9 +40,8 @@ describe('useDiscoveryFeed', () => {
   it('returns empty feed on API error', async () => {
     mockFeed.mockRejectedValue(new Error('Network error'));
 
-    const { result } = renderHook(() => useDiscoveryFeed(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useDiscoveryFeed(), { wrapper });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
 
@@ -65,9 +52,8 @@ describe('useDiscoveryFeed', () => {
   it('starts in loading state', () => {
     mockFeed.mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderHook(() => useDiscoveryFeed(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useDiscoveryFeed(), { wrapper });
 
     expect(result.current.isLoading).toBe(true);
     expect(result.current.feed).toEqual([]);
@@ -77,12 +63,38 @@ describe('useDiscoveryFeed', () => {
     mockFeed.mockResolvedValue({ data: [] });
     const filters = { distanceKm: 10, goals: ['strength'] };
 
-    const { result } = renderHook(() => useDiscoveryFeed(filters), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useDiscoveryFeed(filters), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(mockFeed).toHaveBeenCalledWith(filters);
+  });
+
+  it('invalidates discovery and match caches when undoing a swipe', async () => {
+    mockFeed.mockResolvedValue({ data: [] });
+    mockUndo.mockResolvedValue({ data: { restoredUserId: 'u1' } });
+
+    const { queryClient, wrapper } = createQueryTestHarness();
+    const invalidateSpy = jest
+      .spyOn(queryClient, 'invalidateQueries')
+      .mockResolvedValue(undefined as never);
+
+    const { result } = renderHook(() => useDiscoveryFeed({ distanceKm: 10 }), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    await act(async () => {
+      await result.current.undoSwipe();
+    });
+
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.discovery.feedFamily,
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.matches.list,
+    });
   });
 });

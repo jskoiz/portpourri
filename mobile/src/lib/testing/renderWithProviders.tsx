@@ -1,22 +1,14 @@
 import React, { PropsWithChildren } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderOptions } from '@testing-library/react-native';
 import { ThemeProvider } from '../../theme/useTheme';
-
-function createTestClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: 0, staleTime: 0 },
-      mutations: { retry: false, gcTime: 0 },
-    },
-  });
-}
+import { createTestQueryClient } from './queryTestHarness';
 
 export function renderWithProviders(
   ui: React.ReactElement,
   options?: Omit<RenderOptions, 'wrapper'>,
 ) {
-  const client = createTestClient();
+  const client = createTestQueryClient();
 
   function Wrapper({ children }: PropsWithChildren) {
     return (

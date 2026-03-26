@@ -20,8 +20,6 @@ import {
   DISCOVERY_FEED_RESULT_LIMIT,
   DISCOVERY_SCORE_WEIGHTS,
   EARTH_RADIUS_KM,
-  PROFILE_COMPLETENESS_CHECKS,
-  PROFILE_COMPLETENESS_PROMPTS,
 } from './discovery.constants';
 
 export interface DiscoveryFilters {
@@ -589,45 +587,6 @@ export class DiscoveryService {
 
       return { status: 'nothing_to_undo' as const };
     });
-  }
-
-  async getProfileCompleteness(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        profile: true,
-        fitnessProfile: true,
-        photos: { where: { isHidden: false } },
-      },
-    });
-
-    if (!user) {
-      return {
-        score: 0,
-        total: PROFILE_COMPLETENESS_CHECKS.length,
-        earned: 0,
-        prompts: [PROFILE_COMPLETENESS_PROMPTS.missingProfile],
-        missing: PROFILE_COMPLETENESS_CHECKS.map((c) => ({
-          field: c.field,
-          label: c.label,
-          route: c.route,
-        })),
-      };
-    }
-
-    const checks = PROFILE_COMPLETENESS_CHECKS.map((check) => ({
-      ...check,
-      ok: check.test(user),
-    }));
-
-    const earned = checks.filter((c) => c.ok).length;
-    const score = Math.round((earned / checks.length) * 100);
-    const prompts = checks.filter((c) => !c.ok).map((c) => c.prompt);
-    const missing = checks
-      .filter((c) => !c.ok)
-      .map((c) => ({ field: c.field, label: c.label, route: c.route }));
-
-    return { score, total: checks.length, earned, prompts, missing };
   }
 
 }

@@ -81,6 +81,23 @@ describe('MatchesRealtimeService', () => {
     done();
   });
 
+  it('bridges published messages to the websocket gateway once', () => {
+    const emitMessageToRoom = jest.fn();
+    (service as any)._chatGateway = { emitMessageToRoom };
+
+    const msg: MatchMessagePayload = {
+      id: 'msg-bridge',
+      text: 'bridge',
+      sender: 'me',
+      timestamp: new Date(),
+    };
+
+    service.publishMessage('match-bridge', msg);
+
+    expect(emitMessageToRoom).toHaveBeenCalledTimes(1);
+    expect(emitMessageToRoom).toHaveBeenCalledWith('match-bridge', msg);
+  });
+
   describe('stream cleanup', () => {
     it('removes the stream when the last subscriber unsubscribes', () => {
       const sub1 = service.stream('match-cleanup').subscribe();

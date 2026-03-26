@@ -190,7 +190,7 @@ describe('ChatGateway', () => {
   });
 
   describe('handleSendMessage', () => {
-    it('persists and broadcasts the message to the room', async () => {
+    it('persists the message without broadcasting directly from the gateway', async () => {
       const socket = createMockSocket();
       socket.data = { userId: 'user-1' };
       const savedMessage = {
@@ -211,11 +211,8 @@ describe('ChatGateway', () => {
         'user-1',
         'hello',
       );
-      expect(mockServer.to).toHaveBeenCalledWith('match:match-1');
-      expect(mockServer.emit).toHaveBeenCalledWith('message:new', {
-        matchId: 'match-1',
-        message: savedMessage,
-      });
+      expect(mockServer.to).not.toHaveBeenCalled();
+      expect(mockServer.emit).not.toHaveBeenCalled();
     });
 
     it('emits error when sendMessage fails', async () => {

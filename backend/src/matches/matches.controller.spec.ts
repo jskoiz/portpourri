@@ -1,8 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
+import {
+  ChatMessageListSchema,
+  MatchListSchema,
+  SendMessageResponseSchema,
+} from '@contracts';
 import { MatchesController } from './matches.controller';
 import { MatchesService } from './matches.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
+
+function expectSchema<T>(schema: { parse: (value: unknown) => T }, value: unknown) {
+  expect(() => schema.parse(value)).not.toThrow();
+}
 
 describe('MatchesController', () => {
   let controller: MatchesController;
@@ -32,6 +41,7 @@ describe('MatchesController', () => {
     const result = await controller.getMatches(req);
     expect(matchesServiceMock.getMatches).toHaveBeenCalledWith('user-1', 20, 0);
     expect(result).toEqual([]);
+    expectSchema(MatchListSchema, result);
   });
 
   it('parses pagination query params before delegating getMatches', async () => {
@@ -39,6 +49,7 @@ describe('MatchesController', () => {
     const result = await controller.getMatches(req, '5', '10');
     expect(matchesServiceMock.getMatches).toHaveBeenCalledWith('user-1', 5, 10);
     expect(result).toEqual([]);
+    expectSchema(MatchListSchema, result);
   });
 
   it('delegates getMessages to service', async () => {
@@ -51,6 +62,7 @@ describe('MatchesController', () => {
       undefined,
     );
     expect(result).toEqual([]);
+    expectSchema(ChatMessageListSchema, result);
   });
 
   it('delegates streamMessages to service', async () => {
@@ -152,5 +164,6 @@ describe('MatchesController', () => {
       'hi',
     );
     expect(result).toBe(msg);
+    expectSchema(SendMessageResponseSchema, result);
   });
 });

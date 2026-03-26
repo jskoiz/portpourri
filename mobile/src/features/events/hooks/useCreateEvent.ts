@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { normalizeApiError } from '../../../api/errors';
 import type { CreateEventPayload, EventSummary } from '../../../api/types';
 import { queryKeys } from '../../../lib/query/queryKeys';
+import { invalidateEventSurfaces } from '../../../lib/query/queryInvalidation';
 import { eventsApi } from '../../../services/api';
 
 export function useCreateEvent() {
@@ -13,7 +14,7 @@ export function useCreateEvent() {
         createdEvent,
         ...current,
       ]);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.events.mine });
+      void invalidateEventSurfaces(queryClient);
     },
   });
 
@@ -25,4 +26,3 @@ export function useCreateEvent() {
     reset: createEvent.reset,
   };
 }
-

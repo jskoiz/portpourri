@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createQueryTestHarness } from '../../../../lib/testing/queryTestHarness';
 import { ReportSheet } from '../ReportSheet';
 
 const mockReport = jest.fn();
@@ -44,17 +44,6 @@ jest.mock('../../../../theme/useTheme', () => ({
   }),
 }));
 
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: queryClient }, children);
-}
-
 const mockRef = { current: null };
 const defaultController = {
   onChangeIndex: jest.fn(),
@@ -70,13 +59,14 @@ describe('ReportSheet', () => {
   });
 
   it('renders all report categories', () => {
+    const { wrapper } = createQueryTestHarness();
     const { getByText } = render(
       <ReportSheet
         controller={defaultController}
         onClose={jest.fn()}
         reportedUserId="u1"
       />,
-      { wrapper: createWrapper() },
+      { wrapper },
     );
 
     expect(getByText('Harassment or bullying')).toBeTruthy();
@@ -87,13 +77,14 @@ describe('ReportSheet', () => {
   });
 
   it('renders submit button', () => {
+    const { wrapper } = createQueryTestHarness();
     const { getByText } = render(
       <ReportSheet
         controller={defaultController}
         onClose={jest.fn()}
         reportedUserId="u1"
       />,
-      { wrapper: createWrapper() },
+      { wrapper },
     );
 
     expect(getByText('Submit report')).toBeTruthy();
@@ -102,6 +93,7 @@ describe('ReportSheet', () => {
   it('submits report with selected category', async () => {
     mockReport.mockResolvedValue({ data: { id: 'r1', status: 'pending' } });
     const onClose = jest.fn();
+    const { wrapper } = createQueryTestHarness();
 
     const { getByText } = render(
       <ReportSheet
@@ -110,7 +102,7 @@ describe('ReportSheet', () => {
         reportedUserId="u1"
         matchId="m1"
       />,
-      { wrapper: createWrapper() },
+      { wrapper },
     );
 
     fireEvent.press(getByText('Spam or scam'));
@@ -128,6 +120,7 @@ describe('ReportSheet', () => {
 
   it('includes description when provided', async () => {
     mockReport.mockResolvedValue({ data: { id: 'r1', status: 'pending' } });
+    const { wrapper } = createQueryTestHarness();
 
     const { getByText, getByPlaceholderText } = render(
       <ReportSheet
@@ -135,7 +128,7 @@ describe('ReportSheet', () => {
         onClose={jest.fn()}
         reportedUserId="u1"
       />,
-      { wrapper: createWrapper() },
+      { wrapper },
     );
 
     fireEvent.press(getByText('Harassment or bullying'));

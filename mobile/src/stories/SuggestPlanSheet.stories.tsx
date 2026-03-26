@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
 import React from 'react';
 import { View } from 'react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '../design/primitives';
 import { useSheetController } from '../design/sheets/useSheetController';
 import { SuggestPlanSheet } from '../features/chat/components/SuggestPlanSheet';
@@ -37,43 +37,26 @@ const seededEvents: EventSummary[] = [
   }),
 ];
 
-function createQueryClient(events: EventSummary[]) {
-  const client = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-        refetchOnMount: false,
-        refetchOnReconnect: false,
-        refetchOnWindowFocus: false,
-        staleTime: Infinity,
-      },
-    },
-  });
-
-  client.setQueryData(queryKeys.events.mine, events);
-  return client;
-}
-
 function SuggestPlanSheetStory({ events }: { events: EventSummary[] }) {
   const sheet = useSheetController();
-  const queryClient = React.useMemo(() => createQueryClient(events), [events]);
+  const queryClient = useQueryClient();
+
+  queryClient.setQueryData(queryKeys.events.mine, events);
 
   React.useEffect(() => {
     sheet.open();
   }, [sheet.open]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <View style={{ flex: 1, justifyContent: 'flex-end', padding: 20 }}>
-        <Button label="Open plan picker" onPress={sheet.open} variant="secondary" />
-        <SuggestPlanSheet
-          controller={sheet.sheetProps}
-          onClose={sheet.close}
-          onCreateEvent={() => undefined}
-          onSelectEvent={() => undefined}
-        />
-      </View>
-    </QueryClientProvider>
+    <View style={{ flex: 1, justifyContent: 'flex-end', padding: 20 }}>
+      <Button label="Open plan picker" onPress={sheet.open} variant="secondary" />
+      <SuggestPlanSheet
+        controller={sheet.sheetProps}
+        onClose={sheet.close}
+        onCreateEvent={() => undefined}
+        onSelectEvent={() => undefined}
+      />
+    </View>
   );
 }
 

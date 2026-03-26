@@ -1,8 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import {
+  EventInviteListSchema,
+  EventInviteResponseSchema,
+  EventListSchema,
+  EventRsvpResponseSchema,
+  EventSummarySchema,
+} from '@contracts';
 import { EventsController } from './events.controller';
 import { EventsService } from './events.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
+
+function expectSchema<T>(schema: { parse: (value: unknown) => T }, value: unknown) {
+  expect(() => schema.parse(value)).not.toThrow();
+}
 
 describe('EventsController', () => {
   let controller: EventsController;
@@ -15,6 +26,20 @@ describe('EventsController', () => {
     rsvp: jest.fn(),
     invite: jest.fn(),
     getInvites: jest.fn(),
+  };
+
+  const eventSummaryFixture = {
+    id: 'event-1',
+    title: 'Yoga',
+    description: 'Morning flow',
+    location: 'Studio A',
+    imageUrl: null,
+    category: 'wellness',
+    startsAt: '2026-07-01T10:00:00Z',
+    endsAt: '2026-07-01T11:00:00Z',
+    host: { id: 'user-1', firstName: 'Ava' },
+    attendeesCount: 6,
+    joined: true,
   };
 
   beforeEach(async () => {
@@ -39,7 +64,9 @@ describe('EventsController', () => {
     } as AuthenticatedRequest;
     eventsServiceMock.list.mockResolvedValue([]);
 
-    await expect(controller.list(req, undefined, undefined)).resolves.toEqual([]);
+    const result = await controller.list(req, undefined, undefined);
+    expect(result).toEqual([]);
+    expectSchema(EventListSchema, result);
     expect(eventsServiceMock.list).toHaveBeenCalledWith('user-1', 20, 0);
   });
 
@@ -49,7 +76,9 @@ describe('EventsController', () => {
     } as AuthenticatedRequest;
     eventsServiceMock.list.mockResolvedValue([]);
 
-    await expect(controller.list(req, '12', '4')).resolves.toEqual([]);
+    const result = await controller.list(req, '12', '4');
+    expect(result).toEqual([]);
+    expectSchema(EventListSchema, result);
     expect(eventsServiceMock.list).toHaveBeenCalledWith('user-1', 12, 4);
   });
 
@@ -62,15 +91,11 @@ describe('EventsController', () => {
       location: 'Studio A',
       startsAt: '2026-07-01T10:00:00Z',
     };
-    eventsServiceMock.create.mockResolvedValue({
-      id: 'event-1',
-      title: 'Yoga',
-    });
+    eventsServiceMock.create.mockResolvedValue(eventSummaryFixture);
 
-    await expect(controller.create(payload, req)).resolves.toEqual({
-      id: 'event-1',
-      title: 'Yoga',
-    });
+    const result = await controller.create(payload, req);
+    expect(result).toEqual(eventSummaryFixture);
+    expectSchema(EventSummarySchema, result);
     expect(eventsServiceMock.create).toHaveBeenCalledWith(payload, 'user-1');
   });
 
@@ -83,10 +108,12 @@ describe('EventsController', () => {
       attendeesCount: 6,
     });
 
-    await expect(controller.rsvp('event-1', req)).resolves.toEqual({
+    const result = await controller.rsvp('event-1', req);
+    expect(result).toEqual({
       status: 'joined',
       attendeesCount: 6,
     });
+    expectSchema(EventRsvpResponseSchema, result);
     expect(eventsServiceMock.rsvp).toHaveBeenCalledWith('event-1', 'user-1');
   });
 
@@ -95,10 +122,25 @@ describe('EventsController', () => {
       user: { id: 'user-1', email: 'u@example.com' },
     } as AuthenticatedRequest;
     const payload = { matchId: 'match-1', message: 'Want to join?' };
-    const invite = { id: 'invite-1', status: 'pending' };
+    const invite = {
+      id: 'invite-1',
+      status: 'pending',
+      event: {
+        id: 'event-1',
+        title: 'Yoga',
+        location: 'Studio A',
+        startsAt: '2026-07-01T10:00:00Z',
+        endsAt: '2026-07-01T11:00:00Z',
+        category: 'wellness',
+        host: { id: 'user-1', firstName: 'Ava' },
+        attendeesCount: 6,
+      },
+    };
     eventsServiceMock.invite.mockResolvedValue(invite);
 
-    await expect(controller.invite('event-1', payload, req)).resolves.toEqual(invite);
+    const result = await controller.invite('event-1', payload, req);
+    expect(result).toEqual(invite);
+    expectSchema(EventInviteResponseSchema, result);
     expect(eventsServiceMock.invite).toHaveBeenCalledWith(
       'event-1',
       'user-1',
@@ -111,10 +153,20 @@ describe('EventsController', () => {
     const req = {
       user: { id: 'user-1', email: 'u@example.com' },
     } as AuthenticatedRequest;
-    const invites = [{ id: 'invite-1', status: 'pending' }];
+    const invites = [
+      {
+        id: 'invite-1',
+        status: 'pending',
+        createdAt: '2026-07-01T09:00:00Z',
+        inviter: { id: 'user-1', firstName: 'Ava' },
+        invitee: { id: 'user-2', firstName: 'Noah' },
+      },
+    ];
     eventsServiceMock.getInvites.mockResolvedValue(invites);
 
-    await expect(controller.getInvites('event-1', req)).resolves.toEqual(invites);
+    const result = await controller.getInvites('event-1', req);
+    expect(result).toEqual(invites);
+    expectSchema(EventInviteListSchema, result);
     expect(eventsServiceMock.getInvites).toHaveBeenCalledWith('event-1', 'user-1');
   });
 
@@ -124,7 +176,9 @@ describe('EventsController', () => {
     } as AuthenticatedRequest;
     eventsServiceMock.myEvents.mockResolvedValue([]);
 
-    await expect(controller.myEvents(req)).resolves.toEqual([]);
+    const result = await controller.myEvents(req);
+    expect(result).toEqual([]);
+    expectSchema(EventListSchema, result);
     expect(eventsServiceMock.myEvents).toHaveBeenCalledWith('user-1', 20, 0);
   });
 
@@ -145,12 +199,11 @@ describe('EventsController', () => {
     const req = {
       user: { id: 'user-1', email: 'u@example.com' },
     } as AuthenticatedRequest;
-    eventsServiceMock.detail.mockResolvedValue({ id: 'event-1', joined: true });
+    eventsServiceMock.detail.mockResolvedValue(eventSummaryFixture);
 
-    await expect(controller.detail('event-1', req)).resolves.toEqual({
-      id: 'event-1',
-      joined: true,
-    });
+    const result = await controller.detail('event-1', req);
+    expect(result).toEqual(eventSummaryFixture);
+    expectSchema(EventSummarySchema, result);
     expect(eventsServiceMock.detail).toHaveBeenCalledWith('event-1', 'user-1');
   });
 });

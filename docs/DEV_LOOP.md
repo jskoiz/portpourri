@@ -60,7 +60,7 @@ npm run check:mobile
 npm run docs:check
 ```
 
-Phase 3 is complete on `main`. New work should generally branch from clean `main` and target the next product phase rather than continuing to accumulate broad "Phase 3 cleanup" work in one branch.
+The current shipped mobile surface is on `main`. New work should generally branch from clean `main` and stay narrow rather than continuing to accumulate broad cleanup in one branch.
 
 ## Component workshop
 
@@ -102,7 +102,7 @@ The current seeded QA path is especially useful for validating:
 - chat quick-action suggestions
 - profile editing and photo management
 
-Recommended local QA loop for the current Phase 3 surface:
+Recommended local QA loop for the current shipped mobile surface:
 1. Start the backend with `npm run dev:backend`.
 2. Start the app with `npm run dev:mobile`.
 3. Reset the seeded runtime with `npm run dev:scenario -- ui-preview`.
@@ -113,7 +113,7 @@ Recommended local QA loop for the current Phase 3 surface:
    - move a photo left/right
    - set a different primary photo
    - remove a non-primary photo
-6. Validate the sheet-driven flows changed in Phase 3:
+6. Validate the sheet-driven flows in the current shipped surface:
    - discovery filters
    - explore quick actions
    - create activity/timing substeps
@@ -157,7 +157,7 @@ Recommended usage:
 3. Use `npm run qa:ios:reset` when login state, preview users, or seeded data drift.
 4. Set `IOS_SIMULATOR_NAME="Your Simulator Name"` if you want a different device target.
 
-If you are planning post-Phase-3 work, the current recommended next track is event conversion and re-engagement:
+If you are planning follow-on work, the current recommended next track is event conversion and re-engagement:
 - improve event invite/share flows
 - improve chat-to-event planning paths
 - improve notification relevance and deep links

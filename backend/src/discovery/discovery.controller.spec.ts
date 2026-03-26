@@ -1,9 +1,20 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import {
+  DiscoveryFeedSchema,
+  LikeResponseSchema,
+  PassResponseSchema,
+  ProfileCompletenessSchema,
+  UndoSwipeResponseSchema,
+} from '@contracts';
 import { DiscoveryController } from './discovery.controller';
 import { DiscoveryService } from './discovery.service';
 import { ProfileService } from '../profile/profile.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
+
+function expectSchema<T>(schema: { parse: (value: unknown) => T }, value: unknown) {
+  expect(() => schema.parse(value)).not.toThrow();
+}
 
 describe('DiscoveryController', () => {
   let controller: DiscoveryController;
@@ -45,16 +56,17 @@ describe('DiscoveryController', () => {
     } as AuthenticatedRequest;
     discoveryServiceMock.getFeed.mockResolvedValue([]);
 
-    await expect(
-      controller.getFeed(req, {
-        distanceKm: '10',
-        minAge: '25',
-        maxAge: '32',
-        goals: 'strength,endurance',
-        intensity: 'moderate',
-        availability: 'morning,evening,invalid',
-      }),
-    ).resolves.toEqual([]);
+    const result = await controller.getFeed(req, {
+      distanceKm: '10',
+      minAge: '25',
+      maxAge: '32',
+      goals: 'strength,endurance',
+      intensity: 'moderate',
+      availability: 'morning,evening,invalid',
+    });
+
+    expect(result).toEqual([]);
+    expectSchema(DiscoveryFeedSchema, result);
 
     expect(discoveryServiceMock.getFeed).toHaveBeenCalledWith('user-1', {
       distanceKm: 10,
@@ -72,16 +84,17 @@ describe('DiscoveryController', () => {
     } as AuthenticatedRequest;
     discoveryServiceMock.getFeed.mockResolvedValue([]);
 
-    await expect(
-      controller.getFeed(req, {
-        distanceKm: '15',
-        minAge: '24',
-        maxAge: '41',
-        goals: 'strength,endurance,mobility',
-        intensity: 'moderate,high',
-        availability: 'morning,evening',
-      }),
-    ).resolves.toEqual([]);
+    const result = await controller.getFeed(req, {
+      distanceKm: '15',
+      minAge: '24',
+      maxAge: '41',
+      goals: 'strength,endurance,mobility',
+      intensity: 'moderate,high',
+      availability: 'morning,evening',
+    });
+
+    expect(result).toEqual([]);
+    expectSchema(DiscoveryFeedSchema, result);
 
     expect(discoveryServiceMock.getFeed).toHaveBeenCalledWith('user-1', {
       distanceKm: 15,
@@ -114,9 +127,12 @@ describe('DiscoveryController', () => {
     } as AuthenticatedRequest;
     discoveryServiceMock.likeUser.mockResolvedValue({ status: 'liked' });
 
-    await expect(controller.likeUser(req, 'user-2')).resolves.toEqual({
+    const result = await controller.likeUser(req, 'user-2');
+
+    expect(result).toEqual({
       status: 'liked',
     });
+    expectSchema(LikeResponseSchema, result);
     expect(discoveryServiceMock.likeUser).toHaveBeenCalledWith(
       'user-1',
       'user-2',
@@ -133,11 +149,14 @@ describe('DiscoveryController', () => {
       targetUserId: 'user-2',
     });
 
-    await expect(controller.undoLastSwipe(req)).resolves.toEqual({
+    const result = await controller.undoLastSwipe(req);
+
+    expect(result).toEqual({
       status: 'undone',
       action: 'pass',
       targetUserId: 'user-2',
     });
+    expectSchema(UndoSwipeResponseSchema, result);
     expect(discoveryServiceMock.undoLastSwipe).toHaveBeenCalledWith('user-1');
   });
 
@@ -147,9 +166,12 @@ describe('DiscoveryController', () => {
     } as AuthenticatedRequest;
     discoveryServiceMock.passUser.mockResolvedValue({ status: 'passed' });
 
-    await expect(controller.passUser(req, 'user-2')).resolves.toEqual({
+    const result = await controller.passUser(req, 'user-2');
+
+    expect(result).toEqual({
       status: 'passed',
     });
+    expectSchema(PassResponseSchema, result);
     expect(discoveryServiceMock.passUser).toHaveBeenCalledWith(
       'user-1',
       'user-2',
@@ -173,13 +195,34 @@ describe('DiscoveryController', () => {
     } as AuthenticatedRequest;
     profileServiceMock.getProfileCompleteness.mockResolvedValue({
       score: 75,
+      total: 8,
+      earned: 6,
       prompts: ['Upload at least 2 profile photos.'],
+      missing: [
+        {
+          field: 'photos',
+          label: 'Add more photos',
+          route: 'EditPhotos',
+        },
+      ],
     });
 
-    await expect(controller.getProfileCompleteness(req)).resolves.toEqual({
+    const result = await controller.getProfileCompleteness(req);
+
+    expect(result).toEqual({
       score: 75,
+      total: 8,
+      earned: 6,
       prompts: ['Upload at least 2 profile photos.'],
+      missing: [
+        {
+          field: 'photos',
+          label: 'Add more photos',
+          route: 'EditPhotos',
+        },
+      ],
     });
+    expectSchema(ProfileCompletenessSchema, result);
     expect(profileServiceMock.getProfileCompleteness).toHaveBeenCalledWith(
       'user-1',
     );

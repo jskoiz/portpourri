@@ -19,55 +19,12 @@ import { useTheme } from '../theme/useTheme';
 import type { Theme } from '../theme/tokens';
 import { radii, spacing, typography } from '../theme/tokens';
 import { useNotifications } from '../features/notifications/hooks/useNotifications';
+import {
+  buildNotificationSections,
+  getNotificationMeta,
+} from '../features/notifications/notificationPresentation';
+import { resolveNotificationNavigation } from '../features/notifications/notificationNavigation';
 import type { RootStackScreenProps } from '../core/navigation/types';
-
-function getNotificationMeta(type: AppNotification['type']) {
-  switch (type) {
-    case 'match_created':
-    case 'like_received':
-      return { icon: 'heart' as const, color: '#C4A882' };
-    case 'message_received':
-      return { icon: 'message-square' as const, color: '#8BAA7A' };
-    case 'event_rsvp':
-      return { icon: 'users' as const, color: '#C4A882' };
-    case 'event_reminder':
-      return { icon: 'calendar' as const, color: '#8BAA7A' };
-    default:
-      return { icon: 'bell' as const, color: '#B8A9C4' };
-  }
-}
-
-function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function getNotificationGroup(dateValue: string | Date) {
-  const createdAt = new Date(dateValue);
-  const now = new Date();
-
-  if (isSameDay(createdAt, now)) return 'Today';
-
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  return isSameDay(createdAt, yesterday) ? 'Yesterday' : 'Earlier';
-}
-
-function getIdFromNotificationData(data: Record<string, unknown> | undefined, key: string) {
-  const value = data?.[key];
-  if (typeof value === 'string' && value.trim()) {
-    return value;
-  }
-  return undefined;
-}
-
-function buildNotificationUserFallback(id: string, label: string) {
-  return { id, firstName: label };
-}
 
 // ─── NotifRow ─────────────────────────────────────────────────────────────────
 
@@ -184,78 +141,25 @@ export default function NotificationsScreen({
 
   const handleNavigate = (notif: AppNotification) => {
     setActionError(null);
-    const data = notif.data as Record<string, string> | undefined;
-    const matchId = getIdFromNotificationData(data, 'matchId');
-    const withUserId = getIdFromNotificationData(data, 'withUserId');
-    const senderId = getIdFromNotificationData(data, 'senderId');
-    const fromUserId = getIdFromNotificationData(data, 'fromUserId');
-    const eventId = getIdFromNotificationData(data, 'eventId');
-
-    if (notif.type === 'match_created') {
-      if (!matchId || !withUserId) {
-        setActionError('Match notification is missing navigation details.');
-        return;
-      }
-
-      navigation.navigate('Chat', {
-        matchId,
-        user: buildNotificationUserFallback(withUserId, 'Match'),
-      });
+    const result = resolveNotificationNavigation(notif);
+    if (!result.ok) {
+      setActionError(result.error);
       return;
     }
 
-    if (notif.type === 'message_received') {
-      if (!matchId) {
-        setActionError('Message notification is missing navigation details.');
-        return;
-      }
-
-      const fallbackUserId = senderId || withUserId || matchId;
-      navigation.navigate('Chat', {
-        matchId,
-        user: buildNotificationUserFallback(
-          fallbackUserId,
-          senderId ? 'Message' : 'Match',
-        ),
-      });
+    if (result.target.route === 'Chat') {
+      navigation.navigate('Chat', result.target.params);
       return;
     }
 
-    if (notif.type === 'event_rsvp' || notif.type === 'event_reminder') {
-      if (!eventId) {
-        setActionError('Event notification is missing navigation details.');
-        return;
-      }
-
-      navigation.navigate('EventDetail', { eventId });
+    if (result.target.route === 'EventDetail') {
+      navigation.navigate('EventDetail', result.target.params);
       return;
     }
 
-    if (notif.type === 'like_received') {
-      if (!fromUserId) {
-        setActionError('Like notification is missing navigation details.');
-        return;
-      }
-
-      navigation.navigate('ProfileDetail', {
-        user: buildNotificationUserFallback(fromUserId, 'Profile'),
-      });
-      return;
-    }
-
-    setActionError('This notification does not support direct navigation.');
+    navigation.navigate('ProfileDetail', result.target.params);
   };
-
-  const { today: todayNotifs, yesterday: yesterdayNotifs, earlier: earlierNotifs } = notifs.reduce(
-    (groups, n) => {
-      const group = getNotificationGroup(n.createdAt);
-      if (group === 'Today') groups.today.push(n);
-      else if (group === 'Yesterday') groups.yesterday.push(n);
-      else groups.earlier.push(n);
-      return groups;
-    },
-    { today: [] as typeof notifs, yesterday: [] as typeof notifs, earlier: [] as typeof notifs },
-  );
+  const sections = buildNotificationSections(notifs);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -306,11 +210,7 @@ export default function NotificationsScreen({
         </View>
       ) : (
         <SectionList
-          sections={[
-            ...(todayNotifs.length > 0 ? [{ title: 'Today', data: todayNotifs }] : []),
-            ...(yesterdayNotifs.length > 0 ? [{ title: 'Yesterday', data: yesterdayNotifs }] : []),
-            ...(earlierNotifs.length > 0 ? [{ title: 'Earlier', data: earlierNotifs }] : []),
-          ]}
+          sections={sections}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <NotifRow

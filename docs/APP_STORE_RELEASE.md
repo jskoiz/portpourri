@@ -93,7 +93,7 @@ Before any production or TestFlight archive:
 - Verify the branch already exists on `origin` before starting the wrapper.
 - Verify the next `IOS_BUILD_NUMBER` against live App Store Connect state, not historical docs.
 - Record the exact branch, full git SHA, app version, iOS build number, API URL, and build date in the release notes or handoff.
-- Keep the release notes tied to the exact attached TestFlight/App Store artifact; do not reuse notes from an older build after Phase 3 profile/photo changes land.
+- Keep the release notes tied to the exact attached TestFlight/App Store artifact; do not reuse notes from an older build after profile/photo changes land.
 
 The script blocks release if any of these conditions fail:
 
@@ -127,7 +127,7 @@ Successful uploads may still warn about missing vendored framework dSYMs for `Re
 - Verify the authenticated runtime surfaces for Discover, Explore, Create, Inbox, and You. Preview routes are useful, but they do not replace runtime verification.
 - Open the in-app build provenance panel in the You/Profile screen and confirm branch, git SHA, version/build number, API URL, and build date match both the release manifest and the build being attached in App Store Connect/TestFlight.
 
-## Phase 3 release QA focus
+## Release QA focus
 
 Run this against a clean release candidate after the automated checks pass:
 
@@ -146,7 +146,7 @@ Run this against a clean release candidate after the automated checks pass:
 4. Confirm downstream propagation after profile edits:
    - updated primary photo appears in profile, matches/chat surfaces, and discovery/detail cards where applicable
    - updated city/bio values appear anywhere the app renders the signed-in user summary
-5. Validate every shared bottom-sheet interaction changed in Phase 3:
+5. Validate every shared bottom-sheet interaction changed in this release:
    - discovery filters
    - explore quick actions
    - create activity/timing substeps

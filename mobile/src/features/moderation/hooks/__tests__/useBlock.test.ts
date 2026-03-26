@@ -1,7 +1,6 @@
 import { renderHook, waitFor, act } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Alert } from 'react-native';
-import React from 'react';
+import { createQueryTestHarness } from '../../../../lib/testing/queryTestHarness';
 import { useBlock } from '../useBlock';
 import { queryKeys } from '../../../../lib/query/queryKeys';
 
@@ -15,20 +14,6 @@ jest.mock('../../../../services/api', () => ({
 
 jest.spyOn(Alert, 'alert');
 
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  return {
-    wrapper: ({ children }: { children: React.ReactNode }) =>
-      React.createElement(QueryClientProvider, { client: queryClient }, children),
-    queryClient,
-  };
-}
-
 describe('useBlock', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -37,7 +22,7 @@ describe('useBlock', () => {
   it('calls moderationApi.block with the correct payload', async () => {
     mockBlock.mockResolvedValue({ data: { status: 'blocked' } });
 
-    const { wrapper } = createWrapper();
+    const { wrapper } = createQueryTestHarness();
     const { result } = renderHook(() => useBlock(), { wrapper });
 
     await act(async () => {
@@ -51,7 +36,7 @@ describe('useBlock', () => {
   it('invalidates matches query on success', async () => {
     mockBlock.mockResolvedValue({ data: { status: 'blocked' } });
 
-    const { wrapper, queryClient } = createWrapper();
+    const { wrapper, queryClient } = createQueryTestHarness();
     const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
 
     const { result } = renderHook(() => useBlock(), { wrapper });
@@ -69,7 +54,7 @@ describe('useBlock', () => {
   it('shows success alert on block', async () => {
     mockBlock.mockResolvedValue({ data: { status: 'blocked' } });
 
-    const { wrapper } = createWrapper();
+    const { wrapper } = createQueryTestHarness();
     const { result } = renderHook(() => useBlock(), { wrapper });
 
     await act(async () => {
@@ -87,7 +72,7 @@ describe('useBlock', () => {
     mockBlock.mockResolvedValue({ data: { status: 'blocked' } });
     const onSuccess = jest.fn();
 
-    const { wrapper } = createWrapper();
+    const { wrapper } = createQueryTestHarness();
     const { result } = renderHook(() => useBlock({ onSuccess }), { wrapper });
 
     await act(async () => {
@@ -101,7 +86,7 @@ describe('useBlock', () => {
   it('shows error alert on failed block', async () => {
     mockBlock.mockRejectedValue(new Error('Server error'));
 
-    const { wrapper } = createWrapper();
+    const { wrapper } = createQueryTestHarness();
     const { result } = renderHook(() => useBlock(), { wrapper });
 
     await act(async () => {
@@ -122,7 +107,7 @@ describe('useBlock', () => {
   it('passes matchId when provided', async () => {
     mockBlock.mockResolvedValue({ data: { status: 'blocked' } });
 
-    const { wrapper } = createWrapper();
+    const { wrapper } = createQueryTestHarness();
     const { result } = renderHook(() => useBlock(), { wrapper });
 
     await act(async () => {

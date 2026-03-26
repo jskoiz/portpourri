@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildRepoIndex } from './generate-repo-index.mjs';
+import { ACTIVE_DOCS } from './doc-policy.mjs';
 import {
   classifyRepoLayer,
   describeLayer,
@@ -12,21 +13,6 @@ import {
 const scriptPath = fileURLToPath(import.meta.url);
 const scriptDir = path.dirname(scriptPath);
 const repoRoot = path.resolve(scriptDir, '..');
-
-export const ACTIVE_DOCS = [
-  'AGENTS.md',
-  'backend/AGENTS.md',
-  'mobile/AGENTS.md',
-  'backend/README.md',
-  'docs/HARNESS.md',
-  'docs/REPO_MAP.md',
-  'docs/DEV_LOOP.md',
-  'docs/ARCHITECTURE.md',
-  'docs/STORYBOOK_WORKFLOW.md',
-  'docs/FUNCTIONAL_MATRIX.md',
-  'docs/APP_STORE_RELEASE.md',
-  'docs/DEPLOY_LIGHTSAIL.md',
-];
 
 const mobileScreenLimits = new Map([
   ['ChatScreen.tsx', 220],

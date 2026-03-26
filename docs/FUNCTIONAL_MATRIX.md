@@ -30,10 +30,10 @@ This matrix tracks the visible MVP surfaces and whether each user-facing action 
 - No visible CTA should point to mock-only behavior without being labeled as editorial.
 - Follow [`docs/STORYBOOK_WORKFLOW.md`](./STORYBOOK_WORKFLOW.md) for visual iteration; Storybook validates isolated states, while runtime claims still need authenticated app checks.
 - `npm run smoke` is the minimum local regression gate before release or TestFlight promotion.
-- Release QA must explicitly cover Phase 3 profile edits, profile photo mutations, and the sheet-driven discovery/explore/create/chat flows before submission.
+- Release QA must explicitly cover profile edits, profile photo mutations, and the sheet-driven discovery/explore/create/chat flows before submission.
 - The seeded `ui-preview` scenario is the canonical local runtime for deterministic release/readiness checks; rerun it after backend restarts.
 
 ## Planning note
 
-- Phase 3 functionality in this matrix is complete on `main`.
-- The next major product planning track should focus on event conversion, re-engagement, and trust/profile quality systems rather than reopening already-shipped Phase 3 implementation work.
+- The shipped functionality in this matrix is complete on `main`.
+- The next major product planning track should focus on event conversion, re-engagement, and trust/profile quality systems rather than reopening already-shipped interaction work.

@@ -5,6 +5,7 @@ import {
   collectCoverageAudit,
   collectStorybookCoverageViolations,
 } from '../check-repo-policies.mjs';
+import { ACTIVE_DOCS } from '../doc-policy.mjs';
 
 test('flags raw env access outside config layers', () => {
   const violations = collectRepoPolicyViolations({
@@ -65,6 +66,23 @@ test('allows workflow-only harness entrypoints', () => {
       'package.json': '{"scripts":{}}',
       '.github/workflows/ci.yml': 'run: node ./scripts/run-harness-lane.mjs --lane pr-fast',
       'scripts/run-harness-lane.mjs': 'console.log("ok");',
+    },
+    rootPackage: { scripts: {} },
+    scope: 'all',
+  });
+
+  assert.deepEqual(violations, []);
+});
+
+test('treats WORKFLOW.md as a governed doc for script reachability', () => {
+  assert.ok(ACTIVE_DOCS.includes('WORKFLOW.md'));
+
+  const violations = collectRepoPolicyViolations({
+    files: {
+      'AGENTS.md': '# Docs\n',
+      'WORKFLOW.md': 'run ./scripts/new-tool.mjs',
+      'package.json': '{"scripts":{}}',
+      'scripts/new-tool.mjs': 'console.log("ok");',
     },
     rootPackage: { scripts: {} },
     scope: 'all',

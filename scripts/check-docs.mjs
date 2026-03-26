@@ -1,58 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { listMarkdownFiles, loadPackageScripts, repoRoot } from './doc-policy.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
-const scriptDir = path.dirname(scriptPath);
-const repoRoot = path.resolve(scriptDir, '..');
-const markdownRoots = ['docs', '.github'];
-const extraMarkdownFiles = ['AGENTS.md', 'backend/AGENTS.md', 'mobile/AGENTS.md', 'backend/README.md', 'WORKFLOW.md'];
-const packageFiles = ['package.json', 'backend/package.json', 'mobile/package.json'];
-
-function walkMarkdownFiles(rootDir, relativeDir) {
-  const absoluteDir = path.join(rootDir, relativeDir);
-  if (!fs.existsSync(absoluteDir)) {
-    return [];
-  }
-
-  const results = [];
-  for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
-    const absolutePath = path.join(absoluteDir, entry.name);
-    const relativePath = path.relative(rootDir, absolutePath);
-
-    if (entry.isDirectory()) {
-      results.push(...walkMarkdownFiles(rootDir, relativePath));
-      continue;
-    }
-
-    if (entry.isFile() && entry.name.endsWith('.md')) {
-      results.push(relativePath);
-    }
-  }
-
-  return results;
-}
-
-export function listMarkdownFiles(rootDir = repoRoot) {
-  const discovered = markdownRoots.flatMap((dir) => walkMarkdownFiles(rootDir, dir));
-  const portable = [...discovered, ...extraMarkdownFiles].filter((filePath) =>
-    fs.existsSync(path.join(rootDir, filePath)),
-  );
-  return [...new Set(portable)].toSorted();
-}
-
-export function loadPackageScripts(rootDir = repoRoot) {
-  return packageFiles.reduce((accumulator, packageFile) => {
-    const absolutePath = path.join(rootDir, packageFile);
-    if (!fs.existsSync(absolutePath)) {
-      return accumulator;
-    }
-
-    const manifest = JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
-    accumulator[packageFile] = new Set(Object.keys(manifest.scripts ?? {}));
-    return accumulator;
-  }, {});
-}
 
 function hasKnownScript(scriptName, packageScripts) {
   return Object.values(packageScripts).some((scripts) => scripts.has(scriptName));

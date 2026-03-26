@@ -122,17 +122,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      const message = await this.matchesService.sendMessage(
+      await this.matchesService.sendMessage(
         data.matchId,
         userId,
         data.content,
       );
-
-      // Broadcast to all clients in the room (including sender)
-      this.server.to(`match:${data.matchId}`).emit('message:new', {
-        matchId: data.matchId,
-        message,
-      });
     } catch (error) {
       client.emit('error', {
         message:

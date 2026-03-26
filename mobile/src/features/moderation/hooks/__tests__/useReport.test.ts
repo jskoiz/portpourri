@@ -1,7 +1,6 @@
 import { renderHook, waitFor, act } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Alert } from 'react-native';
-import React from 'react';
+import { createQueryTestHarness } from '../../../../lib/testing/queryTestHarness';
 import { useReport } from '../useReport';
 
 const mockReport = jest.fn();
@@ -14,17 +13,6 @@ jest.mock('../../../../services/api', () => ({
 
 jest.spyOn(Alert, 'alert');
 
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: queryClient }, children);
-}
-
 describe('useReport', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -33,9 +21,8 @@ describe('useReport', () => {
   it('calls moderationApi.report with the correct payload', async () => {
     mockReport.mockResolvedValue({ data: { id: 'r1', status: 'pending' } });
 
-    const { result } = renderHook(() => useReport(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useReport(), { wrapper });
 
     await act(async () => {
       await result.current.report({
@@ -56,9 +43,8 @@ describe('useReport', () => {
   it('shows success alert on successful report', async () => {
     mockReport.mockResolvedValue({ data: { id: 'r1', status: 'pending' } });
 
-    const { result } = renderHook(() => useReport(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useReport(), { wrapper });
 
     await act(async () => {
       await result.current.report({
@@ -78,9 +64,8 @@ describe('useReport', () => {
     mockReport.mockResolvedValue({ data: { id: 'r1', status: 'pending' } });
     const onSuccess = jest.fn();
 
-    const { result } = renderHook(() => useReport({ onSuccess }), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useReport({ onSuccess }), { wrapper });
 
     await act(async () => {
       await result.current.report({
@@ -96,9 +81,8 @@ describe('useReport', () => {
   it('shows error alert on failed report', async () => {
     mockReport.mockRejectedValue(new Error('Server error'));
 
-    const { result } = renderHook(() => useReport(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useReport(), { wrapper });
 
     await act(async () => {
       try {
@@ -126,9 +110,8 @@ describe('useReport', () => {
       }),
     );
 
-    const { result } = renderHook(() => useReport(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useReport(), { wrapper });
 
     expect(result.current.isLoading).toBe(false);
 

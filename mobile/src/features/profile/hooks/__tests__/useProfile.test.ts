@@ -1,6 +1,5 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
+import { createQueryTestHarness } from '../../../../lib/testing/queryTestHarness';
 import { useProfile } from '../useProfile';
 
 const mockGetProfile = jest.fn();
@@ -21,17 +20,6 @@ jest.mock('../../../../services/api', () => ({
   },
 }));
 
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: queryClient }, children);
-}
-
 describe('useProfile', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -41,9 +29,8 @@ describe('useProfile', () => {
     const profile = { id: 'u1', firstName: 'Alice', age: 28 };
     mockGetProfile.mockResolvedValue({ data: profile });
 
-    const { result } = renderHook(() => useProfile(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useProfile(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -53,9 +40,8 @@ describe('useProfile', () => {
   it('returns null profile on API failure', async () => {
     mockGetProfile.mockRejectedValue(new Error('Network error'));
 
-    const { result } = renderHook(() => useProfile(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useProfile(), { wrapper });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
 
@@ -65,9 +51,8 @@ describe('useProfile', () => {
   it('starts in loading state', () => {
     mockGetProfile.mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderHook(() => useProfile(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useProfile(), { wrapper });
 
     expect(result.current.isLoading).toBe(true);
     expect(result.current.profile).toBeNull();
@@ -76,9 +61,8 @@ describe('useProfile', () => {
   it('exposes mutation helpers', async () => {
     mockGetProfile.mockResolvedValue({ data: { id: 'u1' } });
 
-    const { result } = renderHook(() => useProfile(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useProfile(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
