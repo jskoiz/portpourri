@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import NodeTrackerCore
 
@@ -27,44 +28,50 @@ struct PopoverRootView: View {
             )
             : []
 
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                CompactHeader(
-                    snapshot: self.store.snapshot,
-                    isRefreshing: self.store.isRefreshing,
-                    useSampleData: self.store.useSampleData,
-                    visibleOtherCount: visibleOtherProcesses.count,
-                    showsAllOtherListeners: self.settings.showNonNodeListeners
-                )
+        ZStack {
+            PopoverMaterialBackground()
 
-                CompactDivider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    CompactHeader(
+                        snapshot: self.store.snapshot,
+                        isRefreshing: self.store.isRefreshing,
+                        useSampleData: self.store.useSampleData,
+                        visibleOtherCount: visibleOtherProcesses.count,
+                        showsAllOtherListeners: self.settings.showNonNodeListeners
+                    )
 
-                WatchedPortsSection(
-                    store: self.store,
-                    statuses: busyWatchedPorts,
-                    visibleOtherProcesses: visibleOtherProcesses
-                )
-
-                if !otherActiveProjects.isEmpty {
                     CompactDivider()
-                    AdditionalNodePortsSection(projects: otherActiveProjects)
-                }
 
-                if !extraOtherListeners.isEmpty {
-                    CompactDivider()
-                    OtherListenersSection(processes: extraOtherListeners)
+                    WatchedPortsSection(
+                        store: self.store,
+                        statuses: busyWatchedPorts,
+                        visibleOtherProcesses: visibleOtherProcesses
+                    )
+
+                    if !otherActiveProjects.isEmpty {
+                        CompactDivider()
+                        AdditionalNodePortsSection(projects: otherActiveProjects)
+                    }
+
+                    if !extraOtherListeners.isEmpty {
+                        CompactDivider()
+                        OtherListenersSection(processes: extraOtherListeners)
+                    }
                 }
+                .padding(16)
             }
-            .padding(16)
         }
-        .background(Color(nsColor: .windowBackgroundColor))
         .overlay(alignment: .bottomTrailing) {
             if let notice = self.store.clipboardNotice {
                 Text(notice)
                     .font(.caption)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(Color(nsColor: .windowBackgroundColor), in: Capsule())
+                    .background {
+                        PopoverCapsuleBackground()
+                            .clipShape(Capsule())
+                    }
                     .overlay(
                         Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 1)
                     )
@@ -76,6 +83,55 @@ struct PopoverRootView: View {
                     }
             }
         }
+    }
+}
+
+private struct PopoverMaterialBackground: View {
+    var body: some View {
+        ZStack {
+            VisualEffectView(material: .popover, blendingMode: .behindWindow, state: .active)
+            Color.white.opacity(0.18)
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.18),
+                    Color.white.opacity(0.06)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .ignoresSafeArea()
+    }
+}
+
+private struct PopoverCapsuleBackground: View {
+    var body: some View {
+        ZStack {
+            VisualEffectView(material: .sidebar, blendingMode: .withinWindow, state: .active)
+            Color.white.opacity(0.12)
+        }
+    }
+}
+
+private struct VisualEffectView: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+    let state: NSVisualEffectView.State
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = self.material
+        view.blendingMode = self.blendingMode
+        view.state = self.state
+        view.isEmphasized = false
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = self.material
+        nsView.blendingMode = self.blendingMode
+        nsView.state = self.state
+        nsView.isEmphasized = false
     }
 }
 
