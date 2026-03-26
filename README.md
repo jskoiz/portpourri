@@ -1,6 +1,6 @@
-# NodeTracker
+# NodeWatcher
 
-NodeTracker is a macOS menu bar app for answering one local-dev question quickly: which ports are busy, which Node processes own them, and which project they belong to.
+NodeWatcher is a macOS menu bar app for answering one local-dev question quickly: which ports are busy, which Node processes own them, and which project they belong to.
 
 ## What it does
 
@@ -31,5 +31,5 @@ To build a local app bundle:
 
 ```bash
 ./Scripts/package_app.sh
-open .build/NodeTracker.app
+open .build/NodeWatcher.app
 ```

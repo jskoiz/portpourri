@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="$ROOT/.build/release"
-APP_DIR="$ROOT/.build/NodeTracker.app"
+APP_DIR="$ROOT/.build/NodeWatcher.app"
 MACOS_DIR="$APP_DIR/Contents/MacOS"
 RESOURCES_DIR="$APP_DIR/Contents/Resources"
 
@@ -23,9 +23,9 @@ cat > "$APP_DIR/Contents/Info.plist" <<'PLIST'
   <key>CFBundleExecutable</key>
   <string>NodeTrackerApp</string>
   <key>CFBundleIdentifier</key>
-  <string>dev.nodetracker.app</string>
+  <string>dev.nodewatcher.app</string>
   <key>CFBundleName</key>
-  <string>NodeTracker</string>
+  <string>NodeWatcher</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>

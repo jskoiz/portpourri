@@ -74,7 +74,7 @@ private struct HeaderCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("NodeTracker")
+                        Text("NodeWatcher")
                             .font(.title3)
                             .fontWeight(.semibold)
                         Text(self.useSampleData ? "Sample data mode" : self.relativeUpdatedText)
@@ -135,7 +135,7 @@ private struct WatchedPortsCard: View {
                         Text(verbatim: String(status.port))
                             .font(.system(.body, design: .monospaced))
                             .fontWeight(.semibold)
-                        Text(status.isBusy ? status.ownerSummary : "Free")
+                        Text(DisplayText.watchedPortSummary(status))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
@@ -219,10 +219,11 @@ private struct ProjectCard: View {
                                     .background(Color.orange.opacity(0.16), in: Capsule())
                             }
                         }
-                        Text(self.project.projectRoot)
+                        Text(DisplayText.path(self.project.projectRoot))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
+                            .truncationMode(.middle)
                     }
                     Spacer()
                     PortBadgeRow(ports: self.project.ports)
@@ -252,7 +253,7 @@ private struct ProcessRow: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text(self.process.process.commandLine)
+            Text(DisplayText.command(self.process.process))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
@@ -286,7 +287,7 @@ private struct ProcessRow: View {
                 MiniActionButton("Copy PID") {
                     self.store.copyText(String(self.process.process.pid), label: "PID")
                 }
-                MiniActionButton("Copy Command") {
+                MiniActionButton("Copy Cmd") {
                     self.store.copyText(self.process.process.commandLine, label: "Command")
                 }
                 if self.canTerminate {
@@ -374,12 +375,15 @@ private struct FooterActions: View {
         Card {
             HStack {
                 Button("Refresh", action: self.refresh)
+                    .buttonStyle(ActionPillButtonStyle(role: nil))
                 Button("Copy JSON", action: self.copyJSON)
+                    .buttonStyle(ActionPillButtonStyle(role: nil))
                 Spacer()
                 Button("Settings", action: self.openSettings)
+                    .buttonStyle(ActionPillButtonStyle(role: nil))
                 Button("Quit", action: self.quit)
+                    .buttonStyle(ActionPillButtonStyle(role: nil))
             }
-            .buttonStyle(.plain)
             .font(.subheadline)
         }
     }
@@ -451,6 +455,67 @@ private struct Card<Content: View>: View {
         }
         .padding(16)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+private enum DisplayText {
+    static func path(_ path: String) -> String {
+        NSString(string: path).abbreviatingWithTildeInPath
+    }
+
+    static func watchedPortSummary(_ status: WatchedPortStatus) -> String {
+        guard status.isBusy else { return "Free" }
+        let owners = status.ownerSummary
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if owners.count > 1 {
+            return "\(owners.count) owners"
+        }
+        return self.stripPID(from: owners.first ?? status.ownerSummary)
+    }
+
+    static func command(_ process: ProcessSnapshot) -> String {
+        let normalized = self.normalizeCommand(process.commandLine, cwd: process.cwd)
+        let tokens = normalized
+            .split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+        guard !tokens.isEmpty else { return normalized }
+
+        if tokens.count >= 2, self.basename(tokens[0]) == "node" {
+            let launched = tokens[1]
+            if launched.contains("/node_modules/.bin/") {
+                let simplified = [self.basename(launched)] + Array(tokens.dropFirst(2))
+                return self.trimmed(simplified.joined(separator: " "))
+            }
+        }
+
+        var displayTokens = tokens
+        displayTokens[0] = self.basename(displayTokens[0])
+        return self.trimmed(displayTokens.joined(separator: " "))
+    }
+
+    private static func normalizeCommand(_ command: String, cwd: String?) -> String {
+        guard let cwd, !cwd.isEmpty, cwd != "/" else { return command }
+        let cwdWithSlash = cwd.hasSuffix("/") ? cwd : cwd + "/"
+        return command
+            .replacingOccurrences(of: cwdWithSlash, with: "")
+            .replacingOccurrences(of: cwd, with: ".")
+    }
+
+    private static func basename(_ token: String) -> String {
+        URL(fileURLWithPath: token).lastPathComponent
+    }
+
+    private static func stripPID(from owner: String) -> String {
+        owner.replacingOccurrences(of: #"\s*\(\d+\)$"#, with: "", options: .regularExpression)
+    }
+
+    private static func trimmed(_ command: String) -> String {
+        let tokens = command.split(whereSeparator: \.isWhitespace)
+        if tokens.count <= 7 {
+            return command
+        }
+        return tokens.prefix(7).joined(separator: " ") + " …"
     }
 }
 

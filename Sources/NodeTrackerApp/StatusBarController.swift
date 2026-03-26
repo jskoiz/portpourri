@@ -34,14 +34,14 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         button.imagePosition = .imageOnly
         button.action = #selector(self.togglePopover(_:))
         button.target = self
-        button.toolTip = "NodeTracker"
+        button.toolTip = "NodeWatcher"
     }
 
     private func configurePopover() {
         self.popover.behavior = .transient
         self.popover.delegate = self
         self.popover.animates = true
-        self.popover.contentSize = NSSize(width: 430, height: 560)
+        self.popover.contentSize = NSSize(width: 416, height: 540)
         self.popover.contentViewController = NSHostingController(
             rootView: PopoverRootView(
                 store: self.store,
