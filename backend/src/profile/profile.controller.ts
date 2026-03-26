@@ -64,8 +64,11 @@ export class ProfileController {
   @ApiOperation({ summary: 'Return a profile by user identifier' })
   @ApiOkResponse({ description: 'Profile returned successfully.' })
   @ApiNotFoundResponse({ description: 'Profile not found.' })
-  async getProfileById(@Param('id') id: string) {
-    const profile = await this.profileService.getPublicProfile(id);
+  async getProfileById(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    const profile = await this.profileService.getPublicProfile(id, req.user.id);
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }

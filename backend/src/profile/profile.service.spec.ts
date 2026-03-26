@@ -3,6 +3,7 @@ import { IntensityLevel } from '@prisma/client';
 import { ProfileService } from './profile.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PhotoStorageService } from './photo-storage.service';
+import { BlockService } from '../moderation/block.service';
 
 describe('ProfileService', () => {
   let service: ProfileService;
@@ -32,9 +33,14 @@ describe('ProfileService', () => {
     saveProfilePhoto: jest.fn(),
     removeProfilePhoto: jest.fn(),
   };
+  const blockServiceMock = {
+    getBlockedUserIds: jest.fn(),
+    isBlocked: jest.fn().mockResolvedValue(false),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    blockServiceMock.isBlocked.mockResolvedValue(false);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -46,6 +52,10 @@ describe('ProfileService', () => {
         {
           provide: PhotoStorageService,
           useValue: photoStorageMock,
+        },
+        {
+          provide: BlockService,
+          useValue: blockServiceMock,
         },
       ],
     }).compile();
@@ -228,6 +238,19 @@ describe('ProfileService', () => {
     expect(result).not.toHaveProperty('updatedAt');
     expect(result).not.toHaveProperty('birthdate');
     expect(result!.age).toBeGreaterThan(0);
+  });
+
+  it('suppresses public profiles for blocked viewers', async () => {
+    blockServiceMock.isBlocked.mockResolvedValue(true);
+
+    const result = await service.getPublicProfile('user-2', 'viewer-1');
+
+    expect(result).toBeNull();
+    expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
+    expect(blockServiceMock.isBlocked).toHaveBeenCalledWith(
+      'viewer-1',
+      'user-2',
+    );
   });
 
   describe('getProfileCompleteness', () => {

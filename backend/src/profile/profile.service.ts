@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { calculateAge } from '../common/age.util';
 import { PhotoStorageService } from './photo-storage.service';
+import { BlockService } from '../moderation/block.service';
 import {
   PROFILE_COMPLETENESS_CHECKS,
   PROFILE_COMPLETENESS_PROMPTS,
@@ -50,6 +51,7 @@ export class ProfileService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly photoStorage: PhotoStorageService,
+    private readonly blockService: BlockService,
   ) {}
 
   async updateFitnessProfile(userId: string, data: UpdateFitnessProfileDto) {
@@ -114,7 +116,14 @@ export class ProfileService {
     };
   }
 
-  async getPublicProfile(userId: string) {
+  async getPublicProfile(userId: string, viewerId?: string) {
+    if (viewerId && (await this.blockService.isBlocked(viewerId, userId))) {
+      this.logger.warn(
+        `Public profile suppressed for viewerId=${viewerId} userId=${userId}`,
+      );
+      return null;
+    }
+
     const user = await this.prisma.user.findFirst({
       where: { id: userId, isDeleted: false, isBanned: false },
       include: {

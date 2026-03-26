@@ -8,6 +8,14 @@ const mockGoBack = jest.fn();
 const mockPass = jest.fn();
 const mockLike = jest.fn();
 const mockMatches: any[] = [];
+const mockIsBlockedUserId = jest.fn((_userId?: string | null) => false);
+const mockUseQuery = jest.fn((_opts?: any) => ({}));
+const mockUseQueryClient = jest.fn(() => ({
+  invalidateQueries: jest.fn(),
+  removeQueries: jest.fn(),
+  setQueryData: jest.fn(),
+  setQueriesData: jest.fn(),
+}));
 
 const mockNavigation = { navigate: mockNavigate, goBack: mockGoBack } as any;
 
@@ -19,6 +27,12 @@ jest.mock('../../features/discovery/hooks/useDiscoveryActions', () => ({
   }),
 }));
 
+jest.mock('@tanstack/react-query', () => ({
+  ...jest.requireActual('@tanstack/react-query'),
+  useQuery: (opts: any) => mockUseQuery(opts),
+  useQueryClient: () => mockUseQueryClient(),
+}));
+
 jest.mock('../../features/matches/hooks/useMatches', () => ({
   useMatches: () => ({
     matches: mockMatches,
@@ -27,6 +41,10 @@ jest.mock('../../features/matches/hooks/useMatches', () => ({
     isRefetching: false,
     refetch: jest.fn(),
   }),
+}));
+
+jest.mock('../../lib/moderation/blockedUsers', () => ({
+  isBlockedUserId: (userId?: string | null) => mockIsBlockedUserId(userId),
 }));
 
 jest.mock('../../components/ui/AppBackdrop', () => () => null);
@@ -99,6 +117,12 @@ const mockRoute = {
 describe('ProfileDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsBlockedUserId.mockReturnValue(false);
+    mockUseQuery.mockReturnValue({
+      data: routeUser,
+      error: null,
+      isLoading: false,
+    });
     mockPass.mockResolvedValue(undefined);
     mockLike.mockResolvedValue(undefined);
     mockMatches.length = 0;
@@ -123,6 +147,11 @@ describe('ProfileDetailScreen', () => {
       ...mockRoute,
       params: { user: routeUserWithFriends },
     };
+    mockUseQuery.mockReturnValueOnce({
+      data: routeUserWithFriends,
+      error: null,
+      isLoading: false,
+    });
 
     render(<ProfileDetailScreen navigation={mockNavigation} route={friendsRoute as any} />);
 
@@ -164,5 +193,27 @@ describe('ProfileDetailScreen', () => {
       expect(mockLike).toHaveBeenCalledWith('user-2');
       expect(Alert.alert).toHaveBeenCalledWith('Could not like profile', 'Like failed');
     });
+  });
+
+  it('shows a blocked profile state when the route target was already blocked', async () => {
+    mockIsBlockedUserId.mockReturnValue(true);
+
+    render(<ProfileDetailScreen navigation={mockNavigation} route={mockRoute as any} />);
+
+    expect(await screen.findByText('Profile unavailable')).toBeTruthy();
+    expect(screen.getByText('This profile can no longer be viewed.')).toBeTruthy();
+  });
+
+  it('shows error state when the server no longer returns the public profile', async () => {
+    mockUseQuery.mockReturnValue({
+      data: null,
+      error: new Error('Not found'),
+      isLoading: false,
+    });
+
+    render(<ProfileDetailScreen navigation={mockNavigation} route={mockRoute as any} />);
+
+    expect(await screen.findByText('Profile not found')).toBeTruthy();
+    expect(screen.getByText('This profile is no longer available.')).toBeTruthy();
   });
 });

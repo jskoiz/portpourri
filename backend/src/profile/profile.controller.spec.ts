@@ -201,24 +201,27 @@ describe('ProfileController', () => {
   });
 
   it('delegates getProfileById to profile service', async () => {
+    const req = { user: { id: 'user-1' } } as AuthenticatedRequest;
     profileServiceMock.getPublicProfile.mockResolvedValue({
       id: 'user-2',
       firstName: 'Other',
     });
 
-    await expect(controller.getProfileById('user-2')).resolves.toEqual({
+    await expect(controller.getProfileById(req, 'user-2')).resolves.toEqual({
       id: 'user-2',
       firstName: 'Other',
     });
-    expect(profileServiceMock.getPublicProfile).toHaveBeenCalledWith('user-2');
+    expect(profileServiceMock.getPublicProfile).toHaveBeenCalledWith(
+      'user-2',
+      'user-1',
+    );
   });
 
   it('throws NotFoundException when getProfileById returns null', async () => {
+    const req = { user: { id: 'user-1' } } as AuthenticatedRequest;
     profileServiceMock.getPublicProfile.mockResolvedValue(null);
 
-    await expect(controller.getProfileById('missing')).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(controller.getProfileById(req, 'missing')).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('delegates deletePhoto to profile service', async () => {

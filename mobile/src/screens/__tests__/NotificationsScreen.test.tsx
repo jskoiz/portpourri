@@ -309,6 +309,7 @@ describe('NotificationsScreen', () => {
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('ProfileDetail', {
         user: { id: 'user-5', firstName: 'Profile' },
+        userId: 'user-5',
       });
     });
   });

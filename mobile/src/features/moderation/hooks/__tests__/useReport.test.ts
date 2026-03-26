@@ -85,14 +85,12 @@ describe('useReport', () => {
     const { result } = renderHook(() => useReport(), { wrapper });
 
     await act(async () => {
-      try {
-        await result.current.report({
+      await expect(
+        result.current.report({
           reportedUserId: 'u1',
           category: 'OTHER',
-        });
-      } catch {
-        // expected
-      }
+        }),
+      ).resolves.toBeUndefined();
     });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -103,7 +101,7 @@ describe('useReport', () => {
   });
 
   it('tracks loading state', async () => {
-    let resolveReport: (value: unknown) => void;
+    let resolveReport;
     mockReport.mockReturnValue(
       new Promise((resolve) => {
         resolveReport = resolve;

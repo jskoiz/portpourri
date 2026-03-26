@@ -35,6 +35,10 @@ export const profileApi = {
     withErrorLogging('profile', 'getProfile', () =>
       client.get<CurrentUser>('/profile'),
     ),
+  getPublicProfile: async (userId: string) =>
+    withErrorLogging('profile', 'getPublicProfile', () =>
+      client.get<CurrentUser>(`/profile/${userId}`),
+    ),
   updateFitness: async (payload: UpdateFitnessPayload) =>
     withErrorLogging('profile', 'updateFitness', () =>
       client.patch<CurrentUser>('/profile/fitness', {

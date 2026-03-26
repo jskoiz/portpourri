@@ -8,6 +8,9 @@ const mockRefresh = jest.fn();
 const mockSendMessage = jest.fn();
 let safeAreaViewProps: Record<string, unknown> | null = null;
 let chatMessageListProps: Record<string, unknown> | null = null;
+const mockIsBlockedUserId = jest.fn((_userId?: string | null) => false);
+const mockUseQueryClient = jest.fn(() => ({}));
+const mockUseChatThread = jest.fn((_matchId?: string, _opts?: unknown) => mockChatThreadState);
 
 const mockNavigation = { navigate: mockNavigate, goBack: mockGoBack } as any;
 const mockRoute = {
@@ -41,8 +44,13 @@ jest.mock('react-native-safe-area-context', () => ({
   },
 }));
 
+jest.mock('@tanstack/react-query', () => ({
+  ...jest.requireActual('@tanstack/react-query'),
+  useQueryClient: () => mockUseQueryClient(),
+}));
+
 jest.mock('../../features/chat/hooks/useChatThread', () => ({
-  useChatThread: () => mockChatThreadState,
+  useChatThread: (matchId: string, opts?: unknown) => mockUseChatThread(matchId, opts),
 }));
 
 jest.mock('../../features/chat/components/ChatMessageList', () => ({
@@ -67,11 +75,17 @@ jest.mock('../../features/moderation/components/ReportSheet', () => ({
   ReportSheet: () => null,
 }));
 
+jest.mock('../../lib/moderation/blockedUsers', () => ({
+  isBlockedUserId: (userId?: string | null) => mockIsBlockedUserId(userId),
+}));
+
 describe('ChatScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     safeAreaViewProps = null;
     chatMessageListProps = null;
+    mockIsBlockedUserId.mockReturnValue(false);
+    mockUseChatThread.mockReturnValue(mockChatThreadState);
     mockRefresh.mockResolvedValue(undefined);
     mockSendMessage.mockResolvedValue(undefined);
     Object.assign(mockChatThreadState, {
@@ -127,6 +141,16 @@ describe('ChatScreen', () => {
     render(<ChatScreen navigation={mockNavigation} route={mockRoute as any} />);
 
     expect(chatMessageListProps?.refreshing).toBe(false);
+  });
+
+  it('shows a blocked conversation state when the chat target was already blocked', async () => {
+    mockIsBlockedUserId.mockReturnValue(true);
+
+    render(<ChatScreen navigation={mockNavigation} route={mockRoute as any} />);
+
+    expect(await screen.findByText('Conversation unavailable')).toBeTruthy();
+    expect(screen.getByText('This conversation can no longer be opened.')).toBeTruthy();
+    expect(mockUseChatThread).toHaveBeenCalledWith('match-1', { enabled: false });
   });
 
   it('passes event navigation through to the chat message list', () => {

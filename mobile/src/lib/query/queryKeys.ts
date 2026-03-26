@@ -9,6 +9,7 @@ export const queryKeys = {
   profile: {
     all: () => ['profile'] as const,
     current: () => ['profile', 'current'] as const,
+    public: (userId: string) => ['profile', 'public', userId] as const,
   },
   matches: {
     all: () => ['matches'] as const,

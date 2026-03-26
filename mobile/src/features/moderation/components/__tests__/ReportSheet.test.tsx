@@ -16,14 +16,11 @@ jest.mock('@gorhom/bottom-sheet', () => {
   const React = require('react');
   const { View } = require('react-native');
   return {
-    BottomSheetModal: React.forwardRef(
-      ({ children }: { children: React.ReactNode }, _ref: unknown) =>
-        React.createElement(View, { testID: 'bottom-sheet-modal' }, children),
+    BottomSheetModal: React.forwardRef((props: any, _ref: any) =>
+      React.createElement(View, { testID: 'bottom-sheet-modal' }, props.children),
     ),
-    BottomSheetScrollView: ({ children }: { children: React.ReactNode }) =>
-      React.createElement(View, null, children),
-    BottomSheetView: ({ children }: { children: React.ReactNode }) =>
-      React.createElement(View, null, children),
+    BottomSheetScrollView: (props: any) => React.createElement(View, null, props.children),
+    BottomSheetView: (props: any) => React.createElement(View, null, props.children),
     BottomSheetBackdrop: () => null,
   };
 });
@@ -116,6 +113,8 @@ describe('ReportSheet', () => {
         description: undefined,
       });
     });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('includes description when provided', async () => {

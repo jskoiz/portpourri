@@ -64,10 +64,17 @@ export class NotificationsService {
     take = 50,
     cursor?: string,
   ): Promise<Notification[]> {
-    return this.prisma.notification.findMany({
+    const blockedIds = await this.getBlockedUserIds(userId);
+    const safeTake = Math.min(take, 100);
+
+    // When blocked users exist, over-fetch so that post-fetch filtering
+    // still yields the requested page size.
+    const fetchLimit = blockedIds.size > 0 ? safeTake * 3 : safeTake;
+
+    const notifications = await this.prisma.notification.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      take: Math.min(take, 100),
+      take: fetchLimit,
       ...(cursor
         ? {
             skip: 1,
@@ -75,6 +82,20 @@ export class NotificationsService {
           }
         : {}),
     });
+
+    if (!blockedIds.size) {
+      return notifications;
+    }
+
+    // Filter blocked-actor notifications BEFORE applying the page limit
+    // so the caller always receives up to `take` results.
+    return notifications
+      .filter((notification) =>
+        this.getNotificationActorIds(notification).every(
+          (actorId) => !blockedIds.has(actorId),
+        ),
+      )
+      .slice(0, safeTake);
   }
 
   async markRead(
@@ -112,6 +133,59 @@ export class NotificationsService {
     return this.prisma.notification.count({
       where: { userId, read: false },
     });
+  }
+
+  private getNotificationActorIds(
+    notification: Pick<Notification, 'data'>,
+  ): string[] {
+    const data =
+      notification.data &&
+      typeof notification.data === 'object' &&
+      !Array.isArray(notification.data)
+        ? (notification.data as Record<string, unknown>)
+        : undefined;
+
+    return [
+      data?.fromUserId,
+      data?.withUserId,
+      data?.senderId,
+      data?.attendeeId,
+      data?.inviterId,
+    ].filter(
+      (value): value is string => typeof value === 'string' && value.length > 0,
+    );
+  }
+
+  private async getBlockedUserIds(userId: string): Promise<Set<string>> {
+    const [blockedMatches, blockReports] = await Promise.all([
+      this.prisma.match.findMany({
+        where: {
+          isBlocked: true,
+          OR: [{ userAId: userId }, { userBId: userId }],
+        },
+        select: { userAId: true, userBId: true },
+      }),
+      this.prisma.report.findMany({
+        where: {
+          category: ReportCategory.BLOCK,
+          OR: [{ reporterId: userId }, { reportedUserId: userId }],
+        },
+        select: { reporterId: true, reportedUserId: true },
+      }),
+    ]);
+
+    const blockedIds = new Set<string>();
+
+    for (const match of blockedMatches) {
+      blockedIds.add(match.userAId === userId ? match.userBId : match.userAId);
+    }
+    for (const report of blockReports) {
+      blockedIds.add(
+        report.reporterId === userId ? report.reportedUserId : report.reporterId,
+      );
+    }
+
+    return blockedIds;
   }
 
   /**

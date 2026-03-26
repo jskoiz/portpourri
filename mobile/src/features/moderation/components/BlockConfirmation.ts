@@ -7,7 +7,7 @@ import { Alert } from 'react-native';
 export function showBlockConfirmation(onConfirm: () => void) {
   Alert.alert(
     'Block this person?',
-    "They won't be able to see your profile or message you.",
+    "They'll be removed from your matches and won't be able to see your profile or message you.",
     [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Block', style: 'destructive', onPress: onConfirm },
