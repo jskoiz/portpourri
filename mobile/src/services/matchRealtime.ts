@@ -1,5 +1,6 @@
 import { env } from '../config/env';
 import { getToken } from '../api/tokenStorage';
+export { connectSocket, disconnectSocket } from '../lib/socket';
 
 type RealtimeStatus = 'connecting' | 'connected' | 'fallback';
 

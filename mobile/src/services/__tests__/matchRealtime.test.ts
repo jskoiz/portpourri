@@ -1,6 +1,6 @@
 import { connectMatchMessageStream } from '../matchRealtime';
+import { connectSocket, disconnectSocket } from '../matchRealtime';
 import { getToken } from '../../api/tokenStorage';
-import { connectSocket, disconnectSocket } from '../../lib/socket';
 import { env } from '../../config/env';
 
 jest.mock('../../api/tokenStorage', () => ({
