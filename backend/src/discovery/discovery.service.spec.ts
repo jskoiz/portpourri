@@ -827,4 +827,149 @@ describe('DiscoveryService', () => {
     expect(result).toEqual({ status: 'liked' });
   });
 
+  describe('concurrent operations', () => {
+    it('mutual like creates match with lexicographic userAId/userBId ordering', async () => {
+      // User B ('user-2') already liked user A ('user-1').
+      // Now user A likes user B — should create a mutual match.
+      prismaMock.like.findUnique
+        .mockResolvedValueOnce(null) // no existing like from user-1 → user-2
+        .mockResolvedValueOnce({ id: 'reverse-like' }); // mutual like from user-2 → user-1 exists
+      prismaMock.pass.deleteMany.mockResolvedValue({ count: 0 });
+      prismaMock.like.create.mockResolvedValue({ id: 'like-1' });
+      prismaMock.userProfile.findMany.mockResolvedValue([
+        { userId: 'user-1', intentDating: true, intentWorkout: true },
+        { userId: 'user-2', intentDating: true, intentWorkout: false },
+      ]);
+      prismaMock.match.upsert.mockResolvedValue({ id: 'match-1' });
+
+      const result = await service.likeUser('user-1', 'user-2');
+
+      expect(result).toEqual({ status: 'match', match: { id: 'match-1' } });
+      // Verify lexicographic sort: 'user-1' < 'user-2'
+      expect(prismaMock.match.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userAId_userBId: {
+              userAId: 'user-1',
+              userBId: 'user-2',
+            },
+          },
+          create: expect.objectContaining({
+            userAId: 'user-1',
+            userBId: 'user-2',
+          }),
+        }),
+      );
+    });
+
+    it('mutual like preserves lexicographic order when actor id sorts after target', async () => {
+      // user-2 likes user-1 (actor > target alphabetically)
+      // user-1 has already liked user-2
+      prismaMock.user.findFirst.mockResolvedValue({ id: 'user-1' });
+      prismaMock.like.findUnique
+        .mockResolvedValueOnce(null) // no existing like from user-2 → user-1
+        .mockResolvedValueOnce({ id: 'reverse-like' }); // mutual like from user-1 → user-2
+      prismaMock.pass.deleteMany.mockResolvedValue({ count: 0 });
+      prismaMock.like.create.mockResolvedValue({ id: 'like-2' });
+      prismaMock.userProfile.findMany.mockResolvedValue([
+        { userId: 'user-1', intentDating: true, intentWorkout: true },
+        { userId: 'user-2', intentDating: true, intentWorkout: true },
+      ]);
+      prismaMock.match.upsert.mockResolvedValue({ id: 'match-2' });
+
+      const result = await service.likeUser('user-2', 'user-1');
+
+      expect(result).toEqual({ status: 'match', match: { id: 'match-2' } });
+      // Even though user-2 is the actor, userAId should still be 'user-1' (lexicographic)
+      expect(prismaMock.match.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userAId_userBId: {
+              userAId: 'user-1',
+              userBId: 'user-2',
+            },
+          },
+          create: expect.objectContaining({
+            userAId: 'user-1',
+            userBId: 'user-2',
+          }),
+        }),
+      );
+    });
+
+    it('duplicate like is idempotent', async () => {
+      // First like succeeds
+      prismaMock.like.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      prismaMock.pass.deleteMany.mockResolvedValue({ count: 0 });
+      prismaMock.like.create.mockResolvedValue({ id: 'like-1' });
+
+      const first = await service.likeUser('user-1', 'user-2');
+      expect(first).toEqual({ status: 'liked' });
+
+      // Second like — existing like found
+      prismaMock.like.findUnique.mockResolvedValue({ id: 'like-1' });
+
+      const second = await service.likeUser('user-1', 'user-2');
+      expect(second).toEqual({ status: 'already_liked' });
+
+      // The create should only have been called once (from the first like)
+      expect(prismaMock.like.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('like after block is rejected', async () => {
+      // user-1 has blocked user-2; user-2 tries to like user-1
+      blockServiceMock.isBlocked.mockResolvedValue(true);
+
+      await expect(service.likeUser('user-2', 'user-1')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(prismaMock.like.create).not.toHaveBeenCalled();
+      expect(prismaMock.match.upsert).not.toHaveBeenCalled();
+    });
+
+    it('undo like before mutual match prevents match creation', async () => {
+      // Step 1: user-1 likes user-2
+      prismaMock.like.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      prismaMock.pass.deleteMany.mockResolvedValue({ count: 0 });
+      prismaMock.like.create.mockResolvedValue({ id: 'like-1' });
+
+      const likeResult = await service.likeUser('user-1', 'user-2');
+      expect(likeResult).toEqual({ status: 'liked' });
+
+      // Step 2: user-1 undoes the like
+      prismaMock.like.findFirst.mockResolvedValue({
+        id: 'like-1',
+        toUserId: 'user-2',
+        createdAt: new Date('2026-01-01T10:00:00.000Z'),
+      });
+      prismaMock.pass.findFirst.mockResolvedValue(null);
+      prismaMock.like.delete.mockResolvedValue({ id: 'like-1' });
+      prismaMock.match.findUnique.mockResolvedValue(null);
+
+      const undoResult = await service.undoLastSwipe('user-1');
+      expect(undoResult).toEqual({
+        status: 'undone',
+        action: 'like',
+        targetUserId: 'user-2',
+      });
+
+      // Step 3: user-2 now likes user-1 — but user-1's like was undone,
+      // so no mutual like exists and no match should be created
+      prismaMock.user.findFirst.mockResolvedValue({ id: 'user-1' });
+      prismaMock.like.findUnique
+        .mockResolvedValueOnce(null) // no existing like from user-2 → user-1
+        .mockResolvedValueOnce(null); // no mutual like from user-1 → user-2 (it was undone)
+      prismaMock.pass.deleteMany.mockResolvedValue({ count: 0 });
+      prismaMock.like.create.mockResolvedValue({ id: 'like-2' });
+
+      const secondLikeResult = await service.likeUser('user-2', 'user-1');
+      expect(secondLikeResult).toEqual({ status: 'liked' });
+      expect(prismaMock.match.upsert).not.toHaveBeenCalled();
+    });
+  });
+
 });
