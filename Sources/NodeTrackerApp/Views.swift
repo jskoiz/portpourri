@@ -11,29 +11,44 @@ struct PopoverRootView: View {
     }
 
     var body: some View {
-        let visibleOtherCount = self.store.visibleOtherProcesses().count
+        let visibleOtherProcesses = self.store.visibleOtherProcesses()
+        let busyWatchedPorts = self.store.snapshot.watchedPorts
+            .filter(\.isBusy)
+            .sorted(by: DisplayText.compareWatchedPorts)
+
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                HeaderCard(
+            CompactPanel {
+                CompactHeader(
                     snapshot: self.store.snapshot,
                     isRefreshing: self.store.isRefreshing,
                     useSampleData: self.store.useSampleData,
-                    otherCount: visibleOtherCount,
-                    otherCountTitle: self.settings.showNonNodeListeners ? "Other listeners" : "Conflicts shown"
+                    visibleOtherCount: visibleOtherProcesses.count,
+                    showsAllOtherListeners: self.settings.showNonNodeListeners
                 )
-                WatchedPortsCard(statuses: self.store.snapshot.watchedPorts)
-                if self.settings.groupMode == .project {
+
+                CompactDivider()
+
+                BusyWatchedPortsSection(
+                    statuses: busyWatchedPorts,
+                    totalCount: self.store.snapshot.watchedPorts.count
+                )
+
+                if self.settings.groupMode == .project, !self.store.snapshot.projects.isEmpty {
+                    CompactDivider()
                     ProjectGroupsView(store: self.store)
-                } else {
+                } else if self.settings.groupMode == .port, !self.store.snapshot.allProcesses.isEmpty {
+                    CompactDivider()
                     PortGroupsView(store: self.store)
                 }
-                if !self.store.visibleOtherProcesses().isEmpty {
-                    OtherListenersCard(store: self.store, processes: self.store.visibleOtherProcesses())
+
+                if !visibleOtherProcesses.isEmpty {
+                    CompactDivider()
+                    OtherListenersSection(store: self.store, processes: visibleOtherProcesses)
                 }
             }
-            .padding(16)
+            .padding(12)
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.clear)
         .overlay(alignment: .bottomTrailing) {
             if let notice = self.store.clipboardNotice {
                 Text(notice)
@@ -52,36 +67,38 @@ struct PopoverRootView: View {
     }
 }
 
-private struct HeaderCard: View {
+private struct CompactHeader: View {
     let snapshot: AppSnapshot
     let isRefreshing: Bool
     let useSampleData: Bool
-    let otherCount: Int
-    let otherCountTitle: String
+    let visibleOtherCount: Int
+    let showsAllOtherListeners: Bool
 
     var body: some View {
-        Card {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("NodeWatcher")
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                        Text(self.useSampleData ? "Sample data mode" : self.relativeUpdatedText)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if self.isRefreshing {
-                        ProgressView()
-                            .controlSize(.small)
-                    }
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("NodeWatcher")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                    Text(self.useSampleData ? "Sample data mode" : self.relativeUpdatedText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                HStack(spacing: 12) {
-                    SummaryMetric(title: "Node projects", value: String(self.snapshot.summary.nodeProjectCount))
-                    SummaryMetric(title: "Busy watched", value: String(self.snapshot.summary.watchedBusyCount))
-                    SummaryMetric(title: self.otherCountTitle, value: String(self.otherCount))
+                Spacer()
+                if self.isRefreshing {
+                    ProgressView()
+                        .controlSize(.small)
                 }
+            }
+
+            HStack(spacing: 18) {
+                HeaderMetric(value: self.snapshot.summary.nodeProjectCount, title: "Projects")
+                HeaderMetric(value: self.snapshot.summary.watchedBusyCount, title: "Busy watched")
+                HeaderMetric(
+                    value: self.visibleOtherCount,
+                    title: self.showsAllOtherListeners ? "Other listeners" : "Conflicts"
+                )
             }
         }
     }
@@ -90,19 +107,19 @@ private struct HeaderCard: View {
         let elapsed = Date().timeIntervalSince(self.snapshot.generatedAt)
         guard elapsed > 3 else { return "Updated just now" }
         let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
+        formatter.unitsStyle = .short
         return "Updated \(formatter.localizedString(fromTimeInterval: -elapsed))"
     }
 }
 
-private struct SummaryMetric: View {
+private struct HeaderMetric: View {
+    let value: Int
     let title: String
-    let value: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(self.value)
-                .font(.title2)
+        VStack(alignment: .leading, spacing: 1) {
+            Text(verbatim: String(self.value))
+                .font(.title3)
                 .fontWeight(.semibold)
             Text(self.title)
                 .font(.caption)
@@ -112,40 +129,85 @@ private struct SummaryMetric: View {
     }
 }
 
-private struct WatchedPortsCard: View {
+private struct BusyWatchedPortsSection: View {
     let statuses: [WatchedPortStatus]
-
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
+    let totalCount: Int
 
     var body: some View {
-        Card(title: "Watched ports") {
-            LazyVGrid(columns: self.columns, alignment: .leading, spacing: 8) {
-                ForEach(self.statuses) { status in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(verbatim: String(status.port))
-                            .font(.system(.body, design: .monospaced))
-                            .fontWeight(.semibold)
-                        Text(DisplayText.watchedPortSummary(status))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
+        VStack(alignment: .leading, spacing: 10) {
+            CompactSectionHeader(
+                title: "Watched ports",
+                trailing: self.statuses.isEmpty ? "All free" : "\(self.statuses.count) busy"
+            )
+
+            if self.statuses.isEmpty {
+                Text("All \(self.totalCount) watched ports are free.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("\(max(self.totalCount - self.statuses.count, 0)) free of \(self.totalCount) watched ports.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                CompactSurface {
+                    let statuses = self.statuses
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(statuses.enumerated()), id: \.element.id) { index, status in
+                            if index > 0 {
+                                CompactRowDivider()
+                            }
+                            BusyPortRow(status: status)
+                                .padding(.vertical, 8)
+                        }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(8)
-                    .background(self.backgroundColor(for: status), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
             }
         }
     }
+}
 
-    private func backgroundColor(for status: WatchedPortStatus) -> AnyShapeStyle {
-        if status.isConflict {
-            return AnyShapeStyle(Color.orange.opacity(0.18))
+private struct BusyPortRow: View {
+    let status: WatchedPortStatus
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            PortBadge(port: self.status.port, tone: self.tone)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(DisplayText.watchedPortSummary(self.status))
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+                Text(DisplayText.watchedPortDetail(self.status))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            StatusTag(text: self.tagText, tone: self.tone)
         }
-        if status.isBusy {
-            return AnyShapeStyle(Color.blue.opacity(0.16))
+    }
+
+    private var tone: AccentTone {
+        if self.status.isConflict {
+            return .warning
         }
-        return AnyShapeStyle(Color.primary.opacity(0.05))
+        if self.status.isNodeOwned {
+            return .node
+        }
+        return .neutral
+    }
+
+    private var tagText: String {
+        if self.status.isConflict {
+            return "Conflict"
+        }
+        if self.status.isNodeOwned {
+            return "Node"
+        }
+        return "Busy"
     }
 }
 
@@ -153,9 +215,12 @@ private struct ProjectGroupsView: View {
     @ObservedObject var store: NodeTrackerStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ForEach(self.sortedProjects()) { project in
-                ProjectCard(store: self.store, project: project)
+        let projects = self.sortedProjects()
+
+        VStack(alignment: .leading, spacing: 10) {
+            CompactSectionHeader(title: "Projects", trailing: "\(projects.count)")
+            ForEach(projects) { project in
+                ProjectGroup(store: self.store, project: project)
             }
         }
     }
@@ -187,16 +252,93 @@ private struct ProjectGroupsView: View {
     }
 }
 
+private struct ProjectGroup: View {
+    @ObservedObject var store: NodeTrackerStore
+    let project: ProjectSnapshot
+
+    var body: some View {
+        CompactSurface {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(self.project.displayName)
+                        .font(.headline)
+                    if self.project.isWorktreeLike {
+                        StatusTag(text: "worktree", tone: .warning)
+                    }
+                    Spacer()
+                    PortBadgeRow(ports: self.project.ports)
+                }
+
+                Text(DisplayText.path(self.project.projectRoot))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+
+                let processes = self.sortedProcesses()
+                if !processes.isEmpty {
+                    CompactRowDivider()
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(processes.enumerated()), id: \.element.id) { index, process in
+                            if index > 0 {
+                                CompactRowDivider()
+                            }
+                            ProcessCompactRow(store: self.store, process: process)
+                                .padding(.vertical, 8)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func sortedProcesses() -> [TrackedProcessSnapshot] {
+        self.project.processes.sorted { lhs, rhs in
+            let lhsPort = lhs.ports.min() ?? .max
+            let rhsPort = rhs.ports.min() ?? .max
+            if lhsPort != rhsPort {
+                return lhsPort < rhsPort
+            }
+
+            let labelComparison = lhs.process.toolLabel.localizedCaseInsensitiveCompare(rhs.process.toolLabel)
+            if labelComparison != .orderedSame {
+                return labelComparison == .orderedAscending
+            }
+
+            return lhs.process.pid < rhs.process.pid
+        }
+    }
+}
+
 private struct PortGroupsView: View {
     @ObservedObject var store: NodeTrackerStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ForEach(self.groupedPorts(), id: \.port) { group in
-                Card(title: "Port \(String(group.port))") {
+        let groups = self.groupedPorts()
+
+        VStack(alignment: .leading, spacing: 10) {
+            CompactSectionHeader(title: "Ports", trailing: "\(groups.count)")
+            ForEach(groups, id: \.port) { group in
+                CompactSurface {
                     VStack(alignment: .leading, spacing: 10) {
-                        ForEach(self.sortedProcesses(group.processes)) { process in
-                            ProcessRow(store: self.store, process: process)
+                        HStack {
+                            Text("Port \(String(group.port))")
+                                .font(.headline)
+                            Spacer()
+                            StatusTag(text: "\(group.processes.count)", tone: .neutral)
+                        }
+
+                        CompactRowDivider()
+
+                        let processes = self.sortedProcesses(group.processes)
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(Array(processes.enumerated()), id: \.element.id) { index, process in
+                                if index > 0 {
+                                    CompactRowDivider()
+                                }
+                                ProcessCompactRow(store: self.store, process: process)
+                                    .padding(.vertical, 8)
+                            }
                         }
                     }
                 }
@@ -232,73 +374,18 @@ private struct PortGroupsView: View {
     }
 }
 
-private struct ProjectCard: View {
-    @ObservedObject var store: NodeTrackerStore
-    let project: ProjectSnapshot
-
-    var body: some View {
-        Card {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 6) {
-                            Text(self.project.displayName)
-                                .font(.headline)
-                            if self.project.isWorktreeLike {
-                                Text("worktree")
-                                    .font(.caption2)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.orange.opacity(0.16), in: Capsule())
-                            }
-                        }
-                        Text(DisplayText.path(self.project.projectRoot))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .truncationMode(.middle)
-                    }
-                    Spacer()
-                    PortBadgeRow(ports: self.project.ports)
-                }
-
-                ForEach(self.sortedProcesses()) { process in
-                    ProcessRow(store: self.store, process: process)
-                }
-            }
-        }
-    }
-
-    private func sortedProcesses() -> [TrackedProcessSnapshot] {
-        self.project.processes.sorted { lhs, rhs in
-            let lhsPort = lhs.ports.min() ?? .max
-            let rhsPort = rhs.ports.min() ?? .max
-            if lhsPort != rhsPort {
-                return lhsPort < rhsPort
-            }
-
-            let labelComparison = lhs.process.toolLabel.localizedCaseInsensitiveCompare(rhs.process.toolLabel)
-            if labelComparison != .orderedSame {
-                return labelComparison == .orderedAscending
-            }
-
-            return lhs.process.pid < rhs.process.pid
-        }
-    }
-}
-
-private struct ProcessRow: View {
+private struct ProcessCompactRow: View {
     @ObservedObject var store: NodeTrackerStore
     let process: TrackedProcessSnapshot
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
                 Text(self.process.process.toolLabel)
                     .font(.subheadline)
                     .fontWeight(.semibold)
                 Spacer()
-                Text(verbatim: "PID \(self.process.process.pid)")
+                Text(self.pidAndUptime)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -307,49 +394,43 @@ private struct ProcessRow: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
-                .lineLimit(2)
+                .lineLimit(1)
                 .truncationMode(.middle)
 
             HStack(spacing: 8) {
                 PortBadgeRow(ports: self.process.ports)
                 if let firstListener = self.process.listeners.first {
                     Text(firstListener.hostScope.label)
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
-                Spacer()
-                Text(self.process.process.uptime)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                Spacer(minLength: 8)
             }
 
-            HStack(spacing: 6) {
+            HStack(spacing: 12) {
                 if self.canReveal {
-                    MiniActionButton("Reveal") {
+                    InlineTextButton("Reveal") {
                         self.store.reveal(path: self.process.process.cwd)
                     }
                 }
                 if self.canOpenTerminal {
-                    MiniActionButton("Terminal") {
+                    InlineTextButton("Terminal") {
                         self.store.openTerminal(path: self.process.process.cwd)
                     }
                 }
-                MiniActionButton("Copy PID") {
-                    self.store.copyText(String(self.process.process.pid), label: "PID")
-                }
-                MiniActionButton("Copy Cmd") {
-                    self.store.copyText(self.process.process.commandLine, label: "Command")
-                }
-                if self.canTerminate {
-                    MiniActionButton("Terminate", role: .destructive) {
-                        self.store.terminate(process: self.process)
-                    }
-                }
+                ProcessActionsMenu(
+                    store: self.store,
+                    process: self.process,
+                    canTerminate: self.canTerminate
+                )
                 Spacer(minLength: 0)
             }
         }
-        .padding(12)
-        .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var pidAndUptime: String {
+        "PID \(self.process.process.pid) \u{00B7} \(self.process.process.uptime)"
     }
 
     private var canReveal: Bool {
@@ -378,20 +459,66 @@ private struct ProcessRow: View {
     }
 }
 
-private struct OtherListenersCard: View {
+private struct ProcessActionsMenu: View {
+    @ObservedObject var store: NodeTrackerStore
+    let process: TrackedProcessSnapshot
+    let canTerminate: Bool
+
+    var body: some View {
+        Menu {
+            Button("Copy PID") {
+                self.store.copyText(String(self.process.process.pid), label: "PID")
+            }
+            Button("Copy command") {
+                self.store.copyText(self.process.process.commandLine, label: "Command")
+            }
+            if self.canTerminate {
+                Divider()
+                Button("Terminate", role: .destructive) {
+                    self.store.terminate(process: self.process)
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text("More")
+                Image(systemName: "ellipsis")
+                    .font(.caption2)
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .menuStyle(BorderlessButtonMenuStyle())
+    }
+}
+
+private struct OtherListenersSection: View {
     @ObservedObject var store: NodeTrackerStore
     let processes: [TrackedProcessSnapshot]
 
     var body: some View {
-        Card(title: "Other listeners") {
-            VStack(alignment: .leading, spacing: 10) {
-                if !self.store.settings.showNonNodeListeners {
-                    Text("Showing watched-port conflicts only.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                ForEach(self.sortedProcesses()) { process in
-                    ProcessRow(store: self.store, process: process)
+        let processes = self.sortedProcesses()
+
+        VStack(alignment: .leading, spacing: 10) {
+            CompactSectionHeader(
+                title: self.store.settings.showNonNodeListeners ? "Other listeners" : "Conflicts",
+                trailing: "\(processes.count)"
+            )
+
+            if !self.store.settings.showNonNodeListeners {
+                Text("Showing watched-port conflicts only.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            CompactSurface {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(processes.enumerated()), id: \.element.id) { index, process in
+                        if index > 0 {
+                            CompactRowDivider()
+                        }
+                        ProcessCompactRow(store: self.store, process: process)
+                            .padding(.vertical, 8)
+                    }
                 }
             }
         }
@@ -419,93 +546,168 @@ private struct OtherListenersCard: View {
     }
 }
 
+private struct CompactPanel<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            self.content
+        }
+        .padding(16)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+
+private struct CompactSurface<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        self.content
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+private struct CompactSectionHeader: View {
+    let title: String
+    let trailing: String?
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(self.title)
+                .font(.headline)
+            Spacer()
+            if let trailing {
+                Text(trailing)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+private struct CompactDivider: View {
+    var body: some View {
+        Divider()
+            .padding(.vertical, 12)
+    }
+}
+
+private struct CompactRowDivider: View {
+    var body: some View {
+        Divider()
+            .overlay(Color.primary.opacity(0.06))
+    }
+}
+
+private enum AccentTone {
+    case neutral
+    case node
+    case warning
+
+    var fill: Color {
+        switch self {
+        case .neutral:
+            return Color.primary.opacity(0.08)
+        case .node:
+            return Color.blue.opacity(0.14)
+        case .warning:
+            return Color.orange.opacity(0.16)
+        }
+    }
+
+    var foreground: Color {
+        switch self {
+        case .neutral:
+            return .primary
+        case .node:
+            return .blue
+        case .warning:
+            return .orange
+        }
+    }
+}
+
+private struct PortBadge: View {
+    let port: Int
+    let tone: AccentTone
+
+    var body: some View {
+        Text(verbatim: String(self.port))
+            .font(.system(.caption, design: .monospaced))
+            .fontWeight(.semibold)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(self.tone.fill, in: Capsule())
+    }
+}
+
 private struct PortBadgeRow: View {
     let ports: [Int]
 
     var body: some View {
         HStack(spacing: 6) {
             ForEach(self.ports, id: \.self) { port in
-                Text(verbatim: String(port))
-                    .font(.system(.caption, design: .monospaced))
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(Color.primary.opacity(0.08), in: Capsule())
+                PortBadge(port: port, tone: .neutral)
             }
         }
     }
 }
 
-private struct MiniActionButton: View {
+private struct StatusTag: View {
+    let text: String
+    let tone: AccentTone
+
+    var body: some View {
+        Text(self.text)
+            .font(.caption2)
+            .fontWeight(.medium)
+            .foregroundStyle(self.tone.foreground)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .background(self.tone.fill, in: Capsule())
+    }
+}
+
+private struct InlineTextButton: View {
     let title: String
-    let role: ButtonRole?
     let action: () -> Void
 
-    init(_ title: String, role: ButtonRole? = nil, action: @escaping () -> Void) {
+    init(_ title: String, action: @escaping () -> Void) {
         self.title = title
-        self.role = role
         self.action = action
     }
 
     var body: some View {
-        Button(role: self.role, action: self.action) {
+        Button(action: self.action) {
             Text(self.title)
                 .font(.caption)
+                .foregroundStyle(.secondary)
         }
-        .buttonStyle(ActionPillButtonStyle(role: self.role))
-    }
-}
-
-private struct ActionPillButtonStyle: ButtonStyle {
-    let role: ButtonRole?
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundStyle(self.foreground(isPressed: configuration.isPressed))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(self.background(isPressed: configuration.isPressed), in: Capsule())
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-    }
-
-    private func foreground(isPressed: Bool) -> Color {
-        if self.role == .destructive {
-            return isPressed ? .red.opacity(0.75) : .red
-        }
-        return isPressed ? .primary.opacity(0.7) : .primary
-    }
-
-    private func background(isPressed: Bool) -> Color {
-        if self.role == .destructive {
-            return Color.red.opacity(isPressed ? 0.14 : 0.08)
-        }
-        return Color.primary.opacity(isPressed ? 0.09 : 0.05)
-    }
-}
-
-private struct Card<Content: View>: View {
-    let title: String?
-    let content: Content
-
-    init(title: String? = nil, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if let title {
-                Text(title)
-                    .font(.headline)
-            }
-            self.content
-        }
-        .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .buttonStyle(.plain)
     }
 }
 
 private enum DisplayText {
+    static func compareWatchedPorts(_ lhs: WatchedPortStatus, _ rhs: WatchedPortStatus) -> Bool {
+        if lhs.isConflict != rhs.isConflict {
+            return lhs.isConflict && !rhs.isConflict
+        }
+        if lhs.isNodeOwned != rhs.isNodeOwned {
+            return lhs.isNodeOwned && !rhs.isNodeOwned
+        }
+        return lhs.port < rhs.port
+    }
+
     static func path(_ path: String) -> String {
         NSString(string: path).abbreviatingWithTildeInPath
     }
@@ -514,31 +716,46 @@ private enum DisplayText {
         guard status.isBusy else { return "Free" }
         let owners = status.ownerSummary
             .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-        if owners.count > 1 {
-            return "\(owners.count) owners"
+            .map { stripPID(from: $0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+
+        guard let firstOwner = owners.first, !firstOwner.isEmpty else {
+            return "In use"
         }
-        return self.stripPID(from: owners.first ?? status.ownerSummary)
+
+        if owners.count == 1 {
+            return firstOwner
+        }
+        return "\(firstOwner) +\(owners.count - 1)"
+    }
+
+    static func watchedPortDetail(_ status: WatchedPortStatus) -> String {
+        if status.isConflict {
+            return "Non-Node listener on a watched port"
+        }
+        if status.isNodeOwned {
+            return "Node process on a watched port"
+        }
+        return status.ownerSummary
     }
 
     static func command(_ process: ProcessSnapshot) -> String {
-        let normalized = self.normalizeCommand(process.commandLine, cwd: process.cwd)
+        let normalized = normalizeCommand(process.commandLine, cwd: process.cwd)
         let tokens = normalized
             .split(whereSeparator: \.isWhitespace)
             .map(String.init)
         guard !tokens.isEmpty else { return normalized }
 
-        if tokens.count >= 2, self.basename(tokens[0]) == "node" {
+        if tokens.count >= 2, basename(tokens[0]) == "node" {
             let launched = tokens[1]
             if launched.contains("/node_modules/.bin/") {
-                let simplified = [self.basename(launched)] + Array(tokens.dropFirst(2))
-                return self.trimmed(simplified.joined(separator: " "))
+                let simplified = [basename(launched)] + Array(tokens.dropFirst(2))
+                return trimmed(simplified.joined(separator: " "))
             }
         }
 
         var displayTokens = tokens
-        displayTokens[0] = self.basename(displayTokens[0])
-        return self.trimmed(displayTokens.joined(separator: " "))
+        displayTokens[0] = basename(displayTokens[0])
+        return trimmed(displayTokens.joined(separator: " "))
     }
 
     private static func normalizeCommand(_ command: String, cwd: String?) -> String {
@@ -559,10 +776,10 @@ private enum DisplayText {
 
     private static func trimmed(_ command: String) -> String {
         let tokens = command.split(whereSeparator: \.isWhitespace)
-        if tokens.count <= 7 {
+        if tokens.count <= 6 {
             return command
         }
-        return tokens.prefix(7).joined(separator: " ") + " …"
+        return tokens.prefix(6).joined(separator: " ") + " …"
     }
 }
 
