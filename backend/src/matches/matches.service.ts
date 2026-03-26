@@ -76,6 +76,9 @@ export class MatchesService {
     let hasMore = true;
 
     while (validMatches.length < safeTake && hasMore) {
+      const remaining = safeTake - validMatches.length;
+      const batchSize = Math.max(remaining, safeTake);
+
       const matches = await this.prisma.match.findMany({
         where: {
           OR: [{ userAId: userId }, { userBId: userId }],
@@ -84,11 +87,15 @@ export class MatchesService {
         },
         select: this.matchListSelect,
         orderBy: { updatedAt: 'desc' },
-        take: safeTake,
+        take: batchSize,
         skip: offset,
       });
 
-      hasMore = matches.length === safeTake;
+      // Only mark exhausted when DB returns fewer raw rows than requested
+      if (matches.length < batchSize) {
+        hasMore = false;
+      }
+
       offset += matches.length;
 
       const mapped = matches
@@ -112,10 +119,6 @@ export class MatchesService {
         });
 
       validMatches.push(...mapped);
-
-      if (matches.length < safeTake) {
-        break;
-      }
     }
 
     return validMatches.slice(0, safeTake);

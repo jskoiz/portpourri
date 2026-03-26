@@ -174,6 +174,55 @@ describe('MatchesService realtime', () => {
     ]);
   });
 
+  it('returns full requested count when deleted users are scattered across pages', async () => {
+    // Scenario: request 3 matches. Page 1 has 3 raw rows but 2 are deleted (1 valid).
+    // Page 2 has 3 raw rows but 1 is deleted (2 valid). Total valid = 3.
+    // Without the fix, pagination would stop early after page 1 or page 2
+    // if hasMore was incorrectly set based on filtered count.
+    const makeMatch = (
+      id: string,
+      otherUserId: string,
+      otherName: string,
+      opts: { isDeleted?: boolean; isBanned?: boolean } = {},
+    ) => ({
+      id,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      userAId: 'user-1',
+      userBId: otherUserId,
+      userA: { id: 'user-1', firstName: 'Self', isDeleted: false, isBanned: false, photos: [] },
+      userB: {
+        id: otherUserId,
+        firstName: otherName,
+        isDeleted: opts.isDeleted ?? false,
+        isBanned: opts.isBanned ?? false,
+        photos: [],
+      },
+      messages: [],
+    });
+
+    jest
+      .mocked(prisma.match.findMany)
+      // Page 1: 3 raw results, 2 deleted -> 1 valid
+      .mockResolvedValueOnce([
+        makeMatch('m1', 'u2', 'Deleted1', { isDeleted: true }),
+        makeMatch('m2', 'u3', 'Valid1'),
+        makeMatch('m3', 'u4', 'Deleted2', { isDeleted: true }),
+      ] as any)
+      // Page 2: 3 raw results, 1 banned -> 2 valid
+      .mockResolvedValueOnce([
+        makeMatch('m4', 'u5', 'Valid2'),
+        makeMatch('m5', 'u6', 'Banned1', { isBanned: true }),
+        makeMatch('m6', 'u7', 'Valid3'),
+      ] as any);
+
+    const result = await service.getMatches('user-1', 3, 0);
+
+    // Should have fetched two pages to accumulate 3 valid matches
+    expect(jest.mocked(prisma.match.findMany)).toHaveBeenCalledTimes(2);
+    expect(result).toHaveLength(3);
+    expect(result.map((m) => m.id)).toEqual(['m2', 'm4', 'm6']);
+  });
+
   it('publishes realtime event when sending a message', async () => {
     const now = new Date('2026-02-20T10:00:00.000Z');
 
