@@ -7,6 +7,7 @@ import { markEventJoined } from '../../../lib/query/queryData';
 import { eventsApi } from '../../../services/api';
 import { queryKeys } from '../../../lib/query/queryKeys';
 import { showToast } from '../../../store/toastStore';
+import { patchJoinedEventSummaryCaches } from '../eventCache';
 
 function applyRsvpPatch(
   current: unknown,
@@ -79,6 +80,7 @@ export function useJoinEvent(
     },
     onSuccess: (result) => {
       markEventJoined(queryClient, eventId, result.attendeesCount);
+      patchJoinedEventSummaryCaches(queryClient, eventId, result.attendeesCount);
       void invalidateQueryScopes(queryClient, queryInvalidationScopes.eventWrite);
       options?.onSuccess?.(result);
     },

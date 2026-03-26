@@ -2,7 +2,6 @@ import { createTestQueryClient } from '../../testing/queryTestHarness';
 import { QueryObserver } from '@tanstack/react-query';
 import { waitFor } from '@testing-library/react-native';
 import {
-  invalidateProfileSurfaces,
   invalidateQueryScopes,
   queryInvalidationScopes,
 } from '../queryInvalidation';
@@ -45,13 +44,12 @@ describe('query invalidation helpers', () => {
     const queryClient = createTestQueryClient();
     const defaultFeedKey = queryKeys.discovery.feed();
     const filteredFeedKey = queryKeys.discovery.feed({ distanceKm: 10 });
-    const completenessKey = queryKeys.discovery.profileCompleteness();
     const profileKey = queryKeys.profile.current();
 
     queryClient.setQueryData(profileKey, { id: 'u1' });
     queryClient.setQueryData(defaultFeedKey, []);
     queryClient.setQueryData(filteredFeedKey, []);
-    queryClient.setQueryData(completenessKey, {
+    queryClient.setQueryData(queryKeys.discovery.profileCompleteness(), {
       score: 1,
       total: 5,
       earned: 1,
@@ -60,10 +58,9 @@ describe('query invalidation helpers', () => {
     });
     queryClient.setQueryData(queryKeys.matches.list(), []);
 
-    await invalidateProfileSurfaces(queryClient);
+    await invalidateQueryScopes(queryClient, queryInvalidationScopes.profileWrite);
 
     expect(isInvalidated(queryClient, profileKey)).toBe(true);
-    expect(isInvalidated(queryClient, completenessKey)).toBe(true);
     expect(isInvalidated(queryClient, defaultFeedKey)).toBe(true);
     expect(isInvalidated(queryClient, filteredFeedKey)).toBe(true);
     expect(isInvalidated(queryClient, queryKeys.matches.list())).toBe(true);

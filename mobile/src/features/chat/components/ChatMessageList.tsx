@@ -1,38 +1,22 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
-import { useQueries } from '@tanstack/react-query';
 import type { ChatMessage } from '../../../api/types';
 import type { Theme } from '../../../theme/tokens';
-import { queryKeys } from '../../../lib/query/queryKeys';
-import { eventsApi } from '../../../services/api';
 import { chatStyles as styles } from './chat.styles';
 import { EventInviteCard } from './EventInviteCard';
 import type { EventInviteCardProps } from './EventInviteCard';
 
 /** Pattern for detecting event invite messages: [EVENT_INVITE:<eventId>] */
 const EVENT_INVITE_PATTERN = /\[EVENT_INVITE:([^\]]+)\]/;
-/** Far-future placeholder so loading cards are never treated as expired. */
-const PENDING_EVENT_STARTS_AT = '2099-01-01T00:00:00.000Z';
 
 export function parseEventInviteMessage(text: string): string | null {
   const match = EVENT_INVITE_PATTERN.exec(text);
   return match ? match[1] : null;
 }
 
-function parseEventInviteContent(text: string) {
-  const eventId = parseEventInviteMessage(text);
-  if (!eventId) {
-    return { eventId: null, noteText: null };
-  }
-
-  const noteText = text
-    .replace(EVENT_INVITE_PATTERN, '')
-    .trim();
-
-  return {
-    eventId,
-    noteText: noteText.length > 0 ? noteText : null,
-  };
+function stripEventInviteMarker(text: string) {
+  const next = text.replace(EVENT_INVITE_PATTERN, '').trim();
+  return next.length > 0 ? next : 'Sent an event invite';
 }
 
 const ChatBubble = React.memo(function ChatBubble({
@@ -48,21 +32,25 @@ const ChatBubble = React.memo(function ChatBubble({
 }) {
   const isMe = item.sender === 'me';
   const senderLabel = isMe ? 'You' : 'Them';
-const { eventId, noteText } = parseEventInviteContent(item.text);
+  const eventId = parseEventInviteMessage(item.text);
+  const inviteNote = eventId ? stripEventInviteMarker(item.text) : null;
+  const showInviteNote = Boolean(
+    inviteNote && inviteNote !== 'Sent an event invite',
+  );
 
   if (eventId) {
     const inviteData = eventInvites?.[eventId];
     if (inviteData) {
       return (
-        <View style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', gap: 8 }}>
-          {noteText ? (
+        <View style={{ alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
+          {showInviteNote ? (
             <View
               style={[
                 styles.bubble,
                 isMe ? styles.bubbleMe : styles.bubbleThem,
                 { backgroundColor: isMe ? theme.textPrimary : theme.surface },
               ]}
-              accessibilityLabel={`${senderLabel}: ${noteText}`}
+              accessibilityLabel={`${senderLabel}: ${inviteNote}`}
             >
               <Text
                 style={[
@@ -70,7 +58,7 @@ const { eventId, noteText } = parseEventInviteContent(item.text);
                   { color: isMe ? theme.textInverse : theme.textPrimary },
                 ]}
               >
-                {noteText}
+                {inviteNote}
               </Text>
             </View>
           ) : null}
@@ -82,40 +70,9 @@ const { eventId, noteText } = parseEventInviteContent(item.text);
         </View>
       );
     }
-
-    return (
-      <View style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', gap: 8 }}>
-        {noteText ? (
-          <View
-            style={[
-              styles.bubble,
-              isMe ? styles.bubbleMe : styles.bubbleThem,
-              { backgroundColor: isMe ? theme.textPrimary : theme.surface },
-            ]}
-            accessibilityLabel={`${senderLabel}: ${noteText}`}
-          >
-            <Text
-              style={[
-                styles.bubbleText,
-                { color: isMe ? theme.textInverse : theme.textPrimary },
-              ]}
-            >
-              {noteText}
-            </Text>
-          </View>
-        ) : null}
-        <EventInviteCard
-          eventId={eventId}
-          title="Loading event..."
-          location=""
-          startsAt={PENDING_EVENT_STARTS_AT}
-          status="pending"
-          isMe={isMe}
-          onNavigateToEvent={onNavigateToEvent}
-        />
-      </View>
-    );
   }
+
+  const bubbleText = eventId ? inviteNote ?? item.text : item.text;
 
   return (
     <View
@@ -124,7 +81,7 @@ const { eventId, noteText } = parseEventInviteContent(item.text);
         isMe ? styles.bubbleMe : styles.bubbleThem,
         { backgroundColor: isMe ? theme.textPrimary : theme.surface },
       ]}
-      accessibilityLabel={`${senderLabel}: ${item.text}`}
+      accessibilityLabel={`${senderLabel}: ${bubbleText}`}
     >
       <Text
         style={[
@@ -132,13 +89,13 @@ const { eventId, noteText } = parseEventInviteContent(item.text);
           { color: isMe ? theme.textInverse : theme.textPrimary },
         ]}
       >
-        {item.text}
+        {bubbleText}
       </Text>
     </View>
   );
 });
 
-export const ChatMessageList = React.memo(function ChatMessageList({
+export function ChatMessageList({
   eventInvites,
   messages,
   onNavigateToEvent,
@@ -153,61 +110,12 @@ export const ChatMessageList = React.memo(function ChatMessageList({
   refreshing: boolean;
   theme: Theme;
 }) {
-const inviteEventIds = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          messages
-            .map((message) => parseEventInviteMessage(message.text))
-            .filter((eventId): eventId is string => Boolean(eventId)),
-        ),
-      ),
-    [messages],
-  );
-  const unresolvedInviteIds = useMemo(
-    () =>
-      inviteEventIds.filter((eventId) => !eventInvites?.[eventId]),
-    [eventInvites, inviteEventIds],
-  );
-  const inviteQueries = useQueries({
-    queries: unresolvedInviteIds.map((eventId) => ({
-      queryKey: queryKeys.events.detail(eventId),
-      queryFn: async () => (await eventsApi.detail(eventId)).data,
-      staleTime: 60_000,
-    })),
-  });
-  const resolvedEventInvites = useMemo(() => {
-    const next: Record<string, EventInviteCardProps> = {
-      ...(eventInvites ?? {}),
-    };
-
-    unresolvedInviteIds.forEach((eventId, index) => {
-      const event = inviteQueries[index]?.data;
-      if (!event) {
-        return;
-      }
-
-      next[eventId] = {
-        eventId,
-        title: event.title,
-        location: event.location,
-        startsAt: event.startsAt,
-        endsAt: event.endsAt ?? null,
-        status: event.joined ? 'accepted' : 'pending',
-        isMe: false,
-      };
-    });
-
-    return next;
-  }, [eventInvites, inviteQueries, unresolvedInviteIds]);
-
   return (
     <FlatList
       data={messages}
-      extraData={resolvedEventInvites}
       renderItem={({ item }) => (
         <ChatBubble
-          eventInvites={resolvedEventInvites}
+          eventInvites={eventInvites}
           item={item}
           onNavigateToEvent={onNavigateToEvent}
           theme={theme}
@@ -230,4 +138,4 @@ const inviteEventIds = useMemo(
       }
     />
   );
-});
+}

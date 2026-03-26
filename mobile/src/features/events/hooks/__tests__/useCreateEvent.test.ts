@@ -1,7 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { useQuery } from '@tanstack/react-query';
+import type { EventSummary } from '../../../../api/types';
 import { createQueryTestHarness } from '../../../../lib/testing/queryTestHarness';
-import { queryKeys } from '../../../../lib/query/queryKeys';
 import { useCreateEvent } from '../useCreateEvent';
 
 const mockCreate = jest.fn();
@@ -12,82 +11,44 @@ jest.mock('../../../../services/api', () => ({
   },
 }));
 
+function makeEvent(overrides: Partial<EventSummary> = {}): EventSummary {
+  return {
+    id: overrides.id ?? 'event-1',
+    title: overrides.title ?? 'Sunrise run',
+    description: overrides.description ?? null,
+    location: overrides.location ?? 'Magic Island',
+    imageUrl: overrides.imageUrl ?? null,
+    category: overrides.category ?? 'Run',
+    startsAt: overrides.startsAt ?? '2026-03-15T16:00:00.000Z',
+    endsAt: overrides.endsAt ?? '2026-03-15T17:00:00.000Z',
+    host: overrides.host ?? { id: 'host-1', firstName: 'Nia' },
+    attendeesCount: overrides.attendeesCount ?? 1,
+    joined: overrides.joined ?? true,
+  };
+}
+
 describe('useCreateEvent', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('prepends the new event into the list and mine caches', async () => {
-    const createdEvent = {
-      id: 'e3',
-      title: 'Climb',
-      location: 'Wall',
-      startsAt: '2026-03-27T18:00:00.000Z',
-      host: { id: 'host-1', firstName: 'Casey' },
-      attendeesCount: 0,
-      joined: true,
-    };
+  it('upserts the created event into every event cache', async () => {
+    const createdEvent = makeEvent({ id: 'event-new', title: 'New event' });
     mockCreate.mockResolvedValue({ data: createdEvent });
 
-    const { queryClient, wrapper } = createQueryTestHarness();
-    const invalidateSpy = jest
-      .spyOn(queryClient, 'invalidateQueries')
-      .mockResolvedValue(undefined as never);
-
-    const existingEvent = {
-      id: 'e1',
-      title: 'Trail Run',
-      location: 'Park',
-      startsAt: '2026-03-25T18:00:00.000Z',
-      host: { id: 'host-1', firstName: 'Casey' },
-      attendeesCount: 4,
-      joined: false,
-    };
-    queryClient.setQueryData(queryKeys.events.list(), [existingEvent]);
-    queryClient.setQueryData(queryKeys.events.mine(), [existingEvent]);
-    const listObserver = renderHook(
-      () =>
-        useQuery({
-          queryKey: queryKeys.events.list(),
-          queryFn: async () => {
-            throw new Error('events.list should not refetch in this test');
-          },
-          enabled: false,
-        }),
-      { wrapper },
-    );
-    const mineObserver = renderHook(
-      () =>
-        useQuery({
-          queryKey: queryKeys.events.mine(),
-          queryFn: async () => {
-            throw new Error('events.mine should not refetch in this test');
-          },
-          enabled: false,
-        }),
-      { wrapper },
-    );
-
+    const { wrapper } = createQueryTestHarness();
     const { result } = renderHook(() => useCreateEvent(), { wrapper });
 
-    const createPromise = result.current.createEvent({
-      title: 'Climb',
-      location: 'Wall',
-      startsAt: '2026-03-27T18:00:00.000Z',
-    });
     await act(async () => {
-      await createPromise;
+      await result.current.createEvent({
+        title: createdEvent.title,
+        location: createdEvent.location,
+        startsAt: createdEvent.startsAt,
+      });
     });
 
-    await waitFor(() =>
-      expect(listObserver.result.current.data).toEqual([createdEvent, existingEvent]),
-    );
-    await waitFor(() =>
-      expect(mineObserver.result.current.data).toEqual([createdEvent, existingEvent]),
-    );
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: queryKeys.events.all(),
-      refetchType: 'inactive',
+    await waitFor(() => {
+      expect(result.current.createdEvent).toEqual(createdEvent);
     });
   });
 });

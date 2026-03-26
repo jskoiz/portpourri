@@ -12,6 +12,7 @@ import { useExploreEvents } from '../../src/features/events/hooks/useExploreEven
 import { useEventDetail } from '../../src/features/events/hooks/useEventDetail';
 import { useMyEvents } from '../../src/features/events/hooks/useMyEvents';
 import type { EventSummary, EventDetail } from '../../src/api/types';
+import { createQueryTestHarness } from '../../src/lib/testing/queryTestHarness';
 
 /* ------------------------------------------------------------------ */
 /*  Mocks                                                              */
@@ -80,8 +81,9 @@ describe('Event flow integration', () => {
   // -- Browse events (explore list) -----------------------------------
   it('loads and returns list of events', async () => {
     mockEventsList.mockResolvedValue({ data: events });
+    const { wrapper } = createQueryTestHarness();
 
-    const { result } = renderHook(() => useExploreEvents());
+    const { result } = renderHook(() => useExploreEvents(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -93,8 +95,9 @@ describe('Event flow integration', () => {
   // -- View event detail -----------------------------------------------
   it('loads event detail by ID', async () => {
     mockEventsDetail.mockResolvedValue({ data: eventDetail });
+    const { wrapper } = createQueryTestHarness();
 
-    const { result } = renderHook(() => useEventDetail('evt-1'));
+    const { result } = renderHook(() => useEventDetail('evt-1'), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -110,8 +113,9 @@ describe('Event flow integration', () => {
     mockEventsRsvp.mockResolvedValue({
       data: { status: 'joined', attendeesCount: 6 },
     });
+    const { wrapper } = createQueryTestHarness();
 
-    const { result } = renderHook(() => useEventDetail('evt-1'));
+    const { result } = renderHook(() => useEventDetail('evt-1'), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -135,8 +139,9 @@ describe('Event flow integration', () => {
   it('RSVP error rolls back to previous state', async () => {
     mockEventsDetail.mockResolvedValue({ data: { ...eventDetail } });
     mockEventsRsvp.mockRejectedValue(new Error('RSVP failed'));
+    const { wrapper } = createQueryTestHarness();
 
-    const { result } = renderHook(() => useEventDetail('evt-1'));
+    const { result } = renderHook(() => useEventDetail('evt-1'), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -163,8 +168,9 @@ describe('Event flow integration', () => {
   it('loads list of events the user has joined', async () => {
     const myEvents = [events[1]]; // only the CrossFit one
     mockEventsMine.mockResolvedValue({ data: myEvents });
+    const { wrapper } = createQueryTestHarness();
 
-    const { result } = renderHook(() => useMyEvents());
+    const { result } = renderHook(() => useMyEvents(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -175,7 +181,8 @@ describe('Event flow integration', () => {
 
   // -- Event detail not found (empty ID) ------------------------------
   it('does not fetch when eventId is empty', () => {
-    const { result } = renderHook(() => useEventDetail(''));
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useEventDetail(''), { wrapper });
 
     // Query should not fire (enabled: false)
     expect(result.current.event).toBeNull();
@@ -186,8 +193,9 @@ describe('Event flow integration', () => {
   // -- Explore events returns empty list gracefully -------------------
   it('returns empty events array when API returns empty list', async () => {
     mockEventsList.mockResolvedValue({ data: [] });
+    const { wrapper } = createQueryTestHarness();
 
-    const { result } = renderHook(() => useExploreEvents());
+    const { result } = renderHook(() => useExploreEvents(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -197,8 +205,9 @@ describe('Event flow integration', () => {
   // -- Explore events handles API error --------------------------------
   it('handles API error gracefully for event list', async () => {
     mockEventsList.mockRejectedValue(new Error('Server error'));
+    const { wrapper } = createQueryTestHarness();
 
-    const { result } = renderHook(() => useExploreEvents());
+    const { result } = renderHook(() => useExploreEvents(), { wrapper });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
 
@@ -209,6 +218,7 @@ describe('Event flow integration', () => {
   // -- isJoining flag during RSVP ------------------------------------
   it('isJoining is true while RSVP mutation is pending', async () => {
     mockEventsDetail.mockResolvedValue({ data: { ...eventDetail } });
+    const { wrapper } = createQueryTestHarness();
 
     let resolveRsvp!: (value: unknown) => void;
     mockEventsRsvp.mockReturnValue(
@@ -217,7 +227,7 @@ describe('Event flow integration', () => {
       }),
     );
 
-    const { result } = renderHook(() => useEventDetail('evt-1'));
+    const { result } = renderHook(() => useEventDetail('evt-1'), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -236,5 +246,34 @@ describe('Event flow integration', () => {
     });
 
     await waitFor(() => expect(result.current.isJoining).toBe(false));
+  });
+
+  it('adds the joined event to my-events cache after RSVP succeeds', async () => {
+    mockEventsDetail.mockResolvedValue({ data: { ...eventDetail } });
+    mockEventsMine.mockResolvedValue({ data: [] });
+    mockEventsRsvp.mockResolvedValue({
+      data: { status: 'joined', attendeesCount: 6 },
+    });
+
+    const { wrapper } = createQueryTestHarness();
+    const detailHook = renderHook(() => useEventDetail('evt-1'), { wrapper });
+    const mineHook = renderHook(() => useMyEvents(), { wrapper });
+
+    await waitFor(() => expect(detailHook.result.current.isSuccess).toBe(true));
+    await waitFor(() => expect(mineHook.result.current.isSuccess).toBe(true));
+
+    await act(async () => {
+      await detailHook.result.current.joinEvent();
+    });
+
+    await waitFor(() => {
+      expect(mineHook.result.current.events).toEqual([
+        expect.objectContaining({
+          id: 'evt-1',
+          joined: true,
+          attendeesCount: 6,
+        }),
+      ]);
+    });
   });
 });

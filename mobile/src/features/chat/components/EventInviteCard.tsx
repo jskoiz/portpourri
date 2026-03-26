@@ -1,14 +1,15 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import AppIcon from '../../../components/ui/AppIcon';
 import { Button, Card } from '../../../design/primitives';
 import { useTheme } from '../../../theme/useTheme';
 import { radii, spacing, typography } from '../../../theme/tokens';
-import { useJoinEvent } from '../../events/hooks/useEventDetail';
 import { eventsApi } from '../../../services/api';
-import type { EventDetail } from '../../../api/types';
+import { invalidateEventSurfaces } from '../../../lib/query/queryInvalidation';
 import { queryKeys } from '../../../lib/query/queryKeys';
+import { showToast } from '../../../store/toastStore';
+import { getKnownEvent, patchJoinedEventSummaryCaches } from '../../events/eventCache';
 
 export type EventInviteCardStatus = 'pending' | 'accepted' | 'expired';
 
@@ -20,8 +21,6 @@ export interface EventInviteCardProps {
   endsAt?: string | null;
   status: EventInviteCardStatus;
   isMe: boolean;
-  /** When true, the card will fetch event details from the API to hydrate placeholder data. */
-  needsHydration?: boolean;
   onNavigateToEvent?: (eventId: string) => void;
 }
 
@@ -42,51 +41,57 @@ export function EventInviteCard({
   title,
   location,
   startsAt,
+  endsAt,
   status: initialStatus,
   isMe,
-  needsHydration = false,
   onNavigateToEvent,
 }: EventInviteCardProps) {
   const theme = useTheme();
+  const queryClient = useQueryClient();
 
-  // Track accepted state locally per component instance instead of a module-level Set
-  const [hasAccepted, setHasAccepted] = React.useState(
-    () => initialStatus === 'accepted',
-  );
-
-  const shouldHydrateEvent = needsHydration || location.trim().length === 0;
-  const eventDetailKey = queryKeys.events.detail(eventId);
-  const detailQuery = useQuery({
-    enabled: shouldHydrateEvent,
-    queryKey: eventDetailKey,
-    queryFn: async () => (await eventsApi.detail(eventId)).data,
-    staleTime: 30_000,
-  });
-
-  const eventDetail = detailQuery.data as EventDetail | undefined;
-  const resolvedTitle = eventDetail?.title ?? title;
-  const resolvedLocation = eventDetail?.location ?? location;
-  const resolvedStartsAt = eventDetail?.startsAt ?? startsAt;
-
-  const expired = isEventExpired(resolvedStartsAt);
+  const expired = isEventExpired(endsAt ?? startsAt);
   const effectiveStatus = expired && initialStatus === 'pending' ? 'expired' : initialStatus;
 
-  const rsvpMutation = useJoinEvent(eventId, {
-    onSuccess: () => {
-      setHasAccepted(true);
+  const rsvpMutation = useMutation({
+    mutationFn: async () => (await eventsApi.rsvp(eventId)).data,
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.events.all() });
+
+      const previousList = queryClient.getQueryData(queryKeys.events.list());
+      const previousMine = queryClient.getQueryData(queryKeys.events.mine());
+      const previousDetail = queryClient.getQueryData(
+        queryKeys.events.detail(eventId),
+      );
+
+      const previousAttendeesCount = getKnownEvent(queryClient, eventId)?.attendeesCount ?? null;
+      if (previousAttendeesCount !== null) {
+        patchJoinedEventSummaryCaches(
+          queryClient,
+          eventId,
+          previousAttendeesCount + 1,
+        );
+      }
+
+      return { previousList, previousMine, previousDetail };
+    },
+    onError: (_error, _variables, context) => {
+      if (!context) {
+        return;
+      }
+
+      queryClient.setQueryData(queryKeys.events.list(), context.previousList);
+      queryClient.setQueryData(queryKeys.events.mine(), context.previousMine);
+      queryClient.setQueryData(queryKeys.events.detail(eventId), context.previousDetail);
+      showToast('Could not RSVP to the event.', 'error');
+    },
+    onSuccess: (result) => {
+      patchJoinedEventSummaryCaches(queryClient, eventId, result.attendeesCount);
+      void invalidateEventSurfaces(queryClient);
+      showToast('RSVP confirmed!', 'success');
     },
   });
 
-  // Sync hasAccepted when initialStatus or eventId changes (single consolidated effect)
-  React.useEffect(() => {
-    setHasAccepted(initialStatus === 'accepted');
-  }, [eventId, initialStatus]);
-
-  const accepted =
-    effectiveStatus === 'accepted' ||
-    hasAccepted ||
-    rsvpMutation.isSuccess ||
-    eventDetail?.joined === true;
+  const accepted = effectiveStatus === 'accepted' || rsvpMutation.isSuccess;
 
   return (
     <Card
@@ -105,20 +110,20 @@ export function EventInviteCard({
         </View>
 
         <Text style={[styles.title, { color: theme.textPrimary }]} numberOfLines={2}>
-          {resolvedTitle}
+          {title}
         </Text>
 
         <View style={styles.meta}>
           <View style={styles.metaRow}>
             <AppIcon name="clock" size={13} color={theme.textMuted} />
             <Text style={[styles.metaText, { color: theme.textSecondary }]}>
-              {formatInviteDate(resolvedStartsAt)}
+              {formatInviteDate(startsAt)}
             </Text>
           </View>
           <View style={styles.metaRow}>
             <AppIcon name="map-pin" size={13} color={theme.textMuted} />
             <Text style={[styles.metaText, { color: theme.textSecondary }]} numberOfLines={1}>
-              {resolvedLocation}
+              {location}
             </Text>
           </View>
         </View>
@@ -135,7 +140,9 @@ export function EventInviteCard({
         ) : !isMe ? (
           <Button
             label={rsvpMutation.isPending ? 'Joining...' : 'RSVP'}
-            onPress={() => { void rsvpMutation.mutateAsync(); }}
+            onPress={() => {
+              rsvpMutation.mutate();
+            }}
             disabled={rsvpMutation.isPending}
             loading={rsvpMutation.isPending}
             variant="energy"

@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma, EventCategory } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BlockService } from '../moderation/block.service';
@@ -13,7 +14,6 @@ import {
   buildEventReminderNotification,
   buildEventRsvpNotification,
 } from '../notifications/notification.templates';
-import type { EventCategory } from '@prisma/client';
 import type { CreateEventDto } from './create-event.dto';
 
 interface EventWithRsvps {
@@ -25,12 +25,59 @@ interface ActiveUser {
   firstName: string;
 }
 
+const EVENT_INVITE_PENDING_STATUS = 'pending' as const;
+
+function isUniqueConstraintError(error: unknown): error is Prisma.PrismaClientKnownRequestError {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002'
+  );
+}
+
 function asLogMessage(event: string, context: Record<string, unknown>) {
   return JSON.stringify({ event, ...context });
 }
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
+}
+
+function buildEventSummaryInclude(userId?: string) {
+  return {
+    host: { select: { id: true, firstName: true } },
+    _count: { select: { rsvps: true } },
+    ...(userId
+      ? {
+          rsvps: {
+            where: { userId },
+            select: { id: true },
+          },
+        }
+      : {}),
+  };
+}
+
+function buildInviteEventInclude() {
+  return {
+    event: {
+      select: {
+        id: true,
+        title: true,
+        location: true,
+        startsAt: true,
+        endsAt: true,
+        category: true,
+        host: { select: { id: true, firstName: true } },
+        _count: { select: { rsvps: true } },
+      },
+    },
+  };
+}
+
+function buildEventInviteMessageBody(eventId: string, message?: string) {
+  const inviteMarker = `[EVENT_INVITE:${eventId}]`;
+  const trimmedMessage = message?.trim();
+  return trimmedMessage ? `${trimmedMessage}\n${inviteMarker}` : inviteMarker;
 }
 
 function mapEventSummary(
@@ -120,18 +167,7 @@ export class EventsService {
       orderBy: { startsAt: 'asc' },
       take,
       skip,
-      include: {
-        host: { select: { id: true, firstName: true } },
-        _count: { select: { rsvps: true } },
-        ...(userId
-          ? {
-              rsvps: {
-                where: { userId },
-                select: { id: true },
-              },
-            }
-          : {}),
-      },
+      include: buildEventSummaryInclude(userId),
     });
 
     return events.map((event) =>
@@ -153,18 +189,7 @@ export class EventsService {
         id,
         ...this.buildVisibleEventWhere(blockedIds),
       },
-      include: {
-        host: { select: { id: true, firstName: true } },
-        _count: { select: { rsvps: true } },
-        ...(userId
-          ? {
-              rsvps: {
-                where: { userId },
-                select: { id: true },
-              },
-            }
-          : {}),
-      },
+      include: buildEventSummaryInclude(userId),
     });
 
     if (!event) {
@@ -226,12 +251,7 @@ export class EventsService {
         },
       },
       include: {
-        host: { select: { id: true, firstName: true } },
-        _count: { select: { rsvps: true } },
-        rsvps: {
-          where: { userId },
-          select: { id: true },
-        },
+        ...buildEventSummaryInclude(userId),
       },
     });
 
@@ -251,26 +271,32 @@ export class EventsService {
 const currentUser = await this.getActiveUser(userId);
     const event = await this.detail(eventId, userId, currentUser);
 
-    const countBefore = await this.prisma.eventRsvp.count({
-      where: { eventId, userId },
-    });
-
-    await this.prisma.eventRsvp.upsert({
-      where: {
-        eventId_userId: {
+    let created = false;
+    try {
+      await this.prisma.eventRsvp.create({
+        data: {
           eventId,
           userId,
         },
-      },
-      create: {
-        eventId,
-        userId,
-      },
-      update: {},
-    });
+      });
+      created = true;
+    } catch (error: unknown) {
+      if (!isUniqueConstraintError(error)) {
+        throw error;
+      }
+    }
 
-    // Only send notifications for newly created RSVPs
-    if (countBefore === 0) {
+    // Only send notifications when this request created the RSVP row.
+    if (created) {
+      await this.prisma.eventInvite.updateMany({
+        where: {
+          eventId,
+          inviteeId: userId,
+          status: { not: 'accepted' },
+        },
+        data: { status: 'accepted' },
+      });
+
       this.logger.debug(
         asLogMessage('events.rsvp.completed', {
           eventId,
@@ -340,11 +366,9 @@ const currentUser = await this.getActiveUser(userId);
     matchId: string,
     message?: string,
   ) {
-    // Validate event exists
     const currentUser = await this.getActiveUser(userId);
     const event = await this.detail(eventId, userId, currentUser);
 
-    // Validate user is host or has RSVP'd
     const isHost = event.host.id === userId;
     if (!isHost && !event.joined) {
       throw new ForbiddenException(
@@ -393,6 +417,10 @@ const currentUser = await this.getActiveUser(userId);
     const inviteeId =
       match.userAId === userId ? match.userBId : match.userAId;
 
+    if (inviteeId === event.host.id) {
+      throw new BadRequestException('The event host cannot be invited');
+    }
+
     const invitee = match.userAId === userId ? match.userB : match.userA;
     if (invitee.isDeleted || invitee.isBanned) {
       throw new ForbiddenException('This conversation is no longer available');
@@ -404,78 +432,114 @@ const currentUser = await this.getActiveUser(userId);
       throw new ForbiddenException('This conversation is no longer available');
     }
 
-    // Create the invite record (upsert to handle duplicate gracefully)
-    const invite = await this.prisma.eventInvite.upsert({
-      where: {
-        eventId_inviteeId: { eventId, inviteeId },
-      },
-      create: {
-        eventId,
-        inviterId: userId,
-        inviteeId,
-        matchId,
-      },
-      update: {
-        status: 'pending',
-      },
-      include: {
-        event: {
-          select: {
-            id: true,
-            title: true,
-            location: true,
-            startsAt: true,
-            endsAt: true,
-            category: true,
-            host: { select: { id: true, firstName: true } },
-            _count: { select: { rsvps: true } },
-          },
-        },
-      },
+    const inviteeAlreadyJoined = await this.prisma.eventRsvp.count({
+      where: { eventId, userId: inviteeId },
+    });
+    if (inviteeAlreadyJoined > 0) {
+      throw new BadRequestException('This user has already joined the event');
+    }
+
+    const inviteWhere = {
+      eventId_inviteeId: { eventId, inviteeId },
+    } as const;
+    const inviteData = {
+      eventId,
+      inviterId: userId,
+      inviteeId,
+      matchId,
+      status: EVENT_INVITE_PENDING_STATUS,
+    };
+    const inviteInclude = buildInviteEventInclude();
+
+    const existingInvite = await this.prisma.eventInvite.findUnique({
+      where: inviteWhere,
+      select: { inviterId: true, matchId: true, status: true },
     });
 
-    // Send an event_invite message in the match conversation
-    const inviteBody = `[EVENT_INVITE:${eventId}]`;
-    await this.prisma.message.create({
-      data: {
-        matchId,
-        senderId: userId,
-        body: message ? `${message}\n${inviteBody}` : inviteBody,
-        type: 'EVENT_INVITE',
-      },
-    });
+    const shouldFanOut =
+      !existingInvite ||
+      existingInvite.status !== EVENT_INVITE_PENDING_STATUS ||
+      existingInvite.inviterId !== userId ||
+      existingInvite.matchId !== matchId;
 
-    // Update match timestamp
-    await this.prisma.match.update({
-      where: { id: matchId },
-      data: { updatedAt: new Date() },
-    });
+    const invite = await this.prisma.$transaction(async (tx) => {
+      let nextInvite;
 
-    // Send notification to invitee
-    void this.notifications
-      .create(
-        inviteeId,
-        buildEventInviteNotification(
-          eventId,
-          userId,
-          currentUser.firstName,
-          event.title,
-          matchId,
-        ),
-      )
-      .catch((err) =>
-        this.logger.error(
-          asLogMessage('events.notification_failed', {
-            operation: 'event_invite',
-            eventId,
+      if (existingInvite) {
+        nextInvite = await tx.eventInvite.update({
+          where: inviteWhere,
+          data: inviteData,
+          include: inviteInclude,
+        });
+      } else {
+        try {
+          nextInvite = await tx.eventInvite.create({
+            data: inviteData,
+            include: inviteInclude,
+          });
+        } catch (error: unknown) {
+          if (!isUniqueConstraintError(error)) {
+            throw error;
+          }
+
+          nextInvite = await tx.eventInvite.update({
+            where: inviteWhere,
+            data: inviteData,
+            include: inviteInclude,
+          });
+        }
+      }
+
+      if (shouldFanOut) {
+        await tx.message.create({
+          data: {
             matchId,
-            inviterId: userId,
-            inviteeId,
-            error: errorMessage(err),
-          }),
-          err instanceof Error ? err.stack : undefined,
-        ),
-      );
+            senderId: userId,
+            body: buildEventInviteMessageBody(eventId, message),
+            type: 'EVENT_INVITE',
+          },
+        });
+
+        await tx.match.update({
+          where: { id: matchId },
+          data: { updatedAt: new Date() },
+        });
+      }
+
+      return nextInvite;
+    });
+
+    if (shouldFanOut) {
+      const inviter = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true },
+      });
+
+      void this.notifications
+        .create(
+          inviteeId,
+          buildEventInviteNotification(
+            eventId,
+            userId,
+            currentUser.firstName,
+            event.title,
+            matchId,
+          ),
+        )
+        .catch((err) =>
+          this.logger.error(
+            asLogMessage('events.notification_failed', {
+              operation: 'event_invite',
+              eventId,
+              matchId,
+              inviterId: userId,
+              inviteeId,
+              error: errorMessage(err),
+            }),
+            err instanceof Error ? err.stack : undefined,
+          ),
+        );
+    }
 
     this.logger.debug(
       asLogMessage('events.invite.completed', {
@@ -565,10 +629,7 @@ const currentUser = await this.getActiveUser(userId);
       skip,
       include: {
         event: {
-          include: {
-            host: { select: { id: true, firstName: true } },
-            _count: { select: { rsvps: true } },
-          },
+          include: buildEventSummaryInclude(userId),
         },
       },
     });

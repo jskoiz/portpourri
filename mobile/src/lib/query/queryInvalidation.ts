@@ -34,10 +34,12 @@ export async function invalidateQueryScopes(
 
 async function invalidateQueryKeys(
   queryClient: QueryClient,
-  queryKeySet: readonly QueryKey[],
+  scopes: readonly QueryInvalidationScope[],
 ) {
   await Promise.all(
-    queryKeySet.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    scopes.map(({ queryKey, refetchType }) =>
+      queryClient.invalidateQueries({ queryKey, refetchType }),
+    ),
   );
 }
 
@@ -55,14 +57,12 @@ export function invalidateProfileSurfaces(queryClient: QueryClient) {
 
 export function invalidateDiscoverySurfaces(queryClient: QueryClient) {
   return invalidateQueryKeys(queryClient, [
-    queryKeys.discovery.feeds(),
-    queryKeys.matches.list(),
+    { queryKey: queryKeys.discovery.feeds() },
+    { queryKey: queryKeys.matches.list() },
   ]);
 }
 
+/** Convenience wrapper kept for event-surface callers. */
 export function invalidateEventSurfaces(queryClient: QueryClient) {
-  return queryClient.invalidateQueries({
-    queryKey: queryKeys.events.all(),
-    refetchType: 'inactive',
-  });
+  return invalidateQueryScopes(queryClient, queryInvalidationScopes.eventWrite);
 }

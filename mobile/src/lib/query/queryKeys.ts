@@ -24,6 +24,7 @@ export const queryKeys = {
     all: () => ['events'] as const,
     list: () => ['events', 'list'] as const,
     detail: (eventId: string) => ['events', 'detail', eventId] as const,
+    invites: (eventId: string) => ['events', 'invites', eventId] as const,
     mine: () => ['events', 'mine'] as const,
   },
 };

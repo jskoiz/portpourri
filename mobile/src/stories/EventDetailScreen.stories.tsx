@@ -1,32 +1,39 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
-import {
-  EventDetailView,
-} from '../screens/EventDetailScreen';
+import { EventDetailView } from '../screens/EventDetailScreen';
+import type { EventDetailViewProps } from '../screens/EventDetailScreen';
 import { makeEventDetail, withStoryScreenFrame } from './support';
+
+const baseArgs: EventDetailViewProps = {
+  errorMessage: null,
+  event: makeEventDetail(),
+  hostInviteSummary: null,
+  isHost: false,
+  isLoadingInvites: false,
+  isJoining: false,
+  isLoading: false,
+  onBack: () => undefined,
+  onJoin: () => undefined,
+  onRefresh: () => undefined,
+};
 
 const meta = {
   title: 'Screens/EventDetail',
   component: EventDetailView,
   decorators: [withStoryScreenFrame({ height: 920, width: 430 })],
-  args: {
-    errorMessage: null,
-    event: makeEventDetail(),
-    isJoining: false,
-    isLoading: false,
-    onBack: () => undefined,
-    onJoin: () => undefined,
-    onRefresh: () => undefined,
-  },
+  args: baseArgs,
 } satisfies Meta<typeof EventDetailView>;
 
 export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  args: baseArgs,
+};
 
 export const Joined: Story = {
   args: {
+    ...baseArgs,
     event: makeEventDetail({
       attendeesCount: 9,
       joined: true,
@@ -36,6 +43,7 @@ export const Joined: Story = {
 
 export const Loading: Story = {
   args: {
+    ...baseArgs,
     event: null,
     isLoading: true,
   },
@@ -43,6 +51,7 @@ export const Loading: Story = {
 
 export const ErrorState: Story = {
   args: {
+    ...baseArgs,
     errorMessage: 'The event could not be loaded.',
     event: null,
   },

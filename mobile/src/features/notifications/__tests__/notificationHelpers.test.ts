@@ -170,4 +170,24 @@ describe('notification helpers', () => {
       },
     });
   });
+
+  it('routes event invites to chat when the payload type is event_invite', () => {
+    const result = resolveNotificationNavigation(
+      buildNotification({
+        type: 'event_reminder',
+        data: { eventId: 'event-1', matchId: 'match-9', type: 'event_invite' },
+      }),
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      target: {
+        route: 'Chat',
+        params: {
+          matchId: 'match-9',
+          user: { id: 'match-9', firstName: 'Invite' },
+        },
+      },
+    });
+  });
 });

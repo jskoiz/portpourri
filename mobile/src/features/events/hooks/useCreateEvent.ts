@@ -4,6 +4,7 @@ import type { CreateEventPayload, EventSummary } from '../../../api/types';
 import { prependCreatedEvent } from '../../../lib/query/queryData';
 import { invalidateQueryScopes, queryInvalidationScopes } from '../../../lib/query/queryInvalidation';
 import { eventsApi } from '../../../services/api';
+import { upsertEventSummaryCaches } from '../eventCache';
 
 export function useCreateEvent() {
   const queryClient = useQueryClient();
@@ -11,6 +12,7 @@ export function useCreateEvent() {
     mutationFn: async (payload: CreateEventPayload) =>
       (await eventsApi.create(payload) as { data: EventSummary }).data,
     onSuccess: (createdEvent: EventSummary) => {
+      upsertEventSummaryCaches(queryClient, createdEvent);
       prependCreatedEvent(queryClient, createdEvent);
       void invalidateQueryScopes(queryClient, queryInvalidationScopes.eventWrite);
     },

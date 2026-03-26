@@ -1,17 +1,21 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Alert, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import type { EventDetail } from '../api/types';
 import { normalizeApiError } from '../api/errors';
+import { eventsApi } from '../services/api';
 import AppBackButton from '../components/ui/AppBackButton';
 import AppBackdrop from '../components/ui/AppBackdrop';
 import AppIcon from '../components/ui/AppIcon';
 import { Button, StatePanel } from '../design/primitives';
+import { useAuthStore } from '../store/authStore';
 import { useTheme } from '../theme/useTheme';
 import { radii, spacing, typography } from '../theme/tokens';
 import { useEventDetail } from '../features/events/hooks/useEventDetail';
 import { hapticSuccess } from '../lib/interaction/feedback';
+import { queryKeys } from '../lib/query/queryKeys';
 import type { RootStackScreenProps } from '../core/navigation/types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -29,6 +33,13 @@ function formatDateRange(startsAt: string, endsAt?: string | null) {
 export type EventDetailViewProps = {
   errorMessage: string | null;
   event: EventDetail | null;
+  hostInviteSummary: {
+    acceptedCount: number;
+    pendingCount: number;
+    totalCount: number;
+  } | null;
+  isHost: boolean;
+  isLoadingInvites: boolean;
   isJoining: boolean;
   isLoading: boolean;
   onBack: () => void;
@@ -39,6 +50,9 @@ export type EventDetailViewProps = {
 export function EventDetailView({
   errorMessage,
   event,
+  hostInviteSummary,
+  isHost,
+  isLoadingInvites,
   isJoining,
   isLoading,
   onBack,
@@ -96,8 +110,14 @@ export function EventDetailView({
               <Text style={[styles.hostLabel, { color: theme.textMuted }]}>Hosted by</Text>
               <Text style={[styles.hostName, { color: theme.textPrimary }]}>{event.host.firstName}</Text>
             </View>
-            <View style={[styles.hostPill, { borderColor: theme.border, minHeight: 36 }]} accessibilityLabel="Open invite" accessibilityRole="text">
-              <Text style={[styles.hostPillText, { color: theme.textSecondary }]}>Open invite</Text>
+            <View
+              style={[styles.hostPill, { borderColor: theme.border, minHeight: 36 }]}
+              accessibilityLabel={isHost ? 'You are hosting this event' : 'Open invite'}
+              accessibilityRole="text"
+            >
+              <Text style={[styles.hostPillText, { color: theme.textSecondary }]}>
+                {isHost ? 'You’re hosting' : 'Open invite'}
+              </Text>
             </View>
           </View>
 
@@ -115,13 +135,36 @@ export function EventDetailView({
           ) : null}
 
           <View style={styles.ctaArea}>
-            <Button
-              label={event.joined ? "You're going" : isJoining ? 'Joining…' : 'Join event'}
-              onPress={onJoin}
-              disabled={event.joined}
-              loading={isJoining}
-              variant="energy"
-            />
+            {isHost ? (
+              <View
+                style={[
+                  styles.hostSummaryCard,
+                  { backgroundColor: theme.surfaceElevated, borderColor: theme.border },
+                ]}
+              >
+                <Text style={[styles.hostSummaryLabel, { color: theme.accent }]}>
+                  HOST-ONLY VIEW
+                </Text>
+                <Text style={[styles.hostSummaryTitle, { color: theme.textPrimary }]}>
+                  Invite activity
+                </Text>
+                <Text style={[styles.hostSummaryBody, { color: theme.textSecondary }]}>
+                  {isLoadingInvites
+                    ? 'Loading invite activity...'
+                    : hostInviteSummary
+                      ? `${hostInviteSummary.totalCount} sent / ${hostInviteSummary.pendingCount} pending / ${hostInviteSummary.acceptedCount} accepted`
+                      : 'No invites sent yet. Share the event from your match threads to fill the room.'}
+                </Text>
+              </View>
+            ) : (
+              <Button
+                label={event.joined ? "You're going" : isJoining ? 'Joining…' : 'Join event'}
+                onPress={onJoin}
+                disabled={event.joined}
+                loading={isJoining}
+                variant="energy"
+              />
+            )}
           </View>
         </View>
       </ScrollView>
@@ -134,12 +177,40 @@ export default function EventDetailScreen({
   navigation,
 }: RootStackScreenProps<'EventDetail'>) {
   const eventId = route.params?.eventId;
+  const currentUserId = useAuthStore((state) => state.user?.id);
   const { error, event, isJoining: joining, isLoading: loading, joinEvent, refetch } =
     useEventDetail(eventId);
   const errorMessage = error ? normalizeApiError(error).message : null;
+  const isHost = Boolean(event && currentUserId && event.host.id === currentUserId);
+  const invitesQuery = useQuery({
+    enabled: Boolean(eventId) && isHost,
+    queryKey: queryKeys.events.invites(eventId ?? ''),
+    queryFn: async () => (await eventsApi.getInvites(eventId ?? '')).data,
+    staleTime: 30_000,
+  });
+
+  const hostInviteSummary = React.useMemo(() => {
+    const invites = invitesQuery.data;
+    if (!invites?.length) {
+      return null;
+    }
+
+    return invites.reduce(
+      (summary, invite) => {
+        summary.totalCount += 1;
+        if (invite.status === 'accepted') {
+          summary.acceptedCount += 1;
+        } else if (invite.status === 'pending') {
+          summary.pendingCount += 1;
+        }
+        return summary;
+      },
+      { acceptedCount: 0, pendingCount: 0, totalCount: 0 },
+    );
+  }, [invitesQuery.data]);
 
   const handleJoin = async () => {
-    if (!event || joining || event.joined) return;
+    if (!event || isHost || joining || event.joined) return;
     try {
       await joinEvent();
       void hapticSuccess();
@@ -158,6 +229,9 @@ export default function EventDetailScreen({
     <EventDetailView
       errorMessage={errorMessage}
       event={event}
+      hostInviteSummary={hostInviteSummary}
+      isHost={isHost}
+      isLoadingInvites={invitesQuery.isLoading}
       isJoining={joining}
       isLoading={loading}
       onBack={() => navigation.goBack()}
@@ -357,5 +431,24 @@ const styles = StyleSheet.create({
   ctaArea: {
     marginTop: spacing.sm,
     paddingBottom: spacing.lg,
+  },
+  hostSummaryCard: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 22,
+    padding: spacing.lg,
+    gap: spacing.xs,
+  },
+  hostSummaryLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.3,
+  },
+  hostSummaryTitle: {
+    fontSize: typography.body,
+    fontWeight: '700',
+  },
+  hostSummaryBody: {
+    fontSize: typography.bodySmall,
+    lineHeight: 22,
   },
 });

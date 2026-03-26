@@ -1,5 +1,6 @@
 import client from '../../api/client';
 import type {
+  CurrentUser,
   UpdateFitnessPayload,
   UpdatePhotoPayload,
   UpdateProfilePayload,
