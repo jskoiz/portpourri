@@ -14,7 +14,6 @@ import {
   BottomSheetScrollView,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
-import type { BottomSheetModal as BottomSheetModalType } from '@gorhom/bottom-sheet';
 import type { RefObject } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from '../../components/ui/AppIcon';
@@ -80,7 +79,7 @@ export function AppBottomSheet({
       keyboardBehavior={Platform.OS === 'ios' ? 'interactive' : 'fillParent'}
       keyboardBlurBehavior="restore"
       style={styles.sheetOuter}
-      backdropComponent={(props) => (
+      backdropComponent={(props: any) => (
         <BottomSheetBackdrop
           {...props}
           appearsOnIndex={0}
@@ -138,7 +137,7 @@ export type AppBottomSheetProps = PropsWithChildren<{
   onChangeIndex?: (index: number) => void;
   onDismiss: () => void;
   onRequestClose?: () => void;
-  refObject: RefObject<BottomSheetModalType | null>;
+  refObject: RefObject<{ present: () => void; dismiss: () => void } | null>;
   scrollable?: boolean;
   snapPoints?: ReadonlyArray<string | number>;
   subtitle?: string;

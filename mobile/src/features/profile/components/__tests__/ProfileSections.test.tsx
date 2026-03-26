@@ -112,4 +112,76 @@ describe('ProfileSections', () => {
 
     expect(screen.getByDisplayValue('Kailua')).toBeTruthy();
   });
+
+  it('shows inline operation state and disables actions while busy', () => {
+    const photos = [
+      makePhoto({
+        id: 'photo-primary',
+        isPrimary: true,
+        sortOrder: 0,
+      }),
+      makePhoto({
+        id: 'photo-secondary',
+        sortOrder: 1,
+      }),
+    ];
+
+    renderPhotoManager(photos, {
+      isBusy: true,
+      operation: {
+        type: 'reorder',
+        photoId: 'photo-secondary',
+        label: 'Reordering photos…',
+      },
+    });
+
+    expect(screen.getByText('Reordering photos…')).toBeTruthy();
+    expect(screen.getAllByLabelText('Move photo later')[0].props.accessibilityState).toEqual({
+      disabled: true,
+    });
+    expect(screen.getByText('Working…')).toBeTruthy();
+  });
+
+  it('ignores hidden photos when ordering the gallery', () => {
+    const photos = [
+      makePhoto({
+        id: 'photo-hidden',
+        isHidden: true,
+        sortOrder: 0,
+      }),
+      makePhoto({
+        id: 'photo-primary',
+        isPrimary: true,
+        sortOrder: 1,
+      }),
+      makePhoto({
+        id: 'photo-secondary',
+        sortOrder: 2,
+      }),
+    ];
+
+    renderPhotoManager(photos);
+
+    expect(screen.queryByText('Photo 3')).toBeNull();
+    expect(screen.getByText('Photo 2')).toBeTruthy();
+  });
+
+  it('hides photo controls when editing is disabled', () => {
+    renderPhotoManager(
+      [
+        makePhoto({
+          id: 'photo-primary',
+          isPrimary: true,
+          sortOrder: 0,
+        }),
+      ],
+      {
+        canEdit: false,
+      },
+    );
+
+    expect(screen.queryByText('Add photo')).toBeNull();
+    expect(screen.queryByLabelText('Remove photo')).toBeNull();
+    expect(screen.queryByLabelText('Move photo later')).toBeNull();
+  });
 });

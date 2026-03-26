@@ -117,7 +117,7 @@ export function setupNotificationListeners(
   onNotificationTap: (data: Record<string, unknown>) => void,
 ): () => void {
   const subscription = Notifications.addNotificationResponseReceivedListener(
-    (response) => {
+    (response: any) => {
       const data = response.notification.request.content.data ?? {};
       onNotificationTap(data as Record<string, unknown>);
     },

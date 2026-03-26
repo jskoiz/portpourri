@@ -38,55 +38,66 @@ function ProfileScreenContentStory({
 
   return (
     <ProfileScreenContent
-      completenessScore={80}
-      completenessMissing={[]}
-      deletingAccount={false}
-      editingPhotos={Boolean(photoOperation)}
-      bio={profile.profile?.bio ?? ''}
-      city={profile.profile?.city ?? ''}
-      editMode={editMode}
-      errorMessage={errorMessage}
-      intensityLevel={profile.fitnessProfile?.intensityLevel ?? 'moderate'}
-      intentDating
-      intentFriends={false}
-      intentWorkout
+      account={{
+        deletingAccount: false,
+        onConfirmDeleteAccount: () => undefined,
+        onLogout: () => undefined,
+      }}
+      completeness={{
+        score: 80,
+        missing: [],
+      }}
+      editor={{
+        bio: profile.profile?.bio ?? '',
+        city: profile.profile?.city ?? '',
+        editMode,
+        errorMessage,
+        intensityLevel: profile.fitnessProfile?.intensityLevel ?? 'moderate',
+        intentDating: true,
+        intentFriends: false,
+        intentWorkout: true,
+        isSaving,
+        knownLocationSuggestions: [
+          createLocationSuggestion('Honolulu', 'Oahu', 'curated'),
+          createLocationSuggestion('Kakaako', 'Honolulu neighborhood', 'curated'),
+        ],
+        onCancelEdit: () => undefined,
+        onPrimaryAction: () => undefined,
+        onSelectCitySuggestion: () => undefined,
+        onSetBio: () => undefined,
+        onSetCity: () => undefined,
+        onSetIntensityLevel: () => undefined,
+        onSetIntentDating: () => undefined,
+        onSetIntentFriends: () => undefined,
+        onSetIntentWorkout: () => undefined,
+        onSetPrimaryGoal: () => undefined,
+        onSetSelectedActivities: () => undefined,
+        onSetSelectedSchedule: () => undefined,
+        onSetWeeklyFrequencyBand: () => undefined,
+        primaryGoal: profile.fitnessProfile?.primaryGoal ?? 'connection',
+        selectedActivities: ['Running', 'Yoga', 'Hiking'],
+        selectedSchedule: ['Morning', 'Weekends'],
+        weeklyFrequencyBand: profile.fitnessProfile?.weeklyFrequencyBand ?? '3-4',
+      }}
       isRefetching={false}
-      isSavingFitness={isSaving}
-      isSavingProfile={isSaving}
-      knownLocationSuggestions={[
-        createLocationSuggestion('Honolulu', 'Oahu', 'curated'),
-        createLocationSuggestion('Kakaako', 'Honolulu neighborhood', 'curated'),
-      ]}
-      navigation={{ navigate: () => undefined }}
-      onCancelEdit={() => undefined}
-      onConfirmDeleteAccount={() => undefined}
-      onDeletePhoto={() => undefined}
-      onLogout={() => undefined}
-      onMakePrimaryPhoto={() => undefined}
-      onMovePhotoLeft={() => undefined}
-      onMovePhotoRight={() => undefined}
       onRefresh={() => undefined}
-      onSave={() => undefined}
-      onSelectCitySuggestion={() => undefined}
-      onSetBio={() => undefined}
-      onSetCity={() => undefined}
-      onSetIntensityLevel={() => undefined}
-      onSetIntentDating={() => undefined}
-      onSetIntentFriends={() => undefined}
-      onSetIntentWorkout={() => undefined}
-      onSetPrimaryGoal={() => undefined}
-      onSetSelectedActivities={() => undefined}
-      onSetSelectedSchedule={() => undefined}
-      onSetWeeklyFrequencyBand={() => undefined}
-      onToggleBuildInfo={() => undefined}
-      onUploadPhoto={() => undefined}
-      photoOperation={photoOperation}
-      primaryGoal={profile.fitnessProfile?.primaryGoal ?? 'connection'}
+      photos={{
+        editingPhotos: Boolean(photoOperation),
+        onDeletePhoto: () => undefined,
+        onMakePrimaryPhoto: () => undefined,
+        onMovePhotoLeft: () => undefined,
+        onMovePhotoRight: () => undefined,
+        onUploadPhoto: () => undefined,
+        photoOperation,
+      }}
       profile={profile}
-      selectedActivities={['Running', 'Yoga', 'Hiking']}
-      selectedSchedule={['Morning', 'Weekends']}
-      showBuildInfo={showBuildInfo}
-      weeklyFrequencyBand={profile.fitnessProfile?.weeklyFrequencyBand ?? '3-4'}
+      settings={{
+        hapticsOn: true,
+        onOpenNotifications: () => undefined,
+        onToggleBuildInfo: () => undefined,
+        onToggleHaptics: () => undefined,
+        showBuildInfo,
+      }}
     />
   );
 }
@@ -122,6 +133,13 @@ export const ErrorState: Story = {
   },
 };
 
+export const PartialSaveError: Story = {
+  args: {
+    editMode: true,
+    errorMessage: 'Profile basics were saved, but fitness settings could not be saved. Please try again.',
+  },
+};
+
 export const UploadingPhoto: Story = {
   args: {
     editMode: true,
@@ -136,5 +154,16 @@ export const UploadingPhoto: Story = {
 export const LowContrastHero: Story = {
   args: {
     lowContrastHero: true,
+  },
+};
+
+export const PhotoBusy: Story = {
+  args: {
+    editMode: true,
+    photoOperation: {
+      type: 'reorder',
+      photoId: 'photo-2',
+      label: 'Reordering photos…',
+    },
   },
 };

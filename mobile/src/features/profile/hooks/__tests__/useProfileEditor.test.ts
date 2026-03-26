@@ -14,37 +14,206 @@ jest.mock('../../../../store/toastStore', () => ({
   showToast: (...args: unknown[]) => mockShowToast(...args),
 }));
 
+function makeProfile() {
+  return {
+    id: 'user-1',
+    profile: {
+      bio: 'Old bio',
+      city: 'Old City',
+      intentDating: false,
+      intentWorkout: false,
+      intentFriends: false,
+      latitude: 21.3,
+      longitude: -157.8,
+    },
+    fitnessProfile: {
+      intensityLevel: 'moderate',
+      weeklyFrequencyBand: '3-4',
+      primaryGoal: 'connection',
+      favoriteActivities: 'Running',
+      prefersMorning: false,
+      prefersEvening: true,
+    },
+  };
+}
+
+type ProfileShape = ReturnType<typeof makeProfile>;
+
 describe('useProfileEditor', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('keeps the user honest when basics save but fitness fails', async () => {
+  it('preserves unsaved fitness draft when basics save but fitness fails', async () => {
     const updateProfile = jest.fn().mockResolvedValue(undefined);
     const updateFitness = jest.fn().mockRejectedValue(new Error('Fitness save failed'));
+    const refetch = jest.fn().mockResolvedValue(undefined);
+    const profile = makeProfile();
 
-    const profile = {
-      id: 'user-1',
-      profile: {
-        bio: 'Old bio',
-        city: 'Old City',
-        intentDating: false,
-        intentWorkout: false,
-        intentFriends: false,
+    const { result, rerender } = renderHook<
+      ReturnType<typeof useProfileEditor>,
+      { currentProfile: ProfileShape }
+    >(
+      ({ currentProfile }) =>
+        useProfileEditor({
+          profile: currentProfile as never,
+          refetch,
+          updateProfile,
+          updateFitness,
+        }),
+      {
+        initialProps: {
+          currentProfile: profile,
+        },
       },
-      fitnessProfile: {
-        intensityLevel: 'moderate',
-        weeklyFrequencyBand: '3-4',
-        primaryGoal: 'connection',
-        favoriteActivities: 'Running',
-        prefersMorning: false,
-        prefersEvening: true,
+    );
+
+    act(() => {
+      void result.current.save();
+    });
+
+    await waitFor(() => {
+      expect(result.current.editMode).toBe(true);
+    });
+
+    act(() => {
+      result.current.setBio('Updated bio');
+      result.current.setIntensityLevel('high');
+      result.current.setWeeklyFrequencyBand('5+');
+      result.current.setPrimaryGoal('strength');
+      result.current.toggleActivity('Surfing');
+      result.current.toggleSchedule('Morning');
+    });
+
+    await act(async () => {
+      await result.current.save();
+    });
+
+    rerender({
+      currentProfile: {
+        ...profile,
+        profile: {
+          ...profile.profile,
+          bio: 'Updated bio',
+        },
       },
-    };
+    });
+
+    expect(updateProfile).toHaveBeenCalledWith({
+      bio: 'Updated bio',
+    });
+    expect(updateFitness).toHaveBeenCalledWith({
+      intensityLevel: 'high',
+      weeklyFrequencyBand: '5+',
+      primaryGoal: 'strength',
+      favoriteActivities: 'Running, Surfing',
+      prefersMorning: true,
+    });
+    expect(result.current.error).toBe(
+      'Profile basics were saved, but fitness settings could not be saved. Please try again.',
+    );
+    expect(result.current.editMode).toBe(true);
+    expect(result.current.intensityLevel).toBe('high');
+    expect(result.current.weeklyFrequencyBand).toBe('5+');
+    expect(result.current.primaryGoal).toBe('strength');
+    expect(result.current.selectedActivities).toEqual(['Running', 'Surfing']);
+    expect(result.current.selectedSchedule).toEqual(['Evening', 'Morning']);
+    expect(mockTriggerErrorHaptic).toHaveBeenCalled();
+    expect(mockTriggerSuccessHaptic).not.toHaveBeenCalled();
+  });
+
+  it('exits edit mode without mutating when nothing changed', async () => {
+    const updateProfile = jest.fn().mockResolvedValue(undefined);
+    const updateFitness = jest.fn().mockResolvedValue(undefined);
+    const refetch = jest.fn().mockResolvedValue(undefined);
+    const profile = makeProfile();
 
     const { result } = renderHook(() =>
       useProfileEditor({
         profile: profile as never,
+        refetch,
+        updateProfile,
+        updateFitness,
+      }),
+    );
+
+    act(() => {
+      void result.current.save();
+    });
+
+    await waitFor(() => {
+      expect(result.current.editMode).toBe(true);
+    });
+
+    await act(async () => {
+      await result.current.save();
+    });
+
+    expect(updateProfile).not.toHaveBeenCalled();
+    expect(updateFitness).not.toHaveBeenCalled();
+    expect(result.current.editMode).toBe(false);
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  it('keeps the local draft when profile data changes mid-edit', async () => {
+    const updateProfile = jest.fn().mockResolvedValue(undefined);
+    const updateFitness = jest.fn().mockResolvedValue(undefined);
+    const refetch = jest.fn().mockResolvedValue(undefined);
+    const profile = makeProfile();
+
+    const { result, rerender } = renderHook<
+      ReturnType<typeof useProfileEditor>,
+      { currentProfile: ProfileShape }
+    >(
+      ({ currentProfile }) =>
+        useProfileEditor({
+          profile: currentProfile as never,
+          refetch,
+          updateProfile,
+          updateFitness,
+        }),
+      {
+        initialProps: {
+          currentProfile: profile,
+        },
+      },
+    );
+
+    act(() => {
+      void result.current.save();
+    });
+
+    await waitFor(() => {
+      expect(result.current.editMode).toBe(true);
+    });
+
+    act(() => {
+      result.current.setBio('Draft bio');
+    });
+
+    rerender({
+      currentProfile: {
+        ...profile,
+        profile: {
+          ...profile.profile,
+          bio: 'Remote bio',
+        },
+      },
+    });
+
+    expect(result.current.bio).toBe('Draft bio');
+  });
+
+  it('treats refresh failure after save as a warning toast instead of an error state', async () => {
+    const updateProfile = jest.fn().mockResolvedValue(undefined);
+    const updateFitness = jest.fn().mockResolvedValue(undefined);
+    const refetch = jest.fn().mockRejectedValue(new Error('Refresh failed'));
+    const profile = makeProfile();
+
+    const { result } = renderHook(() =>
+      useProfileEditor({
+        profile: profile as never,
+        refetch,
         updateProfile,
         updateFitness,
       }),
@@ -60,73 +229,36 @@ describe('useProfileEditor', () => {
 
     act(() => {
       result.current.setBio('Updated bio');
-      result.current.updateCity('Updated City');
-      result.current.setIntentDating(true);
-      result.current.setIntentWorkout(true);
-      result.current.setIntentFriends(true);
-      result.current.setIntensityLevel('high');
-      result.current.setWeeklyFrequencyBand('5+');
-      result.current.setPrimaryGoal('strength');
-      result.current.toggleActivity('Surfing');
-      result.current.toggleSchedule('Morning');
     });
 
     await act(async () => {
       await result.current.save();
     });
 
-    expect(updateProfile).toHaveBeenCalledWith({
-      bio: 'Updated bio',
-      city: 'Updated City',
-      latitude: undefined,
-      longitude: undefined,
-      intentDating: true,
-      intentWorkout: true,
-      intentFriends: true,
-    });
-    expect(updateFitness).toHaveBeenCalledWith({
-      intensityLevel: 'high',
-      weeklyFrequencyBand: '5+',
-      primaryGoal: 'strength',
-      favoriteActivities: 'Running, Surfing',
-      prefersMorning: true,
-      prefersEvening: true,
-    });
-    expect(result.current.error).toBe(
-      'Profile basics were saved, but fitness settings could not be saved. Please try again.',
+    expect(result.current.error).toBeNull();
+    expect(result.current.editMode).toBe(false);
+    expect(mockTriggerSuccessHaptic).toHaveBeenCalled();
+    expect(mockTriggerErrorHaptic).not.toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith(
+      'Changes saved',
+      'success',
     );
-    expect(result.current.editMode).toBe(true);
-    expect(mockTriggerErrorHaptic).toHaveBeenCalled();
-    expect(mockTriggerSuccessHaptic).not.toHaveBeenCalled();
-    expect(mockShowToast).not.toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith(
+      'Profile saved, but we could not refresh the latest copy. Pull to refresh if anything looks stale.',
+      'warning',
+    );
   });
 
-  it('shows success feedback and exits edit mode when both profile and fitness saves succeed', async () => {
+  it('clears saved coordinates when the user replaces a selected city with freeform text', async () => {
     const updateProfile = jest.fn().mockResolvedValue(undefined);
     const updateFitness = jest.fn().mockResolvedValue(undefined);
-
-    const profile = {
-      id: 'user-1',
-      profile: {
-        bio: 'Old bio',
-        city: 'Old City',
-        intentDating: false,
-        intentWorkout: false,
-        intentFriends: false,
-      },
-      fitnessProfile: {
-        intensityLevel: 'moderate',
-        weeklyFrequencyBand: '3-4',
-        primaryGoal: 'connection',
-        favoriteActivities: 'Running',
-        prefersMorning: false,
-        prefersEvening: true,
-      },
-    };
+    const refetch = jest.fn().mockResolvedValue(undefined);
+    const profile = makeProfile();
 
     const { result } = renderHook(() =>
       useProfileEditor({
         profile: profile as never,
+        refetch,
         updateProfile,
         updateFitness,
       }),
@@ -140,19 +272,23 @@ describe('useProfileEditor', () => {
       expect(result.current.editMode).toBe(true);
     });
 
+    act(() => {
+      result.current.selectCitySuggestion({
+        value: 'Kailua',
+        latitude: 21.4,
+        longitude: -157.7,
+      } as never);
+      result.current.updateCity('Kailua Town');
+    });
+
     await act(async () => {
       await result.current.save();
     });
 
-    expect(updateProfile).toHaveBeenCalledTimes(1);
-    expect(updateFitness).toHaveBeenCalledTimes(1);
-    expect(result.current.error).toBeNull();
-    expect(result.current.editMode).toBe(false);
-    expect(mockTriggerSuccessHaptic).toHaveBeenCalled();
-    expect(mockShowToast).toHaveBeenCalledWith('Profile saved', 'success');
-    expect(mockTriggerErrorHaptic).not.toHaveBeenCalled();
-    expect(result.current.error).not.toBe(
-      'Profile basics were saved, but fitness settings could not be saved. Please try again.',
-    );
+    expect(updateProfile).toHaveBeenCalledWith({
+      city: 'Kailua Town',
+      latitude: null,
+      longitude: null,
+    });
   });
 });

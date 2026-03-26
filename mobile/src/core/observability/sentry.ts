@@ -11,7 +11,7 @@ export function initSentry() {
   }
 
   Sentry.init({
-    dsn: env.sentryDsn,
+    dsn: env.sentryDsn ?? undefined,
     enabled: sentryEnabled,
     environment: buildInfo.appEnv,
     release:

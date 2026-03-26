@@ -1,11 +1,9 @@
 import client from '../../api/client';
 import type {
-  CurrentUser,
   UpdateFitnessPayload,
   UpdatePhotoPayload,
   UpdateProfilePayload,
-  UserPhoto,
-  UserProfile,
+  User,
   UploadPhotoPayload,
 } from '../../api/types';
 import { normalizeIntensityLevelForApi } from '../../api/profileIntensity';
@@ -21,19 +19,10 @@ type ReactNativeFormData = FormData & {
   append(name: string, value: ReactNativeFormDataFile): void;
 };
 
-type UserProfileRecord = UserProfile & { userId: string };
-
-function getChangedFields(payload: object): string[] {
-  return Object.entries(payload)
-    .filter(([, value]) => value !== undefined)
-    .map(([key]) => key)
-    .sort();
-}
-
 export const profileApi = {
   getProfile: async () =>
     withErrorLogging('profile', 'getProfile', () =>
-      client.get<CurrentUser>('/profile'),
+      client.get<User>('/profile'),
     ),
   getPublicProfile: async (userId: string) =>
     withErrorLogging('profile', 'getPublicProfile', () =>
@@ -41,25 +30,16 @@ export const profileApi = {
     ),
   updateFitness: async (payload: UpdateFitnessPayload) =>
     withErrorLogging('profile', 'updateFitness', () =>
-      client.patch<CurrentUser>('/profile/fitness', {
+      client.patch<User>('/profile/fitness', {
         ...payload,
-        intensityLevel: normalizeIntensityLevelForApi(payload.intensityLevel),
+        ...(payload.intensityLevel
+          ? { intensityLevel: normalizeIntensityLevelForApi(payload.intensityLevel) }
+          : {}),
       }),
-      {
-        context: {
-          changedFields: getChangedFields(payload),
-          intensityLevel: normalizeIntensityLevelForApi(payload.intensityLevel),
-        },
-      },
     ),
   updateProfile: async (payload: UpdateProfilePayload) =>
     withErrorLogging('profile', 'updateProfile', () =>
-      client.patch<UserProfileRecord>('/profile', payload),
-      {
-        context: {
-          changedFields: getChangedFields(payload),
-        },
-      },
+      client.patch<User>('/profile', payload),
     ),
   uploadPhoto: async (payload: UploadPhotoPayload) => {
     const formData = new FormData() as ReactNativeFormData;
@@ -71,7 +51,7 @@ export const profileApi = {
     formData.append('file', file);
 
     return withErrorLogging('profile', 'uploadPhoto', () =>
-      client.post<UserPhoto>('/profile/photos', formData, {
+      client.post<User>('/profile/photos', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -82,28 +62,16 @@ export const profileApi = {
           );
         },
       }),
-      {
-        context: {
-          fileType: file.type,
-          hasCustomFileName: Boolean(payload.fileName),
-          hasMimeType: Boolean(payload.mimeType),
-        },
-      },
     );
   },
   updatePhoto: async (photoId: string, payload: UpdatePhotoPayload) =>
     withErrorLogging('profile', 'updatePhoto', () =>
-      client.patch<UserPhoto | null>(`/profile/photos/${photoId}`, payload),
-      {
-        context: {
-          photoId,
-          changedFields: getChangedFields(payload),
-        },
-      },
+      client.patch<User>(`/profile/photos/${photoId}`, payload),
+      { photoId },
     ),
   deletePhoto: async (photoId: string) =>
     withErrorLogging('profile', 'deletePhoto', () =>
-      client.delete<UserPhoto | null>(`/profile/photos/${photoId}`),
-      { context: { photoId } },
+      client.delete<User>(`/profile/photos/${photoId}`),
+      { photoId },
     ),
 };

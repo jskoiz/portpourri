@@ -121,18 +121,18 @@ export interface UpdateProfilePayload {
   bio?: string;
   city?: string;
   country?: string;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
   intentDating?: boolean;
   intentWorkout?: boolean;
   intentFriends?: boolean;
 }
 
 export interface UpdateFitnessPayload {
-  intensityLevel: string;
-  weeklyFrequencyBand: string;
-  primaryGoal: string;
-  favoriteActivities: string;
+  intensityLevel?: string;
+  weeklyFrequencyBand?: string;
+  primaryGoal?: string;
+  favoriteActivities?: string;
   prefersMorning?: boolean;
   prefersEvening?: boolean;
 }

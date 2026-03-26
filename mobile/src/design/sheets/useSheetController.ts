@@ -1,12 +1,11 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import {
   triggerSheetDismissHaptic,
   triggerSheetOpenHaptic,
 } from '../../lib/interaction/feedback';
 
 export function useSheetController() {
-  const ref = useRef<BottomSheetModal | null>(null);
+  const ref = useRef<{ present: () => void; dismiss: () => void } | null>(null);
   const [visible, setVisible] = useState(false);
   const closeReason = useRef<'dismiss' | 'programmatic' | null>(null);
 

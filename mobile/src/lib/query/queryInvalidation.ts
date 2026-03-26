@@ -31,3 +31,38 @@ export async function invalidateQueryScopes(
     ),
   );
 }
+
+async function invalidateQueryKeys(
+  queryClient: QueryClient,
+  queryKeySet: readonly QueryKey[],
+) {
+  await Promise.all(
+    queryKeySet.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+  );
+}
+
+export function invalidateProfileSurfaces(queryClient: QueryClient) {
+  return Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.profile.all(),
+      refetchType: 'inactive',
+    }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.discovery.profileCompleteness() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.discovery.feeds() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.matches.list() }),
+  ]);
+}
+
+export function invalidateDiscoverySurfaces(queryClient: QueryClient) {
+  return invalidateQueryKeys(queryClient, [
+    queryKeys.discovery.feeds(),
+    queryKeys.matches.list(),
+  ]);
+}
+
+export function invalidateEventSurfaces(queryClient: QueryClient) {
+  return queryClient.invalidateQueries({
+    queryKey: queryKeys.events.all(),
+    refetchType: 'inactive',
+  });
+}

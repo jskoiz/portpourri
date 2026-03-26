@@ -13,6 +13,7 @@ import { useProfileEditor } from '../../src/features/profile/hooks/useProfileEdi
 import { usePhotoManager } from '../../src/features/profile/hooks/usePhotoManager';
 import { useAuthStore } from '../../src/store/authStore';
 import type { User, UserPhoto } from '../../src/api/types';
+import { createQueryTestHarness } from '../../src/lib/testing/queryTestHarness';
 
 /* ------------------------------------------------------------------ */
 /*  Mocks                                                              */
@@ -83,7 +84,8 @@ describe('Profile flow integration', () => {
   it('loads profile data and exposes it via hook', async () => {
     mockGetProfile.mockResolvedValue({ data: fakeUser });
 
-    const { result } = renderHook(() => useProfile());
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useProfile(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -99,6 +101,7 @@ describe('Profile flow integration', () => {
     const { result } = renderHook(() =>
       useProfileEditor({
         profile: fakeUser,
+        refetch: jest.fn().mockResolvedValue(undefined),
         updateProfile: mockUpdateProfileFn,
         updateFitness: mockUpdateFitnessFn,
       }),
@@ -120,7 +123,7 @@ describe('Profile flow integration', () => {
     // Change fields
     act(() => {
       result.current.setBio('Updated bio text');
-      result.current.setCity('Boulder');
+      result.current.updateCity('Boulder');
       result.current.setIntensityLevel('high');
     });
 
@@ -151,6 +154,7 @@ describe('Profile flow integration', () => {
     const { result } = renderHook(() =>
       useProfileEditor({
         profile: fakeUser,
+        refetch: jest.fn().mockResolvedValue(undefined),
         updateProfile: jest.fn(),
         updateFitness: jest.fn(),
       }),
@@ -164,7 +168,7 @@ describe('Profile flow integration', () => {
     // Modify fields
     act(() => {
       result.current.setBio('Temporary change');
-      result.current.setCity('Somewhere');
+      result.current.updateCity('Somewhere');
     });
 
     expect(result.current.bio).toBe('Temporary change');
@@ -189,9 +193,10 @@ describe('Profile flow integration', () => {
       isHidden: false,
       sortOrder: 2,
     };
-    mockUploadPhoto.mockResolvedValue({ data: newPhoto });
+    mockUploadPhoto.mockResolvedValue({ data: { ...fakeUser, photos: [...(fakeUser.photos || []), newPhoto] } });
 
-    const { result } = renderHook(() => useProfile());
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useProfile(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -221,16 +226,20 @@ describe('Profile flow integration', () => {
     mockGetProfile.mockResolvedValue({ data: fakeUser });
     mockUpdateProfile.mockResolvedValue({
       data: {
-        userId: 'u-1',
-        bio: 'New bio from server',
-        city: 'Boulder',
-        intentDating: true,
-        intentWorkout: false,
-        intentFriends: true,
+        ...fakeUser,
+        profile: {
+          ...fakeUser.profile,
+          bio: 'New bio from server',
+          city: 'Boulder',
+          intentDating: true,
+          intentWorkout: false,
+          intentFriends: true,
+        },
       },
     });
 
-    const { result } = renderHook(() => useProfile());
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useProfile(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -268,7 +277,8 @@ describe('Profile flow integration', () => {
     };
     mockUpdateFitness.mockResolvedValue({ data: updatedUser });
 
-    const { result } = renderHook(() => useProfile());
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useProfile(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -300,6 +310,7 @@ describe('Profile flow integration', () => {
     const { result } = renderHook(() =>
       useProfileEditor({
         profile: fakeUser,
+        refetch: jest.fn().mockResolvedValue(undefined),
         updateProfile: jest.fn(),
         updateFitness: jest.fn(),
       }),
@@ -323,9 +334,10 @@ describe('Profile flow integration', () => {
   // -- Delete photo via useProfile ------------------------------------
   it('deletePhoto calls API and triggers invalidation', async () => {
     mockGetProfile.mockResolvedValue({ data: fakeUser });
-    mockDeletePhoto.mockResolvedValue({ data: null });
+    mockDeletePhoto.mockResolvedValue({ data: { ...fakeUser, photos: [photo1] } });
 
-    const { result } = renderHook(() => useProfile());
+    const { wrapper } = createQueryTestHarness();
+    const { result } = renderHook(() => useProfile(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 

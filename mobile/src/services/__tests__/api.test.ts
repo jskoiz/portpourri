@@ -292,12 +292,12 @@ describe('profileApi', () => {
   describe('updateProfile', () => {
     it('uses the backend patch route for profile basics', async () => {
       const payload = { bio: 'Updated bio', city: 'Vancouver' };
-      mockClient.patch.mockResolvedValueOnce({ data: { userId: 'user-1', ...payload } });
+      mockClient.patch.mockResolvedValueOnce({ data: { id: 'user-1', profile: payload } });
 
       const result = await profileApi.updateProfile(payload);
 
       expect(mockClient.patch).toHaveBeenCalledWith('/profile', payload);
-      expect(result.data).toEqual({ userId: 'user-1', ...payload });
+      expect(result.data).toEqual({ id: 'user-1', profile: payload });
       expect(mockLogApiFailure).not.toHaveBeenCalled();
     });
 
@@ -362,7 +362,10 @@ describe('profileApi', () => {
   describe('uploadPhoto', () => {
     it('passes multipart payload and forwards upload progress', async () => {
       const onProgress = jest.fn();
-      mockClient.post.mockResolvedValueOnce({ data: { id: 'photo-1' } });
+      mockClient.post.mockImplementationOnce(async (_url, _body, config) => {
+        config?.onUploadProgress?.({ loaded: 45, total: 90 } as any);
+        return { data: { id: 'user-1', photos: [{ id: 'photo-1' }] } };
+      });
 
       await profileApi.uploadPhoto({
         uri: 'file:///tmp/photo.jpg',

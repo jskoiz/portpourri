@@ -1,126 +1,53 @@
-import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { UpdatePhotoPayload, User } from '../../../api/types';
+import type { User } from '../../../api/types';
 import { profileApi } from '../../../services/api';
 import { queryKeys } from '../../../lib/query/queryKeys';
-import { applyPhotoUpdate, patchProfile } from '../../../lib/query/queryData';
-import {
-  invalidateQueryScopes,
-  queryInvalidationScopes,
-} from '../../../lib/query/queryInvalidation';
-import { beginOptimisticUpdate } from '../../../lib/query/optimisticUpdates';
+import { invalidateProfileSurfaces } from '../../../lib/query/queryInvalidation';
 import { useAuthStore } from '../../../store/authStore';
+import { useEffect } from 'react';
+
+/** Sync the returned User back into authStore so screens reading authStore.user stay current. */
+function syncUserToAuthStore(user: User) {
+  useAuthStore.getState().setUser(user);
+}
+
+function syncUserToCaches(queryClient: ReturnType<typeof useQueryClient>, user: User) {
+  queryClient.setQueryData(queryKeys.profile.current(), user);
+  syncUserToAuthStore(user);
+}
 
 export function useProfile() {
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: queryKeys.profile.current(),
-    queryFn: async () => (await profileApi.getProfile() as { data: User }).data,
+    queryFn: async (): Promise<User> => (await profileApi.getProfile()).data,
   });
 
   useEffect(() => {
     if (query.data) {
-      useAuthStore.getState().setUser(query.data);
+      syncUserToAuthStore(query.data);
     }
   }, [query.data]);
 
   const updateFitness = useMutation({
-    mutationFn: async (payload: Parameters<typeof profileApi.updateFitness>[0]) =>
-      (await profileApi.updateFitness(payload) as { data: User }).data,
-    onMutate: async (payload) =>
-      beginOptimisticUpdate(queryClient, [
-        {
-          queryKey: queryKeys.profile.current(),
-          exact: true,
-          updater: (current) => {
-            const user = current as User | undefined;
-            if (!user) {
-              return user;
-            }
-
-            return {
-              ...user,
-              fitnessProfile: {
-                ...user.fitnessProfile,
-                ...payload,
-              },
-            };
-          },
-        },
-      ]),
-    onError: (_error, _payload, context) => {
-      context?.rollback();
-    },
+    mutationFn: profileApi.updateFitness,
     onSuccess: (response) => {
-      patchProfile(queryClient, () => response);
-    },
-    onSettled: () => {
-      void invalidateQueryScopes(queryClient, queryInvalidationScopes.profileWrite);
+      syncUserToCaches(queryClient, response.data);
+      void invalidateProfileSurfaces(queryClient);
     },
   });
   const updateProfile = useMutation({
-    mutationFn: async (payload: Parameters<typeof profileApi.updateProfile>[0]) =>
-      (
-        await profileApi.updateProfile(payload) as {
-          data: User['profile'] & { userId?: string };
-        }
-      ).data,
-    onMutate: async (payload) =>
-      beginOptimisticUpdate(queryClient, [
-        {
-          queryKey: queryKeys.profile.current(),
-          exact: true,
-          updater: (current) => {
-            const user = current as User | undefined;
-            if (!user) {
-              return user;
-            }
-
-            return {
-              ...user,
-              profile: {
-                ...user.profile,
-                ...payload,
-              },
-            };
-          },
-        },
-      ]),
-    onError: (_error, _payload, context) => {
-      context?.rollback();
-    },
+    mutationFn: profileApi.updateProfile,
     onSuccess: (response) => {
-      const { userId: _userId, ...profile } = response;
-      patchProfile(queryClient, (current) =>
-        current
-          ? {
-              ...current,
-              profile: {
-                ...current.profile,
-                ...profile,
-              },
-            }
-          : current,
-      );
-    },
-    onSettled: () => {
-      void invalidateQueryScopes(queryClient, queryInvalidationScopes.profileWrite);
+      syncUserToCaches(queryClient, response.data);
+      void invalidateProfileSurfaces(queryClient);
     },
   });
   const uploadPhoto = useMutation({
-    mutationFn: async (payload: Parameters<typeof profileApi.uploadPhoto>[0]) =>
-      (
-        await profileApi.uploadPhoto(payload) as {
-          data: unknown;
-        }
-      ).data,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.profile.current(),
-      });
-    },
-    onSettled: () => {
-      void invalidateQueryScopes(queryClient, queryInvalidationScopes.profileWrite);
+    mutationFn: profileApi.uploadPhoto,
+    onSuccess: (response) => {
+      syncUserToCaches(queryClient, response.data);
+      void invalidateProfileSurfaces(queryClient);
     },
   });
   const updatePhoto = useMutation({
@@ -129,64 +56,18 @@ export function useProfile() {
       payload,
     }: {
       photoId: string;
-      payload: UpdatePhotoPayload;
-    }) =>
-      (
-        await profileApi.updatePhoto(photoId, payload) as {
-          data: unknown;
-        }
-      ).data,
-    onMutate: async ({ photoId, payload }) =>
-      beginOptimisticUpdate(queryClient, [
-        {
-          queryKey: queryKeys.profile.current(),
-          exact: true,
-          updater: (current) => {
-            const user = current as User | undefined;
-            if (!user) {
-              return user;
-            }
-
-            return {
-              ...user,
-              photos: applyPhotoUpdate(user.photos, photoId, payload),
-            };
-          },
-        },
-      ]),
-    onError: (_error, _payload, context) => {
-      context?.rollback();
-    },
-    onSettled: () => {
-      void invalidateQueryScopes(queryClient, queryInvalidationScopes.profileWrite);
+      payload: Parameters<typeof profileApi.updatePhoto>[1];
+    }) => profileApi.updatePhoto(photoId, payload),
+    onSuccess: (response) => {
+      syncUserToCaches(queryClient, response.data);
+      void invalidateProfileSurfaces(queryClient);
     },
   });
   const deletePhoto = useMutation({
-    mutationFn: async (photoId: string) =>
-      (await profileApi.deletePhoto(photoId) as { data: unknown }).data,
-    onMutate: async (photoId) =>
-      beginOptimisticUpdate(queryClient, [
-        {
-          queryKey: queryKeys.profile.current(),
-          exact: true,
-          updater: (current) => {
-            const user = current as User | undefined;
-            if (!user) {
-              return user;
-            }
-
-            return {
-              ...user,
-              photos: user.photos?.filter((photo) => photo.id !== photoId),
-            };
-          },
-        },
-      ]),
-    onError: (_error, _payload, context) => {
-      context?.rollback();
-    },
-    onSettled: () => {
-      void invalidateQueryScopes(queryClient, queryInvalidationScopes.profileWrite);
+    mutationFn: profileApi.deletePhoto,
+    onSuccess: (response) => {
+      syncUserToCaches(queryClient, response.data);
+      void invalidateProfileSurfaces(queryClient);
     },
   });
 

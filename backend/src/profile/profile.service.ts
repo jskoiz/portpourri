@@ -78,11 +78,13 @@ export class ProfileService {
   }
 
   async updateProfile(userId: string, data: UpdateProfileDto) {
-    return await this.prisma.userProfile.upsert({
+    await this.prisma.userProfile.upsert({
       where: { userId },
       update: { ...data },
       create: { userId, ...data },
     });
+
+    return this.getProfile(userId);
   }
 
   async getProfile(userId: string) {
@@ -158,7 +160,7 @@ export class ProfileService {
     const uploaded = await this.photoStorage.saveProfilePhoto(file);
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      await this.prisma.$transaction(async (tx) => {
         const currentPhotos = await tx.userPhoto.findMany({
           where: { userId },
           orderBy: { sortOrder: 'asc' },
@@ -176,7 +178,7 @@ export class ProfileService {
           });
         }
 
-        return tx.userPhoto.create({
+        await tx.userPhoto.create({
           data: {
             userId,
             storageKey: uploaded.storageKey,
@@ -185,6 +187,8 @@ export class ProfileService {
           },
         });
       });
+
+      return this.getProfile(userId);
     } catch (error) {
       await this.photoStorage.removeProfilePhoto(uploaded.storageKey);
       throw error;
@@ -200,7 +204,28 @@ export class ProfileService {
       throw new NotFoundException('Photo not found');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
+      if (
+        typeof data.sortOrder === 'number' &&
+        data.sortOrder !== existingPhoto.sortOrder
+      ) {
+        const conflictingPhoto = await tx.userPhoto.findFirst({
+          where: {
+            userId,
+            id: { not: photoId },
+            isHidden: false,
+            sortOrder: data.sortOrder,
+          },
+        });
+
+        if (conflictingPhoto) {
+          await tx.userPhoto.update({
+            where: { id: conflictingPhoto.id },
+            data: { sortOrder: existingPhoto.sortOrder },
+          });
+        }
+      }
+
       if (data.isPrimary) {
         await tx.userPhoto.updateMany({
           where: { userId },
@@ -237,6 +262,8 @@ export class ProfileService {
 
       return updated;
     });
+
+    return this.getProfile(userId);
   }
 
   async deletePhoto(userId: string, photoId: string) {
@@ -248,8 +275,8 @@ export class ProfileService {
       throw new NotFoundException('Photo not found');
     }
 
-    const deleted = await this.prisma.$transaction(async (tx) => {
-      const hidden = await tx.userPhoto.update({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userPhoto.update({
         where: { id: photoId },
         data: {
           isHidden: true,
@@ -268,12 +295,10 @@ export class ProfileService {
           data: { isPrimary: true },
         });
       }
-
-      return hidden;
     });
 
     await this.photoStorage.removeProfilePhoto(existingPhoto.storageKey);
-    return deleted;
+    return this.getProfile(userId);
   }
 
   async getProfileCompleteness(userId: string) {

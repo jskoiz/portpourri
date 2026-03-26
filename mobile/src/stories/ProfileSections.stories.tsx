@@ -97,3 +97,34 @@ export const TwoPhotoGallery: Story = {
     photoCount: 2,
   },
 };
+
+export const ReorderingPhoto: Story = {
+  args: {
+    photoOperation: {
+      type: 'reorder',
+      photoId: 'photo-2',
+      label: 'Reordering photos…',
+    },
+  },
+};
+
+export const DeletingPhoto: Story = {
+  args: {
+    photoOperation: {
+      type: 'delete',
+      photoId: 'photo-1',
+      label: 'Removing photo…',
+    },
+  },
+};
+
+export const BusyReadOnly: Story = {
+  args: {
+    editMode: false,
+    photoOperation: {
+      type: 'primary',
+      photoId: 'photo-1',
+      label: 'Setting primary photo…',
+    },
+  },
+};

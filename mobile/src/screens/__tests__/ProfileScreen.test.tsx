@@ -14,7 +14,13 @@ const mockProfile = {
   id: "user-1",
   firstName: "Jordan",
   age: 29,
-  profile: { city: "Honolulu" },
+  profile: {
+    city: "Honolulu",
+    bio: "Sunrise workouts and low-pressure plans.",
+    intentDating: true,
+    intentWorkout: true,
+    intentFriends: false,
+  },
   fitnessProfile: {
     intensityLevel: "moderate",
     weeklyFrequencyBand: "3-4",
@@ -64,6 +70,28 @@ jest.mock("../../features/profile/hooks/useProfile", () => ({
 
 jest.mock("../../features/locations/useKnownLocationSuggestions", () => ({
   useKnownLocationSuggestions: () => [],
+}));
+
+jest.mock("../../features/profile/hooks/useProfileCompleteness", () => ({
+  useProfileCompleteness: () => ({ score: 80, missing: [] }),
+}));
+
+jest.mock("../../features/profile/hooks/useProfileSettings", () => ({
+  useProfileSettings: () => ({
+    hapticsOn: true,
+    showBuildInfo: false,
+    toggleBuildInfo: jest.fn(),
+    toggleHaptics: jest.fn(),
+  }),
+}));
+
+jest.mock("../../lib/interaction/feedback", () => ({
+  triggerErrorHaptic: jest.fn(),
+  triggerSuccessHaptic: jest.fn(),
+  triggerSelectionHaptic: jest.fn(),
+  isHapticsEnabled: () => true,
+  loadHapticsPreference: jest.fn().mockResolvedValue(true),
+  setHapticsEnabled: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("../../components/form/LocationField", () => {
@@ -116,7 +144,7 @@ describe("ProfileScreen", () => {
     mockUpdateProfile.mockResolvedValue(undefined);
   });
 
-  it("persists hydrated activity and schedule preferences when saving", async () => {
+  it("skips network saves when nothing changed", async () => {
     render(<ProfileScreen navigation={mockNavigation} route={mockProfileRoute} />);
 
     expect(await screen.findByText("Jordan, 29")).toBeTruthy();
@@ -125,16 +153,11 @@ describe("ProfileScreen", () => {
     fireEvent.press(screen.getByText(/Edit Profile/));
     fireEvent.press(screen.getByText(/Save/));
 
-    await waitFor(() => {
-      expect(mockUpdateFitness).toHaveBeenCalledWith({
-        intensityLevel: "moderate",
-        weeklyFrequencyBand: "3-4",
-        primaryGoal: "connection",
-        favoriteActivities: "Running, Surfing",
-        prefersMorning: true,
-        prefersEvening: false,
-      });
-    });
+    await waitFor(() => expect(screen.getByText(/Edit Profile/)).toBeTruthy());
+
+    expect(mockUpdateProfile).not.toHaveBeenCalled();
+    expect(mockUpdateFitness).not.toHaveBeenCalled();
+    // refetch is internal to the controller; no direct assertion needed.
   });
 
   it("does not render fake environment pills", async () => {
@@ -177,5 +200,26 @@ describe("ProfileScreen", () => {
     await waitFor(() => {
       expect(screen.getByText(/Edit Profile/)).toBeTruthy();
     });
+  });
+
+  it("surfaces the partial-save error banner when basics save but fitness fails", async () => {
+    mockUpdateFitness.mockRejectedValueOnce(new Error("Fitness save failed"));
+
+    render(<ProfileScreen navigation={mockNavigation} route={mockProfileRoute} />);
+
+    expect(await screen.findByText("Jordan, 29")).toBeTruthy();
+    fireEvent.press(await screen.findByLabelText("Edit profile"));
+    expect(await screen.findByLabelText("Save profile")).toBeTruthy();
+    fireEvent.changeText(
+      screen.getByDisplayValue("Sunrise workouts and low-pressure plans."),
+      "Updated bio",
+    );
+    fireEvent.press(screen.getByLabelText("🏋️ Lifting"));
+    fireEvent.press(screen.getByLabelText("Save profile"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Profile basics were saved, but fitness settings could not be saved. Please try again.")).toBeTruthy();
+    });
+    expect(screen.getByLabelText("Save profile")).toBeTruthy();
   });
 });
