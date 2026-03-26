@@ -3,6 +3,16 @@ import { ChatMessageList } from '../components/ChatMessageList';
 import type { Theme } from '../../../theme/tokens';
 import { renderWithProviders } from '../../../lib/testing/renderWithProviders';
 
+jest.mock('react-native-safe-area-context', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  return {
+    SafeAreaView: ({ children }: { children: React.ReactNode }) => <View>{children}</View>,
+    useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+  };
+});
+
 jest.mock('../components/EventInviteCard', () => {
   const React = require('react');
   const { Text } = require('react-native');
@@ -105,6 +115,16 @@ describe('ChatMessageList accessibility', () => {
 it('preserves the invite note and renders the invite placeholder for event invite messages', () => {
     const rendered = renderWithProviders(
       <ChatMessageList
+        eventInvites={{
+          'event-1': {
+            eventId: 'event-1',
+            title: 'Loading event...',
+            location: 'Kakaako',
+            startsAt: '2099-03-27T18:00:00.000Z',
+            status: 'pending',
+            isMe: false,
+          },
+        }}
         messages={[
           {
             id: 'invite-1',

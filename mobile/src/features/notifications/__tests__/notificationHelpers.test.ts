@@ -122,7 +122,7 @@ describe('notification helpers', () => {
         route: 'Chat',
         params: {
           matchId: 'match-9',
-          user: { id: 'user-4', firstName: 'Match' },
+          user: { id: 'match-9', firstName: 'Event' },
         },
       },
     });
@@ -132,6 +132,8 @@ describe('notification helpers', () => {
     expect(getNotificationMeta('event_invite')).toEqual({
       icon: 'calendar',
       color: '#8BAA7A',
+      titleFallback: 'Event invite',
+      bodyFallback: 'Someone invited you to an event.',
     });
   });
 
@@ -185,7 +187,7 @@ describe('notification helpers', () => {
         route: 'Chat',
         params: {
           matchId: 'match-9',
-          user: { id: 'match-9', firstName: 'Invite' },
+          user: { id: 'match-9', firstName: 'Event' },
         },
       },
     });

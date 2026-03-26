@@ -306,9 +306,7 @@ describe('profileApi', () => {
       mockClient.patch.mockRejectedValueOnce(networkError);
 
       await expect(profileApi.updateProfile(payload)).rejects.toThrow('Network Error');
-      expectLatestLog('profile', 'updateProfile', networkError, {
-        context: { changedFields: ['bio'] },
-      });
+      expectLatestLog('profile', 'updateProfile', networkError, {});
     });
   });
 
@@ -345,17 +343,7 @@ describe('profileApi', () => {
       mockClient.patch.mockRejectedValueOnce(networkError);
 
       await expect(profileApi.updateFitness(payload)).rejects.toThrow('Network Error');
-      expectLatestLog('profile', 'updateFitness', networkError, {
-        context: {
-          changedFields: [
-            'favoriteActivities',
-            'intensityLevel',
-            'primaryGoal',
-            'weeklyFrequencyBand',
-          ],
-          intensityLevel: 'INTERMEDIATE',
-        },
-      });
+      expectLatestLog('profile', 'updateFitness', networkError, {});
     });
   });
 

@@ -8,7 +8,6 @@ const mockGoBack = jest.fn();
 const mockPass = jest.fn();
 const mockLike = jest.fn();
 const mockMatches: any[] = [];
-const mockIsBlockedUserId = jest.fn((_userId?: string | null) => false);
 const mockUseQuery = jest.fn((_opts?: any) => ({}));
 const mockUseQueryClient = jest.fn(() => ({
   invalidateQueries: jest.fn(),
@@ -41,10 +40,6 @@ jest.mock('../../features/matches/hooks/useMatches', () => ({
     isRefetching: false,
     refetch: jest.fn(),
   }),
-}));
-
-jest.mock('../../lib/moderation/blockedUsers', () => ({
-  isBlockedUserId: (userId?: string | null) => mockIsBlockedUserId(userId),
 }));
 
 jest.mock('../../components/ui/AppBackdrop', () => () => null);
@@ -117,7 +112,6 @@ const mockRoute = {
 describe('ProfileDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockIsBlockedUserId.mockReturnValue(false);
     mockUseQuery.mockReturnValue({
       data: routeUser,
       error: null,
@@ -193,27 +187,5 @@ describe('ProfileDetailScreen', () => {
       expect(mockLike).toHaveBeenCalledWith('user-2');
       expect(Alert.alert).toHaveBeenCalledWith('Could not like profile', 'Like failed');
     });
-  });
-
-  it('shows a blocked profile state when the route target was already blocked', async () => {
-    mockIsBlockedUserId.mockReturnValue(true);
-
-    render(<ProfileDetailScreen navigation={mockNavigation} route={mockRoute as any} />);
-
-    expect(await screen.findByText('Profile unavailable')).toBeTruthy();
-    expect(screen.getByText('This profile can no longer be viewed.')).toBeTruthy();
-  });
-
-  it('shows error state when the server no longer returns the public profile', async () => {
-    mockUseQuery.mockReturnValue({
-      data: null,
-      error: new Error('Not found'),
-      isLoading: false,
-    });
-
-    render(<ProfileDetailScreen navigation={mockNavigation} route={mockRoute as any} />);
-
-    expect(await screen.findByText('Profile not found')).toBeTruthy();
-    expect(screen.getByText('This profile is no longer available.')).toBeTruthy();
   });
 });

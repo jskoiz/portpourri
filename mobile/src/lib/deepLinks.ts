@@ -74,7 +74,11 @@ export const linkingConfig: LinkingOptions<RootStackParamList> = {
 export function getNavigationTarget(
   data: NotificationData,
 ): { screen: keyof RootStackParamList; params: Record<string, unknown> } | null {
-  const result = resolveNotificationRoute(data as NotificationRouteInput);
+  const { type, ...payload } = data;
+  const result = resolveNotificationRoute({
+    type,
+    data: payload,
+  } as NotificationRouteInput);
   if (!result.ok) return null;
   return {
     screen: result.target.route,
@@ -92,7 +96,11 @@ export function handleNotificationNavigation(
   data: NotificationData,
   navigation: { navigate: (screen: string, params?: Record<string, unknown>) => void },
 ): NotificationNavigationResult {
-  const result = resolveNotificationRoute(data as NotificationRouteInput);
+  const { type, ...payload } = data;
+  const result = resolveNotificationRoute({
+    type,
+    data: payload,
+  } as NotificationRouteInput);
   if (!result.ok) {
     return result;
   }

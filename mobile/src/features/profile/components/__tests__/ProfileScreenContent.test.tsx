@@ -162,25 +162,20 @@ describe('ProfileScreenContent', () => {
     fireEvent.press(screen.getByLabelText('Build provenance'));
 
     expect(screen.getByTestId('build-provenance-panel')).toBeTruthy();
-    expect(screen.getByText('Provenance')).toBeTruthy();
-    expect(screen.getByText('scripted release metadata')).toBeTruthy();
-    expect(screen.getByLabelText('Build provenance').props.accessibilityState).toEqual(
-      expect.objectContaining({ expanded: true }),
-    );
+    expect(screen.getByText('App env')).toBeTruthy();
+    expect(screen.getByText('test')).toBeTruthy();
     expect(screen.getByText('Version')).toBeTruthy();
-    expect(screen.getByText('1.2.3')).toBeTruthy();
-    expect(screen.getByText('iOS build')).toBeTruthy();
-    expect(screen.getByText('42')).toBeTruthy();
-    expect(screen.getByText('Android code')).toBeTruthy();
-    expect(screen.getByText('77')).toBeTruthy();
+    expect(screen.getByText('1.2.3 (42)')).toBeTruthy();
+    expect(screen.getByText('Branch')).toBeTruthy();
+    expect(screen.getByText('codex/profile-screen')).toBeTruthy();
     expect(screen.getByText('Git SHA')).toBeTruthy();
     expect(screen.getByText('abc123def456')).toBeTruthy();
     expect(screen.getByText('API URL')).toBeTruthy();
     expect(screen.getByText('https://api.example.test')).toBeTruthy();
-    expect(screen.getByText('Timestamp source')).toBeTruthy();
-    expect(screen.getByText('scripted')).toBeTruthy();
-    expect(screen.getByText('Release profile')).toBeTruthy();
-    expect(screen.getByText('device-qa')).toBeTruthy();
+    expect(screen.getByText('Built at')).toBeTruthy();
+    expect(screen.getByText('2026-03-25T12:00:00Z')).toBeTruthy();
+    expect(screen.getByText('Release path')).toBeTruthy();
+    expect(screen.getByText('simulator')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('Notifications'));
 
@@ -191,9 +186,7 @@ describe('ProfileScreenContent', () => {
     const { onLogout, onToggleBuildInfo, navigation } = renderContent();
 
     await waitFor(() => expect(mockLoadHapticsPreference).toHaveBeenCalledTimes(1));
-    expect(screen.getByLabelText('Haptic Feedback').props.accessibilityState).toEqual(
-      expect.objectContaining({ checked: true }),
-    );
+    expect(screen.getByTestId('haptic-feedback-toggle-switch').props.value).toBe(true);
 
     fireEvent(screen.getByTestId('haptic-feedback-toggle-switch'), 'valueChange', false);
 

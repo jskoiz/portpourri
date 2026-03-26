@@ -235,7 +235,7 @@ describe('SwipeDeck', () => {
     expect(onSwipeRight).toHaveBeenCalledWith(user);
   });
 
-  it('disables swipes while interaction is locked', () => {
+  it('keeps vertical swipes disabled in the current deck configuration', () => {
     render(
       <SwipeDeck
         data={[{ id: 'u9', firstName: 'Noa' }]}
@@ -246,8 +246,8 @@ describe('SwipeDeck', () => {
 
     expect(latestSwiperProps).toEqual(
       expect.objectContaining({
-        disableLeftSwipe: true,
-        disableRightSwipe: true,
+        disableBottomSwipe: true,
+        disableTopSwipe: true,
       }),
     );
   });

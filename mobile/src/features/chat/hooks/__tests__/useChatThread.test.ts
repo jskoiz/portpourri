@@ -54,8 +54,12 @@ jest.mock('../../../../lib/query/queryKeys', () => ({
 
 const mockRefetch = jest.fn().mockResolvedValue({ data: [] });
 const mockCancelQueries = jest.fn().mockResolvedValue(undefined);
+const mockInvalidateQueries = jest.fn().mockResolvedValue(undefined);
 const mockSetQueryData = jest.fn();
 const mockGetQueryData = jest.fn().mockReturnValue([]);
+const mockGetQueriesData = jest.fn().mockImplementation(({ queryKey }: { queryKey: unknown }) => [
+  [queryKey, mockGetQueryData(queryKey)],
+]);
 
 jest.mock('@tanstack/react-query', () => ({
   useQuery: () => ({
@@ -67,8 +71,10 @@ jest.mock('@tanstack/react-query', () => ({
   }),
   useQueryClient: () => ({
     cancelQueries: mockCancelQueries,
+    invalidateQueries: mockInvalidateQueries,
     setQueryData: mockSetQueryData,
     getQueryData: mockGetQueryData,
+    getQueriesData: mockGetQueriesData,
   }),
   useMutation: ({
     mutationFn,
@@ -222,6 +228,7 @@ describe('useChatThread', () => {
     });
 
     act(() => {
+      getSocketHandler('joined:match')?.({ matchId: 'match-1' });
       result.current.emitTyping();
       result.current.emitTyping();
     });
@@ -241,6 +248,7 @@ describe('useChatThread', () => {
 
     act(() => {
       mockSocket.connected = true;
+      getSocketHandler('joined:match')?.({ matchId: 'match-1' });
       result.current.emitTyping();
     });
 
@@ -402,6 +410,7 @@ describe('useChatThread', () => {
     });
 
     act(() => {
+      getSocketHandler('joined:match')?.({ matchId: 'match-1' });
       result.current.emitTyping();
     });
 

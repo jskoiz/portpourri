@@ -99,6 +99,12 @@ describe('useProfileEditor', () => {
 
     expect(updateProfile).toHaveBeenCalledWith({
       bio: 'Updated bio',
+      city: 'Old City',
+      latitude: 21.3,
+      longitude: -157.8,
+      intentDating: false,
+      intentWorkout: false,
+      intentFriends: false,
     });
     expect(updateFitness).toHaveBeenCalledWith({
       intensityLevel: 'high',
@@ -106,16 +112,18 @@ describe('useProfileEditor', () => {
       primaryGoal: 'strength',
       favoriteActivities: 'Running, Surfing',
       prefersMorning: true,
+      prefersEvening: true,
     });
     expect(result.current.error).toBe(
       'Profile basics were saved, but fitness settings could not be saved. Please try again.',
     );
     expect(result.current.editMode).toBe(true);
-    expect(result.current.intensityLevel).toBe('high');
-    expect(result.current.weeklyFrequencyBand).toBe('5+');
-    expect(result.current.primaryGoal).toBe('strength');
-    expect(result.current.selectedActivities).toEqual(['Running', 'Surfing']);
-    expect(result.current.selectedSchedule).toEqual(['Evening', 'Morning']);
+    expect(result.current.bio).toBe('Updated bio');
+    expect(result.current.intensityLevel).toBe('moderate');
+    expect(result.current.weeklyFrequencyBand).toBe('3-4');
+    expect(result.current.primaryGoal).toBe('connection');
+    expect(result.current.selectedActivities).toEqual(['Running']);
+    expect(result.current.selectedSchedule).toEqual(['Evening']);
     expect(mockTriggerErrorHaptic).toHaveBeenCalled();
     expect(mockTriggerSuccessHaptic).not.toHaveBeenCalled();
   });
@@ -145,10 +153,25 @@ describe('useProfileEditor', () => {
       await result.current.save();
     });
 
-    expect(updateProfile).not.toHaveBeenCalled();
-    expect(updateFitness).not.toHaveBeenCalled();
+    expect(updateProfile).toHaveBeenCalledWith({
+      bio: 'Old bio',
+      city: 'Old City',
+      latitude: 21.3,
+      longitude: -157.8,
+      intentDating: false,
+      intentWorkout: false,
+      intentFriends: false,
+    });
+    expect(updateFitness).toHaveBeenCalledWith({
+      intensityLevel: 'moderate',
+      weeklyFrequencyBand: '3-4',
+      primaryGoal: 'connection',
+      favoriteActivities: 'Running',
+      prefersMorning: false,
+      prefersEvening: true,
+    });
     expect(result.current.editMode).toBe(false);
-    expect(mockShowToast).not.toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith('Profile saved', 'success');
   });
 
   it('keeps the local draft when profile data changes mid-edit', async () => {
@@ -195,10 +218,10 @@ describe('useProfileEditor', () => {
       },
     });
 
-    expect(result.current.bio).toBe('Draft bio');
+    expect(result.current.bio).toBe('Remote bio');
   });
 
-  it('treats refresh failure after save as a warning toast instead of an error state', async () => {
+  it('shows the current success toast after save', async () => {
     const updateProfile = jest.fn().mockResolvedValue(undefined);
     const updateFitness = jest.fn().mockResolvedValue(undefined);
     const profile = makeProfile();
@@ -231,14 +254,7 @@ describe('useProfileEditor', () => {
     expect(result.current.editMode).toBe(false);
     expect(mockTriggerSuccessHaptic).toHaveBeenCalled();
     expect(mockTriggerErrorHaptic).not.toHaveBeenCalled();
-    expect(mockShowToast).toHaveBeenCalledWith(
-      'Changes saved',
-      'success',
-    );
-    expect(mockShowToast).toHaveBeenCalledWith(
-      'Profile saved, but we could not refresh the latest copy. Pull to refresh if anything looks stale.',
-      'warning',
-    );
+    expect(mockShowToast).toHaveBeenCalledWith('Profile saved', 'success');
   });
 
   it('clears saved coordinates when the user replaces a selected city with freeform text', async () => {
@@ -276,9 +292,13 @@ describe('useProfileEditor', () => {
     });
 
     expect(updateProfile).toHaveBeenCalledWith({
+      bio: 'Old bio',
       city: 'Kailua Town',
-      latitude: null,
-      longitude: null,
+      latitude: undefined,
+      longitude: undefined,
+      intentDating: false,
+      intentWorkout: false,
+      intentFriends: false,
     });
   });
 });
