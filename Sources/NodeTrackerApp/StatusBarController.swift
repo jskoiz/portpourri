@@ -9,6 +9,8 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
     private let statusItem: NSStatusItem
     private let popover = NSPopover()
     private var cancellables: Set<AnyCancellable> = []
+    private var localEventMonitor: Any?
+    private var globalEventMonitor: Any?
 
     init(store: NodeTrackerStore) {
         self.store = store
@@ -16,6 +18,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         super.init()
         self.configureStatusItem()
         self.configurePopover()
+        self.installOutsideClickMonitors()
         self.observeStore()
         self.updateStatusImage()
     }
@@ -34,21 +37,37 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         button.imagePosition = .imageOnly
         button.action = #selector(self.togglePopover(_:))
         button.target = self
+        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         button.toolTip = "NodeWatcher"
     }
 
     private func configurePopover() {
-        self.popover.behavior = .transient
+        self.popover.behavior = .semitransient
         self.popover.delegate = self
         self.popover.animates = true
         self.popover.contentSize = NSSize(width: 416, height: 540)
         self.popover.contentViewController = NSHostingController(
-            rootView: PopoverRootView(
-                store: self.store,
-                openSettings: { [weak self] in self?.openSettings() },
-                quit: { [weak self] in self?.quit() }
-            )
+            rootView: PopoverRootView(store: self.store)
         )
+    }
+
+    private func installOutsideClickMonitors() {
+        self.localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown, .keyDown]) { [weak self] event in
+            guard let self, self.popover.isShown else { return event }
+            if event.type == .keyDown, event.keyCode == 53 {
+                self.closePopover()
+                return nil
+            }
+            if self.shouldClosePopover(for: event) {
+                self.closePopover()
+            }
+            return event
+        }
+
+        self.globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
+            guard let self, self.popover.isShown else { return }
+            self.closePopover()
+        }
     }
 
     private func observeStore() {
@@ -67,9 +86,19 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
 
     @objc private func togglePopover(_ sender: AnyObject?) {
         guard let button = self.statusItem.button else { return }
+        guard let event = NSApp.currentEvent else {
+            self.closePopover()
+            return
+        }
+
+        if event.type == .rightMouseUp {
+            self.closePopover()
+            self.showContextMenu(from: button, event: event)
+            return
+        }
+
         if self.popover.isShown {
-            self.popover.performClose(sender)
-            self.store.setPopoverPresented(false)
+            self.closePopover()
         } else {
             self.popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             self.store.setPopoverPresented(true)
@@ -78,6 +107,62 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
 
     func popoverDidClose(_ notification: Notification) {
         self.store.setPopoverPresented(false)
+    }
+
+    private func closePopover() {
+        guard self.popover.isShown else { return }
+        self.popover.performClose(nil)
+        self.store.setPopoverPresented(false)
+    }
+
+    private func shouldClosePopover(for event: NSEvent) -> Bool {
+        guard let popoverWindow = self.popover.contentViewController?.view.window else { return true }
+        if let buttonWindow = self.statusItem.button?.window,
+           event.window?.windowNumber == buttonWindow.windowNumber {
+            return false
+        }
+        return event.window == nil || event.window?.windowNumber != popoverWindow.windowNumber
+    }
+
+    private func showContextMenu(from button: NSStatusBarButton, event: NSEvent) {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+
+        let refresh = NSMenuItem(title: "Refresh", action: #selector(self.refreshFromMenu(_:)), keyEquivalent: "")
+        refresh.target = self
+        menu.addItem(refresh)
+
+        let copyJSON = NSMenuItem(title: "Copy JSON", action: #selector(self.copyJSONFromMenu(_:)), keyEquivalent: "")
+        copyJSON.target = self
+        menu.addItem(copyJSON)
+
+        menu.addItem(.separator())
+
+        let settings = NSMenuItem(title: "Settings", action: #selector(self.openSettingsFromMenu(_:)), keyEquivalent: "")
+        settings.target = self
+        menu.addItem(settings)
+
+        let quit = NSMenuItem(title: "Quit", action: #selector(self.quitFromMenu(_:)), keyEquivalent: "")
+        quit.target = self
+        menu.addItem(quit)
+
+        NSMenu.popUpContextMenu(menu, with: event, for: button)
+    }
+
+    @objc private func refreshFromMenu(_ sender: Any?) {
+        self.store.refreshNow()
+    }
+
+    @objc private func copyJSONFromMenu(_ sender: Any?) {
+        self.store.copySnapshotJSON()
+    }
+
+    @objc private func openSettingsFromMenu(_ sender: Any?) {
+        self.openSettings()
+    }
+
+    @objc private func quitFromMenu(_ sender: Any?) {
+        self.quit()
     }
 }
 
