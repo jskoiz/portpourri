@@ -1,21 +1,27 @@
 import type { AppNotification } from '../../api/types';
+import {
+  getNotificationBodyFallback as getNotificationBodyFallbackFromRegistry,
+  getNotificationMeta as getNotificationMetaFromRegistry,
+  getNotificationTitleFallback as getNotificationTitleFallbackFromRegistry,
+} from './notificationNavigation';
 
 export type NotificationSectionTitle = 'Today' | 'Yesterday' | 'Earlier';
 
 export function getNotificationMeta(type: AppNotification['type']) {
-  switch (type) {
-    case 'match_created':
-    case 'like_received':
-      return { icon: 'heart' as const, color: '#C4A882' };
-    case 'message_received':
-      return { icon: 'message-square' as const, color: '#8BAA7A' };
-    case 'event_rsvp':
-      return { icon: 'users' as const, color: '#C4A882' };
-    case 'event_reminder':
-      return { icon: 'calendar' as const, color: '#8BAA7A' };
-    default:
-      return { icon: 'bell' as const, color: '#B8A9C4' };
-  }
+  return getNotificationMetaFromRegistry(type);
+}
+
+function getNotificationTimestamp(value: string | Date) {
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+export function getNotificationTitleFallback(type: AppNotification['type']) {
+  return getNotificationTitleFallbackFromRegistry(type);
+}
+
+export function getNotificationBodyFallback(type: AppNotification['type']) {
+  return getNotificationBodyFallbackFromRegistry(type);
 }
 
 function isSameDay(a: Date, b: Date) {
@@ -26,8 +32,13 @@ function isSameDay(a: Date, b: Date) {
   );
 }
 
-export function getNotificationGroup(dateValue: string | Date): NotificationSectionTitle {
+export function getNotificationGroup(
+  dateValue: string | Date | null | undefined,
+): NotificationSectionTitle {
+  if (dateValue == null) return 'Earlier';
+
   const createdAt = new Date(dateValue);
+  if (Number.isNaN(createdAt.getTime())) return 'Earlier';
   const now = new Date();
 
   if (isSameDay(createdAt, now)) return 'Today';
@@ -38,8 +49,19 @@ export function getNotificationGroup(dateValue: string | Date): NotificationSect
   return isSameDay(createdAt, yesterday) ? 'Yesterday' : 'Earlier';
 }
 
+export function sortNotificationsForDisplay(notifications: AppNotification[]) {
+  return [...notifications].sort((a, b) => {
+    const timeA = getNotificationTimestamp(a.createdAt);
+    const timeB = getNotificationTimestamp(b.createdAt);
+
+    if (timeA !== timeB) return timeB - timeA;
+
+    return a.id.localeCompare(b.id);
+  });
+}
+
 export function buildNotificationSections(notifications: AppNotification[]) {
-  const groups = notifications.reduce(
+  const groups = sortNotificationsForDisplay(notifications).reduce(
     (accumulator, notification) => {
       const group = getNotificationGroup(notification.createdAt);
       accumulator[group].push(notification);

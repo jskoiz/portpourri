@@ -1,4 +1,5 @@
 import { NotificationsService } from './notifications.service';
+import { NotificationType } from '../common/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { PushService } from './push.service';
 
@@ -62,7 +63,7 @@ describe('NotificationsService', () => {
     );
 
     const n = await service.create('user-1', {
-      type: 'system',
+      type: NotificationType.System,
       title: 'Hello',
       body: 'World',
     });
@@ -73,12 +74,111 @@ describe('NotificationsService', () => {
     expect(prisma.notification.create).toHaveBeenCalledWith({
       data: {
         userId: 'user-1',
-        type: 'system',
+        type: NotificationType.System,
         title: 'Hello',
         body: 'World',
-        data: undefined,
+        data: { type: NotificationType.System },
       },
     });
+  });
+
+  it('dispatches push for event invite notifications when payload is complete', async () => {
+    const mockNotification = {
+      id: 'uuid-3',
+      userId: 'user-1',
+      type: NotificationType.EventInvite,
+      title: 'Event invite',
+      body: 'Mia invited you to Sunrise Run',
+      data: {
+        eventId: 'event-1',
+        matchId: 'match-9',
+        withUserId: 'user-4',
+        type: NotificationType.EventInvite,
+      },
+      read: false,
+      readAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    (prisma.notification.create as jest.Mock).mockResolvedValue(
+      mockNotification,
+    );
+
+    await service.create('user-1', {
+      type: NotificationType.EventInvite,
+      title: 'Event invite',
+      body: 'Mia invited you to Sunrise Run',
+      data: {
+        eventId: 'event-1',
+        matchId: 'match-9',
+        withUserId: 'user-4',
+      },
+    });
+
+    expect(pushService.sendPushNotification).toHaveBeenCalledWith(
+      'token',
+      'Event invite',
+      'Mia invited you to Sunrise Run',
+      {
+        eventId: 'event-1',
+        matchId: 'match-9',
+        notificationId: 'uuid-3',
+        type: NotificationType.EventInvite,
+        withUserId: 'user-4',
+      },
+    );
+  });
+
+  it('does not dispatch push for event reminder notifications', async () => {
+    const mockNotification = {
+      id: 'uuid-3b',
+      userId: 'user-1',
+      type: NotificationType.EventReminder,
+      title: 'Event joined',
+      body: 'You are in for Sunrise Run',
+      data: { eventId: 'event-1', type: NotificationType.EventReminder },
+      read: false,
+      readAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    (prisma.notification.create as jest.Mock).mockResolvedValue(
+      mockNotification,
+    );
+
+    await service.create('user-1', {
+      type: NotificationType.EventReminder,
+      title: 'Event joined',
+      body: 'You are in for Sunrise Run',
+      data: { eventId: 'event-1' },
+    });
+
+    expect(pushService.sendPushNotification).not.toHaveBeenCalled();
+  });
+
+  it('skips push dispatch when a push-eligible notification payload is malformed', async () => {
+    const mockNotification = {
+      id: 'uuid-4',
+      userId: 'user-1',
+      type: NotificationType.MatchCreated,
+      title: "It's a match!",
+      body: 'You can start chatting now.',
+      data: { type: NotificationType.MatchCreated },
+      read: false,
+      readAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    (prisma.notification.create as jest.Mock).mockResolvedValue(mockNotification);
+
+    await service.create('user-1', {
+      type: NotificationType.MatchCreated,
+      title: "It's a match!",
+      body: 'You can start chatting now.',
+      data: {} as Record<string, unknown>,
+    });
+
+    expect(pushService.sendPushNotification).not.toHaveBeenCalled();
   });
 
   it('lists notifications via prisma', async () => {
@@ -161,7 +261,7 @@ describe('NotificationsService', () => {
     (prisma.match.findFirst as jest.Mock).mockResolvedValue({ id: 'blocked-match' });
 
     const result = await service.create('user-1', {
-      type: 'like_received',
+      type: NotificationType.LikeReceived,
       title: 'New like',
       body: 'Someone liked you',
       sourceUserId: 'blocked-user',
@@ -176,7 +276,7 @@ describe('NotificationsService', () => {
     (prisma.report.findFirst as jest.Mock).mockResolvedValue({ id: 'block-report' });
 
     const result = await service.create('user-1', {
-      type: 'like_received',
+      type: NotificationType.LikeReceived,
       title: 'New like',
       body: 'Someone liked you',
       sourceUserId: 'blocked-user',
@@ -193,7 +293,7 @@ describe('NotificationsService', () => {
     const mockNotification = {
       id: 'uuid-2',
       userId: 'user-1',
-      type: 'like_received',
+      type: NotificationType.LikeReceived,
       title: 'New like',
       body: 'Someone liked you',
       data: null,
@@ -205,7 +305,7 @@ describe('NotificationsService', () => {
     (prisma.notification.create as jest.Mock).mockResolvedValue(mockNotification);
 
     const result = await service.create('user-1', {
-      type: 'like_received',
+      type: NotificationType.LikeReceived,
       title: 'New like',
       body: 'Someone liked you',
       sourceUserId: 'normal-user',
@@ -219,7 +319,7 @@ describe('NotificationsService', () => {
     it('returns true when no preferences row exists', async () => {
       (prisma.notificationPreferences.findUnique as jest.Mock).mockResolvedValue(null);
 
-      const enabled = await service.isNotificationEnabled('user-1', 'match_created');
+      const enabled = await service.isNotificationEnabled('user-1', NotificationType.MatchCreated);
       expect(enabled).toBe(true);
     });
 
@@ -233,7 +333,7 @@ describe('NotificationsService', () => {
         system: true,
       });
 
-      const enabled = await service.isNotificationEnabled('user-1', 'match_created');
+      const enabled = await service.isNotificationEnabled('user-1', NotificationType.MatchCreated);
       expect(enabled).toBe(true);
     });
 
@@ -247,7 +347,7 @@ describe('NotificationsService', () => {
         system: true,
       });
 
-      const enabled = await service.isNotificationEnabled('user-1', 'match_created');
+      const enabled = await service.isNotificationEnabled('user-1', NotificationType.MatchCreated);
       expect(enabled).toBe(false);
     });
 
@@ -261,7 +361,7 @@ describe('NotificationsService', () => {
         system: true,
       });
 
-      const enabled = await service.isNotificationEnabled('user-1', 'message_received');
+      const enabled = await service.isNotificationEnabled('user-1', NotificationType.MessageReceived);
       expect(enabled).toBe(false);
     });
 
@@ -275,7 +375,7 @@ describe('NotificationsService', () => {
         system: true,
       });
 
-      const enabled = await service.isNotificationEnabled('user-1', 'like_received');
+      const enabled = await service.isNotificationEnabled('user-1', NotificationType.LikeReceived);
       expect(enabled).toBe(false);
     });
 
@@ -289,7 +389,35 @@ describe('NotificationsService', () => {
         system: true,
       });
 
-      const enabled = await service.isNotificationEnabled('user-1', 'event_rsvp');
+      const enabled = await service.isNotificationEnabled('user-1', NotificationType.EventRsvp);
+      expect(enabled).toBe(false);
+    });
+
+    it('maps event_reminder to the eventReminders preference', async () => {
+      (prisma.notificationPreferences.findUnique as jest.Mock).mockResolvedValue({
+        matches: true,
+        messages: true,
+        likes: true,
+        eventReminders: false,
+        eventRsvps: true,
+        system: true,
+      });
+
+      const enabled = await service.isNotificationEnabled('user-1', NotificationType.EventReminder);
+      expect(enabled).toBe(false);
+    });
+
+    it('maps event_invite to the eventReminders preference', async () => {
+      (prisma.notificationPreferences.findUnique as jest.Mock).mockResolvedValue({
+        matches: true,
+        messages: true,
+        likes: true,
+        eventReminders: false,
+        eventRsvps: true,
+        system: true,
+      });
+
+      const enabled = await service.isNotificationEnabled('user-1', NotificationType.EventInvite);
       expect(enabled).toBe(false);
     });
   });

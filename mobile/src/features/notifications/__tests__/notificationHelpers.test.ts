@@ -75,6 +75,28 @@ describe('notification helpers', () => {
     expect(result).toEqual({
       ok: false,
       error: 'Like notification is missing navigation details.',
+      kind: 'malformed',
+      type: 'like_received',
+    });
+  });
+
+  it('routes event invite notifications to chat', () => {
+    const result = resolveNotificationNavigation(
+      buildNotification({
+        type: 'event_invite',
+        data: { eventId: 'event-1', matchId: 'match-2', withUserId: 'user-9' },
+      }),
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      target: {
+        route: 'Chat',
+        params: {
+          matchId: 'match-2',
+          user: { id: 'user-9', firstName: 'Event' },
+        },
+      },
     });
   });
 });

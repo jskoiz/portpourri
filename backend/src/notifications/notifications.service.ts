@@ -1,37 +1,15 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, ReportCategory } from '@prisma/client';
+import { NotificationType } from '../common/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { PushService } from './push.service';
+import {
+  getNotificationPayloadIssues,
+  normalizeNotificationData,
+  NOTIFICATION_TYPE_METADATA,
+  NotificationTemplatePayload,
+} from './notification.contracts';
 import type { Notification } from '@prisma/client';
-
-export type NotificationType =
-  | 'like_received'
-  | 'match_created'
-  | 'message_received'
-  | 'event_rsvp'
-  | 'event_reminder'
-  | 'system';
-
-/** Notification types that should trigger a push notification. */
-const PUSH_ELIGIBLE_TYPES: ReadonlySet<NotificationType> = new Set([
-  'match_created',
-  'message_received',
-  'like_received',
-  'event_rsvp',
-]);
-
-/**
- * Maps notification types to the corresponding preference field name
- * on the NotificationPreferences model.
- */
-const TYPE_TO_PREFERENCE_KEY: Record<NotificationType, string> = {
-  match_created: 'matches',
-  message_received: 'messages',
-  like_received: 'likes',
-  event_rsvp: 'eventRsvps',
-  event_reminder: 'eventReminders',
-  system: 'system',
-};
 
 @Injectable()
 export class NotificationsService {
@@ -44,14 +22,7 @@ export class NotificationsService {
 
   async create(
     userId: string,
-    payload: {
-      type: NotificationType;
-      title: string;
-      body: string;
-      data?: Record<string, unknown>;
-      /** When set, the notification is suppressed if recipient has blocked this user. */
-      sourceUserId?: string;
-    },
+    payload: NotificationTemplatePayload,
   ): Promise<Notification | null> {
     // Suppress notification if recipient and source are in a block relationship
     if (payload.sourceUserId) {
@@ -64,13 +35,21 @@ export class NotificationsService {
       }
     }
 
+    const normalizedData = normalizeNotificationData(payload.type, payload.data);
+    const payloadIssues = getNotificationPayloadIssues(payload.type, normalizedData);
+    if (payloadIssues.length > 0) {
+      this.logger.warn(
+        `Notification payload incomplete type=${payload.type} userId=${userId} missing=${payloadIssues.join(',')}`,
+      );
+    }
+
     const notification = await this.prisma.notification.create({
       data: {
         userId,
         type: payload.type,
         title: payload.title,
         body: payload.body,
-        data: (payload.data as Prisma.InputJsonValue) ?? undefined,
+        data: normalizedData as Prisma.InputJsonValue,
       },
     });
 
@@ -177,14 +156,39 @@ export class NotificationsService {
 
     if (!prefs) return true;
 
-    const key = TYPE_TO_PREFERENCE_KEY[type];
-    if (!key) return true;
-
+    const key = NOTIFICATION_TYPE_METADATA[type].preferenceKey;
     return (prefs as Record<string, unknown>)[key] !== false;
   }
 
   private async dispatchPush(notification: Notification): Promise<void> {
-    if (!PUSH_ELIGIBLE_TYPES.has(notification.type as NotificationType)) {
+    const metadata = NOTIFICATION_TYPE_METADATA[notification.type as NotificationType];
+
+    if (!metadata) {
+      this.logger.warn(
+        `Push skipped — unsupported notification type=${notification.type} notificationId=${notification.id}`,
+      );
+      return;
+    }
+
+    if (!metadata.pushEligible) {
+      this.logger.debug(
+        `Push skipped — non-push type=${notification.type} notificationId=${notification.id}`,
+      );
+      return;
+    }
+
+    const normalizedData = normalizeNotificationData(
+      notification.type as NotificationType,
+      (notification.data as Record<string, unknown> | null) ?? undefined,
+    );
+    const payloadIssues = getNotificationPayloadIssues(
+      notification.type as NotificationType,
+      normalizedData,
+    );
+    if (payloadIssues.length > 0) {
+      this.logger.warn(
+        `Push skipped — malformed payload type=${notification.type} notificationId=${notification.id} missing=${payloadIssues.join(',')}`,
+      );
       return;
     }
 
@@ -199,15 +203,18 @@ export class NotificationsService {
       });
 
       if (!user?.pushToken) {
+        this.logger.debug(
+          `Push skipped — missing token type=${notification.type} userId=${notification.userId}`,
+        );
         return;
       }
 
       // Check user notification preferences before sending
-      const prefKey = TYPE_TO_PREFERENCE_KEY[notification.type as NotificationType];
       if (
-        prefKey &&
         user.notificationPreferences &&
-        (user.notificationPreferences as Record<string, unknown>)[prefKey] === false
+        (user.notificationPreferences as Record<string, unknown>)[
+          metadata.preferenceKey
+        ] === false
       ) {
         this.logger.debug(
           `Push skipped — user opted out type=${notification.type} userId=${notification.userId}`,
@@ -219,7 +226,10 @@ export class NotificationsService {
         user.pushToken,
         notification.title,
         notification.body,
-        (notification.data as Record<string, unknown>) ?? undefined,
+        {
+          notificationId: notification.id,
+          ...normalizedData,
+        },
       );
 
       this.logger.debug(

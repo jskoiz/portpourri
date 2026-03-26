@@ -41,10 +41,10 @@ describe('deepLinks', () => {
 
   describe('getNavigationTarget', () => {
     it('routes match_created to Chat with matchId', () => {
-      const data: NotificationData = { type: 'match_created', matchId: 'm1' };
+      const data: NotificationData = { type: 'match_created', matchId: 'm1', withUserId: 'u1' };
       expect(getNavigationTarget(data)).toEqual({
         screen: 'Chat',
-        params: { matchId: 'm1' },
+        params: { matchId: 'm1', user: { id: 'u1', firstName: 'Match' } },
       });
     });
 
@@ -52,31 +52,39 @@ describe('deepLinks', () => {
       const data: NotificationData = { type: 'message_received', matchId: 'm2' };
       expect(getNavigationTarget(data)).toEqual({
         screen: 'Chat',
-        params: { matchId: 'm2' },
+        params: { matchId: 'm2', user: { id: 'm2', firstName: 'Match' } },
       });
     });
 
     it('routes event_invite to Chat with matchId', () => {
-      const data: NotificationData = { type: 'event_invite', matchId: 'm3' };
+      const data: NotificationData = { type: 'event_invite', matchId: 'm3', withUserId: 'u3' };
       expect(getNavigationTarget(data)).toEqual({
         screen: 'Chat',
-        params: { matchId: 'm3' },
+        params: { matchId: 'm3', user: { id: 'u3', firstName: 'Event' } },
       });
     });
 
-    it('routes like_received to Inbox tab', () => {
-      const data: NotificationData = { type: 'like_received' };
+    it('routes like_received to profile detail', () => {
+      const data: NotificationData = { type: 'like_received', fromUserId: 'user-7' };
       expect(getNavigationTarget(data)).toEqual({
-        screen: 'Main',
-        params: { screen: 'Inbox' },
+        screen: 'ProfileDetail',
+        params: { user: { id: 'user-7', firstName: 'Profile' } },
       });
     });
 
     it('routes event_rsvp to EventDetail with eventId', () => {
-      const data: NotificationData = { type: 'event_rsvp', eventId: 'e1' };
+      const data: NotificationData = { type: 'event_rsvp', eventId: 'e1', attendeeId: 'u2' } as NotificationData;
       expect(getNavigationTarget(data)).toEqual({
         screen: 'EventDetail',
         params: { eventId: 'e1' },
+      });
+    });
+
+    it('routes event_reminder to EventDetail with eventId', () => {
+      const data: NotificationData = { type: 'event_reminder', eventId: 'e9' };
+      expect(getNavigationTarget(data)).toEqual({
+        screen: 'EventDetail',
+        params: { eventId: 'e9' },
       });
     });
 
@@ -109,11 +117,14 @@ describe('deepLinks', () => {
   describe('handleNotificationNavigation', () => {
     it('calls navigate with correct screen and params', () => {
       const navigate = jest.fn();
-      const data: NotificationData = { type: 'match_created', matchId: 'm1' };
+      const data: NotificationData = { type: 'match_created', matchId: 'm1', withUserId: 'u1' };
 
       handleNotificationNavigation(data, { navigate });
 
-      expect(navigate).toHaveBeenCalledWith('Chat', { matchId: 'm1' });
+      expect(navigate).toHaveBeenCalledWith('Chat', {
+        matchId: 'm1',
+        user: { id: 'u1', firstName: 'Match' },
+      });
     });
 
     it('does not call navigate for unknown types', () => {
@@ -134,13 +145,15 @@ describe('deepLinks', () => {
       expect(navigate).not.toHaveBeenCalled();
     });
 
-    it('navigates to Inbox tab for like_received', () => {
+    it('navigates to ProfileDetail for like_received', () => {
       const navigate = jest.fn();
-      const data: NotificationData = { type: 'like_received' };
+      const data: NotificationData = { type: 'like_received', fromUserId: 'user-7' };
 
       handleNotificationNavigation(data, { navigate });
 
-      expect(navigate).toHaveBeenCalledWith('Main', { screen: 'Inbox' });
+      expect(navigate).toHaveBeenCalledWith('ProfileDetail', {
+        user: { id: 'user-7', firstName: 'Profile' },
+      });
     });
 
     it('navigates to EventDetail for event_rsvp', () => {
@@ -150,6 +163,30 @@ describe('deepLinks', () => {
       handleNotificationNavigation(data, { navigate });
 
       expect(navigate).toHaveBeenCalledWith('EventDetail', { eventId: 'e5' });
+    });
+
+    it('navigates to Chat for message_received', () => {
+      const navigate = jest.fn();
+      const data: NotificationData = { type: 'message_received', matchId: 'm2' };
+
+      handleNotificationNavigation(data, { navigate });
+
+      expect(navigate).toHaveBeenCalledWith('Chat', {
+        matchId: 'm2',
+        user: { id: 'm2', firstName: 'Match' },
+      });
+    });
+
+    it('navigates to Chat for event_invite', () => {
+      const navigate = jest.fn();
+      const data: NotificationData = { type: 'event_invite', matchId: 'm3', withUserId: 'u3' };
+
+      handleNotificationNavigation(data, { navigate });
+
+      expect(navigate).toHaveBeenCalledWith('Chat', {
+        matchId: 'm3',
+        user: { id: 'u3', firstName: 'Event' },
+      });
     });
   });
 });

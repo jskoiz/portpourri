@@ -1,5 +1,10 @@
 import type { LinkingOptions } from '@react-navigation/native';
 import type { RootStackParamList } from '../core/navigation/types';
+import {
+  resolveNotificationRoute,
+  type NotificationNavigationResult,
+  type NotificationRouteInput,
+} from '../features/notifications/notificationNavigation';
 
 /**
  * Deep link URL scheme prefix.
@@ -13,7 +18,12 @@ export interface NotificationData {
   type: string;
   matchId?: string;
   eventId?: string;
-  userId?: string;
+  attendeeId?: string;
+  fromUserId?: string;
+  withUserId?: string;
+  senderId?: string;
+  inviterId?: string;
+  notificationId?: string;
 }
 
 /**
@@ -64,23 +74,12 @@ export const linkingConfig: LinkingOptions<RootStackParamList> = {
 export function getNavigationTarget(
   data: NotificationData,
 ): { screen: keyof RootStackParamList; params: Record<string, unknown> } | null {
-  switch (data.type) {
-    case 'match_created':
-    case 'message_received':
-    case 'event_invite':
-      if (!data.matchId) return null;
-      return { screen: 'Chat', params: { matchId: data.matchId } };
-
-    case 'like_received':
-      return { screen: 'Main', params: { screen: 'Inbox' } };
-
-    case 'event_rsvp':
-      if (!data.eventId) return null;
-      return { screen: 'EventDetail', params: { eventId: data.eventId } };
-
-    default:
-      return null;
-  }
+  const result = resolveNotificationRoute(data as NotificationRouteInput);
+  if (!result.ok) return null;
+  return {
+    screen: result.target.route,
+    params: result.target.params as Record<string, unknown>,
+  };
 }
 
 /**
@@ -92,9 +91,12 @@ export function getNavigationTarget(
 export function handleNotificationNavigation(
   data: NotificationData,
   navigation: { navigate: (screen: string, params?: Record<string, unknown>) => void },
-): void {
-  const target = getNavigationTarget(data);
-  if (!target) return;
+): NotificationNavigationResult {
+  const result = resolveNotificationRoute(data as NotificationRouteInput);
+  if (!result.ok) {
+    return result;
+  }
 
-  navigation.navigate(target.screen, target.params);
+  navigation.navigate(result.target.route, result.target.params);
+  return result;
 }

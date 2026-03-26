@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import {
   AppState,
   InteractionManager,
@@ -11,7 +11,6 @@ import {
 } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
-import * as Notifications from "expo-notifications";
 import { useAuthStore } from "../store/authStore";
 import type { RootStackParamList } from "../core/navigation/types";
 import LoginScreen from "../screens/LoginScreen";
@@ -24,7 +23,15 @@ import EventDetailScreen from "../screens/EventDetailScreen";
 import MyEventsScreen from "../screens/MyEventsScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
 import { refreshUserLocation } from "../lib/location";
-import { getLastNotificationResponseSafe } from "../lib/pushNotifications";
+import {
+  getLastNotificationResponseSafe,
+  setupNotificationListeners,
+} from "../lib/pushNotifications";
+import {
+  addBreadcrumb,
+  captureException,
+  logDevOnly,
+} from "../core/observability/sentry";
 
 import MainTabNavigator from "./MainTabNavigator";
 import { withBoundary } from "../components/withBoundary";
@@ -106,6 +113,44 @@ export default function AppNavigator() {
 
   const autoLoginInFlight = useRef(false);
 
+  const routeNotificationTap = useCallback((data: Record<string, unknown>) => {
+    if (!navigationRef.current) {
+      return;
+    }
+
+    const result = handleNotificationNavigation(
+      data as NotificationData,
+      navigationRef.current,
+    );
+    if (result.ok) {
+      return;
+    }
+
+    addBreadcrumb({
+      category: 'notifications',
+      type: 'navigation',
+      level: result.kind === 'malformed' ? 'warning' : 'info',
+      message: `[notifications] tap ${result.kind}`,
+      data: {
+        type: result.type,
+        error: result.error,
+        ...data,
+      },
+    });
+    logDevOnly('warn', '[notifications] Unable to route notification tap', {
+      type: result.type,
+      error: result.error,
+      data,
+    });
+
+    if (result.kind === 'malformed') {
+      captureException(new Error('Malformed notification tap payload'), {
+        tags: { domain: 'notifications', kind: result.kind, type: result.type },
+        extra: { data, error: result.error },
+      });
+    }
+  }, []);
+
   useEffect(() => {
     const cleanupUnauthorizedHandler = setUnauthorizedHandler(clearSession);
 
@@ -123,6 +168,8 @@ export default function AppNavigator() {
   useEffect(() => {
     if (!token) return;
 
+    const cleanup = setupNotificationListeners(routeNotificationTap);
+
     let cancelled = false;
     const task = InteractionManager.runAfterInteractions(() => {
       getLastNotificationResponseSafe().then((response) => {
@@ -130,17 +177,18 @@ export default function AppNavigator() {
         const data = response.notification.request.content.data as unknown as
           | NotificationData
           | undefined;
-        if (data && navigationRef.current) {
-          handleNotificationNavigation(data, navigationRef.current);
+        if (data) {
+          routeNotificationTap(data as Record<string, unknown>);
         }
       });
     });
 
     return () => {
       cancelled = true;
+      cleanup();
       task.cancel();
     };
-  }, [token]);
+  }, [routeNotificationTap, token]);
 
   // Refresh user location on initial auth and whenever the app comes to the foreground.
   useEffect(() => {

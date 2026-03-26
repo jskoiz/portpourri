@@ -1,22 +1,21 @@
-import type { NotificationType } from './notifications.service';
-
-export interface NotificationTemplatePayload {
-  type: NotificationType;
-  title: string;
-  body: string;
-  data?: Record<string, unknown>;
-  /** When set, notification is suppressed if recipient blocked this user. */
-  sourceUserId?: string;
-}
+import { NotificationType } from '../common/enums';
+import type {
+  EventInviteNotificationData,
+  EventReminderNotificationData,
+  EventRsvpNotificationData,
+  LikeReceivedNotificationData,
+  MatchCreatedNotificationData,
+  NotificationTemplatePayload,
+} from './notification.contracts';
 
 export function buildLikeReceivedNotification(
   fromUserId: string,
-): NotificationTemplatePayload {
+): NotificationTemplatePayload<NotificationType.LikeReceived> {
   return {
-    type: 'like_received',
+    type: NotificationType.LikeReceived,
     title: 'New like',
     body: 'Someone liked your profile.',
-    data: { fromUserId },
+    data: { fromUserId } satisfies LikeReceivedNotificationData,
     sourceUserId: fromUserId,
   };
 }
@@ -24,12 +23,12 @@ export function buildLikeReceivedNotification(
 export function buildMatchCreatedNotification(
   matchId: string,
   withUserId: string,
-): NotificationTemplatePayload {
+): NotificationTemplatePayload<NotificationType.MatchCreated> {
   return {
-    type: 'match_created',
+    type: NotificationType.MatchCreated,
     title: "It's a match!",
     body: 'You can start chatting now.',
-    data: { matchId, withUserId },
+    data: { matchId, withUserId } satisfies MatchCreatedNotificationData,
     sourceUserId: withUserId,
   };
 }
@@ -38,38 +37,45 @@ export function buildEventRsvpNotification(
   eventId: string,
   attendeeId: string,
   eventTitle: string,
-): NotificationTemplatePayload {
+): NotificationTemplatePayload<NotificationType.EventRsvp> {
   return {
-    type: 'event_rsvp',
+    type: NotificationType.EventRsvp,
     title: 'New RSVP',
     body: `Someone joined ${eventTitle}`,
-    data: { eventId, attendeeId },
+    data: { eventId, attendeeId } satisfies EventRsvpNotificationData,
     sourceUserId: attendeeId,
   };
 }
 
 export function buildEventInviteNotification(
   eventId: string,
+  inviterId: string,
   inviterName: string,
   eventTitle: string,
   matchId: string,
-): NotificationTemplatePayload {
+): NotificationTemplatePayload<NotificationType.EventInvite> {
   return {
-    type: 'event_reminder',
+    type: NotificationType.EventInvite,
     title: 'Event invite',
     body: `${inviterName} invited you to ${eventTitle}`,
-    data: { eventId, matchId, type: 'event_invite' },
+    data: {
+      eventId,
+      matchId,
+      inviterId,
+      withUserId: inviterId,
+    } satisfies EventInviteNotificationData,
+    sourceUserId: inviterId,
   };
 }
 
 export function buildEventReminderNotification(
   eventId: string,
   eventTitle: string,
-): NotificationTemplatePayload {
+): NotificationTemplatePayload<NotificationType.EventReminder> {
   return {
-    type: 'event_reminder',
+    type: NotificationType.EventReminder,
     title: 'Event joined',
     body: `You are in for ${eventTitle}`,
-    data: { eventId },
+    data: { eventId } satisfies EventReminderNotificationData,
   };
 }

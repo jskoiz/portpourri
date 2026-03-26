@@ -151,12 +151,13 @@ export interface UpdatePhotoPayload {
 }
 
 export type NotificationType =
-  | "like_received"
-  | "match_created"
-  | "message_received"
-  | "event_rsvp"
-  | "event_reminder"
-  | "system";
+  | 'like_received'
+  | 'match_created'
+  | 'message_received'
+  | 'event_rsvp'
+  | 'event_invite'
+  | 'event_reminder'
+  | 'system';
 
 export interface AppNotification {
   id: string;

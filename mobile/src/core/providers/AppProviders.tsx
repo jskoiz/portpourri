@@ -14,7 +14,6 @@ import { installGlobalErrorHandler } from '../observability/globalErrorHandler';
 import {
   configureNotificationHandler,
   registerForPushNotifications,
-  setupNotificationListeners,
 } from '../../lib/pushNotifications';
 import { loadHapticsPreference } from '../../lib/interaction/feedback';
 
@@ -24,14 +23,6 @@ installGlobalErrorHandler();
 export function AppProviders({ children }: PropsWithChildren) {
   useEffect(() => {
     configureNotificationHandler();
-
-    const cleanup = setupNotificationListeners((data) => {
-      // Deep-link routing based on notification data can be added here.
-      // For now we log the tap for debugging.
-      if (__DEV__) {
-        console.log('[push] Notification tapped:', data);
-      }
-    });
 
     const bootstrapTask = InteractionManager.runAfterInteractions(() => {
       registerForPushNotifications().catch((error) => {
@@ -43,7 +34,6 @@ export function AppProviders({ children }: PropsWithChildren) {
     });
 
     return () => {
-      cleanup();
       bootstrapTask.cancel();
     };
   }, []);

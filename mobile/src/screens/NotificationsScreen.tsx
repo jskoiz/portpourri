@@ -21,7 +21,9 @@ import { radii, spacing, typography } from '../theme/tokens';
 import { useNotifications } from '../features/notifications/hooks/useNotifications';
 import {
   buildNotificationSections,
+  getNotificationBodyFallback,
   getNotificationMeta,
+  getNotificationTitleFallback,
 } from '../features/notifications/notificationPresentation';
 import { resolveNotificationNavigation } from '../features/notifications/notificationNavigation';
 import type { RootStackScreenProps } from '../core/navigation/types';
@@ -43,6 +45,8 @@ const NotifRow = memo(function NotifRow({
 }) {
   const { color, icon } = getNotificationMeta(notif.type);
   const isRead = Boolean(notif.readAt);
+  const title = notif.title?.trim() || getNotificationTitleFallback(notif.type);
+  const body = notif.body?.trim() || getNotificationBodyFallback(notif.type);
 
   return (
     <TouchableOpacity
@@ -61,7 +65,7 @@ const NotifRow = memo(function NotifRow({
       }}
       activeOpacity={0.85}
       accessibilityRole="button"
-      accessibilityLabel={`${notif.title}. ${notif.body}`}
+      accessibilityLabel={`${title}. ${body}`}
       accessibilityHint={isRead ? 'Already read' : 'Tap to mark as read'}
     >
       {/* Icon */}
@@ -71,8 +75,8 @@ const NotifRow = memo(function NotifRow({
 
       {/* Content */}
       <View style={styles.notifContent}>
-        <Text style={[styles.notifTitle, { color: theme.textPrimary }]}>{notif.title}</Text>
-        <Text style={[styles.notifBody, { color: theme.textSecondary }]}>{notif.body}</Text>
+        <Text style={[styles.notifTitle, { color: theme.textPrimary }]}>{title}</Text>
+        <Text style={[styles.notifBody, { color: theme.textSecondary }]}>{body}</Text>
       </View>
 
       {!isRead ? (
@@ -146,6 +150,11 @@ export default function NotificationsScreen({
     }
   }, [markAllRead]);
 
+  const handleRetry = useCallback(() => {
+    setActionError(null);
+    void refetch();
+  }, [refetch]);
+
   const handleNavigate = useCallback((notif: AppNotification) => {
     setActionError(null);
     const result = resolveNotificationNavigation(notif);
@@ -217,9 +226,7 @@ export default function NotificationsScreen({
           title="Couldn't load notifications"
           description={errorMessage}
           actionLabel="Try again"
-          onAction={() => {
-            void refetch();
-          }}
+          onAction={handleRetry}
           isError
         />
       ) : notifs.length === 0 ? (
@@ -253,9 +260,7 @@ export default function NotificationsScreen({
           refreshControl={
             <RefreshControl
               refreshing={isRefetching && !loading}
-              onRefresh={() => {
-                void refetch();
-              }}
+              onRefresh={handleRetry}
               tintColor={theme.primary}
             />
           }

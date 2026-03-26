@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Logger, NotFoundException } from '@nestjs/common';
 import { EventCategory } from '@prisma/client';
+import { NotificationType } from '../common/enums';
 import { EventsService } from './events.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -496,6 +497,19 @@ describe('EventsService', () => {
             matchId: 'match-1',
             senderId: 'host-1',
             type: 'EVENT_INVITE',
+          }),
+        }),
+      );
+      expect(notificationsCreate).toHaveBeenCalledWith(
+        'user-2',
+        expect.objectContaining({
+          type: NotificationType.EventInvite,
+          sourceUserId: 'host-1',
+          data: expect.objectContaining({
+            eventId: 'event-1',
+            matchId: 'match-1',
+            inviterId: 'host-1',
+            withUserId: 'host-1',
           }),
         }),
       );

@@ -19,6 +19,7 @@ export enum NotificationType {
   MatchCreated = 'match_created',
   MessageReceived = 'message_received',
   EventRsvp = 'event_rsvp',
+  EventInvite = 'event_invite',
   EventReminder = 'event_reminder',
   System = 'system',
 }

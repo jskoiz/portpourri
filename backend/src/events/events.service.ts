@@ -453,7 +453,8 @@ export class EventsService {
         inviteeId,
         buildEventInviteNotification(
           eventId,
-          currentUser.firstName,
+          userId,
+          inviter?.firstName ?? 'Someone',
           event.title,
           matchId,
         ),
