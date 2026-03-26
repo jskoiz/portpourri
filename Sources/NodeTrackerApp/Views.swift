@@ -4,14 +4,10 @@ import NodeTrackerCore
 struct PopoverRootView: View {
     @ObservedObject var store: NodeTrackerStore
     @ObservedObject private var settings: SettingsStore
-    let openSettings: () -> Void
-    let quit: () -> Void
 
-    init(store: NodeTrackerStore, openSettings: @escaping () -> Void, quit: @escaping () -> Void) {
+    init(store: NodeTrackerStore) {
         self.store = store
         self._settings = ObservedObject(wrappedValue: store.settings)
-        self.openSettings = openSettings
-        self.quit = quit
     }
 
     var body: some View {
@@ -34,12 +30,6 @@ struct PopoverRootView: View {
                 if !self.store.visibleOtherProcesses().isEmpty {
                     OtherListenersCard(store: self.store, processes: self.store.visibleOtherProcesses())
                 }
-                FooterActions(
-                    refresh: { self.store.refreshNow() },
-                    copyJSON: { self.store.copySnapshotJSON() },
-                    openSettings: self.openSettings,
-                    quit: self.quit
-                )
             }
             .padding(16)
         }
@@ -164,9 +154,35 @@ private struct ProjectGroupsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            ForEach(self.store.snapshot.projects) { project in
+            ForEach(self.sortedProjects()) { project in
                 ProjectCard(store: self.store, project: project)
             }
+        }
+    }
+
+    private func sortedProjects() -> [ProjectSnapshot] {
+        let watchedPorts = Set(self.store.settings.watchedPorts)
+        return self.store.snapshot.projects.sorted { lhs, rhs in
+            let lhsWatched = lhs.ports.filter(watchedPorts.contains).count
+            let rhsWatched = rhs.ports.filter(watchedPorts.contains).count
+            if lhsWatched != rhsWatched {
+                return lhsWatched > rhsWatched
+            }
+
+            let nameComparison = lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName)
+            if nameComparison != .orderedSame {
+                return nameComparison == .orderedAscending
+            }
+
+            if lhs.isWorktreeLike != rhs.isWorktreeLike {
+                return lhs.isWorktreeLike == false
+            }
+
+            if lhs.projectRoot != rhs.projectRoot {
+                return lhs.projectRoot < rhs.projectRoot
+            }
+
+            return lhs.ports.lexicographicallyPrecedes(rhs.ports)
         }
     }
 }
@@ -179,7 +195,7 @@ private struct PortGroupsView: View {
             ForEach(self.groupedPorts(), id: \.port) { group in
                 Card(title: "Port \(String(group.port))") {
                     VStack(alignment: .leading, spacing: 10) {
-                        ForEach(group.processes) { process in
+                        ForEach(self.sortedProcesses(group.processes)) { process in
                             ProcessRow(store: self.store, process: process)
                         }
                     }
@@ -195,6 +211,23 @@ private struct PortGroupsView: View {
 
         return grouped.keys.sorted().map { port in
             (port, grouped[port]?.map(\.1) ?? [])
+        }
+    }
+
+    private func sortedProcesses(_ processes: [TrackedProcessSnapshot]) -> [TrackedProcessSnapshot] {
+        processes.sorted { lhs, rhs in
+            let lhsPort = lhs.ports.min() ?? .max
+            let rhsPort = rhs.ports.min() ?? .max
+            if lhsPort != rhsPort {
+                return lhsPort < rhsPort
+            }
+
+            let labelComparison = lhs.process.toolLabel.localizedCaseInsensitiveCompare(rhs.process.toolLabel)
+            if labelComparison != .orderedSame {
+                return labelComparison == .orderedAscending
+            }
+
+            return lhs.process.pid < rhs.process.pid
         }
     }
 }
@@ -229,10 +262,27 @@ private struct ProjectCard: View {
                     PortBadgeRow(ports: self.project.ports)
                 }
 
-                ForEach(self.project.processes) { process in
+                ForEach(self.sortedProcesses()) { process in
                     ProcessRow(store: self.store, process: process)
                 }
             }
+        }
+    }
+
+    private func sortedProcesses() -> [TrackedProcessSnapshot] {
+        self.project.processes.sorted { lhs, rhs in
+            let lhsPort = lhs.ports.min() ?? .max
+            let rhsPort = rhs.ports.min() ?? .max
+            if lhsPort != rhsPort {
+                return lhsPort < rhsPort
+            }
+
+            let labelComparison = lhs.process.toolLabel.localizedCaseInsensitiveCompare(rhs.process.toolLabel)
+            if labelComparison != .orderedSame {
+                return labelComparison == .orderedAscending
+            }
+
+            return lhs.process.pid < rhs.process.pid
         }
     }
 }
@@ -340,10 +390,31 @@ private struct OtherListenersCard: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                ForEach(self.processes) { process in
+                ForEach(self.sortedProcesses()) { process in
                     ProcessRow(store: self.store, process: process)
                 }
             }
+        }
+    }
+
+    private func sortedProcesses() -> [TrackedProcessSnapshot] {
+        self.processes.sorted { lhs, rhs in
+            if lhs.isWatchedConflict != rhs.isWatchedConflict {
+                return lhs.isWatchedConflict && !rhs.isWatchedConflict
+            }
+
+            let lhsPort = lhs.ports.min() ?? .max
+            let rhsPort = rhs.ports.min() ?? .max
+            if lhsPort != rhsPort {
+                return lhsPort < rhsPort
+            }
+
+            let labelComparison = lhs.process.toolLabel.localizedCaseInsensitiveCompare(rhs.process.toolLabel)
+            if labelComparison != .orderedSame {
+                return labelComparison == .orderedAscending
+            }
+
+            return lhs.process.pid < rhs.process.pid
         }
     }
 }
@@ -361,30 +432,6 @@ private struct PortBadgeRow: View {
                     .padding(.vertical, 4)
                     .background(Color.primary.opacity(0.08), in: Capsule())
             }
-        }
-    }
-}
-
-private struct FooterActions: View {
-    let refresh: () -> Void
-    let copyJSON: () -> Void
-    let openSettings: () -> Void
-    let quit: () -> Void
-
-    var body: some View {
-        Card {
-            HStack {
-                Button("Refresh", action: self.refresh)
-                    .buttonStyle(ActionPillButtonStyle(role: nil))
-                Button("Copy JSON", action: self.copyJSON)
-                    .buttonStyle(ActionPillButtonStyle(role: nil))
-                Spacer()
-                Button("Settings", action: self.openSettings)
-                    .buttonStyle(ActionPillButtonStyle(role: nil))
-                Button("Quit", action: self.quit)
-                    .buttonStyle(ActionPillButtonStyle(role: nil))
-            }
-            .font(.subheadline)
         }
     }
 }
