@@ -24,6 +24,8 @@
     "storybook": "npm --prefix mobile run storybook:start",
     "dev:backend": "./scripts/dev-backend-local.sh",
     "dev:backend:local": "./scripts/dev-backend-local.sh",
+    "dev:backend:remote": "./scripts/dev-backend-remote.sh",
+    "dev:tunnel": "./scripts/dev-tunnel.sh",
     "dev:mobile": "npm --prefix mobile run start",
     "dev:mobile:dev-client": "./scripts/qa-ios.sh",
     "dev:scenario": "npm --prefix backend run dev:scenario --",
