@@ -301,4 +301,36 @@ describe('useProfileEditor', () => {
       intentFriends: false,
     });
   });
+
+  it('keeps a stable save callback identity when form fields change', () => {
+    const updateProfile = jest.fn().mockResolvedValue(undefined);
+    const updateFitness = jest.fn().mockResolvedValue(undefined);
+    const profile = makeProfile();
+
+    const { result } = renderHook<
+      ReturnType<typeof useProfileEditor>,
+      { currentProfile: ProfileShape }
+    >(
+      ({ currentProfile }) =>
+        useProfileEditor({
+          profile: currentProfile as never,
+          updateProfile,
+          updateFitness,
+        }),
+      { initialProps: { currentProfile: profile } },
+    );
+
+    const saveBefore = result.current.save;
+
+    act(() => {
+      result.current.setBio('Changed bio');
+      result.current.updateCity('New City');
+      result.current.setIntensityLevel('high');
+      result.current.setIntentDating(true);
+      result.current.toggleActivity('Yoga');
+      result.current.toggleSchedule('Morning');
+    });
+
+    expect(result.current.save).toBe(saveBefore);
+  });
 });

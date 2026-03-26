@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { User } from '../../../api/types';
 import { normalizeApiError } from '../../../api/errors';
 import { normalizeIntensityLevelForForm } from '../../../api/profileIntensity';
@@ -55,6 +55,39 @@ export function useProfileEditor({
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<string[]>([]);
 
+  // Ref holds frequently-changing form values so the save callback can read
+  // current state without closing over every field (stabilises callback identity).
+  const formRef = useRef({
+    editMode,
+    bio,
+    city,
+    citySelection,
+    intensityLevel,
+    intentDating,
+    intentWorkout,
+    intentFriends,
+    weeklyFrequencyBand,
+    primaryGoal,
+    selectedActivities,
+    selectedSchedule,
+  });
+  useEffect(() => {
+    formRef.current = {
+      editMode,
+      bio,
+      city,
+      citySelection,
+      intensityLevel,
+      intentDating,
+      intentWorkout,
+      intentFriends,
+      weeklyFrequencyBand,
+      primaryGoal,
+      selectedActivities,
+      selectedSchedule,
+    };
+  });
+
   const syncFromProfile = useCallback((source: User) => {
     setBio(source.profile?.bio || '');
     setCity(source.profile?.city || '');
@@ -95,7 +128,8 @@ export function useProfileEditor({
     setError(null);
   }, [profile, syncFromProfile]);
   const save = useCallback(async () => {
-    if (!editMode) {
+    const f = formRef.current;
+    if (!f.editMode) {
       setEditMode(true);
       return;
     }
@@ -105,22 +139,22 @@ export function useProfileEditor({
     let fitnessSaved = false;
     try {
       await updateProfile({
-        bio: bio.trim(),
-        city: city.trim(),
-        latitude: citySelection?.latitude,
-        longitude: citySelection?.longitude,
-        intentDating,
-        intentWorkout,
-        intentFriends,
+        bio: f.bio.trim(),
+        city: f.city.trim(),
+        latitude: f.citySelection?.latitude,
+        longitude: f.citySelection?.longitude,
+        intentDating: f.intentDating,
+        intentWorkout: f.intentWorkout,
+        intentFriends: f.intentFriends,
       });
       basicsSaved = true;
       await updateFitness({
-        intensityLevel,
-        weeklyFrequencyBand,
-        primaryGoal,
-        favoriteActivities: selectedActivities.join(', '),
-        prefersMorning: selectedSchedule.includes('Morning'),
-        prefersEvening: selectedSchedule.includes('Evening'),
+        intensityLevel: f.intensityLevel,
+        weeklyFrequencyBand: f.weeklyFrequencyBand,
+        primaryGoal: f.primaryGoal,
+        favoriteActivities: f.selectedActivities.join(', '),
+        prefersMorning: f.selectedSchedule.includes('Morning'),
+        prefersEvening: f.selectedSchedule.includes('Evening'),
       });
       fitnessSaved = true;
       void triggerSuccessHaptic();
@@ -135,22 +169,7 @@ export function useProfileEditor({
 
       setError(normalizeApiError(err).message);
     }
-  }, [
-    bio,
-    city,
-    citySelection,
-    editMode,
-    intentDating,
-    intentFriends,
-    intentWorkout,
-    primaryGoal,
-    selectedActivities,
-    selectedSchedule,
-    intensityLevel,
-    updateFitness,
-    updateProfile,
-    weeklyFrequencyBand,
-  ]);
+  }, [updateProfile, updateFitness]);
 
   return {
     error,
