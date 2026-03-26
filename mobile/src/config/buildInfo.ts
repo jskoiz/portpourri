@@ -10,8 +10,10 @@ type BuildProvenance = {
   gitSha: string;
   gitShortSha: string;
   buildDate: string;
+  buildDateSource: "scripted" | "runtime-generated" | "unknown";
   releaseMode: string;
   releaseProfile: string | null;
+  provenanceSource: "runtime-derived" | "scripted-release";
 };
 
 type ExpoExtra = {
@@ -23,21 +25,66 @@ type ExpoExtra = {
 const extra = (Constants.expoConfig?.extra ?? {}) as ExpoExtra;
 const provenance = extra.buildProvenance ?? {};
 
+const normalizeString = (value: string | null | undefined) => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const normalizeRequiredString = (
+  ...values: Array<string | null | undefined>
+) => {
+  for (const value of values) {
+    const normalized = normalizeString(value);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return "unknown";
+};
+
+const normalizeGitSha = (value: string | null | undefined) => {
+  const normalized = normalizeString(value);
+  if (!normalized) {
+    return "unknown";
+  }
+
+  return /^[0-9a-f]{7,40}$/i.test(normalized) ? normalized : "unknown";
+};
+
+const gitSha = normalizeGitSha(provenance.gitSha);
+const normalizedReleaseMode = normalizeString(provenance.releaseMode);
+const releaseMode = normalizedReleaseMode ?? "unknown";
+const releaseProfile = normalizeString(provenance.releaseProfile);
+const hasScriptedReleaseMetadata =
+  (normalizedReleaseMode !== null && normalizedReleaseMode !== "runtime") ||
+  releaseProfile !== null;
+
 export const buildInfo: BuildProvenance = {
-  appEnv: provenance.appEnv ?? extra.appEnv ?? "unknown",
-  apiBaseUrl: provenance.apiBaseUrl ?? extra.apiBaseUrl ?? null,
+  appEnv: normalizeRequiredString(provenance.appEnv, extra.appEnv),
+  apiBaseUrl:
+    normalizeString(provenance.apiBaseUrl) ?? normalizeString(extra.apiBaseUrl),
   version:
-    provenance.version ??
-    Constants.expoConfig?.version ??
-    "unknown",
-  iosBuildNumber: provenance.iosBuildNumber ?? "unknown",
-  androidVersionCode: provenance.androidVersionCode ?? "unknown",
-  gitBranch: provenance.gitBranch ?? "unknown",
-  gitSha: provenance.gitSha ?? "unknown",
+    normalizeRequiredString(provenance.version, Constants.expoConfig?.version),
+  iosBuildNumber: normalizeRequiredString(provenance.iosBuildNumber),
+  androidVersionCode: normalizeRequiredString(provenance.androidVersionCode),
+  gitBranch: normalizeRequiredString(provenance.gitBranch),
+  gitSha,
   gitShortSha:
-    provenance.gitShortSha ??
-    (provenance.gitSha ? provenance.gitSha.slice(0, 7) : "unknown"),
-  buildDate: provenance.buildDate ?? "unknown",
-  releaseMode: provenance.releaseMode ?? "unknown",
-  releaseProfile: provenance.releaseProfile ?? null,
+    normalizeString(provenance.gitShortSha) ??
+    (gitSha === "unknown" ? "unknown" : gitSha.slice(0, 7)),
+  buildDate: normalizeRequiredString(provenance.buildDate),
+  buildDateSource: (() => {
+    const src = normalizeString(provenance.buildDateSource);
+    return src === "scripted" || src === "runtime-generated" ? src : "unknown";
+  })(),
+  releaseMode,
+  releaseProfile,
+  provenanceSource: hasScriptedReleaseMetadata
+    ? "scripted-release"
+    : "runtime-derived",
 };

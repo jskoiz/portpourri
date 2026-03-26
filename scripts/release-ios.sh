@@ -51,6 +51,20 @@ detect_apple_team_id() {
   ' "$MOBILE_DIR"
 }
 
+detect_app_version() {
+  node -e '
+    const fs = require("fs");
+    const path = require("path");
+    const pkgPath = path.join(process.argv[1], "package.json");
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+      process.stdout.write(String(pkg.version ?? "").trim());
+    } catch {
+      process.stdout.write("");
+    }
+  ' "$MOBILE_DIR"
+}
+
 detect_app_store_connect_key_path() {
   local key_id="$1"
   local candidate
@@ -149,6 +163,7 @@ STATUS_OUTPUT="$(run_git status --porcelain --untracked-files=normal)"
 
 UPSTREAM="$(run_git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)"
 [[ -n "$UPSTREAM" ]] || fail "branch '$BRANCH' has no upstream tracking branch"
+UPSTREAM_GIT_SHA="$(run_git rev-parse "$UPSTREAM")"
 
 read -r AHEAD BEHIND < <(run_git rev-list --left-right --count "HEAD...$UPSTREAM")
 [[ "$AHEAD" == "0" ]] || fail "branch '$BRANCH' has local-only commits that are not on $UPSTREAM"
@@ -163,7 +178,12 @@ export BRDG_BUILD_DATE="${BRDG_BUILD_DATE:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
 export BRDG_RELEASE_MODE="$MODE"
 export BRDG_RELEASE_PROFILE="$PROFILE"
 
-export APP_VERSION="${APP_VERSION:-1.0.0}"
+DETECTED_APP_VERSION="$(detect_app_version)"
+[[ -n "$DETECTED_APP_VERSION" ]] || fail "unable to resolve app version from mobile/package.json"
+if [[ -n "${APP_VERSION:-}" && "$APP_VERSION" != "$DETECTED_APP_VERSION" ]]; then
+  fail "APP_VERSION ($APP_VERSION) does not match mobile/package.json version ($DETECTED_APP_VERSION)"
+fi
+export APP_VERSION="${APP_VERSION:-$DETECTED_APP_VERSION}"
 export IOS_BUILD_NUMBER="${IOS_BUILD_NUMBER:-}"
 export IOS_BUNDLE_IDENTIFIER="${IOS_BUNDLE_IDENTIFIER:-}"
 export IOS_DEVELOPMENT_TEAM="${IOS_DEVELOPMENT_TEAM:-$(detect_apple_team_id)}"
@@ -171,10 +191,19 @@ export EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-}"
 export ASC_API_KEY_ID="${ASC_API_KEY_ID:-}"
 export ASC_API_ISSUER_ID="${ASC_API_ISSUER_ID:-}"
 export ASC_API_KEY_PATH="${ASC_API_KEY_PATH:-}"
+export ASC_LIVE_BUILD_NUMBER="${ASC_LIVE_BUILD_NUMBER:-}"
+export ASC_BUILD_NUMBER_VERIFIED_AT="${ASC_BUILD_NUMBER_VERIFIED_AT:-}"
 
 [[ -n "$IOS_BUILD_NUMBER" ]] || fail "IOS_BUILD_NUMBER must be set before running a release"
+[[ "$IOS_BUILD_NUMBER" =~ ^[0-9]+$ ]] || fail "IOS_BUILD_NUMBER must be numeric"
 [[ -n "$IOS_BUNDLE_IDENTIFIER" ]] || fail "IOS_BUNDLE_IDENTIFIER must be set before running a release"
 [[ -n "$EXPO_PUBLIC_API_URL" ]] || fail "EXPO_PUBLIC_API_URL must be set before running a release"
+[[ -n "$ASC_LIVE_BUILD_NUMBER" ]] || fail "ASC_LIVE_BUILD_NUMBER must be set from live App Store Connect state before running a release"
+[[ "$ASC_LIVE_BUILD_NUMBER" =~ ^[0-9]+$ ]] || fail "ASC_LIVE_BUILD_NUMBER must be numeric"
+[[ -n "$ASC_BUILD_NUMBER_VERIFIED_AT" ]] || fail "ASC_BUILD_NUMBER_VERIFIED_AT must record when the live App Store Connect build number was checked"
+(( IOS_BUILD_NUMBER > ASC_LIVE_BUILD_NUMBER )) || fail "IOS_BUILD_NUMBER ($IOS_BUILD_NUMBER) must be greater than the latest live App Store Connect build number ($ASC_LIVE_BUILD_NUMBER)"
+
+AUTH_MODE="expo-eas"
 if [[ "$MODE" == "xcode" ]]; then
   [[ -n "$IOS_DEVELOPMENT_TEAM" ]] || fail "IOS_DEVELOPMENT_TEAM is required for xcode releases when mobile/eas.json does not define submit.production.ios.appleTeamId"
   if [[ -n "$ASC_API_KEY_ID" || -n "$ASC_API_ISSUER_ID" || -n "$ASC_API_KEY_PATH" ]]; then
@@ -183,6 +212,9 @@ if [[ "$MODE" == "xcode" ]]; then
     ASC_API_KEY_PATH="${ASC_API_KEY_PATH:-$(detect_app_store_connect_key_path "$ASC_API_KEY_ID")}"
     [[ -n "$ASC_API_KEY_PATH" ]] || fail "unable to locate AuthKey_${ASC_API_KEY_ID}.p8; set ASC_API_KEY_PATH to the App Store Connect private key file"
     [[ -f "$ASC_API_KEY_PATH" ]] || fail "ASC_API_KEY_PATH does not exist: $ASC_API_KEY_PATH"
+    AUTH_MODE="app-store-connect-api-key"
+  else
+    AUTH_MODE="xcode-account"
   fi
   if [[ -z "${SENTRY_ALLOW_FAILURE:-}" && ( -z "${SENTRY_ORG:-}" || -z "${SENTRY_PROJECT:-}" || -z "${SENTRY_AUTH_TOKEN:-}" ) ]]; then
     export SENTRY_ALLOW_FAILURE=true
@@ -192,6 +224,22 @@ if [[ "$MODE" == "xcode" ]]; then
   fi
 fi
 
+export UPSTREAM="$UPSTREAM"
+export UPSTREAM_GIT_SHA="$UPSTREAM_GIT_SHA"
+export AUTH_MODE="$AUTH_MODE"
+export CHECK_ONLY
+
+echo "release-ios: preflight summary"
+echo "  branch: $BRANCH"
+echo "  head sha: $BRDG_GIT_SHA"
+echo "  upstream: $UPSTREAM ($UPSTREAM_GIT_SHA)"
+echo "  version/build: $APP_VERSION ($IOS_BUILD_NUMBER)"
+echo "  latest live ASC build: $ASC_LIVE_BUILD_NUMBER"
+echo "  live ASC build verified at: $ASC_BUILD_NUMBER_VERIFIED_AT"
+echo "  api url: $EXPO_PUBLIC_API_URL"
+echo "  mode/profile: $MODE / $PROFILE"
+echo "  auth mode: $AUTH_MODE"
+
 echo "release-ios: running repo validation"
 (
   cd "$ROOT_DIR"
@@ -199,20 +247,41 @@ echo "release-ios: running repo validation"
 )
 
 mkdir -p "$MANIFEST_DIR"
-cat >"$MANIFEST_PATH" <<EOF
-{
-  "branch": "$BRANCH",
-  "upstream": "$UPSTREAM",
-  "gitSha": "$BRDG_GIT_SHA",
-  "appVersion": "$APP_VERSION",
-  "iosBuildNumber": "$IOS_BUILD_NUMBER",
-  "iosBundleIdentifier": "$IOS_BUNDLE_IDENTIFIER",
-  "apiBaseUrl": "$EXPO_PUBLIC_API_URL",
-  "buildDate": "$BRDG_BUILD_DATE",
-  "mode": "$MODE",
-  "profile": "$PROFILE"
+python3 - <<'PY' "$MANIFEST_PATH"
+import json
+import os
+import pathlib
+import sys
+
+manifest = {
+    "branch": os.environ["BRDG_GIT_BRANCH"],
+    "upstream": os.environ["UPSTREAM"],
+    "upstreamGitSha": os.environ["UPSTREAM_GIT_SHA"],
+    "gitSha": os.environ["BRDG_GIT_SHA"],
+    "appVersion": os.environ["APP_VERSION"],
+    "iosBuildNumber": os.environ["IOS_BUILD_NUMBER"],
+    "iosBundleIdentifier": os.environ["IOS_BUNDLE_IDENTIFIER"],
+    "apiBaseUrl": os.environ["EXPO_PUBLIC_API_URL"],
+    "buildDate": os.environ["BRDG_BUILD_DATE"],
+    "mode": os.environ["BRDG_RELEASE_MODE"],
+    "profile": os.environ["BRDG_RELEASE_PROFILE"],
+    "authMode": os.environ["AUTH_MODE"],
+    "appStoreConnectKeyId": os.environ.get("ASC_API_KEY_ID") or None,
+    "appStoreConnectLiveBuildNumber": os.environ["ASC_LIVE_BUILD_NUMBER"],
+    "appStoreConnectBuildNumberVerifiedAt": os.environ["ASC_BUILD_NUMBER_VERIFIED_AT"],
+    "preflightOnly": os.environ["CHECK_ONLY"] == "1",
+    "releaseEligibility": {
+        "allowedBranch": True,
+        "cleanTree": True,
+        "hasUpstream": True,
+        "aheadCount": 0,
+        "behindCount": 0,
+        "iosBuildNumberGreaterThanLiveAppStoreConnectBuild": True,
+    },
 }
-EOF
+
+pathlib.Path(sys.argv[1]).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+PY
 
 echo "release-ios: manifest written to $MANIFEST_PATH"
 echo "release-ios: branch=$BRANCH sha=$BRDG_GIT_SHA version=$APP_VERSION build=$IOS_BUILD_NUMBER api=$EXPO_PUBLIC_API_URL"
@@ -317,5 +386,8 @@ esac
 # Tag the release commit so deploy-testflight workflow can trigger on it.
 # Format: v{APP_VERSION}+{IOS_BUILD_NUMBER}
 RELEASE_TAG="v${APP_VERSION}+${IOS_BUILD_NUMBER}"
+if run_git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
+  fail "git tag '$RELEASE_TAG' already exists; do not reuse an existing release provenance tag"
+fi
 echo "release-ios: tagging release as $RELEASE_TAG"
 run_git tag "$RELEASE_TAG"

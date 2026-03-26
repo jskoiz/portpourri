@@ -23,72 +23,162 @@ function statusLine(status, label, detail) {
   console.log(`${prefix} ${label}${detail ? `: ${detail}` : ''}`);
 }
 
-function main() {
+export function collectDoctorReport({
+  runCommand = run,
+  spawnCommand = spawnSync,
+  pathExists = exists,
+  nodeVersion = process.versions.node,
+  platform = process.platform,
+} = {}) {
   const failures = [];
+  const lines = [];
+  const pushLine = (status, label, detail) => {
+    lines.push({ status, label, detail });
+  };
 
-  const branch = run('git', ['branch', '--show-current']);
+  const branch = runCommand('git', ['branch', '--show-current']);
   const currentBranch = branch.stdout.trim();
   if (branch.status !== 0) {
     failures.push('Unable to read git branch.');
-    statusLine('fail', 'Git', branch.stderr.trim());
+    pushLine('fail', 'Git', branch.stderr.trim());
   } else if (!currentBranch) {
-    statusLine('warn', 'Git branch', 'detached HEAD');
+    pushLine('warn', 'Git branch', 'detached HEAD');
   } else {
-    statusLine('ok', 'Git branch', currentBranch);
+    pushLine('ok', 'Git branch', currentBranch);
   }
 
-  const dirty = run('git', ['status', '--porcelain']);
+  const gitHead = runCommand('git', ['rev-parse', 'HEAD']);
+  if (gitHead.status === 0) {
+    pushLine('ok', 'Git HEAD', gitHead.stdout.trim());
+  } else {
+    failures.push('Unable to read git HEAD SHA.');
+    pushLine('fail', 'Git HEAD', gitHead.stderr.trim());
+  }
+
+  if (currentBranch) {
+    const branchPolicy =
+      currentBranch === 'main'
+        ? 'main'
+        : currentBranch.startsWith('release/')
+          ? 'release branch'
+          : 'feature branch';
+    pushLine(branchPolicy === 'feature branch' ? 'warn' : 'ok', 'Branch policy', branchPolicy);
+  }
+
+  const upstream = runCommand('git', ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']);
+  const upstreamName = upstream.status === 0 ? upstream.stdout.trim() : '';
+  if (upstreamName) {
+    pushLine('ok', 'Git upstream', upstreamName);
+  } else {
+    pushLine('warn', 'Git upstream', 'missing');
+  }
+
+  if (upstreamName) {
+    const aheadBehind = runCommand('git', ['rev-list', '--left-right', '--count', `HEAD...${upstreamName}`]);
+    if (aheadBehind.status === 0) {
+      const [ahead = '0', behind = '0'] = aheadBehind.stdout.trim().split(/\s+/);
+      pushLine(
+        ahead === '0' && behind === '0' ? 'ok' : 'warn',
+        'Git upstream sync',
+        `ahead ${ahead}, behind ${behind}`,
+      );
+    } else {
+      pushLine('warn', 'Git upstream sync', aheadBehind.stderr.trim() || 'unable to determine');
+    }
+  }
+
+  const dirty = runCommand('git', ['status', '--porcelain']);
   if (dirty.stdout.trim()) {
-    statusLine('warn', 'Working tree', 'uncommitted changes present');
+    pushLine('warn', 'Working tree', 'uncommitted changes present');
   } else {
-    statusLine('ok', 'Working tree', 'clean');
+    pushLine('ok', 'Working tree', 'clean');
   }
 
-  const nodeMajor = Number.parseInt(process.versions.node.split('.')[0], 10);
+  const nodeMajor = Number.parseInt(nodeVersion.split('.')[0], 10);
   if (Number.isNaN(nodeMajor) || nodeMajor < 22) {
     failures.push('Node 22 or newer is required.');
-    statusLine('fail', 'Node version', process.versions.node);
+    pushLine('fail', 'Node version', nodeVersion);
   } else {
-    statusLine('ok', 'Node version', process.versions.node);
+    pushLine('ok', 'Node version', nodeVersion);
   }
 
   for (const [label, relativePath] of [
     ['backend dependencies', 'backend/node_modules'],
     ['mobile dependencies', 'mobile/node_modules'],
-    ['backend env source', exists('backend/.env') ? 'backend/.env' : 'backend/.env.example'],
+    ['backend env source', pathExists('backend/.env') ? 'backend/.env' : 'backend/.env.example'],
     ['mobile env example', 'mobile/.env.example'],
   ]) {
-    if (exists(relativePath)) {
-      statusLine('ok', label, relativePath);
+    if (pathExists(relativePath)) {
+      pushLine('ok', label, relativePath);
     } else {
       failures.push(`Missing required path: ${relativePath}`);
-      statusLine('fail', label, relativePath);
+      pushLine('fail', label, relativePath);
     }
   }
 
-  const expoDoctor = spawnSync('npx', ['expo-doctor', '--version'], {
+  const hasMobileProdEnv = pathExists('mobile/.env.production');
+  pushLine(
+    hasMobileProdEnv ? 'ok' : 'warn',
+    'mobile production env',
+    hasMobileProdEnv ? 'mobile/.env.production' : 'missing',
+  );
+  const hasRepoIndex = pathExists('artifacts/repo-index.json');
+  pushLine(
+    hasRepoIndex ? 'ok' : 'warn',
+    'repo index artifact',
+    hasRepoIndex ? 'artifacts/repo-index.json' : 'missing',
+  );
+
+  const repoIndexDirty = runCommand('git', ['status', '--porcelain', '--', 'artifacts/repo-index.json']);
+  if (repoIndexDirty.status === 0) {
+    pushLine(
+      repoIndexDirty.stdout.trim() ? 'warn' : 'ok',
+      'repo index git status',
+      repoIndexDirty.stdout.trim() ? 'artifacts/repo-index.json has local changes' : 'clean',
+    );
+  }
+
+  const expoDoctor = spawnCommand('npx', ['expo-doctor', '--version'], {
     cwd: path.join(repoRoot, 'mobile'),
     encoding: 'utf8',
   });
   if (expoDoctor.status === 0) {
-    statusLine('ok', 'Expo doctor', expoDoctor.stdout.trim() || 'available via npx');
+    pushLine('ok', 'Expo doctor', expoDoctor.stdout.trim() || 'available via npx');
   } else {
     failures.push('expo-doctor is not available through npx in mobile/.');
-    statusLine('fail', 'Expo doctor', expoDoctor.stderr.trim() || 'unavailable');
+    pushLine('fail', 'Expo doctor', expoDoctor.stderr.trim() || 'unavailable');
   }
 
-  const docker = run('docker', ['info']);
+  if (platform === 'darwin') {
+    const xcodebuild = runCommand('xcodebuild', ['-version']);
+    pushLine(
+      xcodebuild.status === 0 ? 'ok' : 'warn',
+      'Xcode build tools',
+      xcodebuild.status === 0 ? xcodebuild.stdout.split('\n')[0].trim() : (xcodebuild.stderr.trim() || 'xcodebuild unavailable'),
+    );
+  }
+
+  const docker = runCommand('docker', ['info']);
   if (docker.status === 0) {
-    statusLine('ok', 'Docker', 'running');
+    pushLine('ok', 'Docker', 'running');
   } else if (docker.error) {
     failures.push('Docker CLI is unavailable.');
-    statusLine('fail', 'Docker', docker.error.message);
+    pushLine('fail', 'Docker', docker.error.message);
   } else {
     failures.push('Docker daemon is not reachable.');
-    statusLine('fail', 'Docker', docker.stderr.trim() || 'not running');
+    pushLine('fail', 'Docker', docker.stderr.trim() || 'not running');
   }
 
-  if (failures.length > 0) {
+  return { failures, lines };
+}
+
+function main() {
+  const report = collectDoctorReport();
+  for (const line of report.lines) {
+    statusLine(line.status, line.label, line.detail);
+  }
+
+  if (report.failures.length > 0) {
     process.exit(1);
   }
 }

@@ -53,7 +53,9 @@ const readGitValue = (
 
 const gitSha = readGitValue("BRDG_GIT_SHA", ["rev-parse", "HEAD"]);
 const gitBranch = readGitValue("BRDG_GIT_BRANCH", ["branch", "--show-current"]);
-const buildDate = process.env.BRDG_BUILD_DATE?.trim() || new Date().toISOString();
+const configuredBuildDate = process.env.BRDG_BUILD_DATE?.trim();
+const buildDate = configuredBuildDate || new Date().toISOString();
+const buildDateSource = configuredBuildDate ? "scripted" : "runtime-generated";
 const releaseMode = process.env.BRDG_RELEASE_MODE?.trim() || "runtime";
 
 if (appEnv !== "development" && !apiUrl) {
@@ -131,6 +133,7 @@ const config: ExpoConfig = {
       gitSha,
       gitShortSha: gitSha === "unknown" ? "unknown" : gitSha.slice(0, 7),
       buildDate,
+      buildDateSource,
       releaseMode,
       releaseProfile: process.env.BRDG_RELEASE_PROFILE?.trim() || null,
     },

@@ -27,7 +27,7 @@ npm run scaffold:backend-module -- --name moderation
 ## Validation Lanes
 
 - `npm run harness:doctor`
-  - quick local sanity: git state, Node version, dependency install presence, env files, Docker availability
+  - quick local sanity: git/provenance status, Node version, dependency install presence, env files, repo-index visibility, release-adjacent tool availability, and Docker availability
 - `npm run check:root`
   - root validation lane: `docs:check`, `policy:check`, then `test:root`
 - `npm run pre-submit`
@@ -63,6 +63,7 @@ npm run scaffold:backend-module -- --name moderation
 ## Review Flow
 
 - Local PR readiness: run `npm run pre-submit`
+- If the local machine or checkout looks suspect, run `npm run harness:doctor` first. Fix failures before deeper validation, and treat provenance warnings as a sign that the checkout is not a trustworthy base for release or deploy prep.
 - PR lane: run `npm run check:changed`
 - Docs/policy-only edits: run `npm run check:root`
 - Protected branch or release prep: run `npm run check` and add `npm run smoke` when you need bootstrap/runtime confidence

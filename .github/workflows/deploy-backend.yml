@@ -327,8 +327,33 @@ jobs:
             docker compose up -d postgres cloudflared api
             docker logout ghcr.io || true
             curl -fsS http://127.0.0.1:3010/health >/tmp/brdg-health.json
+            python3 - <<'PY'
+import json
+from pathlib import Path
+
+health = json.loads(Path('/tmp/brdg-health.json').read_text(encoding='utf-8'))
+manifest = json.loads(Path('release-manifest.json').read_text(encoding='utf-8'))
+build = health.get('build') or {}
+
+checks = {
+    'gitSha': manifest['gitSha'],
+    'imageTag': manifest['imageTag'],
+    'buildTime': manifest['buildTime'],
+    'source': manifest['workflowRunUrl'],
+}
+
+for field, expected in checks.items():
+    actual = build.get(field)
+    if actual != expected:
+        raise SystemExit(f'Health build provenance mismatch for {field}: expected {expected!r}, got {actual!r}')
+PY
             docker compose ps"
 
       - name: Verify hosted backend
         if: steps.meta.outputs.dry_run != 'true'
-        run: npm run check:hosted-backend -- --api-base-url "https://${API_HOSTNAME}"
+        run: >-
+          npm run check:hosted-backend -- --api-base-url "https://${API_HOSTNAME}"
+          --expected-git-sha "${{ steps.meta.outputs.target_sha }}"
+          --expected-image-tag "${{ steps.meta.outputs.image_ref }}"
+          --expected-build-time "${{ steps.meta.outputs.build_time }}"
+          --expected-source "${{ steps.meta.outputs.workflow_url }}"

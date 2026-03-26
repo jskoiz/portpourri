@@ -10,6 +10,11 @@ If the local environment looks suspect, start with:
 npm run harness:doctor
 ```
 
+Interpret `harness:doctor` output in two buckets:
+
+- failures: fix these before `npm run check`, `npm run smoke`, or any deploy/release preflight
+- warnings: these do not block normal development, but they mean the checkout is not a trustworthy base for operator work until the provenance issue is resolved
+
 From repo root:
 
 ```bash
@@ -174,6 +179,7 @@ If you are planning follow-on work, the current recommended next track is event 
 
 - Do not cut TestFlight or App Store builds from feature branches, dirty trees, detached `HEAD`, or local-only commits.
 - Ship only from a clean `main` or explicit `release/*` branch.
+- If release readiness is the goal, use `npm run release:ios:check` after `npm run harness:doctor`; the doctor is an operator sanity check, not the release gate itself.
 - If local dev and TestFlight differ, inspect the shipped bundle and identify the exact source snapshot before changing UI code.
 
 ## Troubleshooting quick reference

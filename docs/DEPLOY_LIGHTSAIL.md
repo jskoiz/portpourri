@@ -12,6 +12,14 @@ Recommended production API host:
 
 Production deploys are workflow-only. Use [`.github/workflows/deploy-backend.yml`](../.github/workflows/deploy-backend.yml) from `main`; do not copy the repo onto the host or build the backend image on the instance.
 
+Treat backend deploy provenance as a three-surface check:
+
+1. workflow manifest in `artifacts/backend-deploy/release-manifest.json`
+2. host runtime bundle at `/opt/brdg/runtime/api/release-manifest.json`
+3. running backend surfaces at `GET /health` and `GET /build-info`
+
+The deploy is not trustworthy unless those surfaces agree on `gitSha`, `imageTag`, `buildTime`, and workflow source.
+
 ## Managed config
 
 The production workflow renders runtime files from AWS SSM Parameter Store under `/brdg/prod/backend/*`.
@@ -82,7 +90,8 @@ The workflow:
 4. renders `.env` and Cloudflare credentials/config from SSM
 5. uploads only runtime files to `/opt/brdg/runtime/api`
 6. pulls the exact image tag on Lightsail and restarts `postgres`, `cloudflared`, and `api`
-7. verifies both local and hosted health
+7. compares the host-local `/health.build` payload against `release-manifest.json`
+8. verifies hosted health and build provenance against the workflow manifest
 
 ## Manual validation helpers
 
@@ -90,11 +99,17 @@ From repo root:
 
 ```bash
 npm run deploy:backend:validate-env -- --input path/to/rendered/.env
-npm run check:hosted-backend -- --api-base-url https://api.brdg.social
+npm run check:hosted-backend -- --api-base-url https://api.brdg.social \
+  --expected-git-sha <full_sha> \
+  --expected-image-tag ghcr.io/<owner>/brdg-api:<full_sha> \
+  --expected-build-time <utc_timestamp> \
+  --expected-source <workflow_run_url>
 npm run check:prisma-migration-safety
 ```
 
 The workflow uses `scripts/render-backend-env.mjs` to read SSM and write the runtime bundle, and `scripts/check-hosted-backend.mjs` to gate rollout completion.
+
+`scripts/check-hosted-backend.mjs` now verifies both HTTP status expectations and, when expected values are provided, the provenance fields returned by `GET /health` and `GET /build-info`.
 
 ## Legacy migration repair
 
@@ -119,4 +134,14 @@ Successful rollout means:
 
 - `GET /health` returns `200`
 - guarded profile mutation routes return `401`, not `404` or `502`
-- `/health` and `/build-info` report the expected git SHA and image tag from the workflow manifest
+- `/health.build` and `/build-info` report the expected `gitSha`, `imageTag`, `buildTime`, and workflow source from the deploy manifest
+
+Manual reconciliation commands:
+
+```bash
+curl https://api.brdg.social/health
+curl https://api.brdg.social/build-info
+cat /opt/brdg/runtime/api/release-manifest.json
+```
+
+For rollbacks, `rollback_image_tag` intentionally changes the expected image tag. The provenance comparison should still be made against the selected workflow/runtime manifest, not local repo state.

@@ -103,7 +103,26 @@ test('checkHostedBackend passes when health and guarded routes return expected s
   const server = http.createServer((req, res) => {
     if (req.url === '/health') {
       res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ status: 'ok' }));
+      res.end(JSON.stringify({
+        status: 'ok',
+        build: {
+          gitSha: 'abcdef1234567890',
+          imageTag: 'ghcr.io/jskoiz/brdg-api:abcdef1234567890',
+          buildTime: '2026-03-25T20:00:00Z',
+          source: 'https://github.com/example/repo/actions/runs/1',
+        },
+      }));
+      return;
+    }
+
+    if (req.url === '/build-info') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({
+        gitSha: 'abcdef1234567890',
+        imageTag: 'ghcr.io/jskoiz/brdg-api:abcdef1234567890',
+        buildTime: '2026-03-25T20:00:00Z',
+        source: 'https://github.com/example/repo/actions/runs/1',
+      }));
       return;
     }
 
@@ -135,19 +154,34 @@ test('checkHostedBackend passes when health and guarded routes return expected s
       : 'http://127.0.0.1:0';
 
   try {
-    const result = await checkHostedBackend({ apiBaseUrl });
+    const result = await checkHostedBackend({
+      apiBaseUrl,
+      expectedBuild: {
+        gitSha: 'abcdef1234567890',
+        imageTag: 'ghcr.io/jskoiz/brdg-api:abcdef1234567890',
+        buildTime: '2026-03-25T20:00:00Z',
+        source: 'https://github.com/example/repo/actions/runs/1',
+      },
+    });
     assert.equal(result.ok, true);
     assert.equal(
       result.results.every((entry) => entry.ok),
       true,
     );
+    assert.equal(result.provenanceResults.every((entry) => entry.ok), true);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
 });
 
 test('checkHostedBackend reports mismatched hosted statuses', async () => {
-  const server = http.createServer((_req, res) => {
+  const server = http.createServer((req, res) => {
+    if (req.url === '/build-info') {
+      res.writeHead(502, { 'content-type': 'text/plain' });
+      res.end('bad gateway');
+      return;
+    }
+
     res.writeHead(502, { 'content-type': 'text/plain' });
     res.end('bad gateway');
   });
@@ -165,6 +199,79 @@ test('checkHostedBackend reports mismatched hosted statuses', async () => {
     assert.match(
       result.results.find((entry) => entry.path === '/health').bodySnippet,
       /bad gateway/,
+    );
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('checkHostedBackend fails when hosted build provenance does not match the expected manifest', async () => {
+  const server = http.createServer((req, res) => {
+    if (req.url === '/health') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({
+        status: 'ok',
+        build: {
+          gitSha: 'stale1234567',
+          imageTag: 'ghcr.io/jskoiz/brdg-api:stale1234567',
+          buildTime: '2026-03-24T20:00:00Z',
+          source: 'https://github.com/example/repo/actions/runs/old',
+        },
+      }));
+      return;
+    }
+
+    if (req.url === '/build-info') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({
+        gitSha: 'stale1234567',
+        imageTag: 'ghcr.io/jskoiz/brdg-api:stale1234567',
+        buildTime: '2026-03-24T20:00:00Z',
+        source: 'https://github.com/example/repo/actions/runs/old',
+      }));
+      return;
+    }
+
+    if (req.url === '/') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok' }));
+      return;
+    }
+
+    if (
+      (req.method === 'PATCH' && req.url === '/profile') ||
+      (req.method === 'PATCH' && req.url === '/profile/fitness') ||
+      (req.method === 'POST' && req.url === '/profile/photos')
+    ) {
+      res.writeHead(401, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ message: 'Unauthorized' }));
+      return;
+    }
+
+    res.writeHead(404);
+    res.end();
+  });
+
+  await new Promise((resolve) => server.listen(0, resolve));
+  const address = server.address();
+  const apiBaseUrl =
+    typeof address === 'object' && address
+      ? `http://127.0.0.1:${address.port}`
+      : 'http://127.0.0.1:0';
+
+  try {
+    const result = await checkHostedBackend({
+      apiBaseUrl,
+      expectedBuild: {
+        gitSha: 'abcdef1234567890',
+        imageTag: 'ghcr.io/jskoiz/brdg-api:abcdef1234567890',
+      },
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(
+      result.provenanceResults.some((entry) => entry.field === 'gitSha' && entry.ok === false),
+      true,
     );
   } finally {
     await new Promise((resolve) => server.close(resolve));

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, Pressable, RefreshControl, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -202,13 +202,20 @@ export function ProfileScreenContent({
   const primaryPhoto = getPrimaryPhotoUri(profile);
   const isSaving = isSavingFitness || isSavingProfile;
   const buildRows = [
+    { label: 'Provenance', value: buildInfo.provenanceSource === 'scripted-release' ? 'scripted release metadata' : 'runtime-derived metadata' },
     { label: 'App env', value: buildInfo.appEnv },
-    { label: 'Version', value: `${buildInfo.version} (${buildInfo.iosBuildNumber})` },
+    { label: 'Version', value: buildInfo.version },
+    { label: Platform.OS === 'android' ? 'Android code' : 'iOS build', value: Platform.OS === 'android' ? buildInfo.androidVersionCode : buildInfo.iosBuildNumber },
+    ...(Platform.OS === 'android'
+      ? [{ label: 'iOS build', value: buildInfo.iosBuildNumber }]
+      : [{ label: 'Android code', value: buildInfo.androidVersionCode }]),
     { label: 'Branch', value: buildInfo.gitBranch },
     { label: 'Git SHA', value: buildInfo.gitSha },
     { label: 'API URL', value: buildInfo.apiBaseUrl || 'not set' },
-    { label: 'Built at', value: buildInfo.buildDate },
+    { label: 'Build timestamp (UTC)', value: buildInfo.buildDate },
+    { label: 'Timestamp source', value: buildInfo.buildDateSource },
     { label: 'Release path', value: buildInfo.releaseMode },
+    ...(buildInfo.releaseProfile ? [{ label: 'Release profile', value: buildInfo.releaseProfile }] : []),
   ];
 
   return (
