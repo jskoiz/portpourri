@@ -5,6 +5,8 @@
   "scripts": {
     "start": "expo start",
     "storybook:start": "EXPO_PUBLIC_STORYBOOK_ENABLED=true expo start -c",
+    "storybook:web": "storybook dev -p 6006",
+    "storybook:build": "storybook build",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
@@ -28,6 +30,7 @@
     "@expo/vector-icons": "^15.0.3",
     "@gorhom/bottom-sheet": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
+    "@lottiefiles/dotlottie-react": "^0.13.5",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "^8.4.4",
     "@react-native-community/slider": "^5.0.1",
@@ -72,13 +75,16 @@
     "@storybook/addon-ondevice-actions": "^10.2.3",
     "@storybook/addon-ondevice-controls": "^10.2.3",
     "@storybook/react-native": "^10.2.3",
+    "@storybook/react-native-web-vite": "^10.3.3",
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.1.0",
     "babel-preset-expo": "~54.0.10",
     "jest": "^29.7.0",
     "jest-expo": "~54.0.17",
-    "typescript": "~5.9.2"
+    "storybook": "^10.3.3",
+    "typescript": "~5.9.2",
+    "vite": "^8.0.3"
   },
   "private": true
 }

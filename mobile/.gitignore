@@ -40,3 +40,5 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+storybook-static/
+debug-storybook.log

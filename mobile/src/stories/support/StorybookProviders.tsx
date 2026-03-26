@@ -1,12 +1,20 @@
 import React, { PropsWithChildren, useState } from 'react';
+import { Platform } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { createHarnessQueryClient } from '../../lib/testing/queryTestHarness';
 import { ThemeProvider } from '../../theme/useTheme';
 import { lightTheme } from '../../theme/tokens';
+
+// BottomSheetModalProvider crashes silently on web — wrap conditionally
+function MaybeBottomSheet({ children }: PropsWithChildren) {
+  if (Platform.OS === 'web') return <>{children}</>;
+  const { BottomSheetModalProvider } =
+    require('@gorhom/bottom-sheet') as typeof import('@gorhom/bottom-sheet');
+  return <BottomSheetModalProvider>{children}</BottomSheetModalProvider>;
+}
 
 export function StorybookProviders({ children }: PropsWithChildren) {
   const [client] = useState(() => {
@@ -30,9 +38,9 @@ export function StorybookProviders({ children }: PropsWithChildren) {
           style={{ flex: 1, backgroundColor: lightTheme.background }}
         >
           <QueryClientProvider client={client}>
-            <BottomSheetModalProvider>
+            <MaybeBottomSheet>
               <ThemeProvider>{children}</ThemeProvider>
-            </BottomSheetModalProvider>
+            </MaybeBottomSheet>
           </QueryClientProvider>
         </GestureHandlerRootView>
       </SafeAreaProvider>

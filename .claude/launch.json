@@ -4,7 +4,7 @@
     {
       "name": "expo-web",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd mobile && npx expo start --web --port $PORT"],
+      "runtimeArgs": ["-c", "cd mobile && NODE_OPTIONS='--no-experimental-detect-module' npx expo start --web --port $PORT"],
       "port": 8082,
       "autoPort": true
     },
@@ -17,8 +17,8 @@
     {
       "name": "storybook-web",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd mobile && EXPO_PUBLIC_STORYBOOK_ENABLED=true npx expo start --web --port $PORT"],
-      "port": 8083,
+      "runtimeArgs": ["-c", "cd mobile && NODE_OPTIONS='--no-experimental-detect-module' npx storybook dev -p $PORT --no-open"],
+      "port": 6006,
       "autoPort": true
     }
   ]
