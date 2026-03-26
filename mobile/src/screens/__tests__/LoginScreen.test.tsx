@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { createScreenNavigation, createScreenRoute } from '../../lib/testing/screenProps';
 import LoginScreen from '../LoginScreen';
 
 const mockLogin = jest.fn();
@@ -10,13 +11,8 @@ jest.mock('../../store/authStore', () => ({
 }));
 
 describe('LoginScreen', () => {
-  const navigation = {
-    navigate: jest.fn(),
-  } as any;
-  const route = {
-    key: 'Login',
-    name: 'Login',
-  } as any;
+  const navigation = createScreenNavigation();
+  const route = createScreenRoute('Login');
 
   beforeEach(() => {
     jest.clearAllMocks();

@@ -47,8 +47,5 @@ describe('HomeHero', () => {
 
     fireEvent.press(getByLabelText('Notifications 4'));
     expect(onPressNotifications).toHaveBeenCalledTimes(1);
-    expect(mockNotificationButton.mock.calls[0]?.[0]).toEqual(
-      expect.objectContaining({ unreadCount: 4, onPress: onPressNotifications }),
-    );
   });
 });

@@ -1,7 +1,7 @@
 import React, { PropsWithChildren } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-export function createTestQueryClient() {
+export function createHarnessQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0, staleTime: 0 },
@@ -10,8 +10,10 @@ export function createTestQueryClient() {
   });
 }
 
+export const createTestQueryClient = createHarnessQueryClient;
+
 export function createQueryTestHarness() {
-  const queryClient = createTestQueryClient();
+  const queryClient = createHarnessQueryClient();
 
   function Wrapper({ children }: PropsWithChildren) {
     return (

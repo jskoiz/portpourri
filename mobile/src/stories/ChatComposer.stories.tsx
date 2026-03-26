@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
 import React from 'react';
-import { View } from 'react-native';
 import { ChatComposer } from '../features/chat/components/ChatComposer';
 import { lightTheme } from '../theme/tokens';
+import { withStoryBottomSurface } from './support';
 
 const meta = {
   title: 'Chat/Composer',
   component: ChatComposer,
-  decorators: [(Story) => <View style={{ flex: 1, justifyContent: 'flex-end', padding: 24, backgroundColor: '#FDFBF8' }}><Story /></View>],
+  decorators: [withStoryBottomSurface()],
 } satisfies Meta<typeof ChatComposer>;
 
 export default meta;

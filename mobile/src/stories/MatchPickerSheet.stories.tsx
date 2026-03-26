@@ -1,13 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
-import React from 'react';
-import { View } from 'react-native';
-import { useQueryClient } from '@tanstack/react-query';
-import { Button } from '../design/primitives';
-import { useSheetController } from '../design/sheets/useSheetController';
 import { MatchPickerSheet } from '../features/chat/components/MatchPickerSheet';
 import type { Match } from '../api/types';
 import { queryKeys } from '../lib/query/queryKeys';
-import { withStoryScreenFrame } from './support';
+import { QuerySeededSheetStory, withStoryScreenFrame } from './support';
 
 const seededMatches: Match[] = [
   {
@@ -34,24 +29,20 @@ const seededMatches: Match[] = [
 ];
 
 function MatchPickerSheetStory({ matches }: { matches: Match[] }) {
-  const sheet = useSheetController();
-  const queryClient = useQueryClient();
-
-  queryClient.setQueryData(queryKeys.matches.list, matches);
-
-  React.useEffect(() => {
-    sheet.open();
-  }, [sheet.open]);
-
   return (
-    <View style={{ flex: 1, justifyContent: 'flex-end', padding: 20 }}>
-      <Button label="Open match picker" onPress={sheet.open} variant="secondary" />
-      <MatchPickerSheet
-        controller={sheet.sheetProps}
-        onClose={sheet.close}
-        onSelectMatch={() => undefined}
-      />
-    </View>
+    <QuerySeededSheetStory
+      buttonLabel="Open match picker"
+      queryData={matches}
+      queryKey={queryKeys.matches.list}
+    >
+      {({ close, controller }) => (
+        <MatchPickerSheet
+          controller={controller}
+          onClose={close}
+          onSelectMatch={() => undefined}
+        />
+      )}
+    </QuerySeededSheetStory>
   );
 }
 

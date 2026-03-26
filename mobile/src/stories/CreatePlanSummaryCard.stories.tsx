@@ -1,12 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
-import React from 'react';
-import { View } from 'react-native';
 import { CreatePlanSummaryCard } from '../features/events/create/CreatePlanSummaryCard';
+import { withStorySurface } from './support';
 
 const meta = {
   title: 'Events/CreatePlanSummaryCard',
   component: CreatePlanSummaryCard,
-  decorators: [(Story) => <View style={{ flex: 1, padding: 24, backgroundColor: '#FDFBF8' }}><Story /></View>],
+  decorators: [withStorySurface({ centered: false })],
 } satisfies Meta<typeof CreatePlanSummaryCard>;
 
 export default meta;
@@ -21,4 +20,3 @@ export const ReadyToPost: Story = {
     where: 'Magic Island',
   },
 };
-

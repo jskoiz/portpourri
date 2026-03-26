@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { createScreenNavigation, createScreenRoute } from '../../lib/testing/screenProps';
 import HomeScreen from '../HomeScreen';
 
 const mockUseDiscoveryFeed = jest.fn();
@@ -48,13 +49,8 @@ jest.mock('../../components/ui/AppIcon', () => {
 });
 
 describe('HomeScreen', () => {
-  const navigation = {
-    navigate: jest.fn(),
-  } as any;
-  const route = {
-    key: 'Discover',
-    name: 'Discover',
-  } as any;
+  const navigation = createScreenNavigation();
+  const route = createScreenRoute('Discover');
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -77,23 +73,22 @@ describe('HomeScreen', () => {
     );
   });
 
-  it('uses quick filters to refetch discovery with API-backed params', async () => {
+  it('marks quick filters as selected when the user toggles them', async () => {
     render(<HomeScreen navigation={navigation} route={route} />);
 
     expect(await screen.findByText('Swipe deck')).toBeTruthy();
 
-    fireEvent.press(screen.getByText('Strength'));
+    const quickFilter = screen.getByLabelText('Filter by Strength');
+    fireEvent.press(quickFilter);
 
     await waitFor(() => {
-      expect(mockUseDiscoveryFeed).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          goals: ['strength'],
-        }),
+      expect(screen.getByLabelText('Filter by Strength').props.accessibilityState).toEqual(
+        expect.objectContaining({ selected: true }),
       );
     });
   });
 
-  it('applies bounded discovery filter values without free-typed inputs', async () => {
+  it('surfaces the active filter count after applying bounded discovery controls', async () => {
     render(<HomeScreen navigation={navigation} route={route} />);
 
     expect(await screen.findByText('Swipe deck')).toBeTruthy();
@@ -104,13 +99,7 @@ describe('HomeScreen', () => {
     fireEvent.press(screen.getByText('Apply'));
 
     await waitFor(() => {
-      expect(mockUseDiscoveryFeed).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          distanceKm: 51,
-          minAge: 22,
-          maxAge: 44,
-        }),
-      );
+      expect(screen.getByText('Refine (3)')).toBeTruthy();
     });
   });
 

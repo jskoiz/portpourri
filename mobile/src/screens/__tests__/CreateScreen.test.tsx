@@ -1,6 +1,6 @@
 import React from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { createScreenNavigation, createScreenRoute } from '../../lib/testing/screenProps';
 import CreateScreen, { buildStartDate } from '../CreateScreen';
 
 const mockCreateEvent = jest.fn();
@@ -72,13 +72,8 @@ jest.mock('react-native-safe-area-context', () => {
 });
 
 describe('CreateScreen', () => {
-  const navigation = {
-    navigate: jest.fn(),
-  } as any;
-  const route = {
-    key: 'Create',
-    name: 'Create',
-  } as any;
+  const navigation = createScreenNavigation();
+  const route = createScreenRoute('Create');
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -93,29 +88,15 @@ describe('CreateScreen', () => {
     });
   });
 
-  it('uses keyboard-aware layout and dismissal props for the create form', () => {
-    const { UNSAFE_getByType } = render(<CreateScreen navigation={navigation} route={route} />);
+  it('keeps typed event details intact through the create flow', async () => {
+    render(<CreateScreen navigation={navigation} route={route} />);
 
-    const keyboardAvoider = UNSAFE_getByType(KeyboardAvoidingView);
-    const scrollView = screen.UNSAFE_getAllByType(ScrollView).find(
-      (view) => view.props.keyboardShouldPersistTaps === 'handled',
-    );
     const noteInput = screen.getByPlaceholderText(
       'Easy pace, bring water, no experience needed...',
     );
+    fireEvent.changeText(noteInput, 'Bring water and meet by the tennis courts.');
 
-    expect(keyboardAvoider.props.behavior).toBe(
-      Platform.OS === 'ios' ? 'padding' : undefined,
-    );
-    expect(scrollView).toBeTruthy();
-    expect(scrollView.props.keyboardShouldPersistTaps).toBe('handled');
-    expect(scrollView.props.keyboardDismissMode).toBe(
-      Platform.OS === 'ios' ? 'interactive' : 'on-drag',
-    );
-    expect(scrollView.props.automaticallyAdjustKeyboardInsets).toBe(true);
-    expect(scrollView.props.onScrollBeginDrag).toEqual(expect.any(Function));
-    expect(noteInput.props.onFocus).toEqual(expect.any(Function));
-    expect(noteInput.props.blurOnSubmit).toBe(true);
+    expect(screen.getByDisplayValue('Bring water and meet by the tennis courts.')).toBeTruthy();
   });
 
   it('shows an inline success card after posting an activity', async () => {

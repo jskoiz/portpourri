@@ -1,13 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
-import React from 'react';
-import { View } from 'react-native';
-import { useQueryClient } from '@tanstack/react-query';
-import { Button } from '../design/primitives';
-import { useSheetController } from '../design/sheets/useSheetController';
 import { SuggestPlanSheet } from '../features/chat/components/SuggestPlanSheet';
 import type { EventSummary } from '../api/types';
 import { queryKeys } from '../lib/query/queryKeys';
-import { makeEventSummary, withStoryScreenFrame } from './support';
+import { makeEventSummary, QuerySeededSheetStory, withStoryScreenFrame } from './support';
 
 function toIsoFromNow(daysFromNow: number) {
   return new Date(Date.now() + daysFromNow * 24 * 60 * 60 * 1000).toISOString();
@@ -38,25 +33,21 @@ const seededEvents: EventSummary[] = [
 ];
 
 function SuggestPlanSheetStory({ events }: { events: EventSummary[] }) {
-  const sheet = useSheetController();
-  const queryClient = useQueryClient();
-
-  queryClient.setQueryData(queryKeys.events.mine, events);
-
-  React.useEffect(() => {
-    sheet.open();
-  }, [sheet.open]);
-
   return (
-    <View style={{ flex: 1, justifyContent: 'flex-end', padding: 20 }}>
-      <Button label="Open plan picker" onPress={sheet.open} variant="secondary" />
-      <SuggestPlanSheet
-        controller={sheet.sheetProps}
-        onClose={sheet.close}
-        onCreateEvent={() => undefined}
-        onSelectEvent={() => undefined}
-      />
-    </View>
+    <QuerySeededSheetStory
+      buttonLabel="Open plan picker"
+      queryData={events}
+      queryKey={queryKeys.events.mine}
+    >
+      {({ close, controller }) => (
+        <SuggestPlanSheet
+          controller={controller}
+          onClose={close}
+          onCreateEvent={() => undefined}
+          onSelectEvent={() => undefined}
+        />
+      )}
+    </QuerySeededSheetStory>
   );
 }
 

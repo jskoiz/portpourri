@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
 import React from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   LoginScreenView,
@@ -9,7 +8,7 @@ import {
   loginSchema,
   type LoginFormValues,
 } from '../features/auth/schema';
-import { withStoryScreenFrame } from './support';
+import { useStoryForm, withStoryScreenFrame } from './support';
 
 function LoginScreenStory({
   email,
@@ -26,27 +25,26 @@ function LoginScreenStory({
   passwordError?: string;
   submitError: string;
 }) {
-  const form = useForm<LoginFormValues>({
-    defaultValues: {
+  const values = React.useMemo(
+    () => ({
       email,
       password,
-    },
+    }),
+    [email, password],
+  );
+  const errors = React.useMemo(
+    () => ({
+      email: emailError,
+      password: passwordError,
+    }),
+    [emailError, passwordError],
+  );
+  const form = useStoryForm<LoginFormValues>({
+    defaultValues: values,
+    errors,
     resolver: zodResolver(loginSchema),
+    values,
   });
-
-  React.useEffect(() => {
-    form.reset({ email, password });
-  }, [email, form, password]);
-
-  React.useEffect(() => {
-    form.clearErrors();
-    if (emailError) {
-      form.setError('email', { type: 'manual', message: emailError });
-    }
-    if (passwordError) {
-      form.setError('password', { type: 'manual', message: passwordError });
-    }
-  }, [emailError, form, passwordError]);
 
   return (
     <LoginScreenView

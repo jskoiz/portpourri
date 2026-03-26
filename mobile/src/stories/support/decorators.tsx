@@ -32,6 +32,26 @@ export function withStorySurface(options: StoryDecoratorOptions = {}) {
   );
 }
 
+export function withStoryBottomSurface(options: StoryDecoratorOptions = {}) {
+  const {
+    backgroundColor = '#FDFBF8',
+    padding = 24,
+  } = options;
+
+  return (Story: React.ComponentType) => (
+    <View
+      style={{
+        flex: 1,
+        justifyContent: 'flex-end',
+        padding,
+        backgroundColor,
+      }}
+    >
+      <Story />
+    </View>
+  );
+}
+
 export function withStoryScreenFrame(options: StoryDecoratorOptions = {}) {
   const {
     backgroundColor = '#FDFBF8',

@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
 import React from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   SignupScreenView,
@@ -9,7 +8,7 @@ import {
   signupSchema,
   type SignupFormValues,
 } from '../features/auth/schema';
-import { withStoryScreenFrame } from './support';
+import { useStoryForm, withStoryScreenFrame } from './support';
 
 function SignupScreenStory({
   birthdate,
@@ -40,45 +39,32 @@ function SignupScreenStory({
   passwordError?: string;
   step: number;
 }) {
-  const form = useForm<SignupFormValues>({
-    defaultValues: {
+  const values = React.useMemo(
+    () => ({
       birthdate,
       email,
       firstName,
       gender,
       password,
-    },
+    }),
+    [birthdate, email, firstName, gender, password],
+  );
+  const errors = React.useMemo(
+    () => ({
+      birthdate: birthdateError,
+      email: emailError,
+      firstName: firstNameError,
+      gender: genderError,
+      password: passwordError,
+    }),
+    [birthdateError, emailError, firstNameError, genderError, passwordError],
+  );
+  const form = useStoryForm<SignupFormValues>({
+    defaultValues: values,
+    errors,
     resolver: zodResolver(signupSchema),
+    values,
   });
-
-  React.useEffect(() => {
-    form.reset({
-      birthdate,
-      email,
-      firstName,
-      gender,
-      password,
-    });
-  }, [birthdate, email, firstName, form, gender, password]);
-
-  React.useEffect(() => {
-    form.clearErrors();
-    if (firstNameError) {
-      form.setError('firstName', { type: 'manual', message: firstNameError });
-    }
-    if (emailError) {
-      form.setError('email', { type: 'manual', message: emailError });
-    }
-    if (passwordError) {
-      form.setError('password', { type: 'manual', message: passwordError });
-    }
-    if (birthdateError) {
-      form.setError('birthdate', { type: 'manual', message: birthdateError });
-    }
-    if (genderError) {
-      form.setError('gender', { type: 'manual', message: genderError });
-    }
-  }, [birthdateError, emailError, firstNameError, form, genderError, passwordError]);
 
   return (
     <SignupScreenView
