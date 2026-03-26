@@ -12,56 +12,62 @@ struct PopoverRootView: View {
     }
 
     var body: some View {
-        let visibleOtherProcesses = self.store.visibleOtherProcesses()
-        let busyWatchedPorts = self.store.snapshot.watchedPorts
-            .filter(\.isBusy)
+        let conflicts = self.store.snapshot.watchedPorts.filter(\.isConflict)
             .sorted(by: DisplayText.compareWatchedPorts)
-        let busyWatchedPortSet = Set(busyWatchedPorts.map(\.port))
-        let otherActiveProjects = SnapshotDetails.projectsExcludingPorts(
-            self.store.snapshot.projects,
-            excludedPorts: busyWatchedPortSet
-        )
-        let extraOtherListeners = self.settings.showNonNodeListeners
-            ? SnapshotDetails.processesExcludingPorts(
-                visibleOtherProcesses,
-                excludedPorts: busyWatchedPortSet
-            )
-            : []
+        let nodeOwnedPorts = self.store.snapshot.watchedPorts
+            .filter { $0.isBusy && $0.isNodeOwned && !$0.isConflict }
+            .sorted(by: DisplayText.compareWatchedPorts)
+        let freePorts = self.store.snapshot.watchedPorts.filter { !$0.isBusy }
+        let allProjects = SnapshotDetails.sortedProjects(self.store.snapshot.projects)
+        let visibleOtherProcesses = self.store.visibleOtherProcesses()
 
         ZStack {
             PopoverMaterialBackground()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 8) {
                     CompactHeader(
                         snapshot: self.store.snapshot,
                         isRefreshing: self.store.isRefreshing,
                         useSampleData: self.store.useSampleData,
-                        visibleOtherCount: visibleOtherProcesses.count,
-                        showsAllOtherListeners: self.settings.showNonNodeListeners
+                        conflictCount: conflicts.count,
+                        projectCount: allProjects.count,
+                        freePortCount: freePorts.count
                     )
 
-                    CompactDivider()
-
-                    WatchedPortsSection(
-                        store: self.store,
-                        statuses: busyWatchedPorts,
-                        visibleOtherProcesses: visibleOtherProcesses
-                    )
-
-                    if !otherActiveProjects.isEmpty {
-                        CompactDivider()
-                        AdditionalNodePortsSection(projects: otherActiveProjects)
+                    if !conflicts.isEmpty {
+                        ConflictSection(
+                            store: self.store,
+                            conflicts: conflicts,
+                            visibleOtherProcesses: visibleOtherProcesses
+                        )
                     }
 
-                    if !extraOtherListeners.isEmpty {
+                    if !allProjects.isEmpty || !nodeOwnedPorts.isEmpty {
                         CompactDivider()
-                        OtherListenersSection(processes: extraOtherListeners)
+                        ProjectDashboardSection(
+                            store: self.store,
+                            projects: allProjects,
+                            nodeOwnedPorts: nodeOwnedPorts
+                        )
+                    }
+
+                    if !freePorts.isEmpty {
+                        CompactDivider()
+                        HealthyPortsRow(ports: freePorts.map(\.port))
+                    }
+
+                    if self.settings.showNonNodeListeners, !visibleOtherProcesses.isEmpty {
+                        CompactDivider()
+                        OtherListenersSection(processes: visibleOtherProcesses)
                     }
                 }
-                .padding(16)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
             }
         }
+        .frame(width: 400)
+        .frame(maxHeight: 500)
         .overlay(alignment: .bottomTrailing) {
             if let notice = self.store.clipboardNotice {
                 Text(notice)
@@ -86,420 +92,289 @@ struct PopoverRootView: View {
     }
 }
 
-private struct PopoverMaterialBackground: View {
-    var body: some View {
-        ZStack {
-            VisualEffectView(material: .popover, blendingMode: .behindWindow, state: .active)
-            Color.white.opacity(0.18)
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(0.18),
-                    Color.white.opacity(0.06)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        }
-        .ignoresSafeArea()
-    }
-}
+// MARK: - Zone 1: Conflict Triage
 
-private struct PopoverCapsuleBackground: View {
-    var body: some View {
-        ZStack {
-            VisualEffectView(material: .sidebar, blendingMode: .withinWindow, state: .active)
-            Color.white.opacity(0.12)
-        }
-    }
-}
-
-private struct VisualEffectView: NSViewRepresentable {
-    let material: NSVisualEffectView.Material
-    let blendingMode: NSVisualEffectView.BlendingMode
-    let state: NSVisualEffectView.State
-
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = self.material
-        view.blendingMode = self.blendingMode
-        view.state = self.state
-        view.isEmphasized = false
-        return view
-    }
-
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
-        nsView.material = self.material
-        nsView.blendingMode = self.blendingMode
-        nsView.state = self.state
-        nsView.isEmphasized = false
-    }
-}
-
-private struct CompactHeader: View {
-    let snapshot: AppSnapshot
-    let isRefreshing: Bool
-    let useSampleData: Bool
-    let visibleOtherCount: Int
-    let showsAllOtherListeners: Bool
+private struct ConflictSection: View {
+    @ObservedObject var store: NodeTrackerStore
+    let conflicts: [WatchedPortStatus]
+    let visibleOtherProcesses: [TrackedProcessSnapshot]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text("NodeWatcher")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                Spacer()
-                Text(self.useSampleData ? "Sample data mode" : self.relativeUpdatedText)
-                    .font(.caption)
-                    .foregroundStyle(Readability.secondaryText)
-                if self.isRefreshing {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-            }
-
-            self.summaryLine
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-        }
-    }
-
-    private var relativeUpdatedText: String {
-        let elapsed = Date().timeIntervalSince(self.snapshot.generatedAt)
-        guard elapsed > 3 else { return "Updated just now" }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .short
-        return "Updated \(formatter.localizedString(fromTimeInterval: -elapsed))"
-    }
-
-    private var summaryLine: Text {
-        let lastLabel = self.showsAllOtherListeners ? "other listeners" : "blocked"
-        return Text("\(self.snapshot.summary.nodeProjectCount)")
-            .fontWeight(.semibold)
-        + Text(" projects  ·  ")
-        + Text("\(self.snapshot.summary.watchedBusyCount)")
-            .fontWeight(.semibold)
-        + Text(" watched busy  ·  ")
-        + Text("\(self.visibleOtherCount)")
-            .fontWeight(.semibold)
-        + Text(" \(lastLabel)")
-    }
-}
-
-private struct WatchedPortsSection: View {
-    @ObservedObject var store: NodeTrackerStore
-    let statuses: [WatchedPortStatus]
-    let visibleOtherProcesses: [TrackedProcessSnapshot]
-
-    @State private var expandedPort: Int?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            CompactSectionHeader(
-                title: "Watched ports",
-                trailing: self.statuses.isEmpty ? "All free" : "\(self.statuses.count) busy"
-            )
-
-            if self.statuses.isEmpty {
-                Text("All \(self.store.snapshot.watchedPorts.count) watched ports are free.")
-                    .font(.caption)
-                    .foregroundStyle(Readability.secondaryText)
-            } else {
-                Text("Blue means one of your Node apps is using the port. Orange means another app is blocking it.")
-                    .font(.caption)
-                    .foregroundStyle(Readability.secondaryText)
-
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(self.statuses.enumerated()), id: \.element.id) { index, status in
-                        if index > 0 {
-                            CompactRowDivider()
-                        }
-
-                        WatchedPortRow(
-                            status: status,
-                            isExpanded: self.expandedPort == status.port
-                        ) {
-                            if self.expandedPort == status.port {
-                                self.expandedPort = nil
-                            } else {
-                                self.expandedPort = status.port
-                            }
-                        }
-                        .padding(.vertical, 9)
-
-                        if self.expandedPort == status.port {
-                            WatchedPortDetails(
-                                store: self.store,
-                                status: status,
-                                projects: SnapshotDetails.projects(
-                                    for: status.port,
-                                    from: self.store.snapshot.projects
-                                ),
-                                otherProcesses: SnapshotDetails.processes(
-                                    for: status.port,
-                                    from: self.visibleOtherProcesses
-                                )
-                            )
-                            .padding(.leading, 18)
-                            .padding(.top, 2)
-                            .padding(.bottom, 12)
-                        }
+            if self.conflicts.count > 1 {
+                HStack {
+                    Spacer()
+                    InlineAccentButton("Copy all fixes", tone: .warning) {
+                        self.store.copyAllSuggestedPorts()
                     }
                 }
             }
-        }
-        .onAppear {
-            self.syncExpandedPort()
-        }
-        .onChange(of: self.statuses.map(\.port)) {
-            self.syncExpandedPort()
-        }
-    }
 
-    private func syncExpandedPort() {
-        if let expandedPort, self.statuses.contains(where: { $0.port == expandedPort }) {
-            return
+            ForEach(self.conflicts, id: \.id) { status in
+                ConflictCard(
+                    store: self.store,
+                    status: status,
+                    otherProcesses: SnapshotDetails.processes(
+                        for: status.port,
+                        from: self.visibleOtherProcesses
+                    ),
+                    projects: SnapshotDetails.projects(
+                        for: status.port,
+                        from: self.store.snapshot.projects
+                    )
+                )
+            }
         }
-        self.expandedPort = self.statuses.first?.port
     }
 }
 
-private struct WatchedPortRow: View {
+private struct ConflictCard: View {
+    @ObservedObject var store: NodeTrackerStore
     let status: WatchedPortStatus
-    let isExpanded: Bool
-    let action: () -> Void
+    let otherProcesses: [TrackedProcessSnapshot]
+    let projects: [ProjectSnapshot]
 
     var body: some View {
-        Button(action: self.action) {
-            HStack(alignment: .center, spacing: 10) {
-                PortBadge(port: self.status.port, tone: self.tone)
+        HStack(spacing: 8) {
+            PortBadge(port: self.status.port, tone: .warning)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(DisplayText.watchedPortHeadline(self.status))
+            VStack(alignment: .leading, spacing: 0) {
+                Text(DisplayText.watchedPortHeadline(self.status))
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+                if let process = self.primaryBlocker {
+                    Text(DisplayText.blockerDetail(process))
+                        .font(.caption2)
+                        .foregroundStyle(Readability.secondaryText)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+
+            Spacer(minLength: 4)
+
+            self.actionButton
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(AccentTone.warning.fill, in: RoundedRectangle(cornerRadius: 7))
+        .overlay(
+            RoundedRectangle(cornerRadius: 7)
+                .stroke(AccentTone.warning.foreground.opacity(0.12), lineWidth: 0.5)
+        )
+    }
+
+    @ViewBuilder
+    private var actionButton: some View {
+        if let process = self.primaryBlocker,
+           let resolution = ResolutionAdvisor.primaryAction(for: process, portContext: self.status.port) {
+            switch resolution.kind {
+            case .terminate:
+                InlineAccentButton(resolution.title, tone: resolution.tone) {
+                    self.store.terminate(process: process)
+                }
+            case let .openApplication(path):
+                InlineAccentButton(resolution.title, tone: resolution.tone) {
+                    self.store.openApplication(at: path)
+                }
+            }
+        } else if let suggested = self.store.nextAvailablePort(after: self.status.port) {
+            InlineAccentButton("Use \(suggested)", tone: .node) {
+                self.store.copySuggestedPort(after: self.status.port)
+            }
+        }
+    }
+
+    private var primaryBlocker: TrackedProcessSnapshot? {
+        self.otherProcesses.first ?? self.projects.flatMap(\.processes).first
+    }
+}
+
+// MARK: - Zone 2: Project Dashboard
+
+private struct ProjectDashboardSection: View {
+    @ObservedObject var store: NodeTrackerStore
+    let projects: [ProjectSnapshot]
+    let nodeOwnedPorts: [WatchedPortStatus]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(self.projects.enumerated()), id: \.element.id) { index, project in
+                    if index > 0 {
+                        CompactRowDivider()
+                    }
+                    ProjectDashboardRow(store: self.store, project: project)
+                        .padding(.vertical, 5)
+                }
+            }
+        }
+    }
+}
+
+private struct ProjectDashboardRow: View {
+    @ObservedObject var store: NodeTrackerStore
+    let project: ProjectSnapshot
+    @State private var isExpanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                self.isExpanded.toggle()
+            } label: {
+                HStack(alignment: .center, spacing: 6) {
+                    Circle()
+                        .fill(Color(nsColor: .systemGreen))
+                        .frame(width: 6, height: 6)
+
+                    Text(self.project.displayName)
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundStyle(.primary)
                         .lineLimit(1)
-                    Text(DisplayText.watchedPortExplanation(self.status))
+
+                    if self.project.isWorktreeLike {
+                        StatusTag(text: "worktree", tone: .warning)
+                    }
+
+                    Text(DisplayText.toolsSummary(self.project.processes))
                         .font(.caption)
                         .foregroundStyle(Readability.secondaryText)
                         .lineLimit(1)
-                }
 
-                Spacer(minLength: 10)
+                    Spacer(minLength: 4)
 
-                StatusTag(text: self.tagText, tone: self.tone)
+                    PortBadgeRow(ports: self.project.ports)
 
-                Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
-                    .font(.caption2)
-                    .foregroundStyle(Readability.secondaryText)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var tone: AccentTone {
-        if self.status.isConflict {
-            return .warning
-        }
-        if self.status.isNodeOwned {
-            return .node
-        }
-        return .neutral
-    }
-
-    private var tagText: String {
-        if self.status.isConflict {
-            return "Blocked"
-        }
-        if self.status.isNodeOwned {
-            return "Node app"
-        }
-        return "In use"
-    }
-}
-
-private struct WatchedPortDetails: View {
-    @ObservedObject var store: NodeTrackerStore
-    let status: WatchedPortStatus
-    let projects: [ProjectSnapshot]
-    let otherProcesses: [TrackedProcessSnapshot]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if self.status.isConflict, let suggestedPort = self.store.nextAvailablePort(after: self.status.port) {
-                HStack(spacing: 8) {
-                    Text("Suggested free port")
-                        .font(.caption)
+                    Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption2)
                         .foregroundStyle(Readability.secondaryText)
-                    Text(verbatim: String(suggestedPort))
-                        .font(.system(.caption, design: .monospaced))
-                        .fontWeight(.semibold)
-                    InlineAccentButton("Copy", tone: .node) {
-                        self.store.copySuggestedPort(after: self.status.port)
-                    }
-                    Spacer(minLength: 0)
                 }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
 
-            if !self.projects.isEmpty {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(self.projects.enumerated()), id: \.element.id) { index, project in
-                        if index > 0 {
-                            CompactRowDivider()
-                                .padding(.vertical, 8)
-                        }
-                        ProjectDetailBlock(store: self.store, project: project)
-                    }
-                }
-            }
+            if self.isExpanded {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(DisplayText.path(self.project.projectRoot))
+                        .font(.caption2)
+                        .foregroundStyle(Readability.secondaryText)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
 
-            if !self.otherProcesses.isEmpty {
-                if !self.projects.isEmpty {
-                    CompactRowDivider()
-                }
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(self.otherProcesses.enumerated()), id: \.element.id) { index, process in
-                        if index > 0 {
-                            CompactRowDivider()
-                                .padding(.vertical, 8)
-                        }
-                        ProcessDetailRow(store: self.store, process: process, portContext: self.status.port)
+                    let processes = SnapshotDetails.sortedProcesses(self.project.processes)
+                    ForEach(processes, id: \.id) { process in
+                        ProcessDetailRow(
+                            store: self.store,
+                            process: process,
+                            portContext: self.project.ports.first
+                        )
                     }
                 }
+                .padding(.leading, 14)
+                .padding(.top, 4)
+                .overlay(alignment: .leading) {
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.08))
+                        .frame(width: 1)
+                }
             }
-        }
-        .padding(.leading, 12)
-        .overlay(alignment: .leading) {
-            Rectangle()
-                .fill(Color.primary.opacity(0.08))
-                .frame(width: 1)
         }
     }
 }
 
-private struct ProjectDetailBlock: View {
-    @ObservedObject var store: NodeTrackerStore
-    let project: ProjectSnapshot
+// MARK: - Zone 3: Healthy Ports
+
+private struct HealthyPortsRow: View {
+    let ports: [Int]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(self.project.displayName)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                if self.project.isWorktreeLike {
-                    StatusTag(text: "worktree", tone: .warning)
-                }
-                Spacer()
-            }
-
-            Text(DisplayText.path(self.project.projectRoot))
+        HStack(alignment: .center, spacing: 8) {
+            Text("Ready")
                 .font(.caption)
+                .fontWeight(.medium)
                 .foregroundStyle(Readability.secondaryText)
-                .lineLimit(1)
-                .truncationMode(.middle)
-
-            let processes = SnapshotDetails.sortedProcesses(self.project.processes)
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(processes.enumerated()), id: \.element.id) { index, process in
-                    if index > 0 {
-                        CompactRowDivider()
-                            .padding(.vertical, 8)
-                    }
-                    ProcessDetailRow(store: self.store, process: process, showPortBadges: false, portContext: self.project.ports.first)
+            HStack(spacing: 4) {
+                ForEach(self.ports, id: \.self) { port in
+                    PortBadge(port: port, tone: .healthy)
                 }
             }
+            Spacer(minLength: 0)
         }
     }
 }
+
+// MARK: - Process Detail (collapsed by default)
 
 private struct ProcessDetailRow: View {
     @ObservedObject var store: NodeTrackerStore
     let process: TrackedProcessSnapshot
-    let showPortBadges: Bool
     let portContext: Int?
 
-    init(store: NodeTrackerStore, process: TrackedProcessSnapshot, showPortBadges: Bool = false, portContext: Int? = nil) {
-        self.store = store
-        self.process = process
-        self.showPortBadges = showPortBadges
-        self.portContext = portContext
-    }
+    @State private var showDetails = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
                 Text(self.process.process.toolLabel)
-                    .font(.subheadline)
+                    .font(.caption)
                     .fontWeight(.medium)
-                Spacer()
-                Text(self.metaText)
-                    .font(.caption)
-                    .foregroundStyle(Readability.secondaryText)
-            }
 
-            if let detail = DisplayText.processDetail(self.process.process) {
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(Readability.secondaryText)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-
-            HStack(spacing: 8) {
-                if self.showPortBadges {
-                    PortBadgeRow(ports: self.process.ports)
-                }
-                if let firstListener = self.process.listeners.first {
-                    Text(firstListener.hostScope.label)
-                        .font(.caption)
-                        .foregroundStyle(Readability.secondaryText)
-                }
                 Spacer(minLength: 8)
-            }
 
-            HStack(spacing: 12) {
                 if let resolution = self.primaryResolution {
                     InlineAccentButton(resolution.title, tone: resolution.tone) {
                         self.run(resolution)
                     }
                 }
-                if self.canReveal {
-                    InlineTextButton("Reveal") {
-                        self.store.reveal(path: self.process.process.cwd)
+
+                Button {
+                    self.showDetails.toggle()
+                } label: {
+                    HStack(spacing: 2) {
+                        Image(systemName: "ellipsis")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if self.showDetails {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("PID \(self.process.process.pid) \u{00B7} \(self.process.process.uptime)")
+                        .font(.caption2)
+                        .foregroundStyle(Readability.secondaryText)
+
+                    if let detail = DisplayText.processDetail(self.process.process) {
+                        Text(detail)
+                            .font(.caption2)
+                            .foregroundStyle(Readability.secondaryText)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+
+                    HStack(spacing: 10) {
+                        if ProcessActionPolicy.hasMeaningfulDirectory(self.process) {
+                            InlineTextButton("Reveal") {
+                                self.store.reveal(path: self.process.process.cwd)
+                            }
+                            if self.process.process.isNodeFamily {
+                                InlineTextButton("Terminal") {
+                                    self.store.openTerminal(path: self.process.process.cwd)
+                                }
+                            }
+                        }
+                        ProcessActionsMenu(
+                            store: self.store,
+                            process: self.process,
+                            canTerminate: ProcessActionPolicy.canTerminate(self.process)
+                        )
                     }
                 }
-                if self.canOpenTerminal {
-                    InlineTextButton("Terminal") {
-                        self.store.openTerminal(path: self.process.process.cwd)
-                    }
-                }
-                ProcessActionsMenu(
-                    store: self.store,
-                    process: self.process,
-                    canTerminate: self.canTerminate
-                )
-                Spacer(minLength: 0)
             }
         }
-    }
-
-    private var metaText: String {
-        "PID \(self.process.process.pid) \u{00B7} \(self.process.process.uptime)"
-    }
-
-    private var canReveal: Bool {
-        ProcessActionPolicy.hasMeaningfulDirectory(self.process)
-    }
-
-    private var canOpenTerminal: Bool {
-        self.process.process.isNodeFamily && ProcessActionPolicy.hasMeaningfulDirectory(self.process)
-    }
-
-    private var canTerminate: Bool {
-        ProcessActionPolicy.canTerminate(self.process)
     }
 
     private var primaryResolution: ResolutionAction? {
@@ -516,68 +391,7 @@ private struct ProcessDetailRow: View {
     }
 }
 
-private struct AdditionalNodePortsSection: View {
-    let projects: [ProjectSnapshot]
-    @State private var isExpanded = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            DisclosureToggle(
-                title: "Other active Node ports",
-                countText: "\(self.projects.count)",
-                isExpanded: self.$isExpanded
-            )
-
-            if self.isExpanded {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(self.sortedProjects().enumerated()), id: \.element.id) { index, project in
-                        if index > 0 {
-                            CompactRowDivider()
-                        }
-                        ActiveProjectSummaryRow(project: project)
-                            .padding(.vertical, 8)
-                    }
-                }
-            }
-        }
-    }
-
-    private func sortedProjects() -> [ProjectSnapshot] {
-        SnapshotDetails.sortedProjects(self.projects)
-    }
-}
-
-private struct ActiveProjectSummaryRow: View {
-    let project: ProjectSnapshot
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            PortBadgeRow(ports: project.ports)
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 8) {
-                    Text(self.project.displayName)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    if self.project.isWorktreeLike {
-                        StatusTag(text: "worktree", tone: .warning)
-                    }
-                }
-                Text(DisplayText.path(self.project.projectRoot))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Text(DisplayText.toolsSummary(self.project.processes))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 0)
-        }
-    }
-}
+// MARK: - Other Listeners (optional)
 
 private struct OtherListenersSection: View {
     let processes: [TrackedProcessSnapshot]
@@ -634,6 +448,73 @@ private struct OtherListenerSummaryRow: View {
         }
     }
 }
+
+// MARK: - Header
+
+private struct CompactHeader: View {
+    let snapshot: AppSnapshot
+    let isRefreshing: Bool
+    let useSampleData: Bool
+    let conflictCount: Int
+    let projectCount: Int
+    let freePortCount: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("NodeWatcher")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                Spacer()
+                Text(self.useSampleData ? "Sample data mode" : self.relativeUpdatedText)
+                    .font(.caption)
+                    .foregroundStyle(Readability.secondaryText)
+                if self.isRefreshing {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+            }
+
+            self.summaryLine
+                .font(.caption)
+                .foregroundStyle(.primary)
+        }
+    }
+
+    private var relativeUpdatedText: String {
+        let elapsed = Date().timeIntervalSince(self.snapshot.generatedAt)
+        guard elapsed > 3 else { return "Updated just now" }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return "Updated \(formatter.localizedString(fromTimeInterval: -elapsed))"
+    }
+
+    private var summaryLine: Text {
+        var parts: [Text] = []
+        if self.conflictCount > 0 {
+            parts.append(
+                Text("\(self.conflictCount) conflict\(self.conflictCount == 1 ? "" : "s")")
+                    .foregroundColor(Color(nsColor: .systemOrange))
+                    .fontWeight(.medium)
+            )
+        }
+        if self.projectCount > 0 {
+            parts.append(Text("\(self.projectCount) running"))
+        }
+        if self.freePortCount > 0 {
+            parts.append(Text("\(self.freePortCount) ready"))
+        }
+        let separator = Text("  \u{00B7}  ").foregroundColor(Readability.secondaryText)
+        var result = Text("")
+        for (i, part) in parts.enumerated() {
+            if i > 0 { result = result + separator }
+            result = result + part
+        }
+        return result
+    }
+}
+
+// MARK: - Shared Components
 
 private struct ProcessActionsMenu: View {
     @ObservedObject var store: NodeTrackerStore
@@ -707,7 +588,7 @@ private struct CompactSectionHeader: View {
                 Text(trailing)
                     .font(.caption)
                     .foregroundStyle(Readability.secondaryText)
-                }
+            }
         }
     }
 }
@@ -725,10 +606,13 @@ private struct CompactRowDivider: View {
     }
 }
 
+// MARK: - Accent & Styling
+
 private enum AccentTone {
     case neutral
     case node
     case warning
+    case healthy
 
     var fill: Color {
         switch self {
@@ -738,6 +622,8 @@ private enum AccentTone {
             return Color(nsColor: .systemBlue).opacity(0.20)
         case .warning:
             return Color(nsColor: .systemOrange).opacity(0.24)
+        case .healthy:
+            return Color(nsColor: .systemGreen).opacity(0.15)
         }
     }
 
@@ -749,6 +635,8 @@ private enum AccentTone {
             return Color(nsColor: NSColor(calibratedRed: 0.06, green: 0.33, blue: 0.74, alpha: 1))
         case .warning:
             return Color(nsColor: NSColor(calibratedRed: 0.70, green: 0.33, blue: 0.04, alpha: 1))
+        case .healthy:
+            return Color(nsColor: NSColor(calibratedRed: 0.14, green: 0.52, blue: 0.21, alpha: 1))
         }
     }
 }
@@ -763,10 +651,10 @@ private struct PortBadge: View {
 
     var body: some View {
         Text(verbatim: String(self.port))
-            .font(.system(.caption, design: .monospaced))
+            .font(.system(.caption2, design: .monospaced))
             .fontWeight(.semibold)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
             .background(self.tone.fill, in: Capsule())
     }
 }
@@ -789,11 +677,10 @@ private struct StatusTag: View {
 
     var body: some View {
         Text(self.text)
-            .font(.caption2)
-            .fontWeight(.semibold)
+            .font(.system(size: 9, weight: .semibold))
             .foregroundStyle(self.tone.foreground)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
             .background(self.tone.fill, in: Capsule())
     }
 }
@@ -841,6 +728,59 @@ private struct InlineAccentButton: View {
         .buttonStyle(.plain)
     }
 }
+
+// MARK: - Visual Effects
+
+private struct PopoverMaterialBackground: View {
+    var body: some View {
+        ZStack {
+            VisualEffectView(material: .popover, blendingMode: .behindWindow, state: .active)
+            Color.white.opacity(0.18)
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.18),
+                    Color.white.opacity(0.06)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .ignoresSafeArea()
+    }
+}
+
+private struct PopoverCapsuleBackground: View {
+    var body: some View {
+        ZStack {
+            VisualEffectView(material: .sidebar, blendingMode: .withinWindow, state: .active)
+            Color.white.opacity(0.12)
+        }
+    }
+}
+
+private struct VisualEffectView: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+    let state: NSVisualEffectView.State
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = self.material
+        view.blendingMode = self.blendingMode
+        view.state = self.state
+        view.isEmphasized = false
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = self.material
+        nsView.blendingMode = self.blendingMode
+        nsView.state = self.state
+        nsView.isEmphasized = false
+    }
+}
+
+// MARK: - Business Logic
 
 private enum ProcessActionPolicy {
     static func hasMeaningfulDirectory(_ process: TrackedProcessSnapshot) -> Bool {
@@ -913,6 +853,8 @@ private enum ResolutionAdvisor {
     }
 }
 
+// MARK: - Data Helpers
+
 private enum SnapshotDetails {
     static func processes(for port: Int, from processes: [TrackedProcessSnapshot]) -> [TrackedProcessSnapshot] {
         sortedProcesses(processes.compactMap { self.process($0, matching: port) })
@@ -930,25 +872,6 @@ private enum SnapshotDetails {
                 isWorktreeLike: project.isWorktreeLike
             )
         })
-    }
-
-    static func projectsExcludingPorts(_ projects: [ProjectSnapshot], excludedPorts: Set<Int>) -> [ProjectSnapshot] {
-        sortedProjects(projects.compactMap { project in
-            let processes = project.processes.compactMap { self.process($0, excluding: excludedPorts) }
-            guard !processes.isEmpty else { return nil }
-            let ports = Array(Set(processes.flatMap(\.ports))).sorted()
-            return ProjectSnapshot(
-                projectRoot: project.projectRoot,
-                displayName: project.displayName,
-                processes: processes,
-                ports: ports,
-                isWorktreeLike: project.isWorktreeLike
-            )
-        })
-    }
-
-    static func processesExcludingPorts(_ processes: [TrackedProcessSnapshot], excludedPorts: Set<Int>) -> [TrackedProcessSnapshot] {
-        sortedProcesses(processes.compactMap { self.process($0, excluding: excludedPorts) })
     }
 
     static func sortedProjects(_ projects: [ProjectSnapshot]) -> [ProjectSnapshot] {
@@ -1000,19 +923,9 @@ private enum SnapshotDetails {
             isWatchedConflict: process.isWatchedConflict
         )
     }
-
-    private static func process(_ process: TrackedProcessSnapshot, excluding excludedPorts: Set<Int>) -> TrackedProcessSnapshot? {
-        let listeners = process.listeners.filter { !excludedPorts.contains($0.port) }
-        let ports = process.ports.filter { !excludedPorts.contains($0) }
-        guard !ports.isEmpty else { return nil }
-        return TrackedProcessSnapshot(
-            process: process.process,
-            listeners: listeners,
-            ports: Array(Set(ports)).sorted(),
-            isWatchedConflict: process.isWatchedConflict
-        )
-    }
 }
+
+// MARK: - Display Text
 
 private enum DisplayText {
     static func compareWatchedPorts(_ lhs: WatchedPortStatus, _ rhs: WatchedPortStatus) -> Bool {
@@ -1040,14 +953,12 @@ private enum DisplayText {
         return "In use by \(owner)"
     }
 
-    static func watchedPortExplanation(_ status: WatchedPortStatus) -> String {
-        if status.isConflict {
-            return "Another app is already using this watched port"
+    static func blockerDetail(_ process: TrackedProcessSnapshot) -> String {
+        let pid = "PID \(process.process.pid)"
+        if let cwd = process.process.cwd, cwd != "/" {
+            return "\(pid) \u{00B7} \(self.path(cwd))"
         }
-        if status.isNodeOwned {
-            return "A Node process is currently using this watched port"
-        }
-        return "This watched port is already in use"
+        return pid
     }
 
     static func processDetail(_ process: ProcessSnapshot) -> String? {
@@ -1066,7 +977,7 @@ private enum DisplayText {
 
     static func toolsSummary(_ processes: [TrackedProcessSnapshot]) -> String {
         let tools = Array(Set(processes.map(\.process.toolLabel))).sorted()
-        return tools.joined(separator: " • ")
+        return tools.joined(separator: " \u{2022} ")
     }
 
     private static func watchedPortOwner(_ status: WatchedPortStatus) -> String {
@@ -1134,9 +1045,11 @@ private enum DisplayText {
         if tokens.count <= 6 {
             return command
         }
-        return tokens.prefix(6).joined(separator: " ") + " …"
+        return tokens.prefix(6).joined(separator: " ") + " \u{2026}"
     }
 }
+
+// MARK: - Settings
 
 struct SettingsRootView: View {
     @ObservedObject var store: NodeTrackerStore
