@@ -1,6 +1,6 @@
 # BRDG Symphony
 
-BRDG includes an in-repo TypeScript Symphony service under [`../symphony`](../symphony). It follows the upstream Symphony service model from the official spec while staying aligned with the repo's harness-first workflow.
+BRDG includes an in-repo TypeScript Symphony service under [`../symphony`](../symphony). It is an upstream-derived implementation: BRDG follows the core Symphony service model, documents its supported subset explicitly, and keeps a few repo-specific extensions and deviations for the harness-first workflow.
 
 ## What It Does
 
@@ -9,10 +9,22 @@ BRDG includes an in-repo TypeScript Symphony service under [`../symphony`](../sy
 - creates one persistent workspace per issue under `.symphony/workspaces/`
 - launches `codex app-server` inside each issue workspace
 - auto-approves command and file-change prompts from Codex
-- injects a client-side `linear_graphql` tool into Codex sessions
+- exposes a read-only `linear_graphql` tool plus service-reporting tools to Codex sessions
+- owns all Linear writes for state moves, workpad comments, retry notes, and PR attachment sync
 - fails fast if Codex requests interactive user input
 - retries failed issue runs with exponential backoff
 - cleans up workspaces for issues that have moved to terminal states
+
+## Capability Snapshot
+
+| Upstream capability | BRDG status | Notes | Reload behavior |
+| --- | --- | --- | --- |
+| `tracker.endpoint` | supported | Defaults to Linear GraphQL endpoint | reloads dynamically |
+| `hooks.before_run` / `hooks.after_run` / `hooks.timeout_ms` | supported | BRDG runs hooks around each agent launch | reloads dynamically |
+| `agent.max_concurrent_agents_by_state` | supported | Used as an additional dispatch cap by Linear state | reloads dynamically |
+| `codex.turn_timeout_ms` / `read_timeout_ms` / `stall_timeout_ms` | supported | Implemented by the BRDG orchestrator around app-server I/O and turn lifecycle | reloads for future runs |
+| strict upstream workflow/template behavior | intentionally not supported | BRDG keeps the current workflow file and renderer semantics from `item 1` | requires code change |
+| workspace key sanitizer parity | intentionally not supported | BRDG preserves current workspace naming for backward compatibility | requires code change |
 
 ## Commands
 
@@ -51,15 +63,16 @@ The default Codex runtime is configured for full GitHub interactivity:
 - `codex app-server -c shell_environment_policy.inherit=all`
 - `thread_sandbox: danger-full-access`
 
-That setup allows spawned issue sessions to inherit your shell environment, use existing Git or `gh` auth, push branches, and create or update pull requests directly.
+That setup allows spawned issue sessions to inherit your shell environment, use existing Git or `gh` auth, push branches, and create or update pull requests directly. Linear writes still go through the Symphony service, not directly from the agent.
 
 ## Operator Flow
 
 1. Export `LINEAR_API_KEY`.
 2. Start the long-lived worker with `npm run symphony`.
 3. Move a Linear issue into `Todo`.
-4. Symphony picks it up, moves it to `In Progress`, creates or updates the `## Codex Workpad` comment, and starts a Codex run in `.symphony/workspaces/<ISSUE>`.
-5. When the run is healthy, expect the workpad to show a `Symphony runtime revision: ...` note, local validation, branch creation, push, PR attachment, and a state move toward review.
+4. Symphony picks it up, moves it to `In Progress`, creates or updates the service-owned `## Codex Workpad` comment, and starts a Codex run in `.symphony/workspaces/<ISSUE>`.
+5. The agent reports progress through `report_progress` and final routing details through `report_handoff`.
+6. Symphony applies the resulting Linear writes: workpad updates, retry/failure notes, PR attachment sync, and the final state move toward review or merge.
 
 ## State Behavior
 
@@ -70,9 +83,9 @@ That setup allows spawned issue sessions to inherit your shell environment, use 
 
 ## Workpad Expectations
 
-- The agent keeps a single `## Codex Workpad` comment per issue.
+- Symphony keeps a single `## Codex Workpad` comment per issue.
 - The workpad should include `Plan`, `Acceptance Criteria`, `Validation`, and `Notes`.
-- `Notes` should include the `Symphony runtime revision` so you can tell which orchestration build produced that run.
+- `Notes` include the `Symphony runtime revision`, current run status, blocker summary, and any retry or failure notes.
 
 ## PR Review Follow-up Issues
 
@@ -82,13 +95,13 @@ The intended behavior is:
 
 1. the follow-up issue handles the review-comment work
 2. the original implementation issue remains the canonical lifecycle issue
-3. when the PR is ready to merge, the agent updates the original issue and moves that original issue toward `Merging`
+3. when the PR is ready to merge, Symphony updates the original issue and moves that original issue toward `Merging`
 
 This keeps review-cleanup work separate without losing the original implementation issue as the main tracker.
 
 ## Current Scope
 
-This build covers the core Symphony runner/orchestrator contract and injects a client-side `linear_graphql` tool into Codex sessions for raw Linear GraphQL operations.
+This build covers the core Symphony runner/orchestrator contract, injects a read-only `linear_graphql` tool for tracker queries, and exposes reporting tools that let the service own Linear mutations deterministically.
 
 ## Notes
 
@@ -97,3 +110,4 @@ This build covers the core Symphony runner/orchestrator contract and injects a c
 - The current default workflow assumes these Linear states exist: `Todo`, `In Progress`, `Human Review`, `Merging`, `Rework`, and `Done`.
 - If your team uses different state names, update [`../WORKFLOW.md`](../WORKFLOW.md) accordingly.
 - If you want a more restrictive runtime, override the `codex` block in [`../WORKFLOW.md`](../WORKFLOW.md) and accept that GitHub push/PR automation may stop working.
+- BRDG intentionally preserves its current workspace key sanitizer and workflow renderer behavior for compatibility; those are documented deviations from the upstream spec, not accidental drift.

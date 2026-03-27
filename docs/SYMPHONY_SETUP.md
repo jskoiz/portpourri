@@ -2,6 +2,8 @@
 
 This repo is ready to be driven by Symphony through the repo-owned [`../WORKFLOW.md`](../WORKFLOW.md) contract.
 
+BRDG uses an upstream-derived Symphony implementation: it supports the runtime/config pieces listed in [`SYMPHONY.md`](./SYMPHONY.md), keeps the current BRDG workflow renderer from `item 1`, and centralizes all Linear writes in the service.
+
 ## What You Still Need To Fill In
 
 1. Export `LINEAR_PROJECT_SLUG` before starting Symphony, or hardcode it in [`../WORKFLOW.md`](../WORKFLOW.md).
@@ -45,8 +47,10 @@ Use [`SYMPHONY.md`](./SYMPHONY.md) for the canonical local runtime instructions.
 - repo navigation via [`REPO_MAP.md`](./REPO_MAP.md)
 - Storybook co-updates for reusable mobile UI work
 - PR creation and landing through repo-local Symphony skills under [`../.codex/skills`](../.codex/skills)
+- read-only tracker queries from the agent, with service-owned workpad/state/PR-link writes
 
 ## Notes
 
 - If Codex trust is path-sensitive in your local environment, make sure the workspace root you choose is trusted for Codex app-server runs.
 - If your Linear team uses different status names, update the `active_states`, `terminal_states`, and state-routing language in [`../WORKFLOW.md`](../WORKFLOW.md) together.
+- Use [`SYMPHONY.md`](./SYMPHONY.md) as the canonical source for which upstream features BRDG supports versus intentionally deviates from.

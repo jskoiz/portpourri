@@ -39,7 +39,11 @@ function isNotification(message: JsonRpcMessage): message is JsonRpcNotification
 
 export class AppServerClient {
   private readonly child: ChildProcessWithoutNullStreams;
-  private readonly pending = new Map<JsonRpcId, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
+  private readonly pending = new Map<JsonRpcId, {
+    resolve: (value: unknown) => void;
+    reject: (error: Error) => void;
+    timer: NodeJS.Timeout | null;
+  }>();
   private readonly closePromise: Promise<void>;
   private readonly closeResolve: () => void;
 
@@ -79,6 +83,9 @@ export class AppServerClient {
     this.child.once('exit', (code, signal) => {
       const error = new AppServerError(`codex app-server exited with code ${code ?? 'null'} signal ${signal ?? 'null'}`);
       for (const pending of this.pending.values()) {
+        if (pending.timer) {
+          clearTimeout(pending.timer);
+        }
         pending.reject(error);
       }
       this.pending.clear();
@@ -94,6 +101,9 @@ export class AppServerClient {
         return;
       }
       this.pending.delete(String(message.id));
+      if (pending.timer) {
+        clearTimeout(pending.timer);
+      }
       if (message.error) {
         pending.reject(new AppServerError(message.error.message ?? 'Unknown app-server error.'));
         return;
@@ -117,10 +127,16 @@ export class AppServerClient {
     this.child.stdin.write(`${JSON.stringify(payload)}\n`);
   }
 
-  async request<T>(method: string, params?: unknown): Promise<T> {
+  async request<T>(method: string, params?: unknown, timeoutMs?: number): Promise<T> {
     const id = randomUUID();
     const resultPromise = new Promise<T>((resolve, reject) => {
-      this.pending.set(id, { resolve: resolve as (value: unknown) => void, reject });
+      const timer = timeoutMs
+        ? setTimeout(() => {
+            this.pending.delete(id);
+            reject(new AppServerError(`Timed out waiting for app-server response to ${method} after ${timeoutMs}ms.`));
+          }, timeoutMs)
+        : null;
+      this.pending.set(id, { resolve: resolve as (value: unknown) => void, reject, timer });
     });
     this.write({ id, method, params });
     return resultPromise;

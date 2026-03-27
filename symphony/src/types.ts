@@ -4,10 +4,12 @@ export interface WorkflowDocument {
   sourcePath: string;
 }
 
-export interface IssueState {
+export interface BlockedIssueRef {
   id: string | null;
-  name: string;
-  type: string | null;
+  identifier: string | null;
+  state: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface Issue {
@@ -16,17 +18,27 @@ export interface Issue {
   title: string;
   description: string | null;
   priority: number | null;
-  state: IssueState;
-  branchName: string | null;
+  state: string;
+  branch_name: string | null;
   url: string | null;
   labels: string[];
-  createdAt: string | null;
-  updatedAt: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  blocked_by: BlockedIssueRef[];
+  blocked_by_summary: string;
+  tracker: {
+    state_id: string | null;
+    state_type: string | null;
+    team_id: string | null;
+    team_key: string | null;
+    team_name: string | null;
+  };
 }
 
 export interface WorkflowConfig {
   tracker: {
     kind: 'linear';
+    endpoint: string;
     apiKey: string;
     projectSlug: string;
     activeStates: string[];
@@ -40,10 +52,14 @@ export interface WorkflowConfig {
   };
   hooks: {
     afterCreate: string | null;
+    beforeRun: string | null;
+    afterRun: string | null;
     beforeRemove: string | null;
+    timeoutMs: number;
   };
   agent: {
     maxConcurrentAgents: number;
+    maxConcurrentAgentsByState: Record<string, number>;
     maxTurns: number;
     retryBaseDelayMs: number;
     retryMaxDelayMs: number;
@@ -51,11 +67,14 @@ export interface WorkflowConfig {
   codex: {
     command: string;
     model: string | null;
-    approvalPolicy: 'untrusted' | 'on-failure' | 'on-request' | 'never';
-    threadSandbox: 'read-only' | 'workspace-write' | 'danger-full-access';
+    approvalPolicy: string | Record<string, unknown> | null;
+    threadSandbox: string | null;
     turnSandboxPolicy: Record<string, unknown> | null;
-    personality: 'none' | 'friendly' | 'pragmatic' | null;
+    personality: string | null;
     config: Record<string, unknown> | null;
+    turnTimeoutMs: number;
+    readTimeoutMs: number;
+    stallTimeoutMs: number;
   };
 }
 
@@ -88,6 +107,23 @@ export interface RunResult {
   turnId: string;
   finalMessage: string | null;
   error?: string;
+}
+
+export interface ProgressReport {
+  plan?: string | null;
+  acceptanceCriteria?: string | null;
+  validation?: string | null;
+  notes?: string | null;
+}
+
+export interface HandoffReport {
+  summary: string;
+  status?: string | null;
+  desiredState?: string | null;
+  branchName?: string | null;
+  prUrl?: string | null;
+  validation?: string | null;
+  originalIssueIdentifier?: string | null;
 }
 
 export interface RetryEntry {

@@ -9,12 +9,21 @@ const baseIssue: Issue = {
   title: 'Example',
   description: 'Initial description',
   priority: 1,
-  state: { id: 'todo', name: 'Todo', type: 'unstarted' },
-  branchName: null,
+  state: 'Todo',
+  branch_name: null,
   url: 'https://example.com',
   labels: ['mobile'],
-  createdAt: '2026-03-16T10:00:00.000Z',
-  updatedAt: '2026-03-16T10:00:00.000Z',
+  created_at: '2026-03-16T10:00:00.000Z',
+  updated_at: '2026-03-16T10:00:00.000Z',
+  blocked_by: [],
+  blocked_by_summary: 'none',
+  tracker: {
+    state_id: 'todo',
+    state_type: 'unstarted',
+    team_id: 'team-1',
+    team_key: 'BRDG',
+    team_name: 'BRDG',
+  },
 };
 
 test('issue dispatch fingerprint stays stable for unchanged issues', () => {
@@ -27,8 +36,13 @@ test('issue dispatch fingerprint changes when issue state changes', () => {
   const original = buildIssueDispatchFingerprint(baseIssue);
   const changed = buildIssueDispatchFingerprint({
     ...baseIssue,
-    state: { id: 'review', name: 'Human Review', type: 'started' },
-    updatedAt: '2026-03-16T10:05:00.000Z',
+    state: 'Human Review',
+    updated_at: '2026-03-16T10:05:00.000Z',
+    tracker: {
+      ...baseIssue.tracker,
+      state_id: 'review',
+      state_type: 'started',
+    },
   });
   assert.notEqual(original, changed);
 });
@@ -42,8 +56,24 @@ test('issue dispatch fingerprint changes when labels or description change', () 
   const redesc = buildIssueDispatchFingerprint({
     ...baseIssue,
     description: 'Updated description',
-    updatedAt: '2026-03-16T10:02:00.000Z',
+    updated_at: '2026-03-16T10:02:00.000Z',
   });
   assert.notEqual(original, relabeled);
   assert.notEqual(original, redesc);
+});
+
+test('issue dispatch fingerprint changes when blockers change', () => {
+  const original = buildIssueDispatchFingerprint(baseIssue);
+  const blocked = buildIssueDispatchFingerprint({
+    ...baseIssue,
+    blocked_by: [{
+      id: 'issue-2',
+      identifier: 'BRG-2',
+      state: 'Todo',
+      created_at: null,
+      updated_at: null,
+    }],
+    blocked_by_summary: 'BRG-2',
+  });
+  assert.notEqual(original, blocked);
 });

@@ -34,9 +34,22 @@ test('cross-stack changes select the full check lane', () => {
   assert.deepEqual(plan.commands, ['npm run check']);
 });
 
-test('harness-sensitive root script changes select the full check lane', () => {
-  const plan = buildValidationPlan(['scripts/harness-shared.mjs']);
+test('harness-sensitive script entrypoint changes select the full check lane', () => {
+  const plan = buildValidationPlan(['scripts/check-changed.mjs']);
   assert.deepEqual(plan.commands, ['npm run check']);
+});
+
+test('shared harness helper changes stay scoped to root checks', () => {
+  const plan = buildValidationPlan(['scripts/harness-shared.mjs']);
+  assert.deepEqual(plan.commands, ['npm run check:root']);
+});
+
+test('workspace package manifest changes stay scoped to their workspace', () => {
+  const plan = buildValidationPlan([
+    'symphony/package.json',
+    'symphony/src/workflow.ts',
+  ]);
+  assert.deepEqual(plan.commands, ['npm run check:symphony']);
 });
 
 test('symphony-only changes select symphony checks', () => {

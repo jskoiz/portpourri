@@ -28,7 +28,7 @@ export class WorkspaceManager {
         ISSUE_TITLE: issue.title,
         ISSUE_URL: issue.url ?? '',
         WORKSPACE_PATH: workspacePath,
-      });
+      }, this.config.hooks.timeoutMs);
     }
 
     return {
@@ -50,7 +50,7 @@ export class WorkspaceManager {
         ...process.env,
         ISSUE_IDENTIFIER: identifier,
         WORKSPACE_PATH: workspacePath,
-      });
+      }, this.config.hooks.timeoutMs);
     }
 
     fs.rmSync(workspacePath, { recursive: true, force: true });

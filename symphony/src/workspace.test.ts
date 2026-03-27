@@ -19,18 +19,28 @@ const issue: Issue = {
   title: 'Example',
   description: null,
   priority: null,
-  state: { id: null, name: 'Todo', type: null },
-  branchName: null,
+  state: 'Todo',
+  branch_name: null,
   url: null,
   labels: [],
-  createdAt: null,
-  updatedAt: null,
+  created_at: null,
+  updated_at: null,
+  blocked_by: [],
+  blocked_by_summary: 'none',
+  tracker: {
+    state_id: null,
+    state_type: null,
+    team_id: null,
+    team_key: null,
+    team_name: null,
+  },
 };
 
 function config(root: string): WorkflowConfig {
   return {
     tracker: {
       kind: 'linear',
+      endpoint: 'https://api.linear.app/graphql',
       apiKey: 'token',
       projectSlug: 'slug',
       activeStates: ['Todo'],
@@ -38,9 +48,10 @@ function config(root: string): WorkflowConfig {
     },
     polling: { intervalMs: 5000 },
     workspace: { root },
-    hooks: { afterCreate: null, beforeRemove: null },
+    hooks: { afterCreate: null, beforeRun: null, afterRun: null, beforeRemove: null, timeoutMs: 60000 },
     agent: {
       maxConcurrentAgents: 1,
+      maxConcurrentAgentsByState: {},
       maxTurns: 20,
       retryBaseDelayMs: 1000,
       retryMaxDelayMs: 5000,
@@ -53,6 +64,9 @@ function config(root: string): WorkflowConfig {
       turnSandboxPolicy: null,
       personality: 'pragmatic',
       config: null,
+      turnTimeoutMs: 3600000,
+      readTimeoutMs: 5000,
+      stallTimeoutMs: 300000,
     },
   };
 }

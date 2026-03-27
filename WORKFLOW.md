@@ -40,6 +40,7 @@ Issue context:
 - Title: {{ issue.title }}
 - State: {{ issue.state }}
 - Labels: {{ issue.labels }}
+- Blocked by: {{ issue.blocked_by_summary }}
 - URL: {{ issue.url }}
 - Symphony runtime revision: {{ workflow.runtime_revision }}
 
@@ -64,9 +65,9 @@ This is an unattended Symphony session. Operate end-to-end without asking a huma
 - Follow the repository instructions in `AGENTS.md`.
 - Treat `docs/HARNESS.md` as the validation source of truth.
 - Use `docs/REPO_MAP.md` to navigate the codebase quickly.
-- Use the repo-local `linear` skill for raw Linear GraphQL operations through the injected `linear_graphql` tool when tracker reads or writes are needed.
+- Use the repo-local `linear` skill for read-only Linear GraphQL operations through the injected `linear_graphql` tool when tracker reads are needed.
 
-This Symphony build polls Linear directly for scheduling and also injects a `linear_graphql` tool into Codex sessions for raw tracker-side GraphQL operations.
+This Symphony build polls Linear directly for scheduling, owns all Linear writes in the service layer, and injects read/report tools into Codex sessions so the service can update tracker state deterministically.
 
 ## BRDG execution rules
 
@@ -84,17 +85,32 @@ This Symphony build polls Linear directly for scheduling and also injects a `lin
 
 ## Linear workpad rules
 
-Maintain one persistent issue comment headed `## Codex Workpad`.
+Symphony owns the persistent issue comment headed `## Codex Workpad`.
 
-- Reuse the existing active workpad comment when present.
-- Keep these sections current in that comment:
-  - `Plan`
-  - `Acceptance Criteria`
-  - `Validation`
-  - `Notes`
-- Update the workpad after each meaningful milestone.
-- Do not create separate summary comments when the workpad can be updated instead.
-- Record `Symphony runtime revision: {{ workflow.runtime_revision }}` in the `Notes` section so the run can be traced back to the exact orchestration build.
+- Do not create or edit Linear comments directly.
+- Keep the service-owned workpad current by calling `report_progress` after each meaningful milestone.
+- Use these workpad fields:
+  - `plan`
+  - `acceptanceCriteria`
+  - `validation`
+  - `notes`
+- Record handoff details with `report_handoff` instead of mutating issue state or attachments directly.
+- The service records `Symphony runtime revision: {{ workflow.runtime_revision }}` in the `Notes` section so the run can be traced back to the exact orchestration build.
+
+## Service reporting rules
+
+- `linear_graphql` is read-only. Use it only for queries.
+- `report_progress` updates the service-owned workpad fields.
+- `report_handoff` is required when the branch and PR are ready for service routing.
+- `report_handoff` should include:
+  - `summary`
+  - `status`
+  - `desiredState`
+  - `branchName`
+  - `prUrl`
+  - `validation`
+  - `originalIssueIdentifier` only when the issue explicitly names one
+- Do not guess tracker identifiers or mutate Linear directly.
 
 ## Linked issue synchronization
 
@@ -112,7 +128,7 @@ Some issues exist only to address unresolved PR review comments for an earlier i
 ## State routing
 
 - `Backlog`: do not modify the issue; stop and wait.
-- `Todo`: move to `In Progress`, then begin active work.
+- `Todo`: Symphony claims the issue and moves it to `In Progress` before active work begins.
 - `In Progress`: continue implementation.
 - `Human Review`: do not code; wait for reviewer feedback or approval.
 - `Merging`: land the PR, then move the issue to `Done`.
@@ -122,20 +138,20 @@ Some issues exist only to address unresolved PR review comments for an earlier i
 ## Execution flow
 
 1. Read the issue and determine its current state.
-2. For `Todo`, move the ticket to `In Progress` before coding.
-3. Find or create the `## Codex Workpad` comment and refresh its plan, acceptance criteria, validation plan, and notes.
+2. Let Symphony own Linear state changes, comments, and PR attachments.
+3. Refresh the service-owned workpad with `report_progress` as the plan, acceptance criteria, validation plan, and notes become clearer.
 4. Reproduce the current behavior and capture the failure signal before changing code.
 5. Run the `pull` skill before editing code and record the sync result in the workpad.
 6. Implement the smallest correct change that satisfies the issue.
 7. Run the appropriate harness validation commands for the scope.
 8. Commit with the `commit` skill and publish with the `push` skill when the branch is ready.
-9. Attach the PR to the Linear issue and move the ticket to `Human Review` only after validation is green and outstanding PR feedback is addressed.
+9. When the branch is ready, call `report_handoff` with the final summary, validation, branch name, PR URL, and desired next state.
 10. In `Merging`, use the `land` skill flow and only mark the issue `Done` after the PR is merged.
-11. For review-follow-up issues linked to an original implementation issue, update the original issue and move it to `Merging` when the PR is truly merge-ready.
+11. For review-follow-up issues linked to an original implementation issue, include the original issue identifier in `report_handoff` so Symphony can update the original issue and move it to `Merging` when the PR is truly merge-ready.
 
 ## Related skills
 
-- `linear`: use for raw Linear GraphQL operations.
+- `linear`: use for read-only Linear GraphQL operations.
 - `pull`: sync the branch with `origin/main` before and during implementation.
 - `commit`: produce clean commit messages that match the actual diff.
 - `push`: publish the branch and create or update the PR using the BRDG template.

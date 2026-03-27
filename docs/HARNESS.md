@@ -34,7 +34,7 @@ npm run scaffold:backend-module -- --name moderation
 - `npm run pre-submit`
   - canonical local checklist: docs drift, repo policy, new marker guard (`TODO`/`FIXME`/`HACK`), then the same diff-driven validation lane used for PRs; contract-shape changes should be checked against shared schemas plus backend controller-boundary specs/shared guardrails and the mobile dev validator
 - `npm run check:changed`
-  - chooses the smallest reasonable validation set from git diff, promotes mixed or harness-sensitive changes to `check`, appends `smoke` for smoke-sensitive paths, enforces Storybook co-updates for changed reusable mobile UI surfaces, and can emit machine-readable harness artifacts
+  - chooses the smallest reasonable validation set from git diff, promotes mixed or harness-sensitive changes in script entrypoints or workflows to `check`, keeps workspace package manifest changes scoped to the touched workspace, appends `smoke` for smoke-sensitive paths, enforces Storybook co-updates for changed reusable mobile UI surfaces, and can emit machine-readable harness artifacts
 - `npm run check`
   - full graph: `check:root`, then the workspace checks for `backend`, `mobile`, and `symphony`
 - `npm run release:ios:prepare`

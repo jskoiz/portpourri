@@ -37,7 +37,7 @@ The Symphony changes were made so the repo can encode its own working rules once
 - issue state routing
 - GitHub-capable runtime defaults
 
-The result is that the operator no longer has to restate the same workflow every time.
+The result is that the operator no longer has to restate the same workflow every time, and tracker writes now flow through one deterministic service path instead of a mix of service behavior and ad hoc agent mutations.
 
 ## What Changed In Practice
 
@@ -47,6 +47,7 @@ The main changes were:
 - the orchestration contract was defined in [`../WORKFLOW.md`](../WORKFLOW.md)
 - BRDG-specific agent skills were added under [`../.codex/skills`](../.codex/skills)
 - the default runtime was configured for full GitHub interactivity so issue runs can push branches and create PRs
+- Linear writes were centralized in the Symphony service so state moves, workpad updates, and PR attachment sync all go through one owner
 - issue workpads now record a `Symphony runtime revision` so runs can be traced back to the exact orchestration build
 
 These are large changes because they move operational knowledge out of a human operator's head and into repo-controlled automation.
@@ -75,11 +76,11 @@ A healthy Symphony run usually looks like this:
 1. You start `npm run symphony`.
 2. You move an issue to `Todo`.
 3. Symphony moves it to `In Progress`.
-4. It creates or updates a `## Codex Workpad` comment in Linear.
-5. The agent reproduces the problem before changing code.
+4. Symphony creates or updates the service-owned `## Codex Workpad` comment in Linear.
+5. The agent reproduces the problem before changing code and reports progress back to Symphony.
 6. The agent runs BRDG validation.
-7. The agent commits, pushes, creates or updates a PR, and attaches it to the issue.
-8. The issue moves toward review or merge.
+7. The agent commits, pushes, and creates or updates a PR.
+8. Symphony attaches the PR to the issue and moves the issue toward review or merge.
 
 If that sequence is happening, Symphony is doing useful work.
 
@@ -127,7 +128,7 @@ Do not treat Symphony like a one-command fire-and-forget release robot. It is an
 
 ## How To Read A Workpad
 
-Each active issue should have one `## Codex Workpad` comment with:
+Each active issue should have one Symphony-managed `## Codex Workpad` comment with:
 
 - `Plan`
 - `Acceptance Criteria`
@@ -139,6 +140,7 @@ The most useful signals are:
 - whether the bug was actually reproduced first
 - what validation really ran
 - whether a branch/PR was created
+- whether the service recorded retries, blockers, or state-routing decisions
 - the `Symphony runtime revision`
 
 The runtime revision matters because it tells you which orchestration build produced the behavior you are looking at.
@@ -150,6 +152,7 @@ The current BRDG Symphony setup still has some practical limitations:
 - per-workspace trust warnings are noisy, even though they are non-fatal
 - issues left in active states can be picked up again on later polls
 - broad or underspecified tickets still produce weaker results than narrow tickets
+- BRDG still keeps a few intentional deviations from the upstream spec, such as the current workflow renderer and workspace key sanitizer
 
 These are operational issues, not reasons to abandon the model.
 

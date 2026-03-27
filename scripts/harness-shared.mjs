@@ -64,10 +64,7 @@ const smokeSensitivePatterns = [
 
 const harnessSensitivePatterns = [
   /^package\.json$/,
-  /^backend\/package\.json$/,
-  /^mobile\/package\.json$/,
-  /^symphony\/package\.json$/,
-  /^scripts\/.+\.mjs$/,
+  /^scripts\/(?!harness-shared\.mjs$|__tests__\/).+\.mjs$/,
   /^\.github\/workflows\//,
 ];
 

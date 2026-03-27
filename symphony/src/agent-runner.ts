@@ -3,7 +3,7 @@ import { AppServerClient } from './codex/app-server.js';
 import { dynamicToolSpecs, executeDynamicTool } from './codex/dynamic-tool.js';
 import { buildCommandApprovalResponse, buildFileChangeApprovalResponse, buildPermissionsApprovalResponse, throwOnInteractiveRequest } from './policy.js';
 import { renderPrompt } from './workflow.js';
-import type { Issue, LoadedWorkflow, Logger, RunResult, Workspace } from './types.js';
+import type { HandoffReport, Issue, LoadedWorkflow, Logger, ProgressReport, RunResult, Workspace } from './types.js';
 import { AppServerError, UserInputRequiredError } from './errors.js';
 
 interface ItemCompletedNotification {
@@ -31,10 +31,16 @@ interface TurnCompletedNotification {
   };
 }
 
+interface AgentRunCallbacks {
+  onProgress(report: ProgressReport): Promise<void>;
+  onHandoff(report: HandoffReport): Promise<void>;
+}
+
 export class AgentRunner {
   constructor(
     private readonly workflow: LoadedWorkflow,
     private readonly logger: Logger,
+    private readonly callbacks: AgentRunCallbacks,
   ) {}
 
   async run(issue: Issue, workspace: Workspace, attempt: number, abortSignal?: AbortSignal): Promise<RunResult> {
@@ -52,12 +58,15 @@ export class AgentRunner {
     let threadId = '';
     let turnId = '';
     let finalMessage: string | null = null;
+    let turnTimer: NodeJS.Timeout | null = null;
+    let stallTimer: NodeJS.Timeout | null = null;
     let completedResolve!: (value: RunResult) => void;
     let completedReject!: (error: Error) => void;
     const completed = new Promise<RunResult>((resolve, reject) => {
       completedResolve = resolve;
       completedReject = reject;
     });
+    let touchActivity = () => {};
 
     const client = new AppServerClient(
       this.workflow.config.codex.command,
@@ -80,7 +89,10 @@ export class AgentRunner {
               (request.params as { arguments?: unknown } | undefined)?.arguments,
               {
                 linearApiKey: this.workflow.config.tracker.apiKey,
+                linearEndpoint: this.workflow.config.tracker.endpoint,
                 logger: this.logger,
+                onProgress: this.callbacks.onProgress,
+                onHandoff: this.callbacks.onHandoff,
               },
             );
           case 'account/chatgptAuthTokens/refresh':
@@ -90,6 +102,7 @@ export class AgentRunner {
         }
       },
       (notification) => {
+        touchActivity();
         if (notification.method === 'item/completed') {
           const payload = notification as ItemCompletedNotification;
           if (payload.params.item.type === 'agentMessage' && payload.params.item.phase === 'final_answer') {
@@ -140,7 +153,7 @@ export class AgentRunner {
       await client.request('initialize', {
         clientInfo: { name: 'brdg-symphony', version: '0.1.0' },
         capabilities: { experimentalApi: true },
-      });
+      }, this.workflow.config.codex.readTimeoutMs);
       client.notify('initialized');
 
       const threadStart = await client.request<{
@@ -156,20 +169,36 @@ export class AgentRunner {
         dynamicTools: dynamicToolSpecs(),
         experimentalRawEvents: false,
         persistExtendedHistory: false,
-      });
+      }, this.workflow.config.codex.readTimeoutMs);
 
       threadId = threadStart.thread.id;
       const turnStart = await client.request<{ turn: { id: string } }>('turn/start', {
         threadId,
         sandboxPolicy: turnSandboxPolicy,
         input: [{ type: 'text', text: prompt }],
-      });
+      }, this.workflow.config.codex.readTimeoutMs);
       turnId = turnStart.turn.id;
+
+      touchActivity = () => {
+        if (!turnId) {
+          return;
+        }
+        if (stallTimer) {
+          clearTimeout(stallTimer);
+        }
+        stallTimer = setTimeout(() => {
+          completedReject(new AppServerError(`Agent run for ${issue.identifier} stalled after ${this.workflow.config.codex.stallTimeoutMs}ms.`));
+        }, this.workflow.config.codex.stallTimeoutMs);
+      };
+      touchActivity();
+      turnTimer = setTimeout(() => {
+        completedReject(new AppServerError(`Agent run for ${issue.identifier} exceeded ${this.workflow.config.codex.turnTimeoutMs}ms.`));
+      }, this.workflow.config.codex.turnTimeoutMs);
 
       const result = await completed;
       return result;
     } catch (error) {
-      if (error instanceof UserInputRequiredError) {
+      if (error instanceof UserInputRequiredError || error instanceof AppServerError) {
         return {
           status: 'failed',
           threadId,
@@ -180,6 +209,12 @@ export class AgentRunner {
       }
       throw error;
     } finally {
+      if (turnTimer) {
+        clearTimeout(turnTimer);
+      }
+      if (stallTimer) {
+        clearTimeout(stallTimer);
+      }
       abortSignal?.removeEventListener('abort', abortHandler);
       await client.close();
     }

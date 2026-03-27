@@ -48,6 +48,7 @@ export async function runHook(
   script: string,
   cwd: string,
   env: NodeJS.ProcessEnv,
+  timeoutMs = 60000,
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child = spawn(script, {
@@ -56,8 +57,16 @@ export async function runHook(
       shell: true,
       stdio: 'inherit',
     });
-    child.once('error', reject);
+    const timer = setTimeout(() => {
+      child.kill('SIGTERM');
+      reject(new Error(`Hook timed out after ${timeoutMs}ms.`));
+    }, timeoutMs);
+    child.once('error', (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
     child.once('exit', (code, signal) => {
+      clearTimeout(timer);
       if (code === 0) {
         resolve();
         return;

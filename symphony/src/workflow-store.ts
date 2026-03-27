@@ -15,7 +15,7 @@ export class WorkflowStore {
   load(): LoadedWorkflow {
     const stats = fs.statSync(this.workflowPath);
     const document = loadWorkflowDocument(this.workflowPath);
-    const loaded = resolveWorkflowConfig(document, this.env, stats.mtimeMs);
+    const loaded = resolveWorkflowConfig(document, this.env, stats.mtimeMs, this.logger);
     this.currentWorkflow = loaded;
     return loaded;
   }
@@ -34,6 +34,14 @@ export class WorkflowStore {
       return current;
     }
     this.logger.info('workflow.reloaded', { workflowPath: this.workflowPath });
-    return this.load();
+    try {
+      return this.load();
+    } catch (error) {
+      this.logger.error('workflow.reload_failed', {
+        workflowPath: this.workflowPath,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return current;
+    }
   }
 }
