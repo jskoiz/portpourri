@@ -14,6 +14,7 @@ export function ChatHeader({
   onBack,
   onBlock,
   onOpenQuickActions,
+  onPressProfile,
   onReport,
   photoUrl,
   theme,
@@ -23,6 +24,7 @@ export function ChatHeader({
   onBack: () => void;
   onBlock?: () => void;
   onOpenQuickActions: () => void;
+  onPressProfile?: () => void;
   onReport?: () => void;
   photoUrl?: string;
   theme: Theme;
@@ -34,36 +36,47 @@ export function ChatHeader({
   return (
     <GlassView tier="medium" borderRadius={0} style={styles.header}>
       <AppBackButton onPress={onBack} style={styles.backBtn} />
-      {photoUrl ? (
-        <Image source={{ uri: photoUrl }} style={[styles.headerAvatar, { borderColor: theme.primary }]} contentFit="cover" accessibilityLabel={`Photo of ${user?.firstName || 'match'}`} accessibilityRole="image" />
-      ) : (
-        <View
-          style={[
-            styles.headerAvatar,
-            {
-              backgroundColor: theme.surfaceElevated,
-              borderColor: theme.border,
-              alignItems: 'center',
-              justifyContent: 'center',
-            },
-          ]}
-          accessibilityLabel={`Avatar for ${user?.firstName || 'match'}`}
-          accessibilityRole="image"
-        >
-          <Text style={{ color: theme.textPrimary, fontSize: 16, fontWeight: '700' }} importantForAccessibility="no">
-            {user?.firstName?.[0] || '?'}
-          </Text>
-        </View>
-      )}
-      <View style={styles.headerInfo}>
-        <Text style={[styles.headerEyebrow, { color: theme.textMuted }]}>MATCH CONVERSATION</Text>
-        <Text style={[styles.headerName, { color: theme.textPrimary }]} accessibilityRole="header">{user?.firstName || 'Chat'}</Text>
-        {activityTag ? (
-          <View style={[styles.headerTag, { backgroundColor: theme.primarySubtle, borderColor: theme.primary }]} accessibilityLabel={`Activity: ${activityTag}`}>
-            <Text style={[styles.headerTagText, { color: theme.primary }]}>{activityTag}</Text>
+      <Pressable
+        onPress={onPressProfile}
+        disabled={!onPressProfile}
+        accessibilityRole={onPressProfile ? 'button' : undefined}
+        accessibilityLabel={
+          onPressProfile ? `Open profile for ${user?.firstName || 'this user'}` : undefined
+        }
+        accessibilityHint={onPressProfile ? 'Navigates to this user’s profile' : undefined}
+        style={headerMenuStyles.profileTrigger}
+      >
+        {photoUrl ? (
+          <Image source={{ uri: photoUrl }} style={[styles.headerAvatar, { borderColor: theme.primary }]} contentFit="cover" accessibilityLabel={`Photo of ${user?.firstName || 'match'}`} accessibilityRole="image" />
+        ) : (
+          <View
+            style={[
+              styles.headerAvatar,
+              {
+                backgroundColor: theme.surfaceElevated,
+                borderColor: theme.border,
+                alignItems: 'center',
+                justifyContent: 'center',
+              },
+            ]}
+            accessibilityLabel={`Avatar for ${user?.firstName || 'match'}`}
+            accessibilityRole="image"
+          >
+            <Text style={{ color: theme.textPrimary, fontSize: 16, fontWeight: '700' }} importantForAccessibility="no">
+              {user?.firstName?.[0] || '?'}
+            </Text>
           </View>
-        ) : null}
-      </View>
+        )}
+        <View style={styles.headerInfo}>
+          <Text style={[styles.headerEyebrow, { color: theme.textMuted }]}>MATCH CONVERSATION</Text>
+          <Text style={[styles.headerName, { color: theme.textPrimary }]} accessibilityRole="header">{user?.firstName || 'Chat'}</Text>
+          {activityTag ? (
+            <View style={[styles.headerTag, { backgroundColor: theme.primarySubtle, borderColor: theme.primary }]} accessibilityLabel={`Activity: ${activityTag}`}>
+              <Text style={[styles.headerTagText, { color: theme.primary }]}>{activityTag}</Text>
+            </View>
+          ) : null}
+        </View>
+      </Pressable>
       <View style={headerMenuStyles.menuAnchor}>
         <Pressable
           onPress={() => setMenuVisible((v) => !v)}
@@ -122,6 +135,11 @@ export function ChatHeader({
 }
 
 const headerMenuStyles = StyleSheet.create({
+  profileTrigger: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   menuAnchor: {
     position: 'relative',
     zIndex: 10,

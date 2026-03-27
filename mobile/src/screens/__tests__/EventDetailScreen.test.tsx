@@ -1,7 +1,20 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithProviders } from '../../lib/testing/renderWithProviders';
-import { EventDetailView } from '../EventDetailScreen';
+import EventDetailScreen, { EventDetailView } from '../EventDetailScreen';
+
+const mockNavigate = jest.fn();
+const mockGoBack = jest.fn();
+
+jest.mock('../../features/events/hooks/useEventDetailScreenController', () => ({
+  useEventDetailScreenController: jest.fn(),
+}));
+
+const { useEventDetailScreenController } = jest.requireMock(
+  '../../features/events/hooks/useEventDetailScreenController',
+) as {
+  useEventDetailScreenController: jest.Mock;
+};
 
 jest.mock('../../components/ui/AppBackButton', () => {
   const React = require('react');
@@ -37,8 +50,22 @@ describe('EventDetailView', () => {
     joined: false,
   };
 
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useEventDetailScreenController.mockReturnValue({
+      errorMessage: null,
+      event: baseEvent,
+      isJoining: false,
+      isLoading: false,
+      onBack: mockGoBack,
+      onJoin: jest.fn(),
+      onRefresh: jest.fn(),
+    });
+  });
+
   it('renders the join button for guests', () => {
     const onJoin = jest.fn();
+    const onPressHost = jest.fn();
 
     renderWithProviders(
       <EventDetailView
@@ -48,11 +75,49 @@ describe('EventDetailView', () => {
         isLoading={false}
         onBack={jest.fn()}
         onJoin={onJoin}
+        onPressHost={onPressHost}
         onRefresh={jest.fn()}
       />,
     );
 
     fireEvent.press(screen.getByText('Join event'));
     expect(onJoin).toHaveBeenCalled();
+  });
+
+  it('opens the host profile from the host strip', () => {
+    const onPressHost = jest.fn();
+
+    renderWithProviders(
+      <EventDetailView
+        errorMessage={null}
+        event={baseEvent}
+        isJoining={false}
+        isLoading={false}
+        onBack={jest.fn()}
+        onJoin={jest.fn()}
+        onPressHost={onPressHost}
+        onRefresh={jest.fn()}
+      />,
+    );
+
+    fireEvent.press(screen.getByLabelText('Open profile for Ava'));
+
+    expect(onPressHost).toHaveBeenCalledTimes(1);
+  });
+
+  it('navigates to the host profile from the event detail screen', () => {
+    renderWithProviders(
+      <EventDetailScreen
+        navigation={{ navigate: mockNavigate, goBack: mockGoBack } as any}
+        route={{ key: 'EventDetail-1', name: 'EventDetail', params: { eventId: 'event-1' } } as any}
+      />,
+    );
+
+    fireEvent.press(screen.getByLabelText('Open profile for Ava'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('ProfileDetail', {
+      user: baseEvent.host,
+      userId: 'host-1',
+    });
   });
 });

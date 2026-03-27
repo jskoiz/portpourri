@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { EventDetail } from '../../../api/types';
@@ -17,6 +17,7 @@ export type EventDetailViewProps = {
   isLoading: boolean;
   onBack: () => void;
   onJoin: () => void;
+  onPressHost: () => void;
   onRefresh: () => void;
 };
 
@@ -27,6 +28,7 @@ export function EventDetailView({
   isLoading,
   onBack,
   onJoin,
+  onPressHost,
   onRefresh,
 }: EventDetailViewProps) {
   const theme = useTheme();
@@ -92,7 +94,13 @@ export function EventDetailView({
             eyebrowStyle={[styles.kicker, { color: theme.accentPrimary }]}
             titleStyle={[styles.title, { color: theme.textPrimary }]}
           />
-          <View style={[styles.hostStrip, { backgroundColor: theme.subduedSurface }]}>
+          <Pressable
+            onPress={onPressHost}
+            style={[styles.hostStrip, { backgroundColor: theme.subduedSurface }]}
+            accessibilityRole="button"
+            accessibilityLabel={`Open profile for ${event.host.firstName ?? 'the host'}`}
+            accessibilityHint="Navigates to the host’s profile"
+          >
             <View style={[styles.hostAvatar, { backgroundColor: theme.selectedFill }]}>
               <Text style={[styles.hostAvatarText, { color: theme.selectedText }]}>
                 {event.host.firstName?.[0] ?? 'H'}
@@ -111,7 +119,7 @@ export function EventDetailView({
             >
               <Text style={[styles.hostPillText, { color: theme.textSecondary }]}>Open invite</Text>
             </View>
-          </View>
+          </Pressable>
 
           <View style={styles.metaList}>
             <EventDetailMetaRow icon="calendar" label={dateInfo.date} sub={dateInfo.time} />

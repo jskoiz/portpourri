@@ -11,15 +11,20 @@ export default function EventDetailScreen({
     eventId,
     onBack: () => navigation.goBack(),
   });
+  const event = eventDetailScreenState.event ?? route.params?.event ?? null;
 
   return (
     <EventDetailView
       errorMessage={eventDetailScreenState.errorMessage}
-      event={eventDetailScreenState.event}
+      event={event}
       isJoining={eventDetailScreenState.isJoining}
       isLoading={eventDetailScreenState.isLoading}
       onBack={eventDetailScreenState.onBack}
       onJoin={eventDetailScreenState.onJoin}
+      onPressHost={() => {
+        if (!event?.host) return;
+        navigation.navigate('ProfileDetail', { user: event.host, userId: event.host.id });
+      }}
       onRefresh={eventDetailScreenState.onRefresh}
     />
   );

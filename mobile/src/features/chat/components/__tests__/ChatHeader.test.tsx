@@ -66,4 +66,14 @@ describe('ChatHeader', () => {
 
     expect(baseProps.onBack).toHaveBeenCalledTimes(1);
   });
+
+  it('opens the match profile when the identity block is pressed', () => {
+    const onPressProfile = jest.fn();
+
+    render(<ChatHeader {...baseProps} onPressProfile={onPressProfile} />);
+
+    fireEvent.press(screen.getByLabelText('Open profile for Kai'));
+
+    expect(onPressProfile).toHaveBeenCalledTimes(1);
+  });
 });

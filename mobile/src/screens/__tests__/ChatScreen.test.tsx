@@ -15,7 +15,7 @@ const mockRoute = {
   name: 'Chat' as const,
   params: {
     matchId: 'match-1',
-    user: { firstName: 'Kai', fitnessProfile: { primaryGoal: 'endurance' } },
+    user: { id: 'user-1', firstName: 'Kai', fitnessProfile: { primaryGoal: 'endurance' } },
     prefillMessage: 'Coffee after the run?',
   },
 };
@@ -137,5 +137,16 @@ describe('ChatScreen', () => {
     (chatMessageListProps?.onNavigateToEvent as (eventId: string) => void)('event-9');
 
     expect(mockNavigate).toHaveBeenCalledWith('EventDetail', { eventId: 'event-9' });
+  });
+
+  it('navigates to the user profile from the chat header', () => {
+    render(<ChatScreen navigation={mockNavigation} route={mockRoute as any} />);
+
+    fireEvent.press(screen.getByLabelText('Open profile for Kai'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('ProfileDetail', {
+      user: mockRoute.params.user,
+      userId: 'user-1',
+    });
   });
 });

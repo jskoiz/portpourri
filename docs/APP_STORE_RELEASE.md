@@ -93,6 +93,8 @@ npm run release:ios:ship
 
 This is the normal BRDG TestFlight/App Store path. The root scripts pin `--mode xcode`, and [`scripts/release-ios.sh`](../scripts/release-ios.sh) enforces branch cleanliness, upstream sync, backend/mobile validation, writes a manifest to `mobile/build/ios-release-manifest.json`, writes a release context to `mobile/build/ios-release-context.json`, then archives and uploads through Xcode.
 
+The release wrapper uses [`scripts/release-ios-fast-path.mjs`](../scripts/release-ios-fast-path.mjs) to classify whether the existing generated iOS project can be safely reused or whether the run must fall back to a clean Expo prebuild.
+
 In `xcode` mode the wrapper uses a conservative native fast path. It only skips `npx expo prebuild --clean -p ios --npm` when the diff since the latest release tag is limited to known non-native-affecting paths such as `mobile/src/**`, tests, Storybook, docs, backend, and shared contracts. Changes to `mobile/app.config.ts`, `mobile/eas.json`, `mobile/package.json`, `mobile/package-lock.json`, `mobile/ios/**`, or release-critical icon/splash assets force a clean prebuild. If the classifier is uncertain, it falls back to a clean prebuild.
 
 The native fast-path decision is implemented by [`scripts/release-ios-fast-path.mjs`](../scripts/release-ios-fast-path.mjs). Treat it as an internal release helper invoked by [`scripts/release-ios.sh`](../scripts/release-ios.sh), not as a standalone release entrypoint.

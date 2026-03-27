@@ -10,6 +10,7 @@ const baseArgs: EventDetailViewProps = {
   isLoading: false,
   onBack: () => undefined,
   onJoin: () => undefined,
+  onPressHost: () => undefined,
   onRefresh: () => undefined,
 };
 

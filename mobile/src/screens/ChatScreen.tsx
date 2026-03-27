@@ -83,6 +83,9 @@ export default function ChatScreen({ navigation, route }: RootStackScreenProps<'
     }
   }, [message, sending]);
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
+  const handleOpenProfile = useCallback(() => {
+    navigation.navigate('ProfileDetail', { user, userId: user.id });
+  }, [navigation, user]);
   const handleBlock = useCallback(() => {
     showBlockConfirmation(() => {
       void block({ targetUserId: user.id });
@@ -107,6 +110,7 @@ export default function ChatScreen({ navigation, route }: RootStackScreenProps<'
           onBack={handleBack}
           onBlock={handleBlock}
           onOpenQuickActions={handleOpenQuickActions}
+          onPressProfile={handleOpenProfile}
           onReport={handleReport}
           photoUrl={photoUrl}
           theme={theme}
@@ -132,6 +136,7 @@ export default function ChatScreen({ navigation, route }: RootStackScreenProps<'
         onBack={handleBack}
         onBlock={handleBlock}
         onOpenQuickActions={handleOpenQuickActions}
+        onPressProfile={handleOpenProfile}
         onReport={handleReport}
         photoUrl={photoUrl}
         theme={theme}
