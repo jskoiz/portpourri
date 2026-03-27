@@ -3,6 +3,7 @@ import Darwin
 import Foundation
 import NodeTrackerCore
 import ServiceManagement
+import UserNotifications
 
 enum RefreshCadence: Double, CaseIterable, Identifiable {
     case fiveSeconds = 5
@@ -116,6 +117,7 @@ final class NodeTrackerStore: ObservableObject {
 
     private let snapshotService = SnapshotService()
     private var refreshTimer: Timer?
+    private var previousConflictPorts: Set<Int> = []
 
     init(useSampleData: Bool) {
         self.useSampleData = useSampleData
@@ -161,6 +163,7 @@ final class NodeTrackerStore: ObservableObject {
                 switch result {
                 case let .success(snapshot):
                     self.snapshot = snapshot
+                    self.checkForNewConflicts(in: snapshot)
                 case let .failure(error):
                     self.lastError = error.localizedDescription
                     self.snapshot = AppSnapshot.empty(watchedPorts: watchedPorts, source: "error")
@@ -207,6 +210,65 @@ final class NodeTrackerStore: ObservableObject {
             return
         }
         self.copyText(String(suggestedPort), label: "Suggested port")
+    }
+
+    func copyAllSuggestedPorts() {
+        let conflictPorts = self.snapshot.watchedPorts.filter(\.isConflict)
+        let suggestions = conflictPorts.compactMap { status -> String? in
+            guard let port = self.nextAvailablePort(after: status.port) else { return nil }
+            return "\(status.port)\u{2192}\(port)"
+        }
+        guard !suggestions.isEmpty else {
+            self.lastError = "No free ports found"
+            return
+        }
+        let text = suggestions.joined(separator: ", ")
+        self.copyText(text, label: "All suggested ports")
+    }
+
+    func terminateAllNodeProcessesOnWatchedPorts() {
+        let watchedPortSet = Set(self.snapshot.watchedPorts.filter(\.isBusy).map(\.port))
+        let nodeProcesses = self.snapshot.projects
+            .flatMap(\.processes)
+            .filter { process in
+                process.process.isNodeFamily && !Set(process.ports).isDisjoint(with: watchedPortSet)
+            }
+
+        guard !nodeProcesses.isEmpty else { return }
+
+        if self.settings.confirmBeforeTerminate {
+            let alert = NSAlert()
+            alert.messageText = "Terminate \(nodeProcesses.count) Node process\(nodeProcesses.count == 1 ? "" : "es")?"
+            alert.informativeText = "This will free all watched ports owned by Node apps."
+            alert.addButton(withTitle: "Terminate All")
+            alert.addButton(withTitle: "Cancel")
+            if alert.runModal() != .alertFirstButtonReturn {
+                return
+            }
+        }
+
+        for process in nodeProcesses {
+            kill(pid_t(process.process.pid), SIGTERM)
+        }
+        self.refreshNow()
+    }
+
+    func terminateGroup(_ group: NodeProcessGroup) {
+        if self.settings.confirmBeforeTerminate {
+            let alert = NSAlert()
+            alert.messageText = "Terminate \(group.count) \(group.toolLabel) process\(group.count == 1 ? "" : "es")?"
+            alert.informativeText = "This will free \(group.formattedMemory) of memory."
+            alert.addButton(withTitle: "Terminate All")
+            alert.addButton(withTitle: "Cancel")
+            if alert.runModal() != .alertFirstButtonReturn {
+                return
+            }
+        }
+
+        for pid in group.pids {
+            kill(pid_t(pid), SIGTERM)
+        }
+        self.refreshNow()
     }
 
     func reveal(path: String?) {
@@ -263,6 +325,36 @@ final class NodeTrackerStore: ObservableObject {
         }
 
         return nil
+    }
+
+    private func checkForNewConflicts(in snapshot: AppSnapshot) {
+        let currentConflicts = Set(snapshot.watchedPorts.filter(\.isConflict).map(\.port))
+        let newConflicts = currentConflicts.subtracting(self.previousConflictPorts)
+        self.previousConflictPorts = currentConflicts
+
+        guard Bundle.main.bundleIdentifier != nil else { return }
+
+        for port in newConflicts.sorted() {
+            guard let status = snapshot.watchedPorts.first(where: { $0.port == port }) else { continue }
+            let owner = status.ownerSummary
+            let suggested = self.nextAvailablePort(after: port)
+            let body = suggested != nil
+                ? "\(owner) \u{2014} use port \(suggested!) instead"
+                : "\(owner) is blocking this port"
+
+            let content = UNMutableNotificationContent()
+            content.title = "Port \(port) blocked"
+            content.body = body
+            content.sound = .default
+            content.userInfo = ["port": port, "suggestedPort": suggested ?? 0]
+
+            let request = UNNotificationRequest(
+                identifier: "conflict-\(port)",
+                content: content,
+                trigger: nil
+            )
+            UNUserNotificationCenter.current().add(request)
+        }
     }
 
     private func settingsDidChange() {

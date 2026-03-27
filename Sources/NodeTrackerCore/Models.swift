@@ -135,22 +135,52 @@ public struct WatchedPortStatus: Codable, Hashable, Sendable, Identifiable {
     public var id: Int { self.port }
 }
 
+public struct NodeProcessGroup: Codable, Hashable, Sendable, Identifiable {
+    public let toolLabel: String
+    public let count: Int
+    public let totalMemoryBytes: Int
+    public let pids: [Int]
+
+    public init(toolLabel: String, count: Int, totalMemoryBytes: Int, pids: [Int]) {
+        self.toolLabel = toolLabel
+        self.count = count
+        self.totalMemoryBytes = totalMemoryBytes
+        self.pids = pids
+    }
+
+    public var id: String { self.toolLabel }
+
+    public var formattedMemory: String {
+        let mb = Double(self.totalMemoryBytes) / (1024 * 1024)
+        if mb >= 1024 {
+            return String(format: "%.1f GB", mb / 1024)
+        }
+        return String(format: "%.0f MB", mb)
+    }
+}
+
 public struct SnapshotSummary: Codable, Hashable, Sendable {
     public let nodeProjectCount: Int
     public let watchedBusyCount: Int
     public let otherListenerCount: Int
     public let watchedNonNodeConflictCount: Int
+    public let nodeProcessTotalCount: Int
+    public let nodeProcessTotalMemoryBytes: Int
 
     public init(
         nodeProjectCount: Int,
         watchedBusyCount: Int,
         otherListenerCount: Int,
-        watchedNonNodeConflictCount: Int
+        watchedNonNodeConflictCount: Int,
+        nodeProcessTotalCount: Int = 0,
+        nodeProcessTotalMemoryBytes: Int = 0
     ) {
         self.nodeProjectCount = nodeProjectCount
         self.watchedBusyCount = watchedBusyCount
         self.otherListenerCount = otherListenerCount
         self.watchedNonNodeConflictCount = watchedNonNodeConflictCount
+        self.nodeProcessTotalCount = nodeProcessTotalCount
+        self.nodeProcessTotalMemoryBytes = nodeProcessTotalMemoryBytes
     }
 }
 
@@ -170,6 +200,7 @@ public struct AppSnapshot: Codable, Hashable, Sendable {
     public let watchedPorts: [WatchedPortStatus]
     public let projects: [ProjectSnapshot]
     public let otherProcesses: [TrackedProcessSnapshot]
+    public let nodeProcessGroups: [NodeProcessGroup]
     public let diagnostics: ProbeDiagnostics
 
     public init(
@@ -178,6 +209,7 @@ public struct AppSnapshot: Codable, Hashable, Sendable {
         watchedPorts: [WatchedPortStatus],
         projects: [ProjectSnapshot],
         otherProcesses: [TrackedProcessSnapshot],
+        nodeProcessGroups: [NodeProcessGroup] = [],
         diagnostics: ProbeDiagnostics
     ) {
         self.generatedAt = generatedAt
@@ -185,6 +217,7 @@ public struct AppSnapshot: Codable, Hashable, Sendable {
         self.watchedPorts = watchedPorts
         self.projects = projects
         self.otherProcesses = otherProcesses
+        self.nodeProcessGroups = nodeProcessGroups
         self.diagnostics = diagnostics
     }
 
@@ -203,6 +236,7 @@ public struct AppSnapshot: Codable, Hashable, Sendable {
             watchedPorts: statuses,
             projects: [],
             otherProcesses: [],
+            nodeProcessGroups: [],
             diagnostics: ProbeDiagnostics(commands: SnapshotService.diagnosticCommands, source: source)
         )
     }

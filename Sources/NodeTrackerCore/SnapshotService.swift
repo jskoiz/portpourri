@@ -6,6 +6,7 @@ public struct SnapshotService: Sendable {
         "lsof -nP -Fpcuftn -iTCP -sTCP:LISTEN",
         "ps -p <pids> -o pid=,ppid=,etime=,state=,command=",
         "lsof -a -p <pid> -d cwd -Fn",
+        "ps -eo pid=,rss=,command=",
     ]
 
     private let listenerProbe: ListenerProbing
@@ -13,17 +14,20 @@ public struct SnapshotService: Sendable {
     private let projectResolver: ProjectResolving
     private let exporter: SnapshotExporting
     private let classifier = NodeProcessClassifier()
+    private let shellRunner: ShellCommandRunning
 
     public init(
         listenerProbe: ListenerProbing = LsofListenerProbe(),
         metadataProbe: ProcessMetadataProbing = PSProcessMetadataProbe(),
         projectResolver: ProjectResolving = DefaultProjectResolver(),
-        exporter: SnapshotExporting = JSONSnapshotExporter()
+        exporter: SnapshotExporting = JSONSnapshotExporter(),
+        shellRunner: ShellCommandRunning = ProcessShellRunner()
     ) {
         self.listenerProbe = listenerProbe
         self.metadataProbe = metadataProbe
         self.projectResolver = projectResolver
         self.exporter = exporter
+        self.shellRunner = shellRunner
     }
 
     public func captureLiveSnapshot(watchedPorts: [Int]) throws -> AppSnapshot {
@@ -125,11 +129,17 @@ public struct SnapshotService: Sendable {
             return lhs.process.commandLine < rhs.process.commandLine
         }
 
+        let nodeProcessGroups = (try? self.scanAllNodeProcesses()) ?? []
+        let totalNodeCount = nodeProcessGroups.reduce(0) { $0 + $1.count }
+        let totalNodeMemory = nodeProcessGroups.reduce(0) { $0 + $1.totalMemoryBytes }
+
         let summary = SnapshotSummary(
             nodeProjectCount: projects.count,
             watchedBusyCount: watchedStatuses.filter { $0.isBusy }.count,
             otherListenerCount: otherProcesses.count,
-            watchedNonNodeConflictCount: watchedStatuses.filter { $0.isConflict }.count
+            watchedNonNodeConflictCount: watchedStatuses.filter { $0.isConflict }.count,
+            nodeProcessTotalCount: totalNodeCount,
+            nodeProcessTotalMemoryBytes: totalNodeMemory
         )
 
         return AppSnapshot(
@@ -138,8 +148,59 @@ public struct SnapshotService: Sendable {
             watchedPorts: watchedStatuses,
             projects: projects,
             otherProcesses: otherProcesses,
+            nodeProcessGroups: nodeProcessGroups,
             diagnostics: ProbeDiagnostics(commands: Self.diagnosticCommands, source: source)
         )
+    }
+
+    private func scanAllNodeProcesses() throws -> [NodeProcessGroup] {
+        let output = try self.shellRunner.run(
+            launchPath: "/bin/ps",
+            arguments: ["-eo", "pid=,rss=,command="],
+            allowNonZeroExitCodes: []
+        )
+
+        struct RawProcess {
+            let pid: Int
+            let rssKB: Int
+            let commandLine: String
+        }
+
+        var rawProcesses: [RawProcess] = []
+        for line in output.stdout.split(separator: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            let tokens = trimmed.split(maxSplits: 2, omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
+            guard tokens.count >= 3,
+                  let pid = Int(tokens[0]),
+                  let rss = Int(tokens[1]) else { continue }
+            let command = String(tokens[2])
+            rawProcesses.append(RawProcess(pid: pid, rssKB: rss, commandLine: command))
+        }
+
+        let nodeProcesses = rawProcesses.filter {
+            self.classifier.isNodeFamily(commandLine: $0.commandLine, parentCommandLine: nil)
+        }
+
+        var groups: [String: (count: Int, totalBytes: Int, pids: [Int])] = [:]
+        for process in nodeProcesses {
+            let label = self.classifier.classify(
+                pid: process.pid, ppid: 0, state: "", uptime: "",
+                commandLine: process.commandLine, parentCommandLine: nil, cwd: nil
+            ).toolLabel
+            groups[label, default: (0, 0, [])].count += 1
+            groups[label, default: (0, 0, [])].totalBytes += process.rssKB * 1024
+            groups[label, default: (0, 0, [])].pids.append(process.pid)
+        }
+
+        return groups.map { label, data in
+            NodeProcessGroup(
+                toolLabel: label,
+                count: data.count,
+                totalMemoryBytes: data.totalBytes,
+                pids: data.pids.sorted()
+            )
+        }
+        .sorted { $0.totalMemoryBytes > $1.totalMemoryBytes }
     }
 
     private func normalizeListeners(_ listeners: [ListenerSnapshot]) -> [ListenerSnapshot] {

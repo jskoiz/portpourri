@@ -49,10 +49,13 @@ public struct ProcessShellRunner: ShellCommandRunning {
         process.standardError = stderrPipe
 
         try process.run()
-        process.waitUntilExit()
 
+        // Read pipe data before waitUntilExit to avoid deadlock when
+        // output exceeds the pipe buffer size (~64 KB on macOS).
         let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
         let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+
+        process.waitUntilExit()
         let stdout = String(decoding: stdoutData, as: UTF8.self)
         let stderr = String(decoding: stderrData, as: UTF8.self)
 
