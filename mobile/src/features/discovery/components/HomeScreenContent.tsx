@@ -1,8 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import type { User } from '../../../api/types';
 import SwipeDeck from '../../../components/SwipeDeck';
 import MatchAnimation from '../../../components/MatchAnimation';
+import { getFloatingTabBarReservedHeight } from '../../../design/layout/tabBarLayout';
 import { ScreenScaffold, SectionBlock, StatePanel } from '../../../design/primitives';
 import type { AppBottomSheetProps } from '../../../design/sheets/AppBottomSheet';
 import { DiscoveryNudgeCard } from './DiscoveryNudgeCard';
@@ -81,7 +83,9 @@ export function HomeScreenContent({
   showMatch: boolean;
   unreadCount: number;
 }) {
+  const insets = React.useContext(SafeAreaInsetsContext);
   const resolvedCardHeight = clampCardHeight(cardHeight ?? DEFAULT_CARD_HEIGHT);
+  const deckBottomInset = getFloatingTabBarReservedHeight(insets?.bottom ?? 0);
   const handleDeckAreaLayout = React.useCallback((event: { nativeEvent: { layout: { height: number } } }) => {
     const nextHeight = clampCardHeight(event.nativeEvent.layout.height - 2);
     if (Math.abs(resolvedCardHeight - nextHeight) > 1) {
@@ -111,7 +115,7 @@ export function HomeScreenContent({
         <DiscoveryNudgeCard score={completenessScore} onPress={onPressCompleteness} />
       </SectionBlock>
 
-      <View style={styles.deckArea}>
+      <View testID="discovery-deck-shell" style={[styles.deckArea, { paddingBottom: deckBottomInset }]}>
         <View
           style={styles.deckAreaInner}
           testID="discovery-deck-area"

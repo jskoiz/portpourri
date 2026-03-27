@@ -1,7 +1,9 @@
 import React from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import type { User } from '../../../../api/types';
+import { TAB_BAR_EXPANDED, TAB_BAR_MARGIN_BOTTOM } from '../../../../design/layout/tabBarLayout';
 import { HomeScreenContent } from '../HomeScreenContent';
 import type { FilterModalState, QuickFilterKey } from '../discoveryFilters';
 
@@ -62,39 +64,41 @@ function renderHomeScreenContent(overrides: Partial<React.ComponentProps<typeof 
   } as const;
 
   return render(
-    <HomeScreenContent
-      activeFilterCount={0}
-      activeQuickFilter="all"
-      cardHeight={520}
-      completenessScore={45}
-      filtersSheet={filtersSheet}
-      filterState={baseFilterState}
-      feed={[] as User[]}
-      greeting="Evening, Lana"
-      isActing={false}
-      intentOption={{ color: '#8BAA7A', label: 'Open to both' }}
-      onApplyFilters={jest.fn()}
-      onMatchAnimationFinish={jest.fn()}
-      onOpenFilters={jest.fn()}
-      onPressCompleteness={jest.fn()}
-      onPressNotifications={jest.fn()}
-      onPressProfile={jest.fn()}
-      onQuickFilterPress={jest.fn()}
-      onRefetch={jest.fn()}
-      onCardHeightChange={jest.fn()}
-      onSwipeLeft={jest.fn()}
-      onSwipeRight={jest.fn()}
-      onToggleAvailability={jest.fn()}
-      onToggleGoal={jest.fn()}
-      onToggleIntensity={jest.fn()}
-      onUndoAndClose={jest.fn()}
-      onUpdateDistanceKm={jest.fn()}
-      onUpdateMaxAge={jest.fn()}
-      onUpdateMinAge={jest.fn()}
-      showMatch={false}
-      unreadCount={4}
-      {...overrides}
-    />,
+    <SafeAreaInsetsContext.Provider value={{ bottom: 12, left: 0, right: 0, top: 0 }}>
+      <HomeScreenContent
+        activeFilterCount={0}
+        activeQuickFilter="all"
+        cardHeight={520}
+        completenessScore={45}
+        filtersSheet={filtersSheet}
+        filterState={baseFilterState}
+        feed={[] as User[]}
+        greeting="Evening, Lana"
+        isActing={false}
+        intentOption={{ color: '#8BAA7A', label: 'Open to both' }}
+        onApplyFilters={jest.fn()}
+        onMatchAnimationFinish={jest.fn()}
+        onOpenFilters={jest.fn()}
+        onPressCompleteness={jest.fn()}
+        onPressNotifications={jest.fn()}
+        onPressProfile={jest.fn()}
+        onQuickFilterPress={jest.fn()}
+        onRefetch={jest.fn()}
+        onCardHeightChange={jest.fn()}
+        onSwipeLeft={jest.fn()}
+        onSwipeRight={jest.fn()}
+        onToggleAvailability={jest.fn()}
+        onToggleGoal={jest.fn()}
+        onToggleIntensity={jest.fn()}
+        onUndoAndClose={jest.fn()}
+        onUpdateDistanceKm={jest.fn()}
+        onUpdateMaxAge={jest.fn()}
+        onUpdateMinAge={jest.fn()}
+        showMatch={false}
+        unreadCount={4}
+        {...overrides}
+      />
+    </SafeAreaInsetsContext.Provider>,
   );
 }
 
@@ -146,5 +150,19 @@ describe('HomeScreenContent', () => {
     });
 
     expect(onCardHeightChange).toHaveBeenCalledWith(440);
+  });
+
+  it('reserves space for the floating tab bar below the swipe deck', () => {
+    renderHomeScreenContent({
+      feed: [{ id: 'user-1', firstName: 'Kai' } as User],
+    });
+
+    expect(screen.getByTestId('discovery-deck-shell').props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          paddingBottom: TAB_BAR_EXPANDED + TAB_BAR_MARGIN_BOTTOM + 12,
+        }),
+      ]),
+    );
   });
 });

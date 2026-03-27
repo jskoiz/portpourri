@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Animated,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -19,6 +18,12 @@ import { withBoundary } from '../components/withBoundary';
 import { useTheme } from '../theme/useTheme';
 import AppIcon from '../components/ui/AppIcon';
 import { GlassView } from '../design/primitives/GlassView';
+import {
+  TAB_BAR_COLLAPSED,
+  TAB_BAR_EXPANDED,
+  TAB_BAR_MARGIN_BOTTOM,
+  TAB_BAR_MARGIN_H,
+} from '../design/layout/tabBarLayout';
 import type { MainTabParamList } from '../core/navigation/types';
 import { useUnreadNotificationCount } from '../features/notifications/hooks/useUnreadNotificationCount';
 import { useTabBarVisibility } from './TabBarVisibilityContext';
@@ -35,10 +40,6 @@ const TAB_ICONS: Record<string, React.ComponentProps<typeof AppIcon>['name']> = 
   You: 'user',
 };
 
-const TAB_BAR_EXPANDED = Platform.OS === 'ios' ? 62 : 58;
-const TAB_BAR_MARGIN_H = 12;
-const TAB_BAR_MARGIN_BOTTOM = 8;
-
 function FloatingGlassTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -48,7 +49,7 @@ function FloatingGlassTabBar({ state, descriptors, navigation }: BottomTabBarPro
   // Animate height and label opacity
   const tabBarHeight = minimizeProgress.interpolate({
     inputRange: [0, 1],
-    outputRange: [TAB_BAR_EXPANDED, 46],
+    outputRange: [TAB_BAR_EXPANDED, TAB_BAR_COLLAPSED],
     extrapolate: 'clamp',
   });
 

@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-native';
 import React from 'react';
 import { View } from 'react-native';
 import SwipeDeck from '../components/SwipeDeck';
+import { getFloatingTabBarReservedHeight } from '../design/layout/tabBarLayout';
 import { HomeHero } from '../features/discovery/components/HomeHero';
 import { HomeQuickFilters } from '../features/discovery/components/HomeQuickFilters';
 import type { QuickFilterKey } from '../features/discovery/components/discoveryFilters';
@@ -132,6 +133,7 @@ export const DiscoveryScreenPreview: Story = {
   },
   render: () => {
     const [activeFilter, setActiveFilter] = React.useState<QuickFilterKey>('all');
+    const tabBarReserve = getFloatingTabBarReservedHeight(34);
 
     return (
       <View
@@ -155,7 +157,7 @@ export const DiscoveryScreenPreview: Story = {
           onPressFilter={setActiveFilter}
           onPressRefine={() => undefined}
         />
-        <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 4, paddingBottom: 8 }}>
+        <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 4, paddingBottom: tabBarReserve }}>
           <SwipeDeck
             cardHeight={620}
             data={mockProfiles}
@@ -164,7 +166,6 @@ export const DiscoveryScreenPreview: Story = {
             onSwipeRight={() => undefined}
           />
         </View>
-        <View style={{ height: 90, backgroundColor: 'rgba(253,251,248,0.92)' }} />
       </View>
     );
   },
