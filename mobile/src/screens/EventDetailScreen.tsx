@@ -1,10 +1,18 @@
-import type { EventDetail } from '../api/types';
+import type { EventDetail, EventSummary } from '../api/types';
 import type { RootStackScreenProps } from '../core/navigation/types';
 import { EventDetailView } from '../features/events/components/EventDetailView';
 import { useEventDetailScreenController } from '../features/events/hooks/useEventDetailScreenController';
 
-function isEventDetail(event: unknown): event is EventDetail {
-  return Array.isArray((event as EventDetail | null | undefined)?.attendees);
+function ensureEventDetail(
+  event: EventSummary | EventDetail | null | undefined,
+): EventDetail | null {
+  if (!event) return null;
+  if ('attendees' in event) return event;
+
+  return {
+    ...event,
+    attendees: [],
+  };
 }
 
 export default function EventDetailScreen({
@@ -16,8 +24,8 @@ export default function EventDetailScreen({
     eventId,
     onBack: () => navigation.goBack(),
   });
-  const routeEvent = isEventDetail(route.params?.event) ? route.params.event : null;
-  const event = eventDetailScreenState.event ?? routeEvent ?? null;
+  const event =
+    eventDetailScreenState.event ?? ensureEventDetail(route.params?.event);
 
   return (
     <EventDetailView

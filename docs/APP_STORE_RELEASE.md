@@ -112,7 +112,7 @@ During `prepare` and `ship`, the wrapper now also generates `mobile/build/testfl
 
 When App Store Connect API-key auth is available, `npm run release:ios:ship` now publishes that generated text to the TestFlight beta app description automatically. Without API-key auth, the script leaves the generated notes file in `mobile/build/` for manual paste and records that publish state in the release manifest.
 
-In CI, the `release-readiness` lane runs after the main check lane and can still be retried manually for a pushed `main` SHA; it is meant to validate the same release provenance without turning the CI release lane into a second full repo-validation pass.
+In CI, the `release-readiness` lane is manual-only and runs from `workflow_dispatch` on `main`. It is meant to validate the same release provenance without turning the CI release lane into a second full repo-validation pass.
 
 `npm run release:ios:ship` must run from the same clean checkout after a successful prepare run. It does not rerun `npm run check`; instead it verifies the prepared context still matches the current branch, SHA, version, build number, API URL, mode, and profile before it archives and uploads.
 

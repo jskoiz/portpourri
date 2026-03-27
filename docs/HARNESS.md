@@ -85,7 +85,7 @@ npm run scaffold:backend-module -- --name moderation
 ## CI Shape
 
 - CI now runs automatically on pull requests and pushes to `main`; local harness commands remain the primary debugging path.
-- CI runs the fast diff-driven lane, the backend migration rehearsal lane, the full `main-check` lane, and a release-readiness lane that runs after `main-check` on `push` to `main` and `workflow_dispatch`. The release-readiness lane validates release provenance with `repo:index:check` and `release:ios:prepare` without re-running the full repo graph, and manual dispatch remains available for reruns against an existing main SHA.
+- CI runs the fast diff-driven lane, a path-gated backend migration rehearsal lane on migration-sensitive PR changes, the full `main-check` lane on `push` to `main`, and a manual-only release-readiness lane on `workflow_dispatch`. The release-readiness lane validates release provenance with `repo:index:check` and `release:ios:prepare` without re-running the full repo graph.
 - The dedicated iOS simulator workflow still runs only for native-impacting mobile changes such as Expo config, native plugin/dependency changes, generated iOS project changes, or workflow edits.
 - Use `npm run smoke` locally when you need deeper bootstrap/runtime validation, especially after backend auth/discovery/events/matches/notifications/profile changes or matching mobile chat/discovery/events/profile screen changes.
 - Every lane uploads `harness-plan.json`, `harness-results.json`, and `harness-failure-summary.json` as CI artifacts.

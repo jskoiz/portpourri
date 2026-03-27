@@ -15,9 +15,37 @@ permissions:
   contents: read
 
 jobs:
+  backend-migration-gate:
+    name: Backend migration gate
+    if: github.event_name == 'pull_request'
+    runs-on: [self-hosted, Linux, X64, brdg-ci]
+    outputs:
+      should_run: ${{ steps.gate.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          changed_files="$(git diff --name-only --diff-filter=ACMR "$base...$head")"
+
+          should_run=false
+          if printf '%s\n' "$changed_files" | grep -Eq '^(backend/prisma/|backend/scripts/|backend/package.json$|backend/package-lock.json$|scripts/rehearse-legacy-backend-migrations\.mjs$|scripts/check-prisma-migration-safety\.mjs$)'; then
+            should_run=true
+          fi
+
+          echo "should_run=$should_run" >> "$GITHUB_OUTPUT"
+
   backend-migration-rehearsal:
     name: Backend migration rehearsal
-    runs-on: [self-hosted, Linux, X64, brdg-vps]
+    if: github.event_name == 'pull_request' && needs.backend-migration-gate.outputs.should_run == 'true'
+    needs: [backend-migration-gate]
+    runs-on: [self-hosted, Linux, X64, brdg-ci]
     services:
       postgres:
         image: postgres:16-alpine
@@ -58,7 +86,7 @@ jobs:
   fast-pr:
     name: PR fast lane
     if: github.event_name == 'pull_request'
-    runs-on: [self-hosted, Linux, X64, brdg-vps]
+    runs-on: [self-hosted, Linux, X64, brdg-ci]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -88,8 +116,8 @@ jobs:
 
   main-check:
     name: Main check lane
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
-    runs-on: [self-hosted, Linux, X64, brdg-vps]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Linux, X64, brdg-ci]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -115,42 +143,10 @@ jobs:
           name: harness-main-check
           path: artifacts/harness/main-check
 
-  release-path-gate:
-    name: Release path gate
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
-    runs-on: [self-hosted, Linux, X64, brdg-vps]
-    outputs:
-      should_run: ${{ steps.gate.outputs.should_run }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: gate
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          base="${{ github.event.before }}"
-          head="${{ github.sha }}"
-          changed_files="$(git diff --name-only --diff-filter=ACMR "$base" "$head")"
-
-          should_run=false
-          if printf '%s\n' "$changed_files" | grep -qv '^backend/'; then
-            should_run=true
-          fi
-
-          echo "should_run=$should_run" >> "$GITHUB_OUTPUT"
-
   release-readiness:
     name: Release readiness
-    if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'push' && github.ref == 'refs/heads/main') && needs.release-path-gate.outputs.should_run == 'true')
-    needs: [main-check, release-path-gate]
-    runs-on: [self-hosted, Linux, X64, brdg-vps]
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Linux, X64, brdg-ci]
     env:
       EXPO_PUBLIC_API_URL: https://api.example.invalid
       IOS_BUNDLE_IDENTIFIER: com.avmillabs.brdg

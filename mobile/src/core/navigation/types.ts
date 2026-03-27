@@ -2,7 +2,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
-import type { EventSummary, Match, User } from '../../api/types';
+import type { EventDetail, EventSummary, Match, User } from '../../api/types';
 import type { SessionIntent } from '../../types/sessionIntent';
 
 export type MainTabParamList = {
@@ -28,7 +28,7 @@ export type RootStackParamList = {
   };
   EventDetail: {
     eventId: string;
-    event?: EventSummary | null;
+    event?: EventSummary | EventDetail | null;
   };
   MyEvents: undefined;
   Notifications: undefined;

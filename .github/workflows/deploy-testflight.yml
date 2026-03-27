@@ -9,7 +9,7 @@ permissions:
 jobs:
   deploy:
     name: Deprecated EAS Build & Submit
-    runs-on: [self-hosted, Linux, X64, brdg-vps]
+    runs-on: ubuntu-latest
     steps:
       - run: |
           echo "The canonical BRDG TestFlight path is the local Xcode release flow."

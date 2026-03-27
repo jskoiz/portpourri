@@ -1,11 +1,17 @@
 # BRDG Lightsail deployment
 
-BRDG deploys the backend API to a single Ubuntu Lightsail instance with:
+BRDG deploys the backend API to a dedicated Ubuntu Lightsail production host and runs GitHub Actions on a separate Ubuntu Lightsail CI host.
+
+Production host responsibilities:
 
 - a versioned backend image published to GHCR
 - Postgres in Docker
 - Cloudflare Tunnel for public HTTPS
-- three repository-scoped GitHub Actions runners sharing the label `brdg-vps`
+
+Dedicated CI host responsibilities:
+
+- three repository-scoped GitHub Actions runners sharing the label `brdg-ci`
+- Docker-backed GitHub Actions jobs for CI, manual release-readiness, and backend deploy orchestration
 
 Recommended production API host:
 
@@ -57,11 +63,13 @@ The host runtime directory should contain only rendered runtime files and pulled
 
 It must not act as a repo checkout.
 
-GitHub Actions now targets the self-hosted runner pool with `runs-on: [self-hosted, Linux, X64, brdg-vps]`. The Lightsail host runs `brdg-vps`, `brdg-vps-2`, and `brdg-vps-3` under that shared label so validation jobs can fan out instead of queueing behind one worker.
+GitHub Actions now targets a dedicated runner pool with `runs-on: [self-hosted, Linux, X64, brdg-ci]`. The CI Lightsail host runs `brdg-ci`, `brdg-ci-2`, and `brdg-ci-3` under that shared label so validation jobs can fan out without contending with the production backend host.
 
-This keeps PR and deploy workflows off GitHub-hosted minutes, but it also means CI shares CPU, memory, disk, and Docker with the production backend host. Service containers must use dynamically assigned host ports instead of assuming standard ports like `5432` are free on the machine.
+The production backend host should not run GitHub Actions runners. CI, manual release-readiness, image builds, and deploy orchestration run on the dedicated CI host, while the deploy workflow touches production only through Lightsail SSH and the runtime bundle under `/opt/brdg/runtime/api`.
 
 ## Server bootstrap
+
+### Production host
 
 ```bash
 sudo apt-get update
@@ -78,6 +86,20 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plug
 sudo usermod -aG docker ubuntu
 ```
 
+### Dedicated CI runner host
+
+Provision a separate Ubuntu 24.04 Lightsail instance for CI. Size it for concurrent Docker-backed jobs rather than API traffic. `xlarge_3_0` is a reasonable starting point for three parallel BRDG runners.
+
+Bootstrap the host with:
+
+```bash
+token="$(gh api -X POST repos/jskoiz/brdg/actions/runners/registration-token --jq .token)"
+scp ./scripts/bootstrap-github-runner-host.sh ubuntu@<ci-host>:/tmp/
+ssh ubuntu@<ci-host> "chmod +x /tmp/bootstrap-github-runner-host.sh && sudo /tmp/bootstrap-github-runner-host.sh --token '${token}' --repo jskoiz/brdg --labels brdg-ci,brdg --count 3 --prefix brdg-ci"
+```
+
+That installs Docker plus three runner services named `brdg-ci`, `brdg-ci-2`, and `brdg-ci-3`.
+
 ## Workflow deploy
 
 The backend workflow supports:
@@ -87,7 +109,7 @@ The backend workflow supports:
 - `dry_run` to build, render config, and validate without touching the host
 - `rollback_image_tag` to redeploy a previously published GHCR image tag
 
-The deploy workflow is sequenced behind the `main` validation path so it does not start competing with the branch checks that proved the merge. Manual dispatch is still available for a specific `git_sha` when you need to replay or roll back a production rollout.
+The deploy workflow runs on the dedicated `brdg-ci` runners. It is sequenced behind the `main` validation path so it does not start competing with the branch checks that proved the merge. Manual dispatch is still available for a specific `git_sha` when you need to replay or roll back a production rollout.
 
 The workflow:
 
@@ -95,12 +117,16 @@ The workflow:
 2. rehearses the legacy enum migration path with `npm run rehearse:backend:legacy-migrations`
 3. builds and pushes `ghcr.io/<owner>/brdg-api:<full_sha>` plus `:main`
 4. renders `.env` and Cloudflare credentials/config from SSM
-5. uploads only runtime files to `/opt/brdg/runtime/api`
-6. pulls the exact image tag on Lightsail and restarts `postgres`, `cloudflared`, and `api`
+5. resolves Lightsail SSH access from the CI host and uploads only runtime files to `/opt/brdg/runtime/api`
+6. pulls the exact image tag on the production Lightsail host and restarts `postgres`, `cloudflared`, and `api`
 7. compares the host-local `/health.build` payload against `release-manifest.json`
 8. verifies hosted health and build provenance against the workflow manifest
 
-Because CI and deploy use the same runner pool, this sequencing is important: PR validation gets first access to the shared workers, and production rollout only begins after the mainline checks have completed.
+Because CI and deploy share the same dedicated CI pool, this sequencing is still important: PR validation gets first access to the shared workers, and production rollout only begins after the mainline checks have completed.
+
+## Capacity notes
+
+The production host is currently a `medium_3_0` instance. Do not resize it based on pre-migration CI spikes, because those spikes were generated by self-hosted runners sharing the API host. Move CI to the dedicated `brdg-ci` box first, then reassess production-only CPU, memory, and disk behavior before changing the backend host size.
 
 ## Manual validation helpers
 
