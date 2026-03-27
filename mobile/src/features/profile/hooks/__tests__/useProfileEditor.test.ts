@@ -107,8 +107,6 @@ describe('useProfileEditor', () => {
       intentDating: false,
       intentWorkout: false,
       intentFriends: false,
-      showMeMen: true,
-      showMeWomen: true,
     });
     expect(updateFitness).toHaveBeenCalledWith({
       intensityLevel: 'high',
@@ -165,8 +163,6 @@ describe('useProfileEditor', () => {
       intentDating: false,
       intentWorkout: false,
       intentFriends: false,
-      showMeMen: true,
-      showMeWomen: true,
     });
     expect(updateFitness).toHaveBeenCalledWith({
       intensityLevel: 'moderate',
@@ -305,8 +301,94 @@ describe('useProfileEditor', () => {
       intentDating: false,
       intentWorkout: false,
       intentFriends: false,
-      showMeMen: true,
-      showMeWomen: true,
+    });
+  });
+
+  it('only sends discovery flags when the preference actually changes', async () => {
+    const updateProfile = jest.fn().mockResolvedValue(undefined);
+    const updateFitness = jest.fn().mockResolvedValue(undefined);
+    const profile = makeProfile();
+
+    const { result } = renderHook(() =>
+      useProfileEditor({
+        profile: profile as never,
+        updateProfile,
+        updateFitness,
+      }),
+    );
+
+    act(() => {
+      void result.current.save();
+    });
+
+    await waitFor(() => {
+      expect(result.current.editMode).toBe(true);
+    });
+
+    act(() => {
+      result.current.setDiscoveryPreference('women');
+    });
+
+    await act(async () => {
+      await result.current.save();
+    });
+
+    expect(updateProfile).toHaveBeenCalledWith({
+      bio: 'Old bio',
+      city: 'Old City',
+      latitude: 21.3,
+      longitude: -157.8,
+      intentDating: false,
+      intentWorkout: false,
+      intentFriends: false,
+      showMeMen: false,
+    });
+  });
+
+  it('uses the latest loaded profile when discovery flags were unavailable at mount time', async () => {
+    const updateProfile = jest.fn().mockResolvedValue(undefined);
+    const updateFitness = jest.fn().mockResolvedValue(undefined);
+    const profile = makeProfile();
+
+    const { result, rerender } = renderHook<
+      ReturnType<typeof useProfileEditor>,
+      { currentProfile: ProfileShape | null }
+    >(
+      ({ currentProfile }) =>
+        useProfileEditor({
+          profile: currentProfile as never,
+          updateProfile,
+          updateFitness,
+        }),
+      { initialProps: { currentProfile: null } },
+    );
+
+    rerender({ currentProfile: profile });
+
+    await waitFor(() => {
+      expect(result.current.bio).toBe('Old bio');
+    });
+
+    act(() => {
+      void result.current.save();
+    });
+
+    await waitFor(() => {
+      expect(result.current.editMode).toBe(true);
+    });
+
+    await act(async () => {
+      await result.current.save();
+    });
+
+    expect(updateProfile).toHaveBeenCalledWith({
+      bio: 'Old bio',
+      city: 'Old City',
+      latitude: 21.3,
+      longitude: -157.8,
+      intentDating: false,
+      intentWorkout: false,
+      intentFriends: false,
     });
   });
 

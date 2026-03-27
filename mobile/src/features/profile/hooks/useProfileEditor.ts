@@ -20,6 +20,13 @@ function toggleValue(values: string[], nextValue: string) {
     : [...values, nextValue];
 }
 
+function getDiscoveryPreferenceFlags(preference: 'men' | 'women' | 'both') {
+  return {
+    showMeMen: preference === 'men' || preference === 'both',
+    showMeWomen: preference === 'women' || preference === 'both',
+  };
+}
+
 export function useProfileEditor({
   profile,
   updateFitness,
@@ -96,6 +103,10 @@ export function useProfileEditor({
       selectedSchedule,
     };
   });
+  const profileRef = useRef(profile);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
 
   const syncFromProfile = useCallback((source: User) => {
     setBio(source.profile?.bio || '');
@@ -150,6 +161,11 @@ export function useProfileEditor({
     let basicsSaved = false;
     let fitnessSaved = false;
     try {
+      const nextDiscoveryFlags = getDiscoveryPreferenceFlags(f.discoveryPreference);
+      const currentDiscoveryFlags = getDiscoveryPreferenceFlags(
+        getDiscoveryPreferenceValue(profileRef.current?.showMeMen, profileRef.current?.showMeWomen),
+      );
+
       await updateProfile({
         bio: f.bio.trim(),
         city: f.city.trim(),
@@ -158,8 +174,12 @@ export function useProfileEditor({
         intentDating: f.intentDating,
         intentWorkout: f.intentWorkout,
         intentFriends: f.intentFriends,
-        showMeMen: f.discoveryPreference === 'men' || f.discoveryPreference === 'both',
-        showMeWomen: f.discoveryPreference === 'women' || f.discoveryPreference === 'both',
+        ...(nextDiscoveryFlags.showMeMen !== currentDiscoveryFlags.showMeMen
+          ? { showMeMen: nextDiscoveryFlags.showMeMen }
+          : {}),
+        ...(nextDiscoveryFlags.showMeWomen !== currentDiscoveryFlags.showMeWomen
+          ? { showMeWomen: nextDiscoveryFlags.showMeWomen }
+          : {}),
       });
       basicsSaved = true;
       await updateFitness({

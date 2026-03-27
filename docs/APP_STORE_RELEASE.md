@@ -95,6 +95,8 @@ This is the normal BRDG TestFlight/App Store path. The root scripts pin `--mode 
 
 In `xcode` mode the wrapper uses a conservative native fast path. It only skips `npx expo prebuild --clean -p ios --npm` when the diff since the latest release tag is limited to known non-native-affecting paths such as `mobile/src/**`, tests, Storybook, docs, backend, and shared contracts. Changes to `mobile/app.config.ts`, `mobile/eas.json`, `mobile/package.json`, `mobile/package-lock.json`, `mobile/ios/**`, or release-critical icon/splash assets force a clean prebuild. If the classifier is uncertain, it falls back to a clean prebuild.
 
+The native fast-path decision is implemented by [`scripts/release-ios-fast-path.mjs`](../scripts/release-ios-fast-path.mjs). Treat it as an internal release helper invoked by [`scripts/release-ios.sh`](../scripts/release-ios.sh), not as a standalone release entrypoint.
+
 The wrapper still defaults Xcode signing to `submit.production.ios.appleTeamId` from [`mobile/eas.json`](../mobile/eas.json); set `IOS_DEVELOPMENT_TEAM` only when the local release should use a different Apple team.
 
 If the local Xcode Accounts state is missing or broken, the same wrapper can authenticate with an App Store Connect API key by setting `ASC_API_KEY_ID` and `ASC_API_ISSUER_ID` before `npm run release:ios:prepare`. The wrapper will auto-discover `AuthKey_<key>.p8` from the standard private-key locations, or you can point it at a different file with `ASC_API_KEY_PATH`.
