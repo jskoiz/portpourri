@@ -213,7 +213,7 @@ describe('SwipeDeck', () => {
       <SwipeDeck data={[user]} onSwipeLeft={noop} onSwipeRight={noop} />,
     );
 
-    expect(getByText('Training')).toBeTruthy();
+    expect(getByText('Looking for a training partner')).toBeTruthy();
   });
 
   it('shows a friends badge when discovery intent is friends-only', () => {
@@ -231,7 +231,29 @@ describe('SwipeDeck', () => {
       <SwipeDeck data={[user]} onSwipeLeft={noop} onSwipeRight={noop} />,
     );
 
-    expect(getByText('Friends')).toBeTruthy();
+    expect(getByText('Open to friendship')).toBeTruthy();
+  });
+
+  it('avoids stacking two evening-oriented labels in the top summary', () => {
+    const user = {
+      id: 'u6c',
+      firstName: 'Noa',
+      profile: {
+        city: 'Honolulu',
+        intentDating: true,
+      },
+      fitnessProfile: {
+        prefersEvening: true,
+      },
+    };
+
+    const { getByText, queryByText } = render(
+      <SwipeDeck data={[user]} onSwipeLeft={noop} onSwipeRight={noop} />,
+    );
+
+    expect(getByText('Open to dating')).toBeTruthy();
+    expect(getByText('Open to local plans')).toBeTruthy();
+    expect(queryByText('Available tonight')).toBeNull();
   });
 
   it('shows zero distance instead of hiding it', () => {

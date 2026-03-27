@@ -90,6 +90,24 @@ export const HelperLabelVariants: Story = {
     cardHeight: 620,
     data: [
       makeDiscoveryUser({
+        firstName: 'Noa',
+        id: 'story-helper-0',
+        profile: {
+          bio: 'Sunset walks, clean follow-through, and plans that leave room to talk.',
+          city: 'Honolulu',
+          intentDating: true,
+          intentWorkout: false,
+        },
+        fitnessProfile: {
+          favoriteActivities: '',
+          intensityLevel: 'steady',
+          prefersMorning: false,
+          prefersEvening: true,
+          primaryGoal: '',
+          weeklyFrequencyBand: '3',
+        },
+      }),
+      makeDiscoveryUser({
         firstName: 'Tori',
         id: 'story-helper-1',
         profile: {

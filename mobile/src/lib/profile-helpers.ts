@@ -65,12 +65,28 @@ export function getIntentLabel(user: Pick<User, 'profile'> | null | undefined): 
   const labels = getIntentLabels(user);
 
   if (labels.length === 0) return 'Intent not set';
-  if (labels.length === 1) return labels[0];
-  return `${labels.length} intents`;
+  if (labels.length === 1) {
+    if (labels[0] === 'Dating') return 'Open to dating';
+    if (labels[0] === 'Training') return 'Looking for a training partner';
+    if (labels[0] === 'Friends') return 'Open to friendship';
+  }
+
+  if (labels.length === 2) {
+    return `Open to ${labels.join(' and ').toLowerCase()}`;
+  }
+
+  return `Open to ${labels
+    .join(', ')
+    .replace(/, ([^,]*)$/, ', and $1')
+    .toLowerCase()}`;
 }
 
-export function getPresenceLabel(user: Pick<User, 'profile'> | null | undefined): string {
+export function getPresenceLabel(
+  user: Pick<User, 'profile' | 'fitnessProfile'> | null | undefined,
+): string {
+  if (user?.profile?.city && user?.fitnessProfile?.prefersEvening) return 'Open to local plans';
   if (user?.profile?.city) return 'Available tonight';
+  if (user?.fitnessProfile?.prefersEvening) return 'Open to evening plans';
   return 'Nearby now';
 }
 
