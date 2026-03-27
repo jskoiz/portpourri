@@ -343,7 +343,19 @@ jobs:
           docker compose pull api
           docker compose up -d postgres cloudflared api
           docker logout ghcr.io || true
-          curl -fsS http://127.0.0.1:3010/health >/tmp/brdg-health.json
+          rm -f /tmp/brdg-health.json
+          for attempt in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:3010/health >/tmp/brdg-health.json; then
+              break
+            fi
+            if [ "$attempt" -eq 20 ]; then
+              echo "Backend did not become healthy in time." >&2
+              docker compose ps >&2 || true
+              docker compose logs api --tail=200 >&2 || true
+              exit 1
+            fi
+            sleep 2
+          done
           python3 - <<'PY'
           import json
           from pathlib import Path
