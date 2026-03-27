@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
@@ -30,6 +30,10 @@ export class ModerationController {
   @ApiOperation({ summary: 'Block another user' })
   @ApiCreatedResponse({ description: 'User blocked successfully.' })
   block(@Req() req: AuthenticatedRequest, @Body() body: BlockUserDto) {
-    return this.moderationService.blockUser(req.user.id, body.targetUserId);
+    const targetUserId = body.targetUserId || body.blockedUserId;
+    if (!targetUserId) {
+      throw new BadRequestException('targetUserId is required');
+    }
+    return this.moderationService.blockUser(req.user.id, targetUserId);
   }
 }

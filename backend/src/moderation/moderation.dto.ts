@@ -5,6 +5,7 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
+import { Expose, Transform } from 'class-transformer';
 import { ReportCategory } from '@prisma/client';
 
 export class ReportUserDto {
@@ -28,7 +29,18 @@ export class ReportUserDto {
 }
 
 export class BlockUserDto {
+  @Expose()
+  @Transform(({ value, obj }) => {
+    const candidate = value ?? obj?.blockedUserId;
+    return typeof candidate === 'string' ? candidate.trim() : candidate;
+  })
   @IsString()
   @IsNotEmpty()
   targetUserId!: string;
+
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  blockedUserId?: string;
 }

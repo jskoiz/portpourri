@@ -26,11 +26,11 @@ describe('useBlock', () => {
     const { result } = renderHook(() => useBlock(), { wrapper });
 
     await act(async () => {
-      await result.current.block({ blockedUserId: 'u1' });
+      await result.current.block({ targetUserId: 'u1' });
     });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(mockBlock).toHaveBeenCalledWith({ blockedUserId: 'u1' });
+    expect(mockBlock).toHaveBeenCalledWith({ targetUserId: 'u1' });
   });
 
   it('invalidates matches query on success', async () => {
@@ -42,7 +42,7 @@ describe('useBlock', () => {
     const { result } = renderHook(() => useBlock(), { wrapper });
 
     await act(async () => {
-      await result.current.block({ blockedUserId: 'u1' });
+      await result.current.block({ targetUserId: 'u1' });
     });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -58,7 +58,7 @@ describe('useBlock', () => {
     const { result } = renderHook(() => useBlock(), { wrapper });
 
     await act(async () => {
-      await result.current.block({ blockedUserId: 'u1' });
+      await result.current.block({ targetUserId: 'u1' });
     });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -76,7 +76,7 @@ describe('useBlock', () => {
     const { result } = renderHook(() => useBlock({ onSuccess }), { wrapper });
 
     await act(async () => {
-      await result.current.block({ blockedUserId: 'u1' });
+      await result.current.block({ targetUserId: 'u1' });
     });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -91,7 +91,7 @@ describe('useBlock', () => {
 
     await act(async () => {
       try {
-        await result.current.block({ blockedUserId: 'u1' });
+        await result.current.block({ targetUserId: 'u1' });
       } catch {
         // expected
       }
@@ -111,10 +111,10 @@ describe('useBlock', () => {
     const { result } = renderHook(() => useBlock(), { wrapper });
 
     await act(async () => {
-      await result.current.block({ blockedUserId: 'u1', matchId: 'm1' });
+      await result.current.block({ targetUserId: 'u1', matchId: 'm1' });
     });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(mockBlock).toHaveBeenCalledWith({ blockedUserId: 'u1', matchId: 'm1' });
+    expect(mockBlock).toHaveBeenCalledWith({ targetUserId: 'u1', matchId: 'm1' });
   });
 });

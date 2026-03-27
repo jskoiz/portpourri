@@ -85,7 +85,7 @@ export default function ChatScreen({ navigation, route }: RootStackScreenProps<'
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
   const handleBlock = useCallback(() => {
     showBlockConfirmation(() => {
-      void block({ blockedUserId: user.id });
+      void block({ targetUserId: user.id });
     });
   }, [block, user.id]);
   const handleOpenQuickActions = useCallback(() => quickActionsSheet.open(), [quickActionsSheet.open]);

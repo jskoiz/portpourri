@@ -76,7 +76,7 @@ export default function ProfileDetailScreen({
 
   const handleBlock = () => {
     showBlockConfirmation(() => {
-      void block({ blockedUserId: user.id });
+      void block({ targetUserId: user.id });
     });
   };
 

@@ -57,4 +57,17 @@ describe('ModerationController', () => {
     );
     expect(result).toBe(blockResult);
   });
+
+  it('accepts the legacy blockedUserId alias for block requests', async () => {
+    const blockResult = { success: true, matchId: null };
+    moderationServiceMock.blockUser.mockResolvedValue(blockResult);
+
+    const result = await controller.block(req, { blockedUserId: 'user-2' });
+
+    expect(moderationServiceMock.blockUser).toHaveBeenCalledWith(
+      'user-1',
+      'user-2',
+    );
+    expect(result).toBe(blockResult);
+  });
 });

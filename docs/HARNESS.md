@@ -14,6 +14,7 @@ npm run smoke
 npm run docs:check
 npm run repo:index
 npm run harness:ci-context -- --branch main
+npm run release:ios:fast-path -- --base-ref <ref>
 npm run hooks:install
 npm run storybook
 npm run dev:backend
@@ -38,6 +39,8 @@ npm run scaffold:backend-module -- --name moderation
   - full graph: `check:root`, then the workspace checks for `backend`, `mobile`, and `symphony`
 - `npm run release:ios:prepare`
   - canonical iOS release-readiness lane: provenance gate, live ASC build-number verification or resolution, release manifest write, release context write, and native fast-path classification without uploading
+- `npm run release:ios:fast-path -- --base-ref <ref>`
+  - inspects the diff against a release base and classifies whether the generated iOS project can be safely reused or a clean prebuild is required
 - `npm run release:ios:ship`
   - canonical iOS upload lane: reuse the prepared release context, archive/upload through Xcode, and wait for ASC processing when API-key auth is available
 - `npm run smoke`

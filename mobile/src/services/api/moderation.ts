@@ -20,7 +20,7 @@ export const moderationApi = {
       client.post<BlockResponse>('/moderation/block', payload),
       {
         context: {
-          blockedUserId: payload.blockedUserId,
+          targetUserId: payload.targetUserId,
           hasMatchId: Boolean(payload.matchId),
         },
       },

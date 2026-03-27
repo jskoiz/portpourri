@@ -197,7 +197,7 @@ export interface ReportPayload {
 }
 
 export interface BlockPayload {
-  blockedUserId: string;
+  targetUserId: string;
   matchId?: string;
 }
 
