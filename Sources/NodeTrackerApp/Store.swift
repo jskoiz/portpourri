@@ -6,19 +6,44 @@ import ServiceManagement
 import UserNotifications
 
 enum RefreshCadence: Double, CaseIterable, Identifiable {
-    case fiveSeconds = 5
-    case tenSeconds = 10
-    case thirtySeconds = 30
-    case sixtySeconds = 60
+    case fifteenSeconds = 15
+    case oneMinute = 60
+    case fiveMinutes = 300
 
     var id: Double { self.rawValue }
 
     var label: String {
         switch self {
-        case .fiveSeconds: "5 sec"
-        case .tenSeconds: "10 sec"
-        case .thirtySeconds: "30 sec"
-        case .sixtySeconds: "60 sec"
+        case .fifteenSeconds: "15 seconds"
+        case .oneMinute: "1 minute"
+        case .fiveMinutes: "5 minutes"
+        }
+    }
+}
+
+enum MenuBarDisplayMode: String, CaseIterable, Identifiable {
+    case countAndMemory
+    case countOnly
+    case memoryOnly
+    case iconOnly
+
+    var id: String { self.rawValue }
+
+    var label: String {
+        switch self {
+        case .countAndMemory: "Projects + Memory"
+        case .countOnly: "Project Count"
+        case .memoryOnly: "Memory Usage"
+        case .iconOnly: "Icon Only"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .countAndMemory: "3 \u{00B7} 2.1G"
+        case .countOnly: "3"
+        case .memoryOnly: "2.1G"
+        case .iconOnly: "N"
         }
     }
 }
@@ -85,15 +110,79 @@ final class SettingsStore: ObservableObject {
         }
     }
 
+    @Published var menuBarDisplayMode: MenuBarDisplayMode {
+        didSet {
+            UserDefaults.standard.set(self.menuBarDisplayMode.rawValue, forKey: "menuBarDisplayMode")
+            self.onChange?()
+        }
+    }
+
+    @Published var enableConflictNotifications: Bool {
+        didSet {
+            UserDefaults.standard.set(self.enableConflictNotifications, forKey: "enableConflictNotifications")
+            self.onChange?()
+        }
+    }
+
+    @Published var notificationSound: Bool {
+        didSet {
+            UserDefaults.standard.set(self.notificationSound, forKey: "notificationSound")
+            self.onChange?()
+        }
+    }
+
+    @Published var checkForUpdatesAutomatically: Bool {
+        didSet {
+            UserDefaults.standard.set(self.checkForUpdatesAutomatically, forKey: "checkForUpdatesAutomatically")
+            self.onChange?()
+        }
+    }
+
+    @Published var hideWhenIdle: Bool {
+        didSet {
+            UserDefaults.standard.set(self.hideWhenIdle, forKey: "hideWhenIdle")
+            self.onChange?()
+        }
+    }
+
+    @Published var showConflictBadge: Bool {
+        didSet {
+            UserDefaults.standard.set(self.showConflictBadge, forKey: "showConflictBadge")
+            self.onChange?()
+        }
+    }
+
+    @Published var hotkeyModifiers: String {
+        didSet {
+            UserDefaults.standard.set(self.hotkeyModifiers, forKey: "hotkeyModifiers")
+            self.onChange?()
+        }
+    }
+
+    @Published var hotkeyKey: String {
+        didSet {
+            UserDefaults.standard.set(self.hotkeyKey, forKey: "hotkeyKey")
+            self.onChange?()
+        }
+    }
+
     init() {
         let defaults = UserDefaults.standard
         self.launchAtLogin = defaults.object(forKey: "launchAtLogin") as? Bool ?? false
         let rawCadence = defaults.double(forKey: "refreshCadence")
-        self.refreshCadence = RefreshCadence(rawValue: rawCadence == 0 ? 10 : rawCadence) ?? .tenSeconds
+        self.refreshCadence = RefreshCadence(rawValue: rawCadence == 0 ? 60 : rawCadence) ?? .oneMinute
         self.confirmBeforeTerminate = defaults.object(forKey: "confirmBeforeTerminate") as? Bool ?? true
         self.groupMode = GroupMode(rawValue: defaults.string(forKey: "groupMode") ?? GroupMode.project.rawValue) ?? .project
         self.showNonNodeListeners = defaults.object(forKey: "showNonNodeListeners") as? Bool ?? false
         self.watchedPortsText = defaults.string(forKey: "watchedPortsText") ?? Self.defaultWatchedPortsText
+        self.menuBarDisplayMode = MenuBarDisplayMode(rawValue: defaults.string(forKey: "menuBarDisplayMode") ?? "") ?? .countAndMemory
+        self.enableConflictNotifications = defaults.object(forKey: "enableConflictNotifications") as? Bool ?? true
+        self.notificationSound = defaults.object(forKey: "notificationSound") as? Bool ?? true
+        self.checkForUpdatesAutomatically = defaults.object(forKey: "checkForUpdatesAutomatically") as? Bool ?? true
+        self.hideWhenIdle = defaults.object(forKey: "hideWhenIdle") as? Bool ?? false
+        self.showConflictBadge = defaults.object(forKey: "showConflictBadge") as? Bool ?? true
+        self.hotkeyModifiers = defaults.string(forKey: "hotkeyModifiers") ?? "ctrl+shift"
+        self.hotkeyKey = defaults.string(forKey: "hotkeyKey") ?? "P"
     }
 
     var watchedPorts: [Int] {
@@ -332,6 +421,7 @@ final class NodeTrackerStore: ObservableObject {
         let newConflicts = currentConflicts.subtracting(self.previousConflictPorts)
         self.previousConflictPorts = currentConflicts
 
+        guard self.settings.enableConflictNotifications else { return }
         guard Bundle.main.bundleIdentifier != nil else { return }
 
         for port in newConflicts.sorted() {
@@ -345,7 +435,7 @@ final class NodeTrackerStore: ObservableObject {
             let content = UNMutableNotificationContent()
             content.title = "Port \(port) blocked"
             content.body = body
-            content.sound = .default
+            content.sound = self.settings.notificationSound ? .default : nil
             content.userInfo = ["port": port, "suggestedPort": suggested ?? 0]
 
             let request = UNNotificationRequest(

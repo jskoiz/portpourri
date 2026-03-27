@@ -15,7 +15,9 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
 cp "$BUILD_DIR/NodeTrackerApp" "$MACOS_DIR/NodeTrackerApp"
 
-cat > "$APP_DIR/Contents/Info.plist" <<'PLIST'
+BUILD_TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M UTC')"
+
+cat > "$APP_DIR/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -36,6 +38,8 @@ cat > "$APP_DIR/Contents/Info.plist" <<'PLIST'
   <true/>
   <key>NSHighResolutionCapable</key>
   <true/>
+  <key>NWBuildTimestamp</key>
+  <string>${BUILD_TIMESTAMP}</string>
 </dict>
 </plist>
 PLIST

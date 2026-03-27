@@ -1141,11 +1141,15 @@ struct SettingsRootView: View {
                 .tabItem { Label("General", systemImage: "gearshape") }
             DisplaySettingsView(settings: self.settings)
                 .tabItem { Label("Display", systemImage: "eye") }
-            AboutSettingsView(store: self.store)
+            NotificationsSettingsView(settings: self.settings)
+                .tabItem { Label("Notifications", systemImage: "bell") }
+            AdvancedSettingsView(store: self.store)
+                .tabItem { Label("Advanced", systemImage: "wrench") }
+            AboutSettingsView(store: self.store, settings: self.settings)
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
         .padding(20)
-        .frame(width: 560, height: 420)
+        .frame(width: 560, height: 440)
     }
 }
 
@@ -1153,24 +1157,79 @@ private struct GeneralSettingsView: View {
     @ObservedObject var store: NodeTrackerStore
     @ObservedObject var settings: SettingsStore
 
+    private static let modifierOptions = ["ctrl+shift", "cmd+shift", "cmd+opt", "ctrl+opt"]
+    private static let keyOptions = ["P", "N", "W", "K", "J"]
+
+    private var hotkeyDisplay: String {
+        StatusBarController.modifierSymbols(self.settings.hotkeyModifiers) + self.settings.hotkeyKey.uppercased()
+    }
+
     var body: some View {
         Form {
-            Toggle("Start at login", isOn: self.$settings.launchAtLogin)
-            Picker("Refresh cadence", selection: self.$settings.refreshCadence) {
-                ForEach(RefreshCadence.allCases) { cadence in
-                    Text(cadence.label).tag(cadence)
-                }
+            Section("Startup") {
+                Toggle("Start at login", isOn: self.$settings.launchAtLogin)
             }
-            Toggle("Confirm before terminate", isOn: self.$settings.confirmBeforeTerminate)
-            if self.store.useSampleData {
-                Text("The app is currently running in sample-data mode.")
+
+            Section("Refresh") {
+                Picker("Refresh cadence", selection: self.$settings.refreshCadence) {
+                    ForEach(RefreshCadence.allCases) { cadence in
+                        Text(cadence.label).tag(cadence)
+                    }
+                }
+                Text("How often to scan for Node processes when the popover is closed.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-            if let error = self.store.lastError {
-                Text(error)
+
+            Section("Keyboard Shortcut") {
+                HStack {
+                    Picker("Modifiers", selection: self.$settings.hotkeyModifiers) {
+                        ForEach(Self.modifierOptions, id: \.self) { mod in
+                            Text(StatusBarController.modifierSymbols(mod))
+                                .tag(mod)
+                        }
+                    }
+                    .frame(width: 140)
+
+                    Picker("Key", selection: self.$settings.hotkeyKey) {
+                        ForEach(Self.keyOptions, id: \.self) { key in
+                            Text(key).tag(key)
+                        }
+                    }
+                    .frame(width: 100)
+
+                    Spacer()
+
+                    Text(self.hotkeyDisplay)
+                        .font(.system(.body, design: .monospaced))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.quaternary)
+                        .cornerRadius(6)
+                }
+                Text("Global shortcut to toggle the NodeWatcher popover.")
                     .font(.footnote)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Safety") {
+                Toggle("Confirm before terminate", isOn: self.$settings.confirmBeforeTerminate)
+            }
+
+            if self.store.useSampleData {
+                Section {
+                    Label("Running in sample-data mode", systemImage: "testtube.2")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let error = self.store.lastError {
+                Section {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
             }
         }
         .formStyle(.grouped)
@@ -1182,14 +1241,57 @@ private struct DisplaySettingsView: View {
 
     var body: some View {
         Form {
-            Picker("Group content by", selection: self.$settings.groupMode) {
-                ForEach(GroupMode.allCases) { mode in
-                    Text(mode.label).tag(mode)
+            Section("Menu Bar") {
+                Picker("Menu bar display", selection: self.$settings.menuBarDisplayMode) {
+                    ForEach(MenuBarDisplayMode.allCases) { mode in
+                        HStack {
+                            Text(mode.label)
+                            Spacer()
+                            Text(mode.description)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+                        .tag(mode)
+                    }
                 }
+                Toggle("Show conflict badge", isOn: self.$settings.showConflictBadge)
+                Toggle("Hide icon when idle", isOn: self.$settings.hideWhenIdle)
+                Text("Hides the menu bar icon when no Node processes are running.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
-            Toggle("Show non-Node listeners", isOn: self.$settings.showNonNodeListeners)
-            TextField("Watched ports", text: self.$settings.watchedPortsText, prompt: Text("3000,5173,8081"))
-            Text("Comma-separated list of ports to highlight in the menu bar and popover.")
+
+            Section("Popover") {
+                Picker("Group content by", selection: self.$settings.groupMode) {
+                    ForEach(GroupMode.allCases) { mode in
+                        Text(mode.label).tag(mode)
+                    }
+                }
+                Toggle("Show non-Node listeners", isOn: self.$settings.showNonNodeListeners)
+            }
+
+            Section("Watched Ports") {
+                TextField("Ports", text: self.$settings.watchedPortsText, prompt: Text("3000,5173,8081"))
+                Text("Comma-separated list of ports to highlight in the menu bar and popover.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+private struct NotificationsSettingsView: View {
+    @ObservedObject var settings: SettingsStore
+
+    var body: some View {
+        Form {
+            Section("Port Conflicts") {
+                Toggle("Notify on port conflicts", isOn: self.$settings.enableConflictNotifications)
+                Toggle("Play notification sound", isOn: self.$settings.notificationSound)
+                    .disabled(!self.settings.enableConflictNotifications)
+            }
+            Text("Notifications appear when a non-Node process occupies a watched port.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -1197,20 +1299,108 @@ private struct DisplaySettingsView: View {
     }
 }
 
-private struct AboutSettingsView: View {
+private struct AdvancedSettingsView: View {
     @ObservedObject var store: NodeTrackerStore
 
     var body: some View {
         Form {
-            LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")
-            Button("Copy latest snapshot JSON") {
-                self.store.copySnapshotJSON()
+            Section("Export") {
+                Button("Copy latest snapshot JSON") {
+                    self.store.copySnapshotJSON()
+                }
+                if let notice = self.store.clipboardNotice {
+                    Text(notice)
+                        .font(.footnote)
+                        .foregroundStyle(.green)
+                }
             }
+
             Section("Diagnostics") {
                 ForEach(self.store.snapshot.diagnostics.commands, id: \.self) { command in
                     Text(command)
                         .font(.system(.footnote, design: .monospaced))
                         .textSelection(.enabled)
+                }
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+private struct AboutSettingsView: View {
+    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var settings: SettingsStore
+    @State private var updateStatus: String?
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+    }
+
+    private var buildNumber: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "-"
+    }
+
+    private var buildTime: String {
+        Bundle.main.object(forInfoDictionaryKey: "NWBuildTimestamp") as? String ?? "Unknown"
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                HStack(spacing: 16) {
+                    Image(systemName: "network")
+                        .font(.system(size: 40))
+                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("NodeWatcher")
+                            .font(.title2.bold())
+                        Text("v\(self.appVersion) (build \(self.buildNumber))")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Text("Built \(self.buildTime)")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+
+            Section("Updates") {
+                Toggle("Check for updates automatically", isOn: self.$settings.checkForUpdatesAutomatically)
+                HStack {
+                    Button("Check for Updates Now") {
+                        self.updateStatus = "You\u{2019}re on the latest version."
+                    }
+                    if let status = self.updateStatus {
+                        Text(status)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Section("Links") {
+                Link(destination: URL(string: "https://github.com/nicktoonz/node-tracker")!) {
+                    HStack {
+                        Image(systemName: "chevron.left.forwardslash.chevron.right")
+                            .frame(width: 20)
+                        Text("GitHub Repository")
+                        Spacer()
+                        Image(systemName: "arrow.up.right.square")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                Link(destination: URL(string: "https://x.com/nicktoonz")!) {
+                    HStack {
+                        Image(systemName: "at")
+                            .frame(width: 20)
+                        Text("Follow on X (Twitter)")
+                        Spacer()
+                        Image(systemName: "arrow.up.right.square")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             }
         }

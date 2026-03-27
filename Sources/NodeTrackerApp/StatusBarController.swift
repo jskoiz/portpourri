@@ -9,6 +9,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
     private let store: NodeTrackerStore
     private let statusItem: NSStatusItem
     private let popover = NSPopover()
+    private var settingsWindow: NSWindow?
     private var cancellables: Set<AnyCancellable> = []
     private var localEventMonitor: Any?
     private var globalEventMonitor: Any?
@@ -28,8 +29,25 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
     }
 
     func openSettings() {
+        if let existing = self.settingsWindow, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let settingsView = SettingsRootView(store: self.store)
+        let hostingController = NSHostingController(rootView: settingsView)
+
+        let window = NSWindow(contentViewController: hostingController)
+        window.title = "NodeWatcher Settings"
+        window.styleMask = [.titled, .closable]
+        window.center()
+        window.isReleasedWhenClosed = false
+        window.level = .floating
+
+        self.settingsWindow = window
+        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        _ = NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 
     func quit() {
@@ -78,25 +96,78 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         }
     }
 
+    private var localHotkeyMonitor: Any?
+
     private func installGlobalHotkey() {
+        self.reinstallHotkey()
+    }
+
+    func reinstallHotkey() {
+        // Remove old monitors
+        if let monitor = self.hotkeyMonitor {
+            NSEvent.removeMonitor(monitor)
+            self.hotkeyMonitor = nil
+        }
+        if let monitor = self.localHotkeyMonitor {
+            NSEvent.removeMonitor(monitor)
+            self.localHotkeyMonitor = nil
+        }
+
+        let requiredModifiers = Self.parseModifiers(self.store.settings.hotkeyModifiers)
+        let requiredKey = self.store.settings.hotkeyKey.lowercased()
+
+        guard !requiredKey.isEmpty, !requiredModifiers.isEmpty else { return }
+
         self.hotkeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            // Ctrl+Shift+P
-            guard event.modifierFlags.contains([.control, .shift]),
-                  event.charactersIgnoringModifiers?.lowercased() == "p" else { return }
+            guard event.modifierFlags.contains(requiredModifiers),
+                  event.charactersIgnoringModifiers?.lowercased() == requiredKey else { return }
             Task { @MainActor in
                 self?.togglePopoverFromHotkey()
             }
         }
 
-        // Also handle when the app is in the foreground
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard event.modifierFlags.contains([.control, .shift]),
-                  event.charactersIgnoringModifiers?.lowercased() == "p" else { return event }
+        self.localHotkeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.modifierFlags.contains(requiredModifiers),
+                  event.charactersIgnoringModifiers?.lowercased() == requiredKey else { return event }
             Task { @MainActor in
                 self?.togglePopoverFromHotkey()
             }
             return nil
         }
+
+        // Update tooltip
+        let symbolStr = Self.modifierSymbols(self.store.settings.hotkeyModifiers) + self.store.settings.hotkeyKey.uppercased()
+        self.statusItem.button?.toolTip = "NodeWatcher (\(symbolStr))"
+    }
+
+    static func parseModifiers(_ str: String) -> NSEvent.ModifierFlags {
+        var flags: NSEvent.ModifierFlags = []
+        let parts = str.lowercased().split(separator: "+").map { $0.trimmingCharacters(in: .whitespaces) }
+        for part in parts {
+            switch part {
+            case "ctrl", "control": flags.insert(.control)
+            case "shift": flags.insert(.shift)
+            case "cmd", "command": flags.insert(.command)
+            case "opt", "option", "alt": flags.insert(.option)
+            default: break
+            }
+        }
+        return flags
+    }
+
+    static func modifierSymbols(_ str: String) -> String {
+        var symbols = ""
+        let parts = str.lowercased().split(separator: "+").map { $0.trimmingCharacters(in: .whitespaces) }
+        for part in parts {
+            switch part {
+            case "ctrl", "control": symbols += "\u{2303}"
+            case "shift": symbols += "\u{21E7}"
+            case "cmd", "command": symbols += "\u{2318}"
+            case "opt", "option", "alt": symbols += "\u{2325}"
+            default: break
+            }
+        }
+        return symbols
     }
 
     private func configureNotifications() {
@@ -121,20 +192,61 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
                 self?.updateStatusImage()
             }
             .store(in: &self.cancellables)
+
+        self.store.settings.$menuBarDisplayMode
+            .sink { [weak self] _ in
+                self?.updateStatusImage()
+            }
+            .store(in: &self.cancellables)
+
+        self.store.settings.$hideWhenIdle
+            .sink { [weak self] _ in
+                self?.updateStatusImage()
+            }
+            .store(in: &self.cancellables)
+
+        self.store.settings.$showConflictBadge
+            .sink { [weak self] _ in
+                self?.updateStatusImage()
+            }
+            .store(in: &self.cancellables)
+
+        self.store.settings.$hotkeyKey
+            .sink { [weak self] _ in
+                self?.reinstallHotkey()
+            }
+            .store(in: &self.cancellables)
+
+        self.store.settings.$hotkeyModifiers
+            .sink { [weak self] _ in
+                self?.reinstallHotkey()
+            }
+            .store(in: &self.cancellables)
     }
 
     private func updateStatusImage() {
         let summary = self.store.snapshot.summary
+        let isIdle = summary.nodeProjectCount == 0 && summary.watchedBusyCount == 0
+
+        // Hide the status item entirely when idle if the user opted in
+        if self.store.settings.hideWhenIdle && isIdle && !self.popover.isShown {
+            self.statusItem.isVisible = false
+            return
+        }
+        self.statusItem.isVisible = true
+
         guard let button = self.statusItem.button else { return }
 
         let conflicts = summary.watchedNonNodeConflictCount
         let hasConflicts = conflicts > 0
+        let showBadge = self.store.settings.showConflictBadge
+        let displayMode = self.store.settings.menuBarDisplayMode
 
-        // Build the status text: "3 · 2.1G" or just "N" when idle
-        let statusText = StatusChipRenderer.statusText(for: summary)
+        // Build the status text based on display mode
+        let statusText = StatusChipRenderer.statusText(for: summary, displayMode: displayMode)
 
-        // When there are conflicts, use a non-template image with a badge
-        if hasConflicts {
+        // When there are conflicts and badge is enabled, use a non-template image with a badge
+        if hasConflicts && showBadge {
             let buttonAppearance = button.effectiveAppearance
             let image = StatusChipRenderer.imageWithBadge(
                 text: statusText,
@@ -145,7 +257,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
             image.isTemplate = false
             button.image = image
         } else {
-            // No conflicts: template image for auto light/dark
+            // No conflicts or badge disabled: template image for auto light/dark
             let image = StatusChipRenderer.templateImage(text: statusText, summary: summary)
             image.isTemplate = true
             button.image = image
@@ -288,22 +400,32 @@ enum StatusChipRenderer {
         return "0M"
     }
 
-    /// Build the status text for the menu bar.
-    /// Active: "3 · 2.1G" (projects · total node memory)
-    /// Idle: "N"
-    static func statusText(for summary: SnapshotSummary) -> String {
+    /// Build the status text for the menu bar based on display mode.
+    static func statusText(for summary: SnapshotSummary, displayMode: MenuBarDisplayMode = .countAndMemory) -> String {
         let projects = summary.nodeProjectCount
         let memBytes = summary.nodeProcessTotalMemoryBytes
+        let isActive = projects > 0 || memBytes > 100 * 1024 * 1024
 
-        if projects > 0 || memBytes > 100 * 1024 * 1024 {
-            // Show project count and memory
-            let memStr = formatMemory(memBytes)
-            if projects > 0 {
-                return "\(projects) · \(memStr)"
+        switch displayMode {
+        case .iconOnly:
+            return "N"
+
+        case .countOnly:
+            return isActive && projects > 0 ? "\(projects)" : "N"
+
+        case .memoryOnly:
+            return isActive ? formatMemory(memBytes) : "N"
+
+        case .countAndMemory:
+            if isActive {
+                let memStr = formatMemory(memBytes)
+                if projects > 0 {
+                    return "\(projects) \u{00B7} \(memStr)"
+                }
+                return memStr
             }
-            return memStr
+            return "N"
         }
-        return "N"
     }
 
     /// Measure the text width for sizing the image.
