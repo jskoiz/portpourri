@@ -279,90 +279,65 @@ export async function fetchNextBuildNumber(options = {}) {
   };
 }
 
-async function listBetaAppLocalizations({
-  appId,
-  locale,
-  apiBase = DEFAULT_API_BASE,
-  fetchImpl = fetch,
-  token,
-  limit = 1,
-}) {
-  const url = new URL('/betaAppLocalizations', apiBase);
-  url.searchParams.set('filter[app]', appId);
-  url.searchParams.set('limit', String(limit));
-  url.searchParams.set('fields[betaAppLocalizations]', 'description,locale');
-  if (locale) {
-    url.searchParams.set('filter[locale]', locale);
-  }
-
-  const payload = await fetchJson(url, { token, fetchImpl });
-  return payload?.data ?? [];
-}
-
-export async function upsertBetaAppDescription({
+/**
+ * Sets the per-build "What to Test" notes for a specific build via the
+ * buildBetaDetails resource.  This is the per-build field testers see —
+ * NOT the app-level betaAppLocalizations description (which is a single
+ * piece of copy shared across all builds).
+ */
+export async function setBuildWhatsNew({
   bundleId = DEFAULT_BUNDLE_ID,
-  locale = 'en-US',
-  description,
+  buildNumber,
+  whatsNew,
   apiBase = DEFAULT_API_BASE,
   fetchImpl = fetch,
   authToken,
 } = {}) {
-  if (!description || !description.trim()) {
-    fail('description is required');
+  if (!whatsNew || !whatsNew.trim()) {
+    fail('whatsNew is required');
+  }
+  if (!buildNumber) {
+    fail('buildNumber is required');
   }
 
   const token = authToken ?? (await createAuthToken()).token;
   const { appId } = await resolveAscAppId({ bundleId, apiBase, fetchImpl, token });
-  const existing = (await listBetaAppLocalizations({
+
+  // Resolve build id from build number
+  const buildResult = await listBuilds({
     appId,
-    locale,
+    bundleId,
     apiBase,
     fetchImpl,
     token,
-  }))[0] ?? null;
-
-  if (existing?.id) {
-    const payload = await requestJson(new URL(`/betaAppLocalizations/${existing.id}`, apiBase), {
-      token,
-      method: 'PATCH',
-      body: {
-        data: {
-          type: 'betaAppLocalizations',
-          id: existing.id,
-          attributes: {
-            description,
-          },
-        },
-      },
-      fetchImpl,
-    });
-
-    return {
-      bundleId,
-      appId,
-      locale,
-      action: 'updated',
-      betaAppLocalization: payload?.data ?? null,
-    };
+    buildNumber,
+    limit: 1,
+  });
+  const build = buildResult.builds[0];
+  if (!build?.id) {
+    fail(`No build found with number ${buildNumber} for bundle id ${bundleId}`);
   }
 
-  const payload = await requestJson(new URL('/betaAppLocalizations', apiBase), {
+  // Fetch the buildBetaDetail linked to this build
+  const detailUrl = new URL(`/builds/${build.id}/buildBetaDetail`, apiBase);
+  detailUrl.searchParams.set('fields[buildBetaDetails]', 'whatsNew');
+  const detailPayload = await fetchJson(detailUrl, { token, fetchImpl });
+  const detail = detailPayload?.data;
+
+  if (!detail?.id) {
+    fail(`No buildBetaDetail found for build ${buildNumber}`);
+  }
+
+  // PATCH the whatsNew field on the existing buildBetaDetail
+  const payload = await requestJson(new URL(`/buildBetaDetails/${detail.id}`, apiBase), {
     token,
-    method: 'POST',
+    method: 'PATCH',
     body: {
       data: {
-        type: 'betaAppLocalizations',
+        type: 'buildBetaDetails',
+        id: detail.id,
         attributes: {
-          locale,
-          description,
-        },
-        relationships: {
-          app: {
-            data: {
-              type: 'apps',
-              id: appId,
-            },
-          },
+          whatsNew,
         },
       },
     },
@@ -372,9 +347,10 @@ export async function upsertBetaAppDescription({
   return {
     bundleId,
     appId,
-    locale,
-    action: 'created',
-    betaAppLocalization: payload?.data ?? null,
+    buildNumber: String(buildNumber),
+    buildId: build.id,
+    action: 'updated',
+    buildBetaDetail: payload?.data ?? null,
   };
 }
 
@@ -447,7 +423,6 @@ function parseArgs(argv) {
     bundleId: DEFAULT_BUNDLE_ID,
     timeoutSeconds: 900,
     intervalSeconds: 15,
-    locale: 'en-US',
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -467,10 +442,6 @@ function parseArgs(argv) {
         break;
       case '--interval-seconds':
         values.intervalSeconds = Number.parseInt(argv[index + 1], 10);
-        index += 1;
-        break;
-      case '--locale':
-        values.locale = argv[index + 1];
         index += 1;
         break;
       case '--notes-file':
@@ -502,16 +473,15 @@ function printUsage() {
     '  latest-build             Print the latest App Store Connect build for the bundle id',
     '  next-build               Print the next build number for the bundle id',
     '  wait-processing          Poll until a specific build appears and reaches a ready state',
-    '  publish-beta-description Upsert the TestFlight beta app description for a locale',
+    '  publish-build-whats-new  Set per-build "What to Test" notes via buildBetaDetails',
     '',
     'Options:',
     '  --bundle-id <id>         Defaults to IOS_BUNDLE_IDENTIFIER or com.avmillabs.brdg',
     '  --build <number>         Required for wait-processing',
     '  --timeout-seconds <n>    Defaults to 900',
     '  --interval-seconds <n>   Defaults to 15',
-    '  --locale <code>          Defaults to en-US for beta description publishing',
-    '  --notes-file <path>      Read the beta description body from a file',
-    '  --description <text>     Inline beta description body',
+    '  --notes-file <path>      Read the "What to Test" body from a file',
+    '  --description <text>     Inline "What to Test" body',
     '',
   ].join('\n'));
 }
@@ -541,14 +511,14 @@ async function main() {
       process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
       process.exit(1);
     }
-  } else if (command === 'publish-beta-description') {
-    const description = args.notesFile
+  } else if (command === 'publish-build-whats-new') {
+    const whatsNew = args.notesFile
       ? fs.readFileSync(path.resolve(args.notesFile), 'utf8')
       : args.description;
-    payload = await upsertBetaAppDescription({
+    payload = await setBuildWhatsNew({
       bundleId: args.bundleId,
-      locale: args.locale,
-      description,
+      buildNumber: args.build,
+      whatsNew,
     });
   } else {
     fail(`Unknown command: ${command}`);

@@ -5,7 +5,7 @@ import {
   summarizeBuild,
   fetchLatestBuild,
   fetchNextBuildNumber,
-  upsertBetaAppDescription,
+  setBuildWhatsNew,
   waitForBuildProcessing,
 } from '../app-store-connect-build.mjs';
 
@@ -166,82 +166,61 @@ test('waitForBuildProcessing returns timeout when the build never becomes ready'
   assert.equal(result.build.processingState, 'PROCESSING');
 });
 
-test('upsertBetaAppDescription patches an existing localization', async () => {
+test('setBuildWhatsNew patches the buildBetaDetail for a specific build', async () => {
   const calls = [];
   const fetchImpl = async (url, options = {}) => {
-    calls.push({ url: String(url), options });
+    calls.push({ url: String(url), method: options?.method || 'GET', body: options?.body });
+    // 1: resolve app id
     if (calls.length === 1) {
       return buildResponse({ data: [{ id: 'app-1' }] });
     }
+    // 2: list builds by number
     if (calls.length === 2) {
       return buildResponse({
         data: [{
-          id: 'loc-1',
+          id: 'build-16',
           attributes: {
-            locale: 'en-US',
-            description: 'old',
+            version: '16',
+            processingState: 'VALID',
+            uploadedDate: '2026-03-27T00:00:00Z',
+            appVersion: '1.0.0',
           },
         }],
       });
     }
-
+    // 3: fetch buildBetaDetail for the build
+    if (calls.length === 3) {
+      return buildResponse({
+        data: {
+          id: 'bbd-1',
+          type: 'buildBetaDetails',
+          attributes: { whatsNew: '' },
+        },
+      });
+    }
+    // 4: PATCH buildBetaDetails
     return buildResponse({
       data: {
-        id: 'loc-1',
-        type: 'betaAppLocalizations',
-        attributes: {
-          locale: 'en-US',
-          description: 'new description',
-        },
+        id: 'bbd-1',
+        type: 'buildBetaDetails',
+        attributes: { whatsNew: 'new notes' },
       },
     });
   };
 
-  const result = await upsertBetaAppDescription({
+  const result = await setBuildWhatsNew({
     bundleId: 'com.example.brdg',
-    locale: 'en-US',
-    description: 'new description',
+    buildNumber: '16',
+    whatsNew: 'new notes',
     fetchImpl,
     authToken: 'token',
   });
 
   assert.equal(result.action, 'updated');
-  assert.equal(calls[2].options.method, 'PATCH');
-  assert.match(calls[2].options.body, /new description/);
-});
-
-test('upsertBetaAppDescription creates a localization when one does not exist', async () => {
-  const calls = [];
-  const fetchImpl = async (url, options = {}) => {
-    calls.push({ url: String(url), options });
-    if (calls.length === 1) {
-      return buildResponse({ data: [{ id: 'app-1' }] });
-    }
-    if (calls.length === 2) {
-      return buildResponse({ data: [] });
-    }
-
-    return buildResponse({
-      data: {
-        id: 'loc-2',
-        type: 'betaAppLocalizations',
-        attributes: {
-          locale: 'en-US',
-          description: 'created description',
-        },
-      },
-    });
-  };
-
-  const result = await upsertBetaAppDescription({
-    bundleId: 'com.example.brdg',
-    locale: 'en-US',
-    description: 'created description',
-    fetchImpl,
-    authToken: 'token',
-  });
-
-  assert.equal(result.action, 'created');
-  assert.equal(calls[2].options.method, 'POST');
-  assert.match(calls[2].options.body, /created description/);
+  assert.equal(result.buildNumber, '16');
+  assert.equal(result.buildId, 'build-16');
+  assert.equal(calls.length, 4);
+  assert.equal(calls[3].method, 'PATCH');
+  assert.match(calls[3].body, /new notes/);
+  assert.match(calls[3].body, /buildBetaDetails/);
 });

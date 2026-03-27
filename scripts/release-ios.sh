@@ -311,6 +311,11 @@ resolve_native_prep_from_context() {
   [[ "$CONTEXT_MODE" == "$MODE" ]] || fail "prepared context mode ($CONTEXT_MODE) does not match current mode ($MODE)"
   [[ "$CONTEXT_PROFILE" == "$PROFILE" ]] || fail "prepared context profile ($CONTEXT_PROFILE) does not match current profile ($PROFILE)"
 
+  export CONTEXT_TESTFLIGHT_LOCALE="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('testflightNotes',{}).get('locale') or '')" "$CONTEXT_PATH")"
+  export CONTEXT_TESTFLIGHT_PUBLISH="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('testflightNotes',{}).get('publishMode') or '')" "$CONTEXT_PATH")"
+  [[ -z "$CONTEXT_TESTFLIGHT_LOCALE" || "$CONTEXT_TESTFLIGHT_LOCALE" == "$TESTFLIGHT_NOTES_LOCALE" ]] || fail "prepared context TestFlight locale ($CONTEXT_TESTFLIGHT_LOCALE) does not match current locale ($TESTFLIGHT_NOTES_LOCALE)"
+  [[ -z "$CONTEXT_TESTFLIGHT_PUBLISH" || "$CONTEXT_TESTFLIGHT_PUBLISH" == "$TESTFLIGHT_NOTES_PUBLISH" ]] || fail "prepared context TestFlight publish mode ($CONTEXT_TESTFLIGHT_PUBLISH) does not match current publish mode ($TESTFLIGHT_NOTES_PUBLISH)"
+
   if [[ "$NATIVE_MODE" == "auto" ]]; then
     export NATIVE_PREP="$CONTEXT_NATIVE_PREP"
   else
@@ -701,11 +706,7 @@ if [[ "$PHASE" == "prepare" ]]; then
   exit 0
 fi
 
-if [[ "$PHASE" == "full" ]]; then
-  write_release_metadata 0
-else
-  write_release_metadata 0
-fi
+write_release_metadata 0
 
 echo "release-ios: manifest written to $MANIFEST_PATH"
 echo "release-ios: context written to $CONTEXT_PATH"
@@ -825,10 +826,10 @@ case "$TESTFLIGHT_NOTES_PUBLISH" in
     ;;
   auto|require)
     if [[ "$AUTH_MODE" == "app-store-connect-api-key" ]]; then
-      echo "release-ios: publishing TestFlight beta description from $TESTFLIGHT_NOTES_PATH"
-      node "$ROOT_DIR/scripts/app-store-connect-build.mjs" publish-beta-description \
+      echo "release-ios: publishing per-build What to Test notes from $TESTFLIGHT_NOTES_PATH"
+      node "$ROOT_DIR/scripts/app-store-connect-build.mjs" publish-build-whats-new \
         --bundle-id "$IOS_BUNDLE_IDENTIFIER" \
-        --locale "$TESTFLIGHT_NOTES_LOCALE" \
+        --build "$IOS_BUILD_NUMBER" \
         --notes-file "$TESTFLIGHT_NOTES_PATH"
       export TESTFLIGHT_NOTES_PUBLISHED="true"
       export TESTFLIGHT_NOTES_PUBLISHED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"

@@ -26,7 +26,7 @@ export function isUserFacingSubject(subject) {
     return false;
   }
 
-  return !/^(ci|docs|chore|test)(\(|:|\b)/iu.test(normalized);
+  return !/^(ci|docs|chore|test)(\([^)]*\))?!?:/iu.test(normalized);
 }
 
 function sentenceCase(value) {
@@ -45,6 +45,7 @@ export function findPreviousReleaseTag({ cwd, appVersion }) {
       '--list',
       `v${appVersion}+*`,
       '--sort=-version:refname',
+      '--merged', 'HEAD',
     ]);
     if (versionScoped) {
       return versionScoped;
@@ -56,6 +57,7 @@ export function findPreviousReleaseTag({ cwd, appVersion }) {
     '--list',
     'v*+*',
     '--sort=-version:refname',
+    '--merged', 'HEAD',
   ]);
 }
 
@@ -81,7 +83,16 @@ export function summarizeUserFacingChanges(subjects, limit = 8) {
     .filter(Boolean)
     .map(sentenceCase);
 
-  return [...new Set(normalized)].slice(0, limit);
+  const seen = new Set();
+  const unique = [];
+  for (const entry of normalized) {
+    const key = entry.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(entry);
+    }
+  }
+  return unique.slice(0, limit);
 }
 
 export function deriveTestingFocus(changes, limit = 4) {

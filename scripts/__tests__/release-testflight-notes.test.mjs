@@ -59,7 +59,11 @@ test('normalizeCommitSubject strips prefixes and PR suffixes', () => {
 
 test('isUserFacingSubject filters operational-only commits', () => {
   assert.equal(isUserFacingSubject('ci: streamline validation and deploy flow'), false);
+  assert.equal(isUserFacingSubject('chore(deps)!: bump dependencies'), false);
   assert.equal(isUserFacingSubject('Fix create event keyboard and CTA overlap'), true);
+  // Plain sentences starting with a filtered prefix but without conventional-commit colon are kept
+  assert.equal(isUserFacingSubject('test more event flows'), true);
+  assert.equal(isUserFacingSubject('docs add screenshot'), true);
 });
 
 test('summarizeUserFacingChanges keeps user-facing entries and dedupes them', () => {
@@ -73,6 +77,18 @@ test('summarizeUserFacingChanges keeps user-facing entries and dedupes them', ()
     [
       'Fix create event keyboard and CTA overlap',
       'Restore profile saves when discovery preference is unchanged',
+    ],
+  );
+});
+
+test('summarizeUserFacingChanges dedupes case-insensitively', () => {
+  assert.deepEqual(
+    summarizeUserFacingChanges([
+      'FIX keyboard overlap',
+      'fix keyboard overlap',
+    ]),
+    [
+      'FIX keyboard overlap',
     ],
   );
 });
