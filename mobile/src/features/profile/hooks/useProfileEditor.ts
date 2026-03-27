@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { User } from '../../../api/types';
 import { normalizeApiError } from '../../../api/errors';
-import { normalizeIntensityLevelForForm } from '../../../api/profileIntensity';
+import { normalizeIntensityLevelForApi, normalizeIntensityLevelForForm } from '../../../api/profileIntensity';
 import type { LocationSuggestion } from '../../locations/locationSuggestions';
 import { triggerErrorHaptic, triggerSuccessHaptic } from '../../../lib/interaction/feedback';
 import { showToast } from '../../../store/toastStore';
@@ -183,7 +183,7 @@ export function useProfileEditor({
       });
       basicsSaved = true;
       await updateFitness({
-        intensityLevel: f.intensityLevel,
+        intensityLevel: normalizeIntensityLevelForApi(f.intensityLevel),
         weeklyFrequencyBand: f.weeklyFrequencyBand,
         primaryGoal: f.primaryGoal,
         favoriteActivities: f.selectedActivities.join(', '),

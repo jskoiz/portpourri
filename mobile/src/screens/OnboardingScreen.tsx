@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthStore } from '../store/authStore';
 import { useProfile } from '../features/profile/hooks/useProfile';
 import { normalizeApiError } from '../api/errors';
+import { normalizeIntensityLevelForApi } from '../api/profileIntensity';
 import { useStepFlow } from '../components/form/useStepFlow';
 import { useTheme } from '../theme/useTheme';
 import type { RootStackScreenProps } from '../core/navigation/types';
@@ -93,7 +94,7 @@ export default function OnboardingScreen({
           showMeWomen,
         });
         await updateFitness({
-          intensityLevel: values.intensityLevel,
+          intensityLevel: normalizeIntensityLevelForApi(values.intensityLevel),
           weeklyFrequencyBand: values.weeklyFrequencyBand,
           primaryGoal:
             values.intent === 'dating'

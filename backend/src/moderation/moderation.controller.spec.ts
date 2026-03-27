@@ -1,5 +1,5 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { plainToInstance } from 'class-transformer';
+import { Test, TestingModule } from '@nestjs/testing';
 import { ReportCategory } from '@prisma/client';
 import { ModerationController } from './moderation.controller';
 import { BlockUserDto } from './moderation.dto';
