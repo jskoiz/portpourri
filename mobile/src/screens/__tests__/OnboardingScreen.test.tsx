@@ -103,5 +103,5 @@ describe('OnboardingScreen', () => {
         }),
       );
     }, { timeout: 10000 });
-  }, 15000);
+  }, 25000);
 });

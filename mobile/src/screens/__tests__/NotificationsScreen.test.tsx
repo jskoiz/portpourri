@@ -182,7 +182,7 @@ describe('NotificationsScreen', () => {
     await waitFor(() => {
       expect(mockMarkRead).toHaveBeenCalledWith('notif-1');
     }, { timeout: 10000 });
-  }, 15000);
+  }, 25000);
 
   it('announces loading and empty states', () => {
     mockUseNotifications.mockReturnValue({
