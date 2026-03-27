@@ -8,6 +8,8 @@ import {
   getPlanDetailsHint,
   formatTimingSummary,
 } from '../../features/events/create/create.helpers';
+import { getFloatingTabBarReservedHeight } from '../../design/layout/tabBarLayout';
+import { screenLayout } from '../../design/primitives';
 
 const mockCreateEvent = jest.fn();
 const mockReset = jest.fn();
@@ -103,6 +105,20 @@ describe('CreateScreen', () => {
     fireEvent.changeText(noteInput, 'Bring water and meet by the tennis courts.');
 
     expect(screen.getByDisplayValue('Bring water and meet by the tennis courts.')).toBeTruthy();
+  });
+
+  it('reserves space for the floating tab bar below the form', () => {
+    render(<CreateScreen navigation={navigation} route={route} />);
+
+    const contentContainerStyle = screen.getByTestId('create-screen-scroll-view').props
+      .contentContainerStyle;
+    const scrollViewStyles = Array.isArray(contentContainerStyle)
+      ? Object.assign({}, ...contentContainerStyle)
+      : contentContainerStyle;
+
+    expect(scrollViewStyles.paddingBottom - screenLayout.screenBottomPadding).toBe(
+      getFloatingTabBarReservedHeight(0),
+    );
   });
 
   it('shows an inline success card after posting an activity', async () => {

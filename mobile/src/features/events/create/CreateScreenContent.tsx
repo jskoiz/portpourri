@@ -3,7 +3,8 @@ import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, View } from
 import type { Control, FieldErrors } from 'react-hook-form';
 import type { EventSummary } from '../../../api/types';
 import type { LocationSuggestion } from '../../locations/locationSuggestions';
-import { Button, ScreenScaffold, SectionBlock } from '../../../design/primitives';
+import { Button, ScreenScaffold, SectionBlock, screenLayout } from '../../../design/primitives';
+import { getFloatingTabBarReservedHeight } from '../../../design/layout/tabBarLayout';
 import {
   AppBottomSheet,
   APP_BOTTOM_SHEET_SNAP_POINTS,
@@ -88,6 +89,7 @@ export function CreateScreenContent({
   const timingSheet = useSheetController();
   const planDetailsHint = getPlanDetailsHint(selectedWhen, selectedTime);
   const planDetailsActionLabel = getPlanDetailsActionLabel(selectedWhen, selectedTime);
+  const tabBarClearance = getFloatingTabBarReservedHeight(0);
 
   return (
     <ScreenScaffold style={styles.container}>
@@ -99,8 +101,12 @@ export function CreateScreenContent({
       >
         <ScrollView
           ref={keyboardScrollRef}
+          testID="create-screen-scroll-view"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: screenLayout.screenBottomPadding + tabBarClearance },
+          ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           automaticallyAdjustKeyboardInsets
