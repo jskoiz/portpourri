@@ -236,6 +236,25 @@ test('prepare rejects detached HEAD state', () => {
   assert.match(result.stderr, /detached HEAD is not allowed/);
 });
 
+test('prepare allows detached HEAD during GitHub Actions dry-run validation', () => {
+  const repoRoot = createFixture();
+  exec('git', ['checkout', '--detach', 'HEAD'], { cwd: repoRoot });
+
+  const result = runRelease(
+    repoRoot,
+    ['--phase', 'prepare', '--mode', 'xcode', '--dry-run-build-number'],
+    {
+      GITHUB_ACTIONS: 'true',
+      GITHUB_HEAD_REF: 'codex/self-hosted-runner-vps',
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+
+  const manifest = readJson(path.join(repoRoot, 'mobile/build/ios-release-manifest.json'));
+  assert.equal(manifest.branch, 'codex/self-hosted-runner-vps');
+});
+
 test('ship rejects missing release context', () => {
   const repoRoot = createFixture();
   const result = runRelease(repoRoot, ['--phase', 'ship', '--mode', 'xcode']);
