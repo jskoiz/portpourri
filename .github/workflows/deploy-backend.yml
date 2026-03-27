@@ -111,21 +111,14 @@ jobs:
             package-lock.json
             backend/package-lock.json
 
-      - name: Install toolchain
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client jq curl unzip
-
-      - name: Install AWS CLI
+      - name: Verify runner toolchain
         shell: bash
         run: |
           set -euo pipefail
-          if command -v aws >/dev/null 2>&1; then
-            aws --version
-            exit 0
-          fi
-          tmpdir="$(mktemp -d)"
-          curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "${tmpdir}/awscliv2.zip"
-          unzip -q "${tmpdir}/awscliv2.zip" -d "${tmpdir}"
-          sudo "${tmpdir}/aws/install" --update
+          psql --version
+          jq --version
+          curl --version | head -n 1
+          unzip -v | head -n 1
           aws --version
 
       - name: Install dependencies

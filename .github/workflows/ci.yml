@@ -43,7 +43,11 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             backend/package-lock.json
-      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Verify runner toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql --version
       - run: npm ci
       - run: npm ci
         working-directory: backend
