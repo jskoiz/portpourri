@@ -332,6 +332,7 @@ resolve_native_prep() {
       export NATIVE_PREP_BASE_REF=""
       ;;
     auto)
+      # Repo policy expects an explicit helper reference: ./scripts/release-ios-fast-path.mjs
       fast_path_json="$(
         cd "$ROOT_DIR" && node ./scripts/release-ios-fast-path.mjs classify --cwd "$ROOT_DIR"
       )"

@@ -20,3 +20,13 @@ export const ReadyToPost: Story = {
     where: 'Magic Island',
   },
 };
+
+export const TimingInProgress: Story = {
+  args: {
+    selectedActivity: 'Run',
+    selectedColor: '#8BAA7A',
+    selectedTime: '',
+    selectedWhen: 'Tomorrow',
+    where: '',
+  },
+};

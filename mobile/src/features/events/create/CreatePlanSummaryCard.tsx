@@ -19,17 +19,19 @@ export function CreatePlanSummaryCard({
   where: string;
 }) {
   const theme = useTheme();
+  const timingValue = selectedWhen || selectedTime ? formatTimingSummary(selectedWhen, selectedTime) : '';
   const steps = [
-    { key: 'activity', label: 'Pick activity', value: selectedActivity },
+    { key: 'activity', label: 'Pick activity', value: selectedActivity, isComplete: Boolean(selectedActivity) },
     {
       key: 'timing',
       label: 'Choose timing',
-      value: selectedWhen && selectedTime ? formatTimingSummary(selectedWhen, selectedTime) : '',
+      value: timingValue,
+      isComplete: Boolean(selectedWhen && selectedTime),
     },
-    { key: 'location', label: 'Add location', value: where.trim() },
+    { key: 'location', label: 'Add location', value: where.trim(), isComplete: Boolean(where.trim()) },
   ];
-  const completedCount = steps.filter((step) => Boolean(step.value)).length;
-  const currentStepIndex = steps.findIndex((step) => !step.value);
+  const completedCount = steps.filter((step) => step.isComplete).length;
+  const currentStepIndex = steps.findIndex((step) => !step.isComplete);
   const activeIndex = currentStepIndex === -1 ? steps.length - 1 : currentStepIndex;
 
   return (
@@ -47,7 +49,7 @@ export function CreatePlanSummaryCard({
       </View>
       <View style={styles.planStack}>
         {steps.map((step, index) => {
-          const isCompleted = Boolean(step.value);
+          const isCompleted = step.isComplete;
           const isActive = index === activeIndex;
           return (
             <View
