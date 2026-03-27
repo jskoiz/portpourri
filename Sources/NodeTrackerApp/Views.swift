@@ -11,6 +11,8 @@ struct PopoverRootView: View {
         self._settings = ObservedObject(wrappedValue: store.settings)
     }
 
+    @State private var showProcessDrawer = false
+
     var body: some View {
         let conflicts = self.store.snapshot.watchedPorts.filter(\.isConflict)
             .sorted(by: DisplayText.compareWatchedPorts)
@@ -19,56 +21,68 @@ struct PopoverRootView: View {
             .sorted(by: DisplayText.compareWatchedPorts)
         let allProjects = SnapshotDetails.sortedProjects(self.store.snapshot.projects)
         let visibleOtherProcesses = self.store.visibleOtherProcesses()
+        let significantGroups = self.store.snapshot.nodeProcessGroups.filter { $0.count >= 3 }
 
         ZStack {
             PopoverMaterialBackground()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
-                    CompactHeader(
-                        snapshot: self.store.snapshot,
-                        useSampleData: self.store.useSampleData,
-                        conflictCount: conflicts.count,
-                        projectCount: allProjects.count
+            VStack(alignment: .leading, spacing: 8) {
+                CompactHeader(
+                    snapshot: self.store.snapshot,
+                    useSampleData: self.store.useSampleData,
+                    conflictCount: conflicts.count,
+                    projectCount: allProjects.count
+                )
+
+                if !conflicts.isEmpty {
+                    ConflictSection(
+                        store: self.store,
+                        conflicts: conflicts,
+                        visibleOtherProcesses: visibleOtherProcesses
+                    )
+                }
+
+                if !allProjects.isEmpty || !nodeOwnedPorts.isEmpty {
+                    Divider()
+                    ProjectDashboardSection(
+                        store: self.store,
+                        projects: allProjects,
+                        nodeOwnedPorts: nodeOwnedPorts
+                    )
+                }
+
+                if self.settings.showNonNodeListeners, !visibleOtherProcesses.isEmpty {
+                    Divider()
+                    OtherListenersSection(processes: visibleOtherProcesses)
+                }
+
+                // Bottom drawer toggle for node process groups
+                if !significantGroups.isEmpty {
+                    Divider()
+                    NodeProcessDrawerToggle(
+                        summary: self.store.snapshot.summary,
+                        significantGroupCount: significantGroups.count,
+                        isOpen: self.$showProcessDrawer
                     )
 
-                    if !conflicts.isEmpty {
-                        ConflictSection(
-                            store: self.store,
-                            conflicts: conflicts,
-                            visibleOtherProcesses: visibleOtherProcesses
-                        )
-                    }
-
-                    if !allProjects.isEmpty || !nodeOwnedPorts.isEmpty {
-                        Divider()
-                        ProjectDashboardSection(
-                            store: self.store,
-                            projects: allProjects,
-                            nodeOwnedPorts: nodeOwnedPorts
-                        )
-                    }
-
-                    if !self.store.snapshot.nodeProcessGroups.isEmpty {
-                        Divider()
-                        NodeProcessSection(
-                            store: self.store,
-                            groups: self.store.snapshot.nodeProcessGroups,
-                            summary: self.store.snapshot.summary
-                        )
-                    }
-
-                    if self.settings.showNonNodeListeners, !visibleOtherProcesses.isEmpty {
-                        Divider()
-                        OtherListenersSection(processes: visibleOtherProcesses)
+                    if self.showProcessDrawer {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 2) {
+                                ForEach(significantGroups) { group in
+                                    NodeProcessGroupRow(store: self.store, group: group)
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 160)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .animation(.easeInOut(duration: 0.2), value: self.showProcessDrawer)
         }
         .frame(width: 340)
-        .frame(maxHeight: 500)
         .overlay(alignment: .bottomTrailing) {
             if let notice = self.store.clipboardNotice {
                 Text(notice)
@@ -102,15 +116,6 @@ private struct ConflictSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            if self.conflicts.count > 1 {
-                HStack {
-                    Spacer()
-                    InlineAccentButton("Copy all fixes", tone: .conflict) {
-                        self.store.copyAllSuggestedPorts()
-                    }
-                }
-            }
-
             ForEach(self.conflicts, id: \.id) { status in
                 ConflictCard(
                     store: self.store,
@@ -287,52 +292,41 @@ private struct ProjectDashboardRow: View {
 
 // MARK: - Node Process Groups
 
-private struct NodeProcessSection: View {
-    @ObservedObject var store: NodeTrackerStore
-    let groups: [NodeProcessGroup]
+private struct NodeProcessDrawerToggle: View {
     let summary: SnapshotSummary
-    @State private var isExpanded = true
+    let significantGroupCount: Int
+    @Binding var isOpen: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Button {
-                self.isExpanded.toggle()
-            } label: {
-                HStack(alignment: .center, spacing: 6) {
-                    Text("Node processes")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(Readability.secondaryText)
-                    Text("\(self.summary.nodeProcessTotalCount)")
-                        .font(.caption)
-                        .foregroundStyle(Readability.secondaryText)
-                    Text("\u{00B7}")
-                        .foregroundStyle(Readability.secondaryText)
-                    Text(self.formattedTotalMemory)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(
-                            self.summary.nodeProcessTotalMemoryBytes > 2 * 1024 * 1024 * 1024
-                                ? Palette.mutedRed
-                                : Readability.secondaryText
-                        )
-                    Spacer()
-                    Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.caption2)
-                        .foregroundStyle(Readability.secondaryText)
-                }
-                .contentShape(Rectangle())
+        Button {
+            self.isOpen.toggle()
+        } label: {
+            HStack(alignment: .center, spacing: 6) {
+                Text("Node processes")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Readability.secondaryText)
+                Text("\(self.summary.nodeProcessTotalCount)")
+                    .font(.caption)
+                    .foregroundStyle(Readability.secondaryText)
+                Text("\u{00B7}")
+                    .foregroundStyle(Readability.secondaryText)
+                Text(self.formattedTotalMemory)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(
+                        self.summary.nodeProcessTotalMemoryBytes > 2 * 1024 * 1024 * 1024
+                            ? Palette.mutedRed
+                            : Readability.secondaryText
+                    )
+                Spacer()
+                Image(systemName: self.isOpen ? "chevron.down" : "chevron.up")
+                    .font(.caption2)
+                    .foregroundStyle(Readability.secondaryText)
             }
-            .buttonStyle(.plain)
-
-            if self.isExpanded {
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(self.groups) { group in
-                        NodeProcessGroupRow(store: self.store, group: group)
-                    }
-                }
-            }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 
     private var formattedTotalMemory: String {
@@ -862,13 +856,17 @@ private enum ResolutionAdvisor {
             return ResolutionAction(title: "Free port", tone: .node, kind: .terminate)
         }
 
-        if tool == "ssh" || lowercasedCommand.hasPrefix("ssh ") {
+        let listenerIsSSH = process.listeners.contains {
+            $0.commandName.lowercased() == "ssh" || $0.commandName.lowercased() == "sshd"
+        }
+        if tool == "ssh" || tool == "sshd" || lowercasedCommand.hasPrefix("ssh ") || listenerIsSSH {
             return ResolutionAction(title: "Stop tunnel", tone: .conflict, kind: .terminate)
         }
 
-        if let bundlePath = self.applicationBundlePath(from: command),
-           bundlePath.localizedCaseInsensitiveContains("/Docker.app") {
-            return ResolutionAction(title: "Open Docker", tone: .neutral, kind: .openApplication(bundlePath))
+        // Docker-owned ports (postgres, redis, etc.) are typically intentional
+        // infrastructure — no action button, just informational display.
+        if self.applicationBundlePath(from: command)?.localizedCaseInsensitiveContains("/Docker.app") == true {
+            return nil
         }
 
         if ProcessActionPolicy.canTerminate(process) {
@@ -1237,6 +1235,16 @@ private struct DisplaySettingsView: View {
                 Text("Comma-separated list of ports to highlight in the menu bar and popover.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+            }
+
+            Section("Port Suggestion") {
+                TextField("Command template", text: self.$settings.portCommandTemplate, prompt: Text("PORT={port}"))
+                Text("Copied to clipboard when using a suggested port. Use {port} as placeholder.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Text("Example: PORT={port} npm run dev")
+                    .font(.system(.footnote, design: .monospaced))
+                    .foregroundStyle(.tertiary)
             }
         }
         .formStyle(.grouped)

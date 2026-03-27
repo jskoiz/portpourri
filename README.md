@@ -15,8 +15,8 @@ If you've ever had multiple projects fighting over ports 3000, 5173, or 8081 and
 - **Project-aware** — maps Node processes back to their project root (`package.json`, `.git`, lockfiles)
 - **Smart classification** — identifies Vite, Next.js, Expo, Storybook, Nest, and other Node-family tools by name
 - **Conflict detection** — distinguishes "your app owns this port" from "Docker is blocking it" or "an SSH tunnel is occupying it"
-- **Safe actions** — context-aware resolution (free port, stop tunnel, open Docker, suggest alternate port) with no destructive force-kill
-- **Configurable** — settings for watched ports, refresh cadence, display modes, hotkeys, and grouping
+- **Safe actions** — context-aware resolution (free port, stop tunnel, configurable port command template) with no destructive force-kill
+- **Configurable** — settings for watched ports, refresh cadence, display modes, hotkeys, port command template, and grouping
 - **CLI included** — `nodetracker snapshot --json` for scripting and CI
 
 ## Requirements

@@ -166,6 +166,13 @@ final class SettingsStore: ObservableObject {
         }
     }
 
+    @Published var portCommandTemplate: String {
+        didSet {
+            UserDefaults.standard.set(self.portCommandTemplate, forKey: "portCommandTemplate")
+            self.onChange?()
+        }
+    }
+
     init() {
         let defaults = UserDefaults.standard
         self.launchAtLogin = defaults.object(forKey: "launchAtLogin") as? Bool ?? false
@@ -183,6 +190,7 @@ final class SettingsStore: ObservableObject {
         self.showConflictBadge = defaults.object(forKey: "showConflictBadge") as? Bool ?? true
         self.hotkeyModifiers = defaults.string(forKey: "hotkeyModifiers") ?? "ctrl+shift"
         self.hotkeyKey = defaults.string(forKey: "hotkeyKey") ?? "P"
+        self.portCommandTemplate = defaults.string(forKey: "portCommandTemplate") ?? "PORT={port}"
     }
 
     var watchedPorts: [Int] {
@@ -296,22 +304,11 @@ final class NodeTrackerStore: ObservableObject {
             self.lastError = "No free port found"
             return
         }
-        self.copyText(String(suggestedPort), label: "Suggested port")
+        let text = self.settings.portCommandTemplate
+            .replacingOccurrences(of: "{port}", with: String(suggestedPort))
+        self.copyText(text, label: "Command copied")
     }
 
-    func copyAllSuggestedPorts() {
-        let conflictPorts = self.snapshot.watchedPorts.filter(\.isConflict)
-        let suggestions = conflictPorts.compactMap { status -> String? in
-            guard let port = self.nextAvailablePort(after: status.port) else { return nil }
-            return "\(status.port)\u{2192}\(port)"
-        }
-        guard !suggestions.isEmpty else {
-            self.lastError = "No free ports found"
-            return
-        }
-        let text = suggestions.joined(separator: ", ")
-        self.copyText(text, label: "All suggested ports")
-    }
 
     func terminateAllNodeProcessesOnWatchedPorts() {
         let watchedPortSet = Set(self.snapshot.watchedPorts.filter(\.isBusy).map(\.port))
