@@ -38,6 +38,7 @@
     "release:ios:prepare": "./scripts/release-ios.sh --phase prepare --mode xcode",
     "release:ios:ship": "./scripts/release-ios.sh --phase ship --mode xcode",
     "release:ios:check": "./scripts/release-ios.sh --phase prepare --mode xcode",
+    "release:ios:fast-path": "node ./scripts/release-ios-fast-path.mjs classify --cwd .",
     "release:ios:asc": "node ./scripts/app-store-connect-build.mjs",
     "rehearse:backend:legacy-migrations": "node ./scripts/rehearse-legacy-backend-migrations.mjs",
     "scaffold:mobile-feature": "npm --prefix mobile run feature:new --",
