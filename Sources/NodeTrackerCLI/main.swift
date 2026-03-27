@@ -44,12 +44,13 @@ struct NodeTrackerCLI {
     private static func runSnapshot(arguments: [String]) throws {
         let sample = arguments.contains("--sample-data")
         let wantsJSON = arguments.contains("--json")
+        let service = SnapshotService()
         let snapshot = sample
             ? SnapshotService.sampleSnapshot()
-            : try SnapshotService().captureLiveSnapshot(watchedPorts: SnapshotService.defaultWatchedPorts)
+            : try service.captureLiveSnapshot(watchedPorts: SnapshotService.defaultWatchedPorts)
 
         if wantsJSON {
-            let data = try SnapshotService().exportJSON(snapshot: snapshot)
+            let data = try service.exportJSON(snapshot: snapshot)
             FileHandle.standardOutput.write(data)
             FileHandle.standardOutput.write(Data("\n".utf8))
             return
@@ -77,9 +78,10 @@ struct NodeTrackerCLI {
             throw CLIError.fixtureNotFound(name)
         }
 
+        let service = SnapshotService()
         let snapshot = SnapshotService.sampleSnapshot(fixtureName: name)
         if arguments.contains("--json") {
-            let data = try SnapshotService().exportJSON(snapshot: snapshot)
+            let data = try service.exportJSON(snapshot: snapshot)
             FileHandle.standardOutput.write(data)
             FileHandle.standardOutput.write(Data("\n".utf8))
             return
