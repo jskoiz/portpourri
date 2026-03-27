@@ -1,10 +1,14 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
+import { createHash } from 'crypto';
 import { Gender, IntensityLevel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -119,11 +123,34 @@ export class DiscoveryService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly blockService: BlockService,
+    @Inject(CACHE_MANAGER) private readonly cache: Cache,
   ) {}
 
+  private feedCacheKey(userId: string, filters: DiscoveryFilters): string {
+    const hash = createHash('md5').update(JSON.stringify(filters)).digest('hex').slice(0, 12);
+    return `feed:${userId}:${hash}`;
+  }
+
+  private blockedCacheKey(userId: string): string {
+    return `blocked:${userId}`;
+  }
+
   async getFeed(userId: string, filters: DiscoveryFilters = {}) {
+    // Check feed cache first
+    const cacheKey = this.feedCacheKey(userId, filters);
+    const cached = await this.cache.get<DiscoveryFeedEntry[]>(cacheKey);
+    if (cached) return cached;
+
     const me = await this.getRequesterOrThrow(userId);
-    const blockedIds = await this.blockService.getBlockedUserIds(userId);
+
+    // Cache blocked IDs (5 min)
+    const blockedKey = this.blockedCacheKey(userId);
+    let blockedIds = await this.cache.get<string[]>(blockedKey);
+    if (!blockedIds) {
+      blockedIds = await this.blockService.getBlockedUserIds(userId);
+      await this.cache.set(blockedKey, blockedIds, 300_000);
+    }
+
     const users = await this.findFeedCandidates(me, blockedIds, filters);
 
     const scored = this.scoreAndFilterCandidates(me, users, filters)
@@ -131,6 +158,9 @@ export class DiscoveryService {
         (a, b) => b.recommendationScore - a.recommendationScore,
       )
       .slice(0, DISCOVERY_FEED_RESULT_LIMIT);
+
+    // Cache feed results (2 min)
+    await this.cache.set(cacheKey, scored, 120_000);
 
     this.logger.debug(
       asLogMessage('discovery.feed.generated', {
@@ -150,6 +180,12 @@ export class DiscoveryService {
     );
 
     return scored;
+  }
+
+  async invalidateUserFeedCache(userId: string): Promise<void> {
+    await this.cache.del(this.blockedCacheKey(userId));
+    // Feed entries with user-specific prefix — we can't easily glob-delete,
+    // so we rely on the short 2min TTL for feed results
   }
 
   private async getRequesterOrThrow(userId: string): Promise<DiscoveryRequester> {
@@ -692,6 +728,7 @@ export class DiscoveryService {
         );
     }
 
+    await this.invalidateUserFeedCache(userId);
     return result;
   }
 
@@ -724,6 +761,7 @@ export class DiscoveryService {
       }),
     );
 
+    await this.invalidateUserFeedCache(userId);
     return result;
   }
 

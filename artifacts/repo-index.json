@@ -183,6 +183,7 @@
   "backend": {
     "modules": [
       "auth",
+      "cache",
       "common",
       "config",
       "contracts",
@@ -268,6 +269,7 @@
           "backend/src/auth/authenticated-user.service.ts",
           "backend/src/auth/jwt-auth.guard.ts",
           "backend/src/auth/jwt.strategy.ts",
+          "backend/src/auth/oauth.service.ts",
           "backend/src/auth/token-auth.service.ts",
           "backend/src/discovery/discovery.service.ts",
           "backend/src/events/events.service.ts",
@@ -281,6 +283,7 @@
           "backend/src/notifications/push.service.ts",
           "backend/src/profile/photo-storage.service.ts",
           "backend/src/profile/profile.service.ts",
+          "backend/src/profile/r2-storage.service.ts",
           "backend/src/verification/verification.service.ts"
         ]
       },
@@ -321,6 +324,7 @@
           "backend/src/app.controller.ts",
           "backend/src/app.module.ts",
           "backend/src/auth/auth.module.ts",
+          "backend/src/cache/cache.module.ts",
           "backend/src/discovery/discovery.module.ts",
           "backend/src/events/events.module.ts",
           "backend/src/main.ts",
@@ -418,6 +422,7 @@
       "mobile/src/stories/ScreenScaffold.stories.tsx",
       "mobile/src/stories/SignupScreen.stories.tsx",
       "mobile/src/stories/Skeleton.stories.tsx",
+      "mobile/src/stories/SocialLoginButtons.stories.tsx",
       "mobile/src/stories/StatePanel.stories.tsx",
       "mobile/src/stories/SuggestPlanSheet.stories.tsx",
       "mobile/src/stories/Toast.stories.tsx"
@@ -611,6 +616,9 @@
           "mobile/src/features/auth/components/AuthScreenShell.tsx",
           "mobile/src/features/auth/components/SignupFlow.tsx",
           "mobile/src/features/auth/components/SignupStepHeader.tsx",
+          "mobile/src/features/auth/components/SocialLoginButtons.tsx",
+          "mobile/src/features/auth/hooks/useAppleAuth.ts",
+          "mobile/src/features/auth/hooks/useGoogleAuth.ts",
           "mobile/src/features/auth/hooks/useSignupFlow.ts",
           "mobile/src/features/auth/schema.ts",
           "mobile/src/features/chat/__tests__/ChatMessageList.accessibility.test.tsx",

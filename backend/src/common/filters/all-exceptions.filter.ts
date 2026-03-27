@@ -5,6 +5,7 @@ import {
   HttpException,
   Logger,
 } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { Request, Response } from 'express';
 
 interface PrismaError {
@@ -65,6 +66,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         exception instanceof Error ? exception.stack : undefined,
       );
 
+      if (status >= 500) {
+        Sentry.captureException(exception);
+      }
+
       response.status(status).json({ statusCode: status, message });
       return;
     }
@@ -78,6 +83,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       `${request.method} ${request.url} ${status}: ${message} [traceId=${traceId ?? 'n/a'}]`,
       exception instanceof Error ? exception.stack : undefined,
     );
+
+    if (status >= 500) {
+      Sentry.captureException(exception);
+    }
 
     response
       .status(status)

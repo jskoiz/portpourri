@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { IntensityLevel } from '@prisma/client';
 import { ProfileService } from './profile.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { PhotoStorageService } from './photo-storage.service';
+import { PHOTO_STORAGE } from './storage.provider';
 import { BlockService } from '../moderation/block.service';
 
 describe('ProfileService', () => {
@@ -38,6 +39,11 @@ describe('ProfileService', () => {
     getBlockedUserIds: jest.fn(),
     isBlocked: jest.fn().mockResolvedValue(false),
   };
+  const cacheMock = {
+    get: jest.fn().mockResolvedValue(undefined),
+    set: jest.fn().mockResolvedValue(undefined),
+    del: jest.fn().mockResolvedValue(undefined),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -51,12 +57,16 @@ describe('ProfileService', () => {
           useValue: prismaMock,
         },
         {
-          provide: PhotoStorageService,
+          provide: PHOTO_STORAGE,
           useValue: photoStorageMock,
         },
         {
           provide: BlockService,
           useValue: blockServiceMock,
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: cacheMock,
         },
       ],
     }).compile();

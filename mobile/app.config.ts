@@ -84,6 +84,7 @@ const config: ExpoConfig = {
           "BRDG uses your location to show people nearby and display distances.",
       },
     ],
+    "expo-apple-authentication",
   ],
   runtimeVersion: {
     policy: "appVersion",
@@ -100,6 +101,7 @@ const config: ExpoConfig = {
     supportsTablet: true,
     bundleIdentifier: iosBundleIdentifier,
     buildNumber: iosBuildNumber,
+    usesAppleSignIn: true,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSLocationWhenInUseUsageDescription:

@@ -1,7 +1,10 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { PrismaService } from '../prisma/prisma.service';
 import { calculateAge } from '../common/age.util';
-import { PhotoStorageService } from './photo-storage.service';
+import { PHOTO_STORAGE } from './storage.provider';
+import type { IPhotoStorage } from './photo-storage.service';
 import { BlockService } from '../moderation/block.service';
 import {
   PROFILE_COMPLETENESS_CHECKS,
@@ -50,8 +53,9 @@ export class ProfileService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly photoStorage: PhotoStorageService,
+    @Inject(PHOTO_STORAGE) private readonly photoStorage: IPhotoStorage,
     private readonly blockService: BlockService,
+    @Inject(CACHE_MANAGER) private readonly cache: Cache,
   ) {}
 
   async updateFitnessProfile(userId: string, data: UpdateFitnessProfileDto) {
@@ -72,6 +76,9 @@ export class ProfileService {
         data: { isOnboarded: true },
       });
     });
+
+    await this.cache.del(`completeness:${userId}`);
+    await this.cache.del(`pub-profile:${userId}`);
 
     // Re-fetch and return the full user profile so callers get a consistent shape
     return this.getProfile(userId);
@@ -133,6 +140,9 @@ export class ProfileService {
       }
     });
 
+    await this.cache.del(`completeness:${userId}`);
+    await this.cache.del(`pub-profile:${userId}`);
+
     return this.getProfile(userId);
   }
 
@@ -175,6 +185,10 @@ export class ProfileService {
       return null;
     }
 
+    const cacheKey = `pub-profile:${userId}`;
+    const cached = await this.cache.get<Record<string, unknown>>(cacheKey);
+    if (cached) return cached;
+
     const user = await this.prisma.user.findFirst({
       where: { id: userId, isDeleted: false, isBanned: false },
       include: {
@@ -199,10 +213,12 @@ export class ProfileService {
       return null;
     }
 
-    return {
+    const result = {
       ...this.sanitizePublicProfile(user),
       age: calculateAge(user.birthdate),
     };
+    await this.cache.set(cacheKey, result, 180_000); // 3 min
+    return result;
   }
 
   async uploadPhoto(userId: string, file: Express.Multer.File) {
@@ -236,6 +252,9 @@ export class ProfileService {
           },
         });
       });
+
+      await this.cache.del(`completeness:${userId}`);
+      await this.cache.del(`pub-profile:${userId}`);
 
       return this.getProfile(userId);
     } catch (error) {
@@ -312,6 +331,9 @@ export class ProfileService {
       return updated;
     });
 
+    await this.cache.del(`completeness:${userId}`);
+    await this.cache.del(`pub-profile:${userId}`);
+
     return this.getProfile(userId);
   }
 
@@ -347,10 +369,24 @@ export class ProfileService {
     });
 
     await this.photoStorage.removeProfilePhoto(existingPhoto.storageKey);
+
+    await this.cache.del(`completeness:${userId}`);
+    await this.cache.del(`pub-profile:${userId}`);
+
     return this.getProfile(userId);
   }
 
   async getProfileCompleteness(userId: string) {
+    const cacheKey = `completeness:${userId}`;
+    const cached = await this.cache.get<{
+      score: number;
+      total: number;
+      earned: number;
+      prompts: string[];
+      missing: Array<{ field: string; label: string; route: string }>;
+    }>(cacheKey);
+    if (cached) return cached;
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -386,6 +422,8 @@ export class ProfileService {
       .filter((c) => !c.ok)
       .map((c) => ({ field: c.field, label: c.label, route: c.route }));
 
-    return { score, total: checks.length, earned, prompts, missing };
+    const result = { score, total: checks.length, earned, prompts, missing };
+    await this.cache.set(cacheKey, result, 600_000); // 10 min
+    return result;
   }
 }

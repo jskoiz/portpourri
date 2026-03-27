@@ -50,4 +50,14 @@ export const authApi = {
     withErrorLogging('auth', 'deleteAccount', () =>
       client.delete<void>('/auth/me'),
     ),
+  googleLogin: async (idToken: string) =>
+    withErrorLogging('auth', 'googleLogin', () =>
+      client.post<AuthResponse>('/auth/google', { idToken }),
+      { context: { provider: 'google' } },
+    ),
+  appleLogin: async (identityToken: string, fullName?: string) =>
+    withErrorLogging('auth', 'appleLogin', () =>
+      client.post<AuthResponse>('/auth/apple', { identityToken, fullName }),
+      { context: { provider: 'apple' } },
+    ),
 };

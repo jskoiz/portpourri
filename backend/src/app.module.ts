@@ -19,6 +19,7 @@ import { EventsModule } from './events/events.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { VerificationModule } from './verification/verification.module';
+import { AppCacheModule } from './cache/cache.module';
 import { appConfig } from './config/app.config';
 
 const isProduction = appConfig.isProduction;
@@ -73,6 +74,7 @@ const isProduction = appConfig.isProduction;
       },
     }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
+    AppCacheModule,
     AuthModule,
     PrismaModule,
     ProfileModule,

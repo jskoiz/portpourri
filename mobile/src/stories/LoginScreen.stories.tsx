@@ -54,6 +54,11 @@ function LoginScreenStory({
       onNavigateSignup={() => undefined}
       onSubmit={() => undefined}
       submitError={submitError}
+      onGoogleLogin={() => undefined}
+      onAppleLogin={() => undefined}
+      googleLoading={false}
+      appleLoading={false}
+      googleReady={false}
     />
   );
 }

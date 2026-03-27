@@ -2,6 +2,7 @@ import {
   IsEmail,
   IsEnum,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Matches,
   MaxLength,
@@ -53,4 +54,21 @@ export class RegisterPushTokenDto {
   @IsNotEmpty()
   @MaxLength(255)
   token!: string;
+}
+
+export class GoogleLoginDto {
+  @IsString()
+  @IsNotEmpty()
+  idToken!: string;
+}
+
+export class AppleLoginDto {
+  @IsString()
+  @IsNotEmpty()
+  identityToken!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  fullName?: string;
 }

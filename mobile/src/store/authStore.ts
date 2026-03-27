@@ -50,6 +50,8 @@ interface AuthState {
   isLoading: boolean;
   clearSession: () => void;
   login: (data: LoginPayload) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
+  loginWithApple: (identityToken: string, fullName?: string) => Promise<void>;
   signup: (data: SignupPayload) => Promise<void>;
   deleteAccount: () => Promise<void>;
   logout: () => Promise<void>;
@@ -75,6 +77,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (data) => {
     try {
       const response = await authApi.login(data) as { data: { access_token: string; user: User } };
+      const { access_token, user } = response.data;
+      await setToken(access_token);
+      get().setSession(access_token, user);
+      Sentry.setUser({ id: user.id, email: user.email ?? undefined });
+    } catch (error) {
+      throw normalizeApiError(error);
+    }
+  },
+
+  loginWithGoogle: async (idToken) => {
+    try {
+      const response = await authApi.googleLogin(idToken) as { data: { access_token: string; user: User } };
+      const { access_token, user } = response.data;
+      await setToken(access_token);
+      get().setSession(access_token, user);
+      Sentry.setUser({ id: user.id, email: user.email ?? undefined });
+    } catch (error) {
+      throw normalizeApiError(error);
+    }
+  },
+
+  loginWithApple: async (identityToken, fullName) => {
+    try {
+      const response = await authApi.appleLogin(identityToken, fullName) as { data: { access_token: string; user: User } };
       const { access_token, user } = response.data;
       await setToken(access_token);
       get().setSession(access_token, user);

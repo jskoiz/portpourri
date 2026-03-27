@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Logger } from '@nestjs/common';
 import { Gender, IntensityLevel } from '@prisma/client';
 import { DiscoveryService } from './discovery.service';
@@ -56,6 +57,12 @@ describe('DiscoveryService', () => {
   const blockServiceMock = {
     getBlockedUserIds: jest.fn().mockResolvedValue([]),
     isBlocked: jest.fn().mockResolvedValue(false),
+  };
+
+  const cacheMock = {
+    get: jest.fn().mockResolvedValue(undefined),
+    set: jest.fn().mockResolvedValue(undefined),
+    del: jest.fn().mockResolvedValue(undefined),
   };
 
   const makeCandidate = (overrides: Record<string, unknown> = {}) => {
@@ -124,6 +131,10 @@ describe('DiscoveryService', () => {
         {
           provide: BlockService,
           useValue: blockServiceMock,
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: cacheMock,
         },
       ],
     }).compile();

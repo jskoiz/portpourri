@@ -10,6 +10,9 @@ import { normalizeApiError } from '../api/errors';
 import { ControlledInputField } from '../components/form/ControlledInputField';
 import { Button, GlassView } from '../design/primitives';
 import { AuthFooterLinkRow, AuthScreenShell } from '../features/auth/components/AuthScreenShell';
+import { SocialLoginButtons } from '../features/auth/components/SocialLoginButtons';
+import { useGoogleAuth } from '../features/auth/hooks/useGoogleAuth';
+import { useAppleAuth } from '../features/auth/hooks/useAppleAuth';
 import { useTheme } from '../theme/useTheme';
 import { lightTheme, radii, spacing, typography } from '../theme/tokens';
 import { fontFamily } from '../lib/fonts';
@@ -24,6 +27,11 @@ export type LoginScreenViewProps = {
   onNavigateSignup: () => void;
   onSubmit: () => void;
   submitError: string;
+  onGoogleLogin: () => void;
+  onAppleLogin: () => void;
+  googleLoading: boolean;
+  appleLoading: boolean;
+  googleReady: boolean;
 };
 
 export function LoginScreenView({
@@ -33,6 +41,11 @@ export function LoginScreenView({
   onNavigateSignup,
   onSubmit,
   submitError,
+  onGoogleLogin,
+  onAppleLogin,
+  googleLoading,
+  appleLoading,
+  googleReady,
 }: LoginScreenViewProps) {
   const theme = useTheme();
   const hero = (
@@ -67,6 +80,14 @@ export function LoginScreenView({
         <GlassView tier="frosted" borderRadius={radii.xxl} specularHighlight style={styles.formCard}>
           <Text style={[styles.formEyebrow, { color: theme.textMuted }]}>SIGN IN</Text>
           <Text style={[styles.formTitle, { color: theme.textPrimary }]} accessibilityRole="header">Welcome back</Text>
+          <SocialLoginButtons
+            onGooglePress={onGoogleLogin}
+            onApplePress={onAppleLogin}
+            googleLoading={googleLoading}
+            appleLoading={appleLoading}
+            googleReady={googleReady}
+            disabled={isSubmitting}
+          />
           <ControlledInputField
             control={control}
             name="email"
@@ -145,6 +166,10 @@ export default function LoginScreen({
 }: RootStackScreenProps<'Login'>) {
   const [submitError, setSubmitError] = useState('');
   const login = useAuthStore((state) => state.login);
+  const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
+  const loginWithApple = useAuthStore((s) => s.loginWithApple);
+  const { signIn: googleSignIn, isLoading: googleLoading, isReady: googleReady } = useGoogleAuth();
+  const { signIn: appleSignIn, isLoading: appleLoading } = useAppleAuth();
   const {
     control,
     handleSubmit,
@@ -156,6 +181,26 @@ export default function LoginScreen({
     },
     resolver: zodResolver(loginSchema),
   });
+
+  const handleGoogleLogin = async () => {
+    setSubmitError('');
+    try {
+      const idToken = await googleSignIn();
+      if (idToken) await loginWithGoogle(idToken);
+    } catch (error) {
+      setSubmitError(normalizeApiError(error).message);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    setSubmitError('');
+    try {
+      const result = await appleSignIn();
+      if (result) await loginWithApple(result.identityToken, result.fullName);
+    } catch (error) {
+      setSubmitError(normalizeApiError(error).message);
+    }
+  };
 
   const handleLogin = handleSubmit(async (values) => {
     setSubmitError('');
@@ -177,6 +222,11 @@ export default function LoginScreen({
       onNavigateSignup={() => navigation.navigate('Signup')}
       onSubmit={handleLogin}
       submitError={submitError}
+      onGoogleLogin={handleGoogleLogin}
+      onAppleLogin={handleAppleLogin}
+      googleLoading={googleLoading}
+      appleLoading={appleLoading}
+      googleReady={googleReady}
     />
   );
 }

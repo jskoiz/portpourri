@@ -104,9 +104,30 @@ export const appConfig = {
     profileDir: 'public/uploads/profile',
     profilePublicBaseUrl: `${assetBaseUrl}/uploads/profile`,
   },
+  oauth: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID || null,
+    },
+    apple: {
+      clientId: process.env.APPLE_CLIENT_ID || null,
+    },
+  },
+  storage: {
+    provider: (process.env.STORAGE_PROVIDER || 'local') as 'local' | 'r2',
+    r2: {
+      accountId: process.env.R2_ACCOUNT_ID || '',
+      accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+      bucketName: process.env.R2_BUCKET_NAME || 'brdg-photos',
+      publicUrl: process.env.R2_PUBLIC_URL || '',
+    },
+  },
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: toNumber(process.env.REDIS_PORT, 6379),
+  },
+  sentry: {
+    dsn: process.env.SENTRY_DSN?.trim() || null,
   },
   scripts: {
     apiBaseUrl,

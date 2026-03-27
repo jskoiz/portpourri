@@ -8,6 +8,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { appConfig } from '../config/app.config';
 import { AuthenticatedUserService } from './authenticated-user.service';
 import { TokenAuthService } from './token-auth.service';
+import { OAuthService } from './oauth.service';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { TokenAuthService } from './token-auth.service';
   ],
   providers: [
     AuthService,
+    OAuthService,
     JwtStrategy,
     AuthenticatedUserService,
     TokenAuthService,

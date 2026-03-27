@@ -124,6 +124,7 @@ model User {
   notificationPreferences NotificationPreferences?
 
   @@unique([email, authProvider])
+  @@unique([authProvider, providerId])
   @@index([phoneNumber])
   @@index([isDeleted, isBanned, isOnboarded])
   @@index([birthdate])

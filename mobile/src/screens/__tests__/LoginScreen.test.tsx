@@ -4,10 +4,28 @@ import { createScreenNavigation, createScreenRoute } from '../../lib/testing/scr
 import LoginScreen from '../LoginScreen';
 
 const mockLogin = jest.fn();
+const mockLoginWithGoogle = jest.fn();
+const mockLoginWithApple = jest.fn();
 
 jest.mock('../../store/authStore', () => ({
-  useAuthStore: (selector: (state: { login: typeof mockLogin }) => unknown) =>
-    selector({ login: mockLogin }),
+  useAuthStore: (selector: (state: {
+    login: typeof mockLogin;
+    loginWithGoogle: typeof mockLoginWithGoogle;
+    loginWithApple: typeof mockLoginWithApple;
+  }) => unknown) =>
+    selector({
+      login: mockLogin,
+      loginWithGoogle: mockLoginWithGoogle,
+      loginWithApple: mockLoginWithApple,
+    }),
+}));
+
+jest.mock('../../features/auth/hooks/useGoogleAuth', () => ({
+  useGoogleAuth: () => ({ signIn: jest.fn(), isLoading: false, isReady: false }),
+}));
+
+jest.mock('../../features/auth/hooks/useAppleAuth', () => ({
+  useAppleAuth: () => ({ signIn: jest.fn(), isLoading: false, isAvailable: false }),
 }));
 
 describe('LoginScreen', () => {
@@ -21,7 +39,7 @@ describe('LoginScreen', () => {
   it('validates required fields before submitting', async () => {
     render(<LoginScreen navigation={navigation} route={route} />);
 
-    fireEvent.press(screen.getByText('Sign in'));
+    fireEvent.press(screen.getByTestId('login-submit-button'));
 
     expect(await screen.findByText('Email is required.')).toBeTruthy();
     expect(screen.getByText('Password is required.')).toBeTruthy();
@@ -39,7 +57,7 @@ describe('LoginScreen', () => {
 
     fireEvent.changeText(screen.getByPlaceholderText('you@example.com'), 'Jordan@Example.com ');
     fireEvent.changeText(screen.getByPlaceholderText('••••••••'), 'password123');
-    fireEvent.press(screen.getByText('Sign in'));
+    fireEvent.press(screen.getByTestId('login-submit-button'));
 
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith({
@@ -56,7 +74,7 @@ describe('LoginScreen', () => {
 
     fireEvent.changeText(screen.getByPlaceholderText('you@example.com'), 'jordan@example.com');
     fireEvent.changeText(screen.getByPlaceholderText('••••••••'), 'bad-password');
-    fireEvent.press(screen.getByText('Sign in'));
+    fireEvent.press(screen.getByTestId('login-submit-button'));
 
     expect(await screen.findByText('Invalid credentials')).toBeTruthy();
     expect(screen.getByLabelText('Invalid credentials').props.accessibilityRole).toBe('alert');

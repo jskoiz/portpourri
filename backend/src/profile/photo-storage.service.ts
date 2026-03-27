@@ -5,9 +5,18 @@ import { randomUUID } from 'crypto';
 import heicConvert from 'heic-convert';
 import { appConfig } from '../config/app.config';
 
+export interface IPhotoStorage {
+  saveProfilePhoto(
+    file: Express.Multer.File,
+  ): Promise<{ storageKey: string; fileName: string }>;
+  removeProfilePhoto(storageKey?: string | null): Promise<void>;
+  /** Resolve a storageKey to a servable URL. Default: identity (key is already a URL). */
+  resolveUrl?(storageKey: string): string;
+}
+
 const HEIC_MIME_TYPES = new Set(['image/heic', 'image/heif']);
 
-function extensionForMimeType(mimeType: string) {
+export function extensionForMimeType(mimeType: string) {
   switch (mimeType) {
     case 'image/jpeg':
       return 'jpg';
@@ -24,7 +33,7 @@ function extensionForMimeType(mimeType: string) {
   }
 }
 
-async function normalizeProfilePhoto(file: Express.Multer.File) {
+export async function normalizeProfilePhoto(file: Express.Multer.File) {
   if (!HEIC_MIME_TYPES.has(file.mimetype)) {
     return file;
   }
@@ -85,7 +94,7 @@ function profilePhotoFileNameFromStorageKey(storageKey: string) {
 }
 
 @Injectable()
-export class PhotoStorageService {
+export class PhotoStorageService implements IPhotoStorage {
   async saveProfilePhoto(file: Express.Multer.File) {
     const normalizedFile = await normalizeProfilePhoto(file);
     const extension = extensionForMimeType(normalizedFile.mimetype);

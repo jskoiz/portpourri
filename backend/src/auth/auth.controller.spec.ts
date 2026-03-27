@@ -3,6 +3,7 @@ import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { AuthResponseSchema, CurrentUserSchema } from '@contracts';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { OAuthService } from './oauth.service';
 import type { LoginDto } from './auth.service';
 import type { AuthenticatedRequest } from '../common/auth-request.interface';
 import { Gender } from '../common/enums';
@@ -19,6 +20,11 @@ describe('AuthController', () => {
     registerPushToken: jest.fn(),
   };
 
+  const oauthServiceMock = {
+    loginWithGoogle: jest.fn(),
+    loginWithApple: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -28,6 +34,10 @@ describe('AuthController', () => {
         {
           provide: AuthService,
           useValue: authServiceMock,
+        },
+        {
+          provide: OAuthService,
+          useValue: oauthServiceMock,
         },
       ],
     }).compile();
