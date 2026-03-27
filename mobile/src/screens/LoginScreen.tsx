@@ -14,9 +14,8 @@ import { SocialLoginButtons } from '../features/auth/components/SocialLoginButto
 import { useGoogleAuth } from '../features/auth/hooks/useGoogleAuth';
 import { useAppleAuth } from '../features/auth/hooks/useAppleAuth';
 import { useTheme } from '../theme/useTheme';
-import { lightTheme, radii, spacing, typography } from '../theme/tokens';
+import { radii, spacing, typography } from '../theme/tokens';
 import { fontFamily } from '../lib/fonts';
-// radii is used in JSX
 import { loginSchema, type LoginFormValues } from '../features/auth/schema';
 import type { RootStackScreenProps } from '../core/navigation/types';
 
@@ -48,38 +47,19 @@ export function LoginScreenView({
   googleReady,
 }: LoginScreenViewProps) {
   const theme = useTheme();
-  const hero = (
-    <View style={styles.hero}>
-      <GlassView tier="light" tint={theme.accentSubtle} borderRadius={999} style={styles.wordmarkPill}>
-        <Text style={[styles.eyebrow, { color: theme.accent }]}>BRDG</Text>
-      </GlassView>
-      <Text style={styles.wordmark}>BRDG</Text>
-      <Text style={[styles.headline, { color: theme.textPrimary }]} accessibilityRole="header">
-        Connect through movement.
-      </Text>
-      <Text style={[styles.tagline, { color: theme.textMuted }]}>
-        Find your people through shared activities.
-      </Text>
-      <View style={styles.heroMetaRow}>
-        <GlassView tier="light" borderRadius={radii.lg} style={styles.heroMetaCard}>
-          <Text style={styles.heroMetaLabel}>DISCOVERY</Text>
-          <Text style={[styles.heroMetaValue, { color: theme.textPrimary }]}>Based on what you do</Text>
-        </GlassView>
-        <GlassView tier="light" borderRadius={radii.lg} style={styles.heroMetaCard}>
-          <Text style={styles.heroMetaLabel}>PACE</Text>
-          <Text style={[styles.heroMetaValue, { color: theme.textPrimary }]}>Quality over quantity</Text>
-        </GlassView>
-      </View>
-    </View>
-  );
 
   return (
     <AuthScreenShell
-      hero={hero}
+      hero={(
+        <View style={styles.hero}>
+          <Text accessibilityRole="header" style={[styles.wordmark, { color: theme.textPrimary }]}>BRDG</Text>
+          <Text style={[styles.tagline, { color: theme.textMuted }]}>
+            Connect through movement
+          </Text>
+        </View>
+      )}
       card={(
         <GlassView tier="frosted" borderRadius={radii.xxl} specularHighlight style={styles.formCard}>
-          <Text style={[styles.formEyebrow, { color: theme.textMuted }]}>SIGN IN</Text>
-          <Text style={[styles.formTitle, { color: theme.textPrimary }]} accessibilityRole="header">Welcome back</Text>
           <SocialLoginButtons
             onGooglePress={onGoogleLogin}
             onApplePress={onAppleLogin}
@@ -232,9 +212,6 @@ export default function LoginScreen({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   content: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -243,79 +220,23 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl,
   },
   hero: {
-    marginBottom: spacing.xxxl,
-  },
-  wordmarkPill: {
-    alignSelf: 'flex-start',
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    marginBottom: spacing.lg,
-  },
-  eyebrow: {
-    fontSize: typography.caption,
-    fontWeight: '800',
-    letterSpacing: 2.2,
+    marginBottom: spacing.xxl,
   },
   wordmark: {
     fontSize: 36,
     fontWeight: '900',
     letterSpacing: -1.5,
     lineHeight: 44,
-    marginBottom: spacing.sm,
-    color: lightTheme.textPrimary,
-  },
-  headline: {
-    fontSize: 28,
-    fontFamily: fontFamily.serifBold,
-    letterSpacing: -0.5,
-    lineHeight: 34,
-    marginBottom: spacing.md,
+    marginBottom: spacing.xs,
   },
   tagline: {
     fontSize: typography.body,
+    fontFamily: fontFamily.serifBold,
     lineHeight: 24,
     letterSpacing: 0.2,
-    maxWidth: 320,
-  },
-  heroMetaRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xl,
-  },
-  heroMetaCard: {
-    flex: 1,
-    borderRadius: 18,
-    padding: spacing.lg,
-    minHeight: 72,
-  },
-  heroMetaLabel: {
-    color: '#8C8279',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.6,
-    marginBottom: spacing.xs,
-    textTransform: 'uppercase',
-  },
-  heroMetaValue: {
-    fontSize: typography.bodySmall,
-    fontWeight: '700',
-    lineHeight: 20,
   },
   formCard: {
     padding: spacing.xxl,
-  },
-  formEyebrow: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.8,
-    marginBottom: spacing.sm,
-  },
-  formTitle: {
-    fontSize: typography.h2,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-    marginBottom: spacing.xl,
   },
   ctaButton: {
     marginTop: spacing.sm,
@@ -333,6 +254,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   footer: {
-    marginTop: spacing.xxxxl,
+    marginTop: spacing.xxxl,
   },
 });

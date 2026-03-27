@@ -50,44 +50,6 @@ const BoundedChat = withBoundary(ChatScreen, 'chat');
 const BoundedEventDetail = withBoundary(EventDetailScreen, 'events');
 const BoundedProfileDetail = withBoundary(ProfileDetailScreen, 'profile');
 
-/** Dev-only: auto-login with preview credentials when no token is stored. */
-let devAutoLoginDone = false;
-
-function useDevAutoLogin() {
-  const token = useAuthStore((s) => s.token);
-  const isLoading = useAuthStore((s) => s.isLoading);
-  const setSession = useAuthStore((s) => s.setSession);
-
-  useEffect(() => {
-    if (!__DEV__ || isLoading || token || devAutoLoginDone) return;
-    devAutoLoginDone = true;
-
-    (async () => {
-      try {
-        const res = await fetch("http://127.0.0.1:3010/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: "preview.lana@brdg.local",
-            password: "PreviewPass123!",
-          }),
-        });
-        if (!res.ok) {
-          devAutoLoginDone = false;
-          return;
-        }
-        const data = await res.json();
-        const { STORAGE_KEYS } = require("../constants/storage");
-        const SecureStore = require("expo-secure-store");
-        await SecureStore.setItemAsync(STORAGE_KEYS.accessToken, data.access_token);
-        setSession(data.access_token, data.user);
-      } catch (e: any) {
-        devAutoLoginDone = false;
-        console.warn("[dev-auto-login]", e?.message || e);
-      }
-    })();
-  }, [isLoading, setSession, token]);
-}
 
 export default function AppNavigator() {
   const token = useAuthStore((state) => state.token);
@@ -96,8 +58,6 @@ export default function AppNavigator() {
   const clearSession = useAuthStore((state) => state.clearSession);
   const theme = useTheme();
   const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
-
-  useDevAutoLogin();
 
   const navigationTheme = {
     ...DefaultTheme,
