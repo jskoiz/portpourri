@@ -1,3 +1,5 @@
+import { Gender } from './config';
+
 /**
  * Photo URL assignments for BRDG seed users.
  *
@@ -20,49 +22,77 @@ const activity = (id: string) =>
 // Photo pools
 // ---------------------------------------------------------------------------
 
-/** ~40 portrait-style photos – outdoor, active, lifestyle */
-const PORTRAIT_PHOTOS: string[] = [
+/**
+ * Portrait pools reviewed manually from the current Unsplash set.
+ *
+ * We intentionally exclude several mixed or low-confidence entries from the
+ * old shared portrait array so seeded users do not lead with obviously
+ * mismatched or non-person photos.
+ */
+const FEMALE_PORTRAIT_PHOTOS: string[] = [
   portrait('photo-1494790108377-be9c29b29330'),
-  portrait('photo-1507003211169-0a1dd7228f2d'),
-  portrait('photo-1506794778202-cad84cf45f1d'),
   portrait('photo-1438761681033-6461ffad8d80'),
-  portrait('photo-1531746020798-e6953c6e8e04'),
-  portrait('photo-1568602471122-7832951cc4c5'),
-  portrait('photo-1516939884455-1445c8652f83'),
-  portrait('photo-1571019613454-1cb2f99b2d8b'),
-  portrait('photo-1574680096145-d05b474e2155'),
-  portrait('photo-1515886657613-9f3515b0c78f'),
   portrait('photo-1524504388940-b1c1722653e1'),
   portrait('photo-1517841905240-472988babdf9'),
-  portrait('photo-1534528741775-53994a69daeb'),
-  portrait('photo-1539571696357-5a69c17a67c6'),
-  portrait('photo-1500648767791-00dcc994a43e'),
-  portrait('photo-1521119989659-a83eee488004'),
   portrait('photo-1488426862026-3ee34a7d66df'),
   portrait('photo-1502823403499-6ccfcf4fb453'),
   portrait('photo-1529626455594-4ff0802cfb7e'),
   portrait('photo-1544005313-94ddf0286df2'),
   portrait('photo-1524638431109-93d95c968f03'),
+  portrait('photo-1517365830460-955ce3ccd263'),
+  portrait('photo-1501196354995-cbb51c65aaea'),
+  portrait('photo-1504199367641-aba8151af406'),
+  portrait('photo-1504703395950-b89145a5425b'),
+  portrait('photo-1546961342-ea5f71b193f3'),
+  portrait('photo-1542206395-9feb3edaa68d'),
+];
+
+const MALE_PORTRAIT_PHOTOS: string[] = [
+  portrait('photo-1507003211169-0a1dd7228f2d'),
+  portrait('photo-1506794778202-cad84cf45f1d'),
+  portrait('photo-1531746020798-e6953c6e8e04'),
+  portrait('photo-1568602471122-7832951cc4c5'),
+  portrait('photo-1539571696357-5a69c17a67c6'),
+  portrait('photo-1500648767791-00dcc994a43e'),
+  portrait('photo-1521119989659-a83eee488004'),
   portrait('photo-1519345182560-3f2917c472ef'),
   portrait('photo-1504257432389-52343af06ae3'),
   portrait('photo-1463453091185-61582044d556'),
   portrait('photo-1522556189639-b150ed9c4330'),
-  portrait('photo-1517365830460-955ce3ccd263'),
-  portrait('photo-1501196354995-cbb51c65aaea'),
   portrait('photo-1495474472287-4d71bcdd2085'),
-  portrait('photo-1504199367641-aba8151af406'),
-  portrait('photo-1513956589380-bad6acb9b9d4'),
-  portrait('photo-1504593811423-6dd665756598'),
+  portrait('photo-1519058082700-08a0b56da9b2'),
   portrait('photo-1528892952291-009c663ce843'),
   portrait('photo-1472099645785-5658abf4ff4e'),
   portrait('photo-1507591064344-4c6ce005b128'),
   portrait('photo-1530268729831-4b0b9e170218'),
   portrait('photo-1496345875659-11f7dd282d1d'),
-  portrait('photo-1504703395950-b89145a5425b'),
-  portrait('photo-1492562080023-ab3db95bfbce'),
-  portrait('photo-1546961342-ea5f71b193f3'),
-  portrait('photo-1542206395-9feb3edaa68d'),
 ];
+
+const NON_BINARY_PORTRAIT_PHOTOS: string[] = [
+  portrait('photo-1494790108377-be9c29b29330'),
+  portrait('photo-1507003211169-0a1dd7228f2d'),
+  portrait('photo-1438761681033-6461ffad8d80'),
+  portrait('photo-1531746020798-e6953c6e8e04'),
+  portrait('photo-1524504388940-b1c1722653e1'),
+  portrait('photo-1517841905240-472988babdf9'),
+  portrait('photo-1534528741775-53994a69daeb'),
+  portrait('photo-1539571696357-5a69c17a67c6'),
+  portrait('photo-1488426862026-3ee34a7d66df'),
+  portrait('photo-1529626455594-4ff0802cfb7e'),
+  portrait('photo-1519345182560-3f2917c472ef'),
+  portrait('photo-1463453091185-61582044d556'),
+  portrait('photo-1501196354995-cbb51c65aaea'),
+  portrait('photo-1472099645785-5658abf4ff4e'),
+  portrait('photo-1504703395950-b89145a5425b'),
+];
+
+const ALL_REVIEWED_PORTRAIT_PHOTOS: string[] = Array.from(
+  new Set([
+    ...FEMALE_PORTRAIT_PHOTOS,
+    ...MALE_PORTRAIT_PHOTOS,
+    ...NON_BINARY_PORTRAIT_PHOTOS,
+  ]),
+);
 
 /** ~15 running / jogging photos */
 const RUNNING_PHOTOS: string[] = [
@@ -315,6 +345,19 @@ function simpleHash(str: string): number {
   return hash >>> 0; // unsigned 32-bit
 }
 
+function getPortraitPoolForGender(gender?: Gender): string[] {
+  switch (gender) {
+    case Gender.FEMALE:
+      return FEMALE_PORTRAIT_PHOTOS;
+    case Gender.MALE:
+      return MALE_PORTRAIT_PHOTOS;
+    case Gender.NON_BINARY:
+      return NON_BINARY_PORTRAIT_PHOTOS;
+    default:
+      return ALL_REVIEWED_PORTRAIT_PHOTOS;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -325,19 +368,22 @@ function simpleHash(str: string): number {
  * @param slug       Unique user slug (e.g. "lana-k")
  * @param photoCount How many photos to return (typically 4-6)
  * @param activities List of activity tags for the user (e.g. ["surfing","yoga"])
+ * @param gender     Seeded gender used to choose a reviewed lead portrait pool
  */
 export function getPhotosForUser(
   slug: string,
   photoCount: number,
   activities: string[],
+  gender?: Gender,
 ): string[] {
   const hash = simpleHash(slug);
   const used = new Set<string>();
   const result: string[] = [];
 
   // 1. Pick a portrait as the primary photo
-  const portraitIdx = hash % PORTRAIT_PHOTOS.length;
-  const primary = PORTRAIT_PHOTOS[portraitIdx];
+  const portraitPool = getPortraitPoolForGender(gender);
+  const portraitIdx = hash % portraitPool.length;
+  const primary = portraitPool[portraitIdx];
   result.push(primary);
   used.add(primary);
 

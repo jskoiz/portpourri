@@ -113,7 +113,12 @@ async function main() {
               },
             },
             photos: {
-              create: getPhotosForUser(user.slug, user.photoCount ?? 4, user.activities).map(
+              create: getPhotosForUser(
+                user.slug,
+                user.photoCount ?? 4,
+                user.activities,
+                user.gender,
+              ).map(
                 (url, photoIndex) => ({
                   storageKey: url,
                   isPrimary: photoIndex === 0,
