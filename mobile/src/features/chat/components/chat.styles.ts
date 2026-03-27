@@ -67,7 +67,7 @@ export const chatStyles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     gap: spacing.sm,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.lg,
   },
   input: {
     flex: 1,
