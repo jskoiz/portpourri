@@ -22,8 +22,11 @@ import {
   resolveInviteeId,
 } from './events.invite';
 import {
+  buildEventDetailInclude,
   buildEventSummaryInclude,
+  type EventDetailSource,
   type EventWithRsvps,
+  mapEventDetail,
   mapEventInvite,
   mapEventSummary,
 } from './events.summary';
@@ -153,7 +156,7 @@ export class EventsService {
         id,
         ...this.buildVisibleEventWhere(blockedIds),
       },
-      include: buildEventSummaryInclude(userId),
+      include: buildEventDetailInclude(userId),
     });
 
     if (!event) {
@@ -164,7 +167,7 @@ export class EventsService {
       throw new ForbiddenException('This event is no longer available');
     }
 
-    return mapEventSummary(event as typeof event & EventWithRsvps);
+    return mapEventDetail(event as typeof event & EventDetailSource, userId);
   }
 
   async create(payload: CreateEventDto, userId: string) {

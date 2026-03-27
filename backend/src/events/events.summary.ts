@@ -17,6 +17,18 @@ export interface EventSummarySource extends EventWithRsvps {
   _count: { rsvps: number };
 }
 
+export interface EventDetailSource extends EventSummarySource {
+  rsvps?: Array<{
+    id: string;
+    userId?: string;
+    user: {
+      id: string;
+      firstName: string;
+      photos: Array<{ storageKey: string }>;
+    };
+  }>;
+}
+
 export interface EventInviteSource {
   id: string;
   status: string;
@@ -47,6 +59,31 @@ export function buildEventSummaryInclude(userId?: string) {
   };
 }
 
+export function buildEventDetailInclude(userId?: string) {
+  return {
+    host: { select: { id: true, firstName: true } },
+    _count: { select: { rsvps: true } },
+    rsvps: {
+      select: {
+        id: true,
+        userId: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            photos: {
+              where: { isPrimary: true },
+              select: { storageKey: true },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' as const },
+    },
+  };
+}
+
 export function mapEventSummary(event: EventSummarySource) {
   return {
     id: event.id,
@@ -60,6 +97,22 @@ export function mapEventSummary(event: EventSummarySource) {
     host: event.host,
     attendeesCount: event._count.rsvps,
     joined: (event.rsvps?.length ?? 0) > 0,
+  };
+}
+
+export function mapEventDetail(event: EventDetailSource, viewerUserId?: string) {
+  const attendees = (event.rsvps ?? []).map(({ user }) => ({
+    id: user.id,
+    firstName: user.firstName,
+    photoUrl: user.photos[0]?.storageKey ?? null,
+  }));
+
+  return {
+    ...mapEventSummary({ ...event, rsvps: [] }),
+    joined: viewerUserId
+      ? (event.rsvps?.some((rsvp) => rsvp.userId === viewerUserId) ?? false)
+      : false,
+    attendees,
   };
 }
 

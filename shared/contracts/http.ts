@@ -11,6 +11,7 @@ import {
   UndoSwipeResponseSchema,
 } from "./discovery";
 import {
+  EventDetailSchema,
   EventInviteListSchema,
   EventInviteResponseSchema,
   EventListSchema,
@@ -61,7 +62,7 @@ export const responseContracts: ResponseContract[] = [
   },
   { method: "GET", path: "/events", pattern: /^\/events$/, responseSchema: EventListSchema },
   { method: "GET", path: "/events/me", pattern: /^\/events\/me$/, responseSchema: EventListSchema },
-  { method: "GET", path: "/events/:id", pattern: /^\/events\/[^/]+$/, responseSchema: EventSummarySchema },
+  { method: "GET", path: "/events/:id", pattern: /^\/events\/[^/]+$/, responseSchema: EventDetailSchema },
   { method: "POST", path: "/events", pattern: /^\/events$/, responseSchema: EventSummarySchema },
   {
     method: "POST",

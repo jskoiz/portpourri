@@ -59,7 +59,10 @@ export function upsertEventSummaryCaches(
   queryClient: QueryClient,
   event: EventSummary,
 ) {
-  queryClient.setQueryData<EventDetail>(queryKeys.events.detail(event.id), event);
+  queryClient.setQueryData<EventDetail>(queryKeys.events.detail(event.id), {
+    ...event,
+    attendees: [],
+  });
   queryClient.setQueryData<EventSummary[]>(
     queryKeys.events.list(),
     (current = []) => upsertEventInCollection(current, event),
@@ -100,7 +103,7 @@ export function patchJoinedEventSummaryCaches(
     });
   };
 
-  queryClient.setQueryData<EventSummary | undefined>(
+  queryClient.setQueryData<EventDetail | undefined>(
     queryKeys.events.detail(eventId),
     (current) =>
       current
@@ -108,6 +111,7 @@ export function patchJoinedEventSummaryCaches(
             ...current,
             joined: true,
             attendeesCount,
+            attendees: current.attendees ?? [],
           }
         : current,
   );

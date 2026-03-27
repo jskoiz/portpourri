@@ -34,7 +34,10 @@ describe('eventCache', () => {
 
     upsertEventSummaryCaches(queryClient, createdEvent);
 
-    expect(queryClient.getQueryData(queryKeys.events.detail('event-new'))).toEqual(createdEvent);
+    expect(queryClient.getQueryData(queryKeys.events.detail('event-new'))).toEqual({
+      ...createdEvent,
+      attendees: [],
+    });
     expect(queryClient.getQueryData<EventSummary[]>(queryKeys.events.list())).toEqual([
       createdEvent,
       existingEvent,
@@ -60,6 +63,7 @@ describe('eventCache', () => {
       ...event,
       joined: true,
       attendeesCount: 8,
+      attendees: [],
     });
     expect(queryClient.getQueryData<EventSummary[]>(queryKeys.events.list())).toEqual([
       { ...event, joined: true, attendeesCount: 8 },
@@ -81,6 +85,7 @@ describe('eventCache', () => {
       ...joinedEvent,
       joined: true,
       attendeesCount: 10,
+      attendees: [],
     });
     expect(queryClient.getQueryData<EventSummary[]>(queryKeys.events.list())).toEqual([
       { ...joinedEvent, joined: true, attendeesCount: 10 },

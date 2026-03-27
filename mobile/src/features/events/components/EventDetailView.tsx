@@ -2,13 +2,14 @@ import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { EventDetail } from '../../../api/types';
+import type { EventDetail, User } from '../../../api/types';
 import AppBackButton from '../../../components/ui/AppBackButton';
 import { Button, ScreenScaffold, SectionBlock, StatePanel } from '../../../design/primitives';
 import { useTheme } from '../../../theme/useTheme';
 import { eventDetailStyles as styles } from './eventDetail.styles';
 import { formatEventDateRange } from './eventDetail.formatters';
 import { EventDetailMetaRow } from './EventDetailMetaRow';
+import { getAvatarInitial } from '../../../lib/profilePhotos';
 
 export type EventDetailViewProps = {
   errorMessage: string | null;
@@ -16,6 +17,7 @@ export type EventDetailViewProps = {
   isJoining: boolean;
   isLoading: boolean;
   onBack: () => void;
+  onOpenAttendee: (user: User) => void;
   onJoin: () => void;
   onPressHost: () => void;
   onRefresh: () => void;
@@ -27,6 +29,7 @@ export function EventDetailView({
   isJoining,
   isLoading,
   onBack,
+  onOpenAttendee,
   onJoin,
   onPressHost,
   onRefresh,
@@ -126,6 +129,55 @@ export function EventDetailView({
             <EventDetailMetaRow icon="map-pin" label={event.location} />
             <EventDetailMetaRow icon="users" label={`${event.attendeesCount} attending`} />
           </View>
+
+          {event.attendees.length > 0 ? (
+            <SectionBlock inset={false} spacingMode="tight">
+              <View style={styles.attendeesHeader}>
+                <Text style={[styles.descLabel, { color: theme.accentPrimary }]}>Attending</Text>
+                <Text style={[styles.attendeesCountLabel, { color: theme.textMuted }]}>
+                  Tap to view profile
+                </Text>
+              </View>
+              <View style={styles.attendeeList}>
+                {event.attendees.map((attendee) => (
+                  <Pressable
+                    key={attendee.id}
+                    onPress={() => onOpenAttendee(attendee)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View profile for ${attendee.firstName}`}
+                    style={({ pressed }) => [
+                      styles.attendeeRow,
+                      { backgroundColor: theme.subduedSurface, opacity: pressed ? 0.82 : 1 },
+                    ]}
+                  >
+                    <View style={[styles.attendeeAvatar, { backgroundColor: theme.selectedFill }]}>
+                      {attendee.photoUrl ? (
+                        <Image
+                          source={{ uri: attendee.photoUrl }}
+                          style={styles.attendeeAvatarImage}
+                          contentFit="cover"
+                          accessibilityLabel={`Photo of ${attendee.firstName}`}
+                        />
+                      ) : (
+                        <Text style={[styles.attendeeAvatarText, { color: theme.selectedText }]}>
+                          {getAvatarInitial(attendee.firstName)}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.attendeeCopy}>
+                      <Text style={[styles.attendeeName, { color: theme.textPrimary }]}>
+                        {attendee.firstName}
+                      </Text>
+                      <Text style={[styles.attendeeHint, { color: theme.textMuted }]}>
+                        Open profile
+                      </Text>
+                    </View>
+                    <Text style={[styles.attendeeChevron, { color: theme.textMuted }]}>›</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </SectionBlock>
+          ) : null}
 
           {event.description ? (
             <SectionBlock inset={false} spacingMode="tight">

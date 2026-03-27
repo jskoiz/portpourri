@@ -20,6 +20,7 @@ export default function EventDetailScreen({
       isJoining={eventDetailScreenState.isJoining}
       isLoading={eventDetailScreenState.isLoading}
       onBack={eventDetailScreenState.onBack}
+      onOpenAttendee={(user) => navigation.navigate('ProfileDetail', { user })}
       onJoin={eventDetailScreenState.onJoin}
       onPressHost={() => {
         if (!event?.host) return;

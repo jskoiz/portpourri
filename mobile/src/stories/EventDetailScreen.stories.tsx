@@ -9,6 +9,7 @@ const baseArgs: EventDetailViewProps = {
   isJoining: false,
   isLoading: false,
   onBack: () => undefined,
+  onOpenAttendee: () => undefined,
   onJoin: () => undefined,
   onPressHost: () => undefined,
   onRefresh: () => undefined,
@@ -35,6 +36,21 @@ export const Joined: Story = {
     event: makeEventDetail({
       attendeesCount: 9,
       joined: true,
+    }),
+  },
+};
+
+export const WithAttendeeList: Story = {
+  args: {
+    ...baseArgs,
+    event: makeEventDetail({
+      attendeesCount: 12,
+      attendees: [
+        { id: 'host-1', firstName: 'Nia', photoUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80' },
+        { id: 'attendee-2', firstName: 'Kai', photoUrl: null },
+        { id: 'attendee-3', firstName: 'Malia', photoUrl: null },
+        { id: 'attendee-4', firstName: 'Sage', photoUrl: null },
+      ],
     }),
   },
 };

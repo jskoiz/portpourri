@@ -87,6 +87,30 @@ const baseEvent = {
   _count: { rsvps: 5 },
 };
 
+const baseEventDetail = {
+  ...baseEvent,
+  rsvps: [
+    {
+      id: 'rsvp-host',
+      userId: 'host-1',
+      user: {
+        id: 'host-1',
+        firstName: 'Alice',
+        photos: [{ storageKey: 'https://cdn.example.com/alice.jpg' }],
+      },
+    },
+    {
+      id: 'rsvp-2',
+      userId: 'user-2',
+      user: {
+        id: 'user-2',
+        firstName: 'Kai',
+        photos: [],
+      },
+    },
+  ],
+};
+
 describe('EventsService', () => {
   let service: EventsService;
   let debugSpy: jest.SpyInstance;
@@ -191,7 +215,7 @@ describe('EventsService', () => {
 
   describe('detail', () => {
     it('returns a single mapped event', async () => {
-      eventFindFirst.mockResolvedValue(baseEvent);
+      eventFindFirst.mockResolvedValue(baseEventDetail);
 
       const result = await service.detail('event-1');
 
@@ -210,11 +234,32 @@ describe('EventsService', () => {
       );
       expect(result.id).toBe('event-1');
       expect(result.attendeesCount).toBe(5);
+      expect(result.joined).toBe(false);
+      expect(result.attendees).toEqual([
+        {
+          id: 'host-1',
+          firstName: 'Alice',
+          photoUrl: 'https://cdn.example.com/alice.jpg',
+        },
+        {
+          id: 'user-2',
+          firstName: 'Kai',
+          photoUrl: null,
+        },
+      ]);
+    });
+
+    it('sets joined=true when the viewer has an RSVP in the attendee list', async () => {
+      eventFindFirst.mockResolvedValue(baseEventDetail);
+
+      const result = await service.detail('event-1', 'user-2');
+
+      expect(result.joined).toBe(true);
     });
 
     it('excludes blocked hosts from the detail query when a user is present', async () => {
       blockServiceMock.getBlockedUserIds.mockResolvedValue(['blocked-host']);
-      eventFindFirst.mockResolvedValue(baseEvent);
+      eventFindFirst.mockResolvedValue(baseEventDetail);
 
       await service.detail('event-1', 'user-1');
 

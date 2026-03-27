@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import {
+  EventDetailSchema,
   EventInviteListSchema,
   EventInviteResponseSchema,
   EventListSchema,
@@ -37,6 +38,13 @@ describe('EventsController', () => {
     host: { id: 'user-1', firstName: 'Ava' },
     attendeesCount: 6,
     joined: true,
+  };
+  const eventDetailFixture = {
+    ...eventSummaryFixture,
+    attendees: [
+      { id: 'user-1', firstName: 'Ava', photoUrl: 'https://cdn.example.com/ava.jpg' },
+      { id: 'user-2', firstName: 'Noah', photoUrl: null },
+    ],
   };
 
   beforeEach(async () => {
@@ -196,11 +204,11 @@ describe('EventsController', () => {
     const req = {
       user: { id: 'user-1', email: 'u@example.com' },
     } as AuthenticatedRequest;
-    eventsServiceMock.detail.mockResolvedValue(eventSummaryFixture);
+    eventsServiceMock.detail.mockResolvedValue(eventDetailFixture);
 
     const result = await controller.detail('event-1', req);
-    expect(result).toEqual(eventSummaryFixture);
-    expectSchema(EventSummarySchema, result);
+    expect(result).toEqual(eventDetailFixture);
+    expectSchema(EventDetailSchema, result);
     expect(eventsServiceMock.detail).toHaveBeenCalledWith('event-1', 'user-1');
   });
 });

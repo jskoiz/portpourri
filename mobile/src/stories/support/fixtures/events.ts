@@ -26,5 +26,12 @@ export function makeEventSummary(
 export function makeEventDetail(
   overrides: Partial<EventDetail> = {},
 ): EventDetail {
-  return makeEventSummary(overrides);
+  return {
+    ...makeEventSummary(overrides),
+    attendees: overrides.attendees ?? [
+      { id: 'host-1', firstName: 'Nia', photoUrl: LOW_CONTRAST_HERO_PHOTO },
+      { id: 'attendee-2', firstName: 'Kai', photoUrl: null },
+      { id: 'attendee-3', firstName: 'Malia', photoUrl: null },
+    ],
+  };
 }

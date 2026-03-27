@@ -67,6 +67,10 @@ const events: EventSummary[] = [
 
 const eventDetail: EventDetail = {
   ...events[0],
+  attendees: [
+    { id: 'u-host', firstName: 'Lana', photoUrl: null },
+    { id: 'u-guest', firstName: 'Kai', photoUrl: null },
+  ],
 };
 
 /* ------------------------------------------------------------------ */

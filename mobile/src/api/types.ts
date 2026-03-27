@@ -14,6 +14,7 @@ import {
   EventRsvpResponseSchema as SharedEventRsvpResponseSchema,
   EventInviteResponseSchema as SharedEventInviteResponseSchema,
   EventInviteListItemSchema as SharedEventInviteListItemSchema,
+  EventDetailSchema as SharedEventDetailSchema,
   UserProfileSchema as SharedUserProfileSchema,
   FitnessProfileSchema as SharedFitnessProfileSchema,
   UserPhotoSchema as SharedUserPhotoSchema,
@@ -55,6 +56,7 @@ export const ChatMessageSchema = SharedChatMessageSchema;
 export const ChatMessageListSchema = z.array(ChatMessageSchema);
 export const SendMessageResponseSchema = SharedSendMessageResponseSchema;
 export const EventSummarySchema = SharedEventSummarySchema;
+export const EventDetailSchema = SharedEventDetailSchema;
 export const EventListSchema = z.array(EventSummarySchema);
 export const EventRsvpResponseSchema = SharedEventRsvpResponseSchema;
 export const EventInviteResponseSchema = SharedEventInviteResponseSchema;
@@ -103,7 +105,7 @@ export type SendMessageResponse = Jsonify<
   z.infer<typeof SendMessageResponseSchema>
 >;
 export type EventSummary = Jsonify<z.infer<typeof EventSummarySchema>>;
-export type EventDetail = EventSummary;
+export type EventDetail = Jsonify<z.infer<typeof EventDetailSchema>>;
 export interface CreateEventPayload {
   title: string;
   description?: string;

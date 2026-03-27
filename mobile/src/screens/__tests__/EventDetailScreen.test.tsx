@@ -48,6 +48,10 @@ describe('EventDetailView', () => {
     host: { id: 'host-1', firstName: 'Ava' },
     attendeesCount: 6,
     joined: false,
+    attendees: [
+      { id: 'host-1', firstName: 'Ava', photoUrl: null },
+      { id: 'user-2', firstName: 'Kai', photoUrl: null },
+    ],
   };
 
   beforeEach(() => {
@@ -74,6 +78,7 @@ describe('EventDetailView', () => {
         isJoining={false}
         isLoading={false}
         onBack={jest.fn()}
+        onOpenAttendee={jest.fn()}
         onJoin={onJoin}
         onPressHost={onPressHost}
         onRefresh={jest.fn()}
@@ -94,6 +99,7 @@ describe('EventDetailView', () => {
         isJoining={false}
         isLoading={false}
         onBack={jest.fn()}
+        onOpenAttendee={jest.fn()}
         onJoin={jest.fn()}
         onPressHost={onPressHost}
         onRefresh={jest.fn()}
@@ -103,6 +109,28 @@ describe('EventDetailView', () => {
     fireEvent.press(screen.getByLabelText('Open profile for Ava'));
 
     expect(onPressHost).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens an attendee profile when an attendee row is pressed', () => {
+    const onOpenAttendee = jest.fn();
+
+    renderWithProviders(
+      <EventDetailView
+        errorMessage={null}
+        event={baseEvent}
+        isJoining={false}
+        isLoading={false}
+        onBack={jest.fn()}
+        onOpenAttendee={onOpenAttendee}
+        onJoin={jest.fn()}
+        onPressHost={jest.fn()}
+        onRefresh={jest.fn()}
+      />,
+    );
+
+    fireEvent.press(screen.getByLabelText('View profile for Kai'));
+
+    expect(onOpenAttendee).toHaveBeenCalledWith(baseEvent.attendees[1]);
   });
 
   it('navigates to the host profile from the event detail screen', () => {

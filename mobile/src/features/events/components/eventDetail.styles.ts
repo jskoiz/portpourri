@@ -146,6 +146,58 @@ export const eventDetailStyles = StyleSheet.create({
     fontSize: typography.body,
     lineHeight: 26,
   },
+  attendeesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  attendeesCountLabel: {
+    fontSize: typography.caption,
+    fontWeight: '600',
+  },
+  attendeeList: {
+    gap: spacing.sm,
+  },
+  attendeeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 22,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  attendeeAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  attendeeAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  attendeeAvatarText: {
+    fontSize: typography.body,
+    fontWeight: '800',
+  },
+  attendeeCopy: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  attendeeName: {
+    fontSize: typography.body,
+    fontWeight: '700',
+  },
+  attendeeHint: {
+    fontSize: typography.bodySmall,
+    marginTop: 2,
+  },
+  attendeeChevron: {
+    fontSize: 26,
+    lineHeight: 26,
+  },
   ctaArea: {
     marginTop: spacing.md,
     paddingBottom: spacing.lg,

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UserStubSchema } from "./common";
 
 // ── Shared host stub ────────────────────────────────────────────────
 
@@ -26,6 +27,15 @@ export const EventSummarySchema = z.object({
 export const EventListSchema = z.array(EventSummarySchema);
 
 export type EventSummary = z.infer<typeof EventSummarySchema>;
+
+export const EventAttendeeSchema = UserStubSchema;
+
+export const EventDetailSchema = EventSummarySchema.extend({
+  attendees: z.array(EventAttendeeSchema),
+});
+
+export type EventAttendee = z.infer<typeof EventAttendeeSchema>;
+export type EventDetail = z.infer<typeof EventDetailSchema>;
 
 // ── POST /events/:id/rsvp ───────────────────────────────────────────
 

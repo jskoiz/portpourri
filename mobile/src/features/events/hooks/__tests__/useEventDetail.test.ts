@@ -62,6 +62,7 @@ describe('useEventDetail', () => {
         ...event,
         joined: true,
         attendeesCount: 5,
+        attendees: [],
       });
       expect(mockShowToast).toHaveBeenCalledWith('RSVP confirmed!', 'success');
     });
