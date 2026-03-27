@@ -23,20 +23,6 @@ enum RefreshCadence: Double, CaseIterable, Identifiable {
     }
 }
 
-enum GroupMode: String, CaseIterable, Identifiable {
-    case project
-    case port
-
-    var id: String { self.rawValue }
-
-    var label: String {
-        switch self {
-        case .project: "Project"
-        case .port: "Port"
-        }
-    }
-}
-
 @MainActor
 final class SettingsStore: ObservableObject {
     static let defaultWatchedPortsText = SnapshotService.defaultWatchedPorts.map(String.init).joined(separator: ",")
@@ -64,13 +50,6 @@ final class SettingsStore: ObservableObject {
         }
     }
 
-    @Published var groupMode: GroupMode {
-        didSet {
-            UserDefaults.standard.set(self.groupMode.rawValue, forKey: "groupMode")
-            self.onChange?()
-        }
-    }
-
     @Published var showNonNodeListeners: Bool {
         didSet {
             UserDefaults.standard.set(self.showNonNodeListeners, forKey: "showNonNodeListeners")
@@ -91,7 +70,6 @@ final class SettingsStore: ObservableObject {
         let rawCadence = defaults.double(forKey: "refreshCadence")
         self.refreshCadence = RefreshCadence(rawValue: rawCadence == 0 ? 10 : rawCadence) ?? .tenSeconds
         self.confirmBeforeTerminate = defaults.object(forKey: "confirmBeforeTerminate") as? Bool ?? true
-        self.groupMode = GroupMode(rawValue: defaults.string(forKey: "groupMode") ?? GroupMode.project.rawValue) ?? .project
         self.showNonNodeListeners = defaults.object(forKey: "showNonNodeListeners") as? Bool ?? false
         self.watchedPortsText = defaults.string(forKey: "watchedPortsText") ?? Self.defaultWatchedPortsText
     }
@@ -158,16 +136,14 @@ final class NodeTrackerStore: ObservableObject {
                 }
             }.value
 
-            await MainActor.run {
-                self.isRefreshing = false
-                switch result {
-                case let .success(snapshot):
-                    self.snapshot = snapshot
-                    self.checkForNewConflicts(in: snapshot)
-                case let .failure(error):
-                    self.lastError = error.localizedDescription
-                    self.snapshot = AppSnapshot.empty(watchedPorts: watchedPorts, source: "error")
-                }
+            self.isRefreshing = false
+            switch result {
+            case let .success(snapshot):
+                self.snapshot = snapshot
+                self.checkForNewConflicts(in: snapshot)
+            case let .failure(error):
+                self.lastError = error.localizedDescription
+                self.snapshot = AppSnapshot.empty(watchedPorts: watchedPorts, source: "error")
             }
         }
     }

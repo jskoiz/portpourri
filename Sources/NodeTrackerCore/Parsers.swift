@@ -1,9 +1,5 @@
 import Foundation
 
-enum ParserError: Error {
-    case malformedLine(String)
-}
-
 struct LsofListenerParser {
     func parse(_ raw: String) -> [ListenerSnapshot] {
         var listeners: [ListenerSnapshot] = []
@@ -86,14 +82,15 @@ struct ProcessMetadataRecord: Hashable, Sendable {
 }
 
 struct PSProcessParser {
+    private static let regex = try? NSRegularExpression(pattern: #"^\s*(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(.+)$"#)
+
     func parse(_ raw: String) -> [Int: ProcessMetadataRecord] {
-        let pattern = #"^\s*(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(.+)$"#
-        let regex = try? NSRegularExpression(pattern: pattern)
+        guard let regex = Self.regex else { return [:] }
         var records: [Int: ProcessMetadataRecord] = [:]
 
         for line in raw.split(whereSeparator: \.isNewline).map(String.init) {
             let range = NSRange(location: 0, length: line.utf16.count)
-            guard let match = regex?.firstMatch(in: line, range: range),
+            guard let match = regex.firstMatch(in: line, range: range),
                   match.numberOfRanges == 6,
                   let pid = self.capture(1, in: line, match: match).flatMap(Int.init),
                   let ppid = self.capture(2, in: line, match: match).flatMap(Int.init),
@@ -184,7 +181,7 @@ public struct PSProcessMetadataProbe: ProcessMetadataProbing {
         let output = try self.runner.run(
             launchPath: "/bin/ps",
             arguments: ["-p", sorted.map(String.init).joined(separator: ","), "-o", "pid=,ppid=,etime=,state=,command="],
-            allowNonZeroExitCodes: []
+            allowNonZeroExitCodes: [1]
         )
 
         let records = self.parser.parse(output.stdout)
@@ -208,17 +205,14 @@ public struct PSProcessMetadataProbe: ProcessMetadataProbing {
 
     public func currentWorkingDirectories(for pids: [Int]) throws -> [Int: String] {
         let sorted = Array(Set(pids)).sorted()
-        var mapping: [Int: String] = [:]
+        guard !sorted.isEmpty else { return [:] }
 
-        for pid in sorted {
-            let output = try self.runner.run(
-                launchPath: "/usr/sbin/lsof",
-                arguments: ["-a", "-p", String(pid), "-d", "cwd", "-Fn"],
-                allowNonZeroExitCodes: [1]
-            )
-            mapping.merge(self.cwdParser.parse(output.stdout)) { current, _ in current }
-        }
-
-        return mapping
+        let pidList = sorted.map(String.init).joined(separator: ",")
+        let output = try self.runner.run(
+            launchPath: "/usr/sbin/lsof",
+            arguments: ["-a", "-p", pidList, "-d", "cwd", "-Fn"],
+            allowNonZeroExitCodes: [1]
+        )
+        return self.cwdParser.parse(output.stdout)
     }
 }

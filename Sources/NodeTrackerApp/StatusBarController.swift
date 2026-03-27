@@ -13,6 +13,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
     private var localEventMonitor: Any?
     private var globalEventMonitor: Any?
     private var hotkeyMonitor: Any?
+    private var localHotkeyMonitor: Any?
 
     init(store: NodeTrackerStore) {
         self.store = store
@@ -88,8 +89,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
             }
         }
 
-        // Also handle when the app is in the foreground
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        self.localHotkeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard event.modifierFlags.contains([.control, .shift]),
                   event.charactersIgnoringModifiers?.lowercased() == "p" else { return event }
             Task { @MainActor in
@@ -257,8 +257,10 @@ extension StatusBarController: UNUserNotificationCenterDelegate {
         if response.actionIdentifier == "COPY_PORT" || response.actionIdentifier == UNNotificationDefaultActionIdentifier {
             let userInfo = response.notification.request.content.userInfo
             if let suggestedPort = userInfo["suggestedPort"] as? Int, suggestedPort > 0 {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(String(suggestedPort), forType: .string)
+                DispatchQueue.main.async {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(String(suggestedPort), forType: .string)
+                }
             }
         }
         completionHandler()
@@ -321,32 +323,29 @@ enum StatusChipRenderer {
         let height: CGFloat = 18
         let size = NSSize(width: width, height: height)
 
-        let image = NSImage(size: size)
-        image.lockFocus()
+        return NSImage(size: size, flipped: false) { _ in
+            let hasActivity = summary.nodeProjectCount > 0 || summary.watchedBusyCount > 0
+            let color: NSColor = hasActivity ? .black : .black.withAlphaComponent(0.45)
 
-        let hasActivity = summary.nodeProjectCount > 0 || summary.watchedBusyCount > 0
-        let color: NSColor = hasActivity ? .black : .black.withAlphaComponent(0.45)
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.alignment = .center
 
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.alignment = .center
-
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .foregroundColor: color,
-            .paragraphStyle: paragraphStyle,
-        ]
-        let str = NSAttributedString(string: text, attributes: attrs)
-        let strSize = str.size()
-        let rect = NSRect(
-            x: (size.width - strSize.width) / 2,
-            y: (size.height - strSize.height) / 2,
-            width: strSize.width,
-            height: strSize.height
-        )
-        str.draw(in: rect)
-
-        image.unlockFocus()
-        return image
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: color,
+                .paragraphStyle: paragraphStyle,
+            ]
+            let str = NSAttributedString(string: text, attributes: attrs)
+            let strSize = str.size()
+            let rect = NSRect(
+                x: (size.width - strSize.width) / 2,
+                y: (size.height - strSize.height) / 2,
+                width: strSize.width,
+                height: strSize.height
+            )
+            str.draw(in: rect)
+            return true
+        }
     }
 
     /// Non-template image with conflict badge — white circle, dark number.
@@ -368,63 +367,58 @@ enum StatusChipRenderer {
         let height: CGFloat = 18
         let size = NSSize(width: totalWidth, height: height)
 
-        let image = NSImage(size: size)
-        image.lockFocus()
+        return NSImage(size: size, flipped: false) { _ in
+            let hasActivity = summary.nodeProjectCount > 0 || summary.watchedBusyCount > 0
+            let textColor: NSColor
+            if isDark {
+                textColor = hasActivity ? .white : .white.withAlphaComponent(0.55)
+            } else {
+                textColor = hasActivity ? .black : .black.withAlphaComponent(0.45)
+            }
 
-        // Draw text
-        let hasActivity = summary.nodeProjectCount > 0 || summary.watchedBusyCount > 0
-        let textColor: NSColor
-        if isDark {
-            textColor = hasActivity ? .white : .white.withAlphaComponent(0.55)
-        } else {
-            textColor = hasActivity ? .black : .black.withAlphaComponent(0.45)
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.alignment = .center
+
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: textColor,
+                .paragraphStyle: paragraphStyle,
+            ]
+            let str = NSAttributedString(string: text, attributes: attrs)
+            let strSize = str.size()
+            let textRect = NSRect(
+                x: (textWidth - strSize.width) / 2,
+                y: (height - strSize.height) / 2,
+                width: strSize.width,
+                height: strSize.height
+            )
+            str.draw(in: textRect)
+
+            let badgeRect = NSRect(
+                x: totalWidth - badgeSize,
+                y: height - badgeSize,
+                width: badgeSize,
+                height: badgeSize
+            )
+            (isDark ? NSColor.white.withAlphaComponent(0.85) : NSColor.black.withAlphaComponent(0.70)).setFill()
+            NSBezierPath(ovalIn: badgeRect).fill()
+
+            let badgeTextColor: NSColor = isDark ? .black : .white
+            let badgeAttrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 8, weight: .bold),
+                .foregroundColor: badgeTextColor,
+                .paragraphStyle: paragraphStyle,
+            ]
+            let badgeText = NSAttributedString(string: "\(min(conflicts, 9))", attributes: badgeAttrs)
+            let badgeTextSize = badgeText.size()
+            let badgeTextRect = NSRect(
+                x: badgeRect.midX - badgeTextSize.width / 2,
+                y: badgeRect.midY - badgeTextSize.height / 2,
+                width: badgeTextSize.width,
+                height: badgeTextSize.height
+            )
+            badgeText.draw(in: badgeTextRect)
+            return true
         }
-
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.alignment = .center
-
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .foregroundColor: textColor,
-            .paragraphStyle: paragraphStyle,
-        ]
-        let str = NSAttributedString(string: text, attributes: attrs)
-        let strSize = str.size()
-        let textRect = NSRect(
-            x: (textWidth - strSize.width) / 2,
-            y: (height - strSize.height) / 2,
-            width: strSize.width,
-            height: strSize.height
-        )
-        str.draw(in: textRect)
-
-        // Draw badge: white circle with dark number
-        let badgeRect = NSRect(
-            x: totalWidth - badgeSize,
-            y: height - badgeSize,
-            width: badgeSize,
-            height: badgeSize
-        )
-        (isDark ? NSColor.white.withAlphaComponent(0.85) : NSColor.black.withAlphaComponent(0.70)).setFill()
-        NSBezierPath(ovalIn: badgeRect).fill()
-
-        let badgeTextColor: NSColor = isDark ? .black : .white
-        let badgeAttrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 8, weight: .bold),
-            .foregroundColor: badgeTextColor,
-            .paragraphStyle: paragraphStyle,
-        ]
-        let badgeText = NSAttributedString(string: "\(min(conflicts, 9))", attributes: badgeAttrs)
-        let badgeTextSize = badgeText.size()
-        let badgeTextRect = NSRect(
-            x: badgeRect.midX - badgeTextSize.width / 2,
-            y: badgeRect.midY - badgeTextSize.height / 2,
-            width: badgeTextSize.width,
-            height: badgeTextSize.height
-        )
-        badgeText.draw(in: badgeTextRect)
-
-        image.unlockFocus()
-        return image
     }
 }
