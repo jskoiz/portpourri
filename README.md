@@ -1,90 +1,119 @@
 # NodeWatcher
 
-NodeWatcher is a macOS menu bar app for answering one local-dev question quickly:
+[![CI](https://github.com/jskoiz/node-watcher/actions/workflows/ci.yml/badge.svg)](https://github.com/jskoiz/node-watcher/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black.svg)](https://www.apple.com/macos/)
+[![Swift 6.0](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
 
-Which local ports are in use right now, which process owns them, and is that process part of my dev workflow or something blocking it?
+A macOS menu bar app that answers one question instantly: **which local ports are in use, who owns them, and is it my dev server or something blocking it?**
 
-It is built for the common case where multiple projects keep colliding on the same ports and the usual fallback is a pile of `lsof`, `ps`, and PID hunting.
+If you've ever had multiple projects fighting over ports 3000, 5173, or 8081 and resorted to a pile of `lsof` and `ps` commands, NodeWatcher replaces that with a single glance.
 
-## Purpose
+## Features
 
-NodeWatcher is intentionally narrow. It is not a general process manager and it is not trying to replace Activity Monitor.
+- **Live port monitoring** in the menu bar with a compact summary
+- **Project-aware** — maps Node processes back to their project root (`package.json`, `.git`, lockfiles)
+- **Smart classification** — identifies Vite, Next.js, Expo, Storybook, Nest, and other Node-family tools by name
+- **Conflict detection** — distinguishes "your app owns this port" from "Docker is blocking it" or "an SSH tunnel is occupying it"
+- **Safe actions** — context-aware resolution (free port, stop tunnel, open Docker, suggest alternate port) with no destructive force-kill
+- **Configurable** — settings for watched ports, refresh cadence, display modes, hotkeys, and grouping
+- **CLI included** — `nodetracker snapshot --json` for scripting and CI
 
-Its job is to make port conflicts legible:
+## Requirements
 
-- show the watched ports you care about
-- tell you whether a Node app owns the port or another process is blocking it
-- map Node processes back to a project root
-- give you the safest useful action for the current situation
+- macOS 14 (Sonoma) or later
+- Swift 6.0+ toolchain (Xcode 16+)
 
-## Methodology
+## Install
 
-The app builds a snapshot of local listening processes in a few steps:
+### Build from source
 
-1. Probe listening TCP sockets with `lsof`.
-2. Enrich those listeners with process metadata from `ps`.
-3. Resolve each process working directory and walk upward to the nearest project markers such as `package.json`, `.git`, `pnpm-workspace.yaml`, `turbo.json`, `nx.json`, and lockfiles.
-4. Classify Node-family dev tools from the command and parent command so rows can say `vite`, `next`, `expo`, `storybook`, `nest`, and similar labels instead of only `node`.
-5. Collapse duplicate IPv4 and IPv6 listeners into one logical port owner.
-6. Mark watched ports as either:
-   - owned by one of your Node apps
-   - blocked by some other listener
+```bash
+git clone https://github.com/jskoiz/node-watcher.git
+cd node-watcher
+swift build -c release
+```
 
-This is why the app can answer a more useful question than “what PID is using 3000?” It can usually tell you “3000 is blocked by Docker” or “8081 is currently owned by the Expo app from `~/Desktop/brdg/mobile`.”
+### Run the app
 
-## Conflict Resolution Philosophy
+```bash
+# As a menu bar app
+./Scripts/package_app.sh
+open .build/NodeWatcher.app
 
-NodeWatcher does not expose a fake universal “resolve conflict” button.
+# Or directly (development mode)
+swift run NodeTrackerApp
 
-Different blockers need different actions:
+# With sample data (no real processes needed)
+swift run NodeTrackerApp --sample-data
+```
 
-- Node process on a watched port: offer `Free port`
-- SSH tunnel: offer `Stop tunnel`
-- User-owned blocker: offer `Stop blocker` when it is reasonably safe
-- Docker-managed port: offer `Open Docker`
-- System process: explain the blocker and suggest the next free port instead of trying to kill it
+### CLI
 
-When the app cannot safely stop a blocker, it falls back to the next best action:
+```bash
+# Live snapshot of all listening processes
+swift run nodetracker snapshot --json
 
-- suggest the next free port
-- let you copy that port immediately
-- expose the process metadata so you can decide what to do manually
+# Dump test fixtures
+swift run nodetracker fixtures --name mixed --json
+```
 
-## What It Ships
+## How It Works
 
-- Menu bar status item with a compact live summary
-- Popover UI focused on watched ports first
-- Context-aware conflict actions
-- Settings for watched ports, grouping, refresh cadence, and listener visibility
-- CLI commands for live snapshots and fixture output
-- Fixture and integration tests so the same model can be validated outside the UI
+NodeWatcher builds a snapshot of local listening processes in a pipeline:
 
-## Repository Shape
+1. **Probe** — scans TCP sockets via `lsof`
+2. **Enrich** — adds process metadata from `ps`
+3. **Resolve** — walks up from the process working directory to find the project root
+4. **Classify** — identifies Node-family dev tools (vite, next, expo, etc.) from the command line
+5. **Collapse** — deduplicates IPv4/IPv6 listeners into one logical port owner
+6. **Assess** — marks watched ports as owned by your app or blocked by something else
 
-- `AGENTS.md` is the top-level map for agents
-- `docs/` is the system of record for product, UI, architecture, and harness guidance
-- `Sources/NodeTrackerCore` owns probing, parsing, normalization, and project resolution
-- `Sources/NodeTrackerApp` owns the menu bar app
-- `Sources/NodeTrackerCLI` exposes snapshot and fixture commands
+This is why NodeWatcher says "3000 is blocked by Docker" or "8081 is owned by the Expo app in `~/projects/mobile`" instead of just "PID 12345 is using port 3000."
+
+## Architecture
+
+```
+Sources/
+  NodeTrackerCore/    # Models, parsers, classifier, snapshot service (no UI)
+  NodeTrackerApp/     # SwiftUI menu bar app
+  NodeTrackerCLI/     # CLI commands (snapshot, fixtures)
+Tests/
+  NodeTrackerCoreTests/   # Fixture-based parser, resolver, and integration tests
+Scripts/
+  package_app.sh      # Build and wrap into .app bundle
+  dev_harness.sh      # Spin up local test listeners for manual testing
+docs/
+  product.md          # Product spec and design philosophy
+  architecture.md     # Module boundaries and data flow
+  ui.md               # Menu bar and popover layout
+  dev-harness.md      # Testing strategy and validation commands
+```
+
+The core library (`NodeTrackerCore`) is deliberately free of AppKit/SwiftUI so it can be tested independently and reused by both the GUI and CLI.
 
 ## Development
 
 ```bash
+# Build
 swift build
+
+# Test
 swift test
-swift run nodetracker snapshot --json
+
+# Run with sample data
 swift run NodeTrackerApp --sample-data
+
+# Run the dev harness (creates real test listeners)
+./Scripts/dev_harness.sh
 ```
 
-To build a local app bundle:
+See [`docs/dev-harness.md`](docs/dev-harness.md) for the full testing strategy.
 
-```bash
-./Scripts/package_app.sh
-open .build/NodeWatcher.app
-```
+## Contributing
 
-## Notes
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
-- The app currently focuses on TCP listeners and common Node-related local development workflows.
-- It is deliberately conservative about destructive actions.
-- The menu bar UI is built on the same snapshot model exposed by the CLI so live behavior, fixtures, and tests stay aligned.
+## License
+
+[MIT](LICENSE)
