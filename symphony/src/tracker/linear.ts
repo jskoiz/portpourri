@@ -21,15 +21,6 @@ interface RawIssue {
   updatedAt: string | null;
   state: { id: string | null; name: string; type: string | null };
   team?: { id: string | null; key: string | null; name: string | null } | null;
-  blockedByIssues?: {
-    nodes: Array<{
-      id: string | null;
-      identifier: string | null;
-      createdAt: string | null;
-      updatedAt: string | null;
-      state?: { name: string | null } | null;
-    }>;
-  } | null;
   labels?: { nodes: Array<{ name: string }> } | null;
 }
 
@@ -73,18 +64,6 @@ interface IssueStatesPayload {
 }
 
 function normalizeIssue(raw: RawIssue): Issue {
-  const blockedBy = raw.blockedByIssues?.nodes.map((blocker) => ({
-    id: blocker.id,
-    identifier: blocker.identifier,
-    state: blocker.state?.name ?? null,
-    created_at: blocker.createdAt,
-    updated_at: blocker.updatedAt,
-  })) ?? [];
-
-  const blockedIdentifiers = blockedBy
-    .map((blocker) => blocker.identifier ?? blocker.id)
-    .filter((value): value is string => Boolean(value));
-
   return {
     id: raw.id,
     identifier: raw.identifier,
@@ -97,8 +76,8 @@ function normalizeIssue(raw: RawIssue): Issue {
     labels: raw.labels?.nodes.map((label) => label.name.toLowerCase()) ?? [],
     created_at: raw.createdAt,
     updated_at: raw.updatedAt,
-    blocked_by: blockedBy,
-    blocked_by_summary: blockedIdentifiers.length ? blockedIdentifiers.join(', ') : 'none',
+    blocked_by: [],
+    blocked_by_summary: 'none',
     tracker: {
       state_id: raw.state.id,
       state_type: raw.state.type,
@@ -176,17 +155,6 @@ export class LinearTracker {
               id
               key
               name
-            }
-            blockedByIssues {
-              nodes {
-                id
-                identifier
-                createdAt
-                updatedAt
-                state {
-                  name
-                }
-              }
             }
             labels {
               nodes {
