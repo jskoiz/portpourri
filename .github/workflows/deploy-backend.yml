@@ -250,7 +250,6 @@ jobs:
           set -euo pipefail
           access_json="${RUNNER_TEMP}/lightsail-access.json"
           key_path="${RUNNER_TEMP}/lightsail-key.pem"
-          cert_path="${RUNNER_TEMP}/lightsail-key-cert.pub"
           known_hosts="${RUNNER_TEMP}/lightsail-known-hosts"
 
           aws lightsail get-instance-access-details \
@@ -258,16 +257,15 @@ jobs:
             --region "${AWS_REGION}" \
             > "$access_json"
 
-          python3 - <<'PY' "$access_json" "$key_path" "$cert_path" "$known_hosts" "$GITHUB_OUTPUT"
+          python3 - <<'PY' "$access_json" "$key_path" "$known_hosts" "$GITHUB_OUTPUT"
           import json
           import pathlib
           import sys
 
-          access_path, key_path, cert_path, known_hosts_path, output_path = sys.argv[1:6]
+          access_path, key_path, known_hosts_path, output_path = sys.argv[1:5]
           payload = json.loads(pathlib.Path(access_path).read_text())["accessDetails"]
 
           pathlib.Path(key_path).write_text(payload["privateKey"], encoding="utf-8")
-          pathlib.Path(cert_path).write_text(payload["certKey"] + "\n", encoding="utf-8")
           pathlib.Path(known_hosts_path).write_text(
               "\n".join(
                   f"{payload['ipAddress']} {entry['algorithm']} {entry['publicKey']}"
@@ -281,13 +279,12 @@ jobs:
               + f"host={payload['ipAddress']}\n"
               + f"user={payload['username']}\n"
               + f"key={key_path}\n"
-              + f"cert={cert_path}\n"
               + f"known_hosts={known_hosts_path}\n",
               encoding="utf-8",
           )
           PY
 
-          chmod 600 "$key_path" "$cert_path"
+          chmod 600 "$key_path"
 
       - name: Upload runtime bundle to Lightsail
         if: steps.meta.outputs.dry_run != 'true'
@@ -295,7 +292,6 @@ jobs:
         run: |
           set -euo pipefail
           ssh -i "${{ steps.ssh.outputs.key }}" \
-            -o CertificateFile="${{ steps.ssh.outputs.cert }}" \
             -o UserKnownHostsFile="${{ steps.ssh.outputs.known_hosts }}" \
             -o StrictHostKeyChecking=yes \
             -o IdentitiesOnly=yes \
@@ -303,7 +299,6 @@ jobs:
             "mkdir -p '${DEPLOY_RUNTIME_DIR}/cloudflared'"
 
           scp -i "${{ steps.ssh.outputs.key }}" \
-            -o CertificateFile="${{ steps.ssh.outputs.cert }}" \
             -o UserKnownHostsFile="${{ steps.ssh.outputs.known_hosts }}" \
             -o StrictHostKeyChecking=yes \
             -o IdentitiesOnly=yes \
@@ -313,7 +308,6 @@ jobs:
             "${{ steps.ssh.outputs.user }}@${{ steps.ssh.outputs.host }}:${DEPLOY_RUNTIME_DIR}/"
 
           scp -i "${{ steps.ssh.outputs.key }}" \
-            -o CertificateFile="${{ steps.ssh.outputs.cert }}" \
             -o UserKnownHostsFile="${{ steps.ssh.outputs.known_hosts }}" \
             -o StrictHostKeyChecking=yes \
             -o IdentitiesOnly=yes \
@@ -329,7 +323,6 @@ jobs:
         run: |
           set -euo pipefail
           ssh -i "${{ steps.ssh.outputs.key }}" \
-            -o CertificateFile="${{ steps.ssh.outputs.cert }}" \
             -o UserKnownHostsFile="${{ steps.ssh.outputs.known_hosts }}" \
             -o StrictHostKeyChecking=yes \
             -o IdentitiesOnly=yes \
