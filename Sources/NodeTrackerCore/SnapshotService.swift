@@ -187,9 +187,11 @@ public struct SnapshotService: Sendable {
                 pid: process.pid, ppid: 0, state: "", uptime: "",
                 commandLine: process.commandLine, parentCommandLine: nil, cwd: nil
             ).toolLabel
-            groups[label, default: (0, 0, [])].count += 1
-            groups[label, default: (0, 0, [])].totalBytes += process.rssKB * 1024
-            groups[label, default: (0, 0, [])].pids.append(process.pid)
+            var entry = groups[label, default: (0, 0, [])]
+            entry.count += 1
+            entry.totalBytes += process.rssKB * 1024
+            entry.pids.append(process.pid)
+            groups[label] = entry
         }
 
         return groups.map { label, data in

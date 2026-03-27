@@ -20,9 +20,10 @@ struct NodeProcessClassifier {
         parentCommandLine: String?,
         cwd: String?
     ) -> ProcessSnapshot {
-        let isNodeFamily = self.isNodeFamily(commandLine: commandLine, parentCommandLine: parentCommandLine)
+        let tokens = self.tokens(from: commandLine) + self.tokens(from: parentCommandLine ?? "")
+        let isNodeFamily = self.isNodeFamily(tokens: tokens)
         let toolLabel = isNodeFamily
-            ? self.nodeToolLabel(commandLine: commandLine, parentCommandLine: parentCommandLine)
+            ? self.nodeToolLabel(tokens: tokens, commandLine: commandLine, parentCommandLine: parentCommandLine)
             : self.executableLabel(from: commandLine)
         return ProcessSnapshot(
             pid: pid,
@@ -39,6 +40,10 @@ struct NodeProcessClassifier {
 
     func isNodeFamily(commandLine: String, parentCommandLine: String?) -> Bool {
         let tokens = self.tokens(from: commandLine) + self.tokens(from: parentCommandLine ?? "")
+        return self.isNodeFamily(tokens: tokens)
+    }
+
+    private func isNodeFamily(tokens: [String]) -> Bool {
         if tokens.contains(where: { self.nodeLaunchers.contains(self.basename(for: $0)) }) {
             return true
         }
@@ -53,9 +58,7 @@ struct NodeProcessClassifier {
         }
     }
 
-    private func nodeToolLabel(commandLine: String, parentCommandLine: String?) -> String {
-        let tokens = self.tokens(from: commandLine) + self.tokens(from: parentCommandLine ?? "")
-
+    private func nodeToolLabel(tokens: [String], commandLine: String, parentCommandLine: String?) -> String {
         if let match = self.knownToolSequences.first(where: { self.contains(sequence: $0.0, in: tokens) }) {
             return match.1
         }

@@ -247,16 +247,14 @@ final class NodeTrackerStore: ObservableObject {
                 }
             }.value
 
-            await MainActor.run {
-                self.isRefreshing = false
-                switch result {
-                case let .success(snapshot):
-                    self.snapshot = snapshot
-                    self.checkForNewConflicts(in: snapshot)
-                case let .failure(error):
-                    self.lastError = error.localizedDescription
-                    self.snapshot = AppSnapshot.empty(watchedPorts: watchedPorts, source: "error")
-                }
+            self.isRefreshing = false
+            switch result {
+            case let .success(snapshot):
+                self.snapshot = snapshot
+                self.checkForNewConflicts(in: snapshot)
+            case let .failure(error):
+                self.lastError = error.localizedDescription
+                self.snapshot = AppSnapshot.empty(watchedPorts: watchedPorts, source: "error")
             }
         }
     }

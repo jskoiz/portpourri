@@ -41,7 +41,7 @@ struct PopoverRootView: View {
                     }
 
                     if !allProjects.isEmpty || !nodeOwnedPorts.isEmpty {
-                        CompactDivider()
+                        Divider()
                         ProjectDashboardSection(
                             store: self.store,
                             projects: allProjects,
@@ -50,7 +50,7 @@ struct PopoverRootView: View {
                     }
 
                     if !self.store.snapshot.nodeProcessGroups.isEmpty {
-                        CompactDivider()
+                        Divider()
                         NodeProcessSection(
                             store: self.store,
                             groups: self.store.snapshot.nodeProcessGroups,
@@ -59,7 +59,7 @@ struct PopoverRootView: View {
                     }
 
                     if self.settings.showNonNodeListeners, !visibleOtherProcesses.isEmpty {
-                        CompactDivider()
+                        Divider()
                         OtherListenersSection(processes: visibleOtherProcesses)
                     }
                 }
@@ -544,12 +544,16 @@ private struct CompactHeader: View {
         }
     }
 
+    private static let relativeDateFormatter: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .short
+        return f
+    }()
+
     private var relativeUpdatedText: String {
         let elapsed = Date().timeIntervalSince(self.snapshot.generatedAt)
         guard elapsed > 3 else { return "Updated just now" }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .short
-        return "Updated \(formatter.localizedString(fromTimeInterval: -elapsed))"
+        return "Updated \(Self.relativeDateFormatter.localizedString(fromTimeInterval: -elapsed))"
     }
 
     private var summaryLine: Text {
@@ -635,29 +639,6 @@ private struct DisclosureToggle: View {
     }
 }
 
-private struct CompactSectionHeader: View {
-    let title: String
-    let trailing: String?
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(self.title)
-                .font(.headline)
-            Spacer()
-            if let trailing {
-                Text(trailing)
-                    .font(.caption)
-                    .foregroundStyle(Readability.secondaryText)
-            }
-        }
-    }
-}
-
-private struct CompactDivider: View {
-    var body: some View {
-        Divider()
-    }
-}
 
 private struct CompactRowDivider: View {
     var body: some View {
@@ -672,47 +653,28 @@ private enum AccentTone {
     case neutral
     case node
     case conflict
-    case warning
-    case healthy
 
     var fill: Color {
         switch self {
-        case .neutral:
-            return Color.primary.opacity(0.06)
-        case .node:
-            return Palette.softGreenFill
-        case .conflict:
-            return Palette.softRedFill
-        case .warning:
-            return Color.primary.opacity(0.08)
-        case .healthy:
-            return Palette.softGreenFill
+        case .neutral: Color.primary.opacity(0.06)
+        case .node: Palette.softGreenFill
+        case .conflict: Palette.softRedFill
         }
     }
 
     var foreground: Color {
         switch self {
-        case .neutral:
-            return .primary
-        case .node:
-            return Palette.mutedGreen
-        case .conflict:
-            return Palette.mutedRed
-        case .warning:
-            return .primary
-        case .healthy:
-            return Palette.mutedGreen
+        case .neutral: .primary
+        case .node: Palette.mutedGreen
+        case .conflict: Palette.mutedRed
         }
     }
 
     var solidBackground: Color {
         switch self {
-        case .node, .healthy:
-            return Palette.mutedGreen
-        case .conflict, .warning:
-            return Palette.mutedRed
-        case .neutral:
-            return Color.primary.opacity(0.45)
+        case .node: Palette.mutedGreen
+        case .conflict: Palette.mutedRed
+        case .neutral: Color.primary.opacity(0.45)
         }
     }
 }
