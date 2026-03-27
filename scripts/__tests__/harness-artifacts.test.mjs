@@ -9,16 +9,17 @@ import {
   readJsonFile,
   runHarnessSteps,
 } from '../harness-shared.mjs';
+import { runWorkspaceChecks } from '../check-workspaces-parallel.mjs';
 import { loadHarnessArtifacts } from '../harness-github.mjs';
 
 function makeTempArtifactsDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'brdg-harness-artifacts-'));
 }
 
-test('runHarnessSteps writes passing harness artifacts with selected commands and metadata', () => {
+test('runHarnessSteps writes passing harness artifacts with selected commands and metadata', async () => {
   const artifactsDir = makeTempArtifactsDir();
 
-  const result = runHarnessSteps({
+  const result = await runHarnessSteps({
     lane: 'test-pass',
     selectedCommands: ['npm run check:root'],
     changedFiles: ['docs/HARNESS.md'],
@@ -59,11 +60,11 @@ test('runHarnessSteps writes passing harness artifacts with selected commands an
   assert.deepEqual(historyEntry.failedCommands, []);
 });
 
-test('runHarnessSteps writes failing harness artifacts with normalized failure context', () => {
+test('runHarnessSteps writes failing harness artifacts with normalized failure context', async () => {
   const artifactsDir = makeTempArtifactsDir();
   const failingCommand = 'node -e "process.exit(1)"';
 
-  const result = runHarnessSteps({
+  const result = await runHarnessSteps({
     lane: 'test-fail',
     selectedCommands: ['npm run test:root'],
     changedFiles: ['scripts/harness-shared.mjs'],
@@ -119,10 +120,10 @@ test('loadHarnessArtifacts ignores non-JSON workflow summary files', () => {
   assert.equal(artifacts.failureSummary, null);
 });
 
-test('runHarnessSteps normalizes smoke bootstrap failures with actionable remediation', () => {
+test('runHarnessSteps normalizes smoke bootstrap failures with actionable remediation', async () => {
   const artifactsDir = makeTempArtifactsDir();
 
-  const result = runHarnessSteps({
+  const result = await runHarnessSteps({
     lane: 'test-smoke-fail',
     selectedCommands: ['npm run smoke'],
     changedFiles: ['scripts/smoke-e2e.sh'],
@@ -154,4 +155,23 @@ test('runHarnessSteps normalizes smoke bootstrap failures with actionable remedi
     inferFailureCategory('npm --prefix backend run db:seed'),
     FAILURE_CATEGORIES.smokeBootstrap,
   );
+});
+
+test('runWorkspaceChecks executes workspace commands in parallel and preserves step results', async () => {
+  const results = await runWorkspaceChecks({
+    cwd: process.cwd(),
+    prefixOutput: false,
+    workspaces: [
+      { name: 'backend', command: 'node -e "process.exit(0)"' },
+      { name: 'mobile', command: 'node -e "process.exit(0)"' },
+      { name: 'symphony', command: 'node -e "process.exit(0)"' },
+    ],
+  });
+
+  assert.deepEqual(
+    results.map((result) => result.name),
+    ['backend', 'mobile', 'symphony'],
+  );
+  assert.ok(results.every((result) => result.exitCode === 0));
+  assert.ok(results.every((result) => result.status === 'passed'));
 });

@@ -103,6 +103,8 @@ Use `npm run release:ios:check` as a compatibility alias for `npm run release:io
 
 `npm run release:ios:prepare` is the canonical release-readiness path. It writes the manifest and context, validates the checkout and config, and must not be treated as proof that a TestFlight/App Store artifact was uploaded or attached.
 
+In CI, the `release-readiness` lane runs after the main check lane and can still be retried manually for a pushed `main` SHA; it is meant to validate the same release provenance without turning the CI release lane into a second full repo-validation pass.
+
 `npm run release:ios:ship` must run from the same clean checkout after a successful prepare run. It does not rerun `npm run check`; instead it verifies the prepared context still matches the current branch, SHA, version, build number, API URL, mode, and profile before it archives and uploads.
 
 If `npm run release:ios:prepare` fails on repo policy because `artifacts/repo-index.json` is stale, run `npm run repo:index`, commit that generated change if it reflects real repo state, push the branch, and rerun release preflight.

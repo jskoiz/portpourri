@@ -176,7 +176,7 @@ function writeStorybookFailureArtifacts({ artifactsDir, lane, plan, options }) {
   writeTextFile(paths.summary, renderHarnessSummary({ planPayload, resultPayload, failurePayload }));
 }
 
-function main() {
+async function main() {
   const options = parseArgs(process.argv.slice(2));
   const changedFiles = resolveChangedFiles(options);
   const plan = buildValidationPlan(changedFiles);
@@ -200,7 +200,7 @@ function main() {
     process.exit(1);
   }
 
-  const { exitCode } = runHarnessSteps({
+  const { exitCode } = await runHarnessSteps({
     lane: options.lane,
     selectedCommands: plan.commands,
     changedFiles: plan.changedFiles,
@@ -220,5 +220,8 @@ function main() {
 }
 
 if (process.argv[1] === scriptPath) {
-  main();
+  void main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
 }

@@ -1,7 +1,11 @@
 name: Deploy Backend
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
     branches:
       - main
   workflow_dispatch:
@@ -39,6 +43,7 @@ env:
 jobs:
   deploy:
     name: Build and deploy backend
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success')
     runs-on: [self-hosted, Linux, X64, brdg-vps]
     timeout-minutes: 60
     environment: production
@@ -74,6 +79,8 @@ jobs:
             target_ref="${{ inputs.git_sha }}"
             dry_run="${{ inputs.dry_run }}"
             rollback_tag="${{ inputs.rollback_image_tag }}"
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            target_ref="${{ github.event.workflow_run.head_sha }}"
           fi
 
           git checkout --detach "$target_ref"

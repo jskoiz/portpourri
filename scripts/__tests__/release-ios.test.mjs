@@ -171,6 +171,11 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
+function readCheckCount(repoRoot) {
+  const countPath = path.join(repoRoot, 'npm-check-count.txt');
+  return fs.existsSync(countPath) ? fs.readFileSync(countPath, 'utf8') : '0';
+}
+
 test('prepare keeps explicit environment overrides instead of clobbering them from .env.production', () => {
   const repoRoot = createFixture();
   const result = runRelease(repoRoot, ['--phase', 'prepare', '--mode', 'xcode', '--native-mode', 'clean'], {
@@ -201,6 +206,31 @@ test('prepare writes manifest and release context without tagging', () => {
   assert.equal(context.nativePrep, 'reuse-existing-ios');
   assert.match(context.gitSha, /^[0-9a-f]{40}$/);
   assert.equal(exec('git', ['tag'], { cwd: repoRoot }), 'v1.2.2+4');
+});
+
+test('prepare can skip repo validation in GitHub Actions dry-run mode', () => {
+  const repoRoot = createFixture({ withReleaseTag: true });
+  const result = runRelease(
+    repoRoot,
+    ['--phase', 'prepare', '--mode', 'xcode', '--dry-run-build-number', '--skip-repo-validation'],
+    {
+      GITHUB_ACTIONS: 'true',
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(readCheckCount(repoRoot), '0');
+
+  const manifest = readJson(path.join(repoRoot, 'mobile/build/ios-release-manifest.json'));
+  assert.equal(manifest.preflightOnly, true);
+});
+
+test('prepare rejects skip-repo-validation outside GitHub Actions', () => {
+  const repoRoot = createFixture();
+  const result = runRelease(repoRoot, ['--phase', 'prepare', '--mode', 'xcode', '--skip-repo-validation']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /only allowed for GitHub Actions prepare dry-runs/);
 });
 
 test('ship uses prepared context and skips npm run check', () => {

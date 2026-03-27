@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { runWorkspaceChecks } from './check-workspaces-parallel.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const scriptDir = path.dirname(scriptPath);
@@ -235,7 +236,7 @@ export function remediationHintForCategory(category) {
   }
 }
 
-export function runHarnessSteps({
+export async function runHarnessSteps({
   lane,
   selectedCommands,
   steps,
@@ -266,37 +267,74 @@ export function runHarnessSteps({
     Array.isArray(step) ? step : [step],
   );
 
-  for (const step of flattenedSteps) {
-    const stepStartedAt = new Date().toISOString();
-    const stepStartTime = Date.now();
-    console.log(`\n[${lane}] ${step.label}`);
-    const result = spawnSync('bash', ['-lc', step.command], {
-      cwd: repoRoot,
-      stdio: 'inherit',
-    });
-    const durationMs = Date.now() - stepStartTime;
-    const exitCode = result.status ?? 1;
+  for (let index = 0; index < flattenedSteps.length; index += 1) {
+    const step = flattenedSteps[index];
+    const nextSteps = flattenedSteps.slice(index + 1, index + 4);
+    const isFullRepoWorkspaceGroup =
+      step.command === HARNESS_COMMANDS.checkRoot &&
+      nextSteps.length === 3 &&
+      nextSteps[0]?.command === HARNESS_COMMANDS.checkBackend &&
+      nextSteps[1]?.command === HARNESS_COMMANDS.checkMobile &&
+      nextSteps[2]?.command === HARNESS_COMMANDS.checkSymphony;
 
-    executedSteps.push({
-      label: step.label,
-      command: step.command,
-      category: step.category,
-      startedAt: stepStartedAt,
-      completedAt: new Date().toISOString(),
-      durationMs,
-      exitCode,
-      status: exitCode === 0 ? 'passed' : 'failed',
-    });
+    if (isFullRepoWorkspaceGroup) {
+      const rootStep = await runSingleStep({ lane, step });
+      executedSteps.push(rootStep);
 
-    if (exitCode !== 0) {
-      failureSummary = {
-        lane,
-        status: 'failed',
-        failureCategory: step.category,
-        failingStep: step.label,
-        localCommand: step.command,
-        remediationHint: remediationHintForCategory(step.category),
-      };
+      if (rootStep.exitCode !== 0) {
+        failureSummary = buildFailureSummary({ lane, step, exitCode: rootStep.exitCode });
+        break;
+      }
+
+      const workspaceSteps = nextSteps;
+      for (const workspaceStep of workspaceSteps) {
+        console.log(`\n[${lane}] ${workspaceStep.label}`);
+      }
+      const workspaceResults = await runWorkspaceChecks({
+        cwd: repoRoot,
+        workspaces: workspaceSteps.map((workspaceStep) => ({
+          name: workspaceStep.label,
+          command: workspaceStep.command,
+        })),
+      });
+
+      for (const result of workspaceResults) {
+        executedSteps.push({
+          label: result.name,
+          command: result.command,
+          category: workspaceSteps.find((workspaceStep) => workspaceStep.label === result.name)?.category ?? FAILURE_CATEGORIES.unknown,
+          startedAt: result.startedAt,
+          completedAt: result.completedAt,
+          durationMs: result.durationMs,
+          exitCode: result.exitCode,
+          status: result.status,
+        });
+      }
+
+      const failedWorkspace = workspaceResults.find((result) => result.exitCode !== 0);
+      if (failedWorkspace) {
+        const failedStep = workspaceSteps.find((workspaceStep) => workspaceStep.label === failedWorkspace.name);
+        failureSummary = buildFailureSummary({
+          lane,
+          step: failedStep ?? {
+            label: failedWorkspace.name,
+            command: failedWorkspace.command,
+            category: FAILURE_CATEGORIES.unknown,
+          },
+          exitCode: failedWorkspace.exitCode,
+        });
+        break;
+      }
+
+      index += 3;
+      continue;
+    }
+
+    const result = await runSingleStep({ lane, step });
+    executedSteps.push(result);
+
+    if (result.exitCode !== 0) {
+      failureSummary = buildFailureSummary({ lane, step, exitCode: result.exitCode });
       break;
     }
   }
@@ -322,14 +360,16 @@ export function runHarnessSteps({
     metadata,
   };
 
-  const failurePayload = failureSummary ?? {
-    lane,
-    status: 'passed',
-    failureCategory: null,
-    failingStep: null,
-    localCommand: null,
-    remediationHint: null,
-  };
+  const failurePayload = failureSummary
+    ? (({ exitCode, ...rest }) => rest)(failureSummary)
+    : {
+        lane,
+        status: 'passed',
+        failureCategory: null,
+        failingStep: null,
+        localCommand: null,
+        remediationHint: null,
+      };
 
   const historyEntry = {
     lane,
@@ -359,7 +399,41 @@ export function runHarnessSteps({
     planPayload,
     resultPayload,
     failurePayload,
-    exitCode: failureSummary ? executedSteps.at(-1)?.exitCode ?? 1 : 0,
+    exitCode: failureSummary ? failureSummary.exitCode ?? executedSteps.at(-1)?.exitCode ?? 1 : 0,
+  };
+}
+
+function buildFailureSummary({ lane, step, exitCode }) {
+  return {
+    lane,
+    status: 'failed',
+    failureCategory: step.category,
+    failingStep: step.label,
+    localCommand: step.command,
+    remediationHint: remediationHintForCategory(step.category),
+    exitCode,
+  };
+}
+
+async function runSingleStep({ lane, step }) {
+  const stepStartedAt = new Date().toISOString();
+  const stepStartTime = Date.now();
+  console.log(`\n[${lane}] ${step.label}`);
+  const result = spawnSync('bash', ['-lc', step.command], {
+    cwd: repoRoot,
+    stdio: 'inherit',
+  });
+  const exitCode = result.status ?? 1;
+
+  return {
+    label: step.label,
+    command: step.command,
+    category: step.category,
+    startedAt: stepStartedAt,
+    completedAt: new Date().toISOString(),
+    durationMs: Date.now() - stepStartTime,
+    exitCode,
+    status: exitCode === 0 ? 'passed' : 'failed',
   };
 }
 

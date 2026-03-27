@@ -13,12 +13,13 @@ PROFILE="production"
 PHASE="full"
 NATIVE_MODE="auto"
 DRY_RUN_BUILD_NUMBER=0
+SKIP_REPO_VALIDATION=0
 WAIT_TIMEOUT_SECONDS=900
 WAIT_INTERVAL_SECONDS=15
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/release-ios.sh [--phase prepare|ship|full] [--mode eas|xcode] [--profile <name>] [--native-mode auto|clean|reuse] [--dry-run-build-number]
+Usage: ./scripts/release-ios.sh [--phase prepare|ship|full] [--mode eas|xcode] [--profile <name>] [--native-mode auto|clean|reuse] [--dry-run-build-number] [--skip-repo-validation]
 
 Options:
   --phase                 Release phase to run. Defaults to "full".
@@ -27,6 +28,7 @@ Options:
   --profile               EAS profile to use when mode is "eas". Defaults to "production".
   --native-mode           Native prep mode. Defaults to "auto".
   --dry-run-build-number  Allow prepare to use synthetic build-number metadata for CI validation.
+  --skip-repo-validation  Skip repo validation during CI dry-run prepares that already ran the same checks upstream.
   --wait-timeout-seconds  App Store Connect processing wait timeout. Defaults to 900.
   --wait-interval-seconds App Store Connect polling interval. Defaults to 15.
   -h, --help              Show this help message.
@@ -501,6 +503,9 @@ while [[ $# -gt 0 ]]; do
     --dry-run-build-number)
       DRY_RUN_BUILD_NUMBER=1
       ;;
+    --skip-repo-validation)
+      SKIP_REPO_VALIDATION=1
+      ;;
     --wait-timeout-seconds)
       shift
       WAIT_TIMEOUT_SECONDS="${1:-}"
@@ -529,6 +534,10 @@ done
 CI_RELEASE_DRY_RUN=0
 if [[ "$PHASE" == "prepare" && "$DRY_RUN_BUILD_NUMBER" == "1" && "${GITHUB_ACTIONS:-}" == "true" ]]; then
   CI_RELEASE_DRY_RUN=1
+fi
+
+if [[ "$SKIP_REPO_VALIDATION" == "1" && "$CI_RELEASE_DRY_RUN" != "1" ]]; then
+  fail "--skip-repo-validation is only allowed for GitHub Actions prepare dry-runs"
 fi
 
 BRANCH="$(run_git branch --show-current)"
@@ -630,7 +639,11 @@ fi
 print_preflight_summary
 
 if [[ "$PHASE" == "prepare" || "$PHASE" == "full" ]]; then
-  run_repo_validation
+  if [[ "$SKIP_REPO_VALIDATION" == "1" ]]; then
+    echo "release-ios: skipping repo validation because CI already ran the same checks upstream"
+  else
+    run_repo_validation
+  fi
 fi
 
 if [[ "$PHASE" == "prepare" ]]; then

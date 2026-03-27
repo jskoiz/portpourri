@@ -84,7 +84,7 @@ jobs:
 
   main-check:
     name: Main check lane
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: [self-hosted, Linux, X64, brdg-vps]
     steps:
       - uses: actions/checkout@v4
@@ -111,10 +111,41 @@ jobs:
           name: harness-main-check
           path: artifacts/harness/main-check
 
+  release-path-gate:
+    name: Release path gate
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: [self-hosted, Linux, X64, brdg-vps]
+    outputs:
+      should_run: ${{ steps.gate.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base="${{ github.event.before }}"
+          head="${{ github.sha }}"
+          changed_files="$(git diff --name-only --diff-filter=ACMR "$base" "$head")"
+
+          should_run=false
+          if printf '%s\n' "$changed_files" | grep -qv '^backend/'; then
+            should_run=true
+          fi
+
+          echo "should_run=$should_run" >> "$GITHUB_OUTPUT"
+
   release-readiness:
     name: Release readiness
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [main-check]
+    if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || ((github.event_name == 'push' && github.ref == 'refs/heads/main') && needs.release-path-gate.outputs.should_run == 'true')
+    needs: [main-check, release-path-gate]
     runs-on: [self-hosted, Linux, X64, brdg-vps]
     env:
       EXPO_PUBLIC_API_URL: https://api.example.invalid
@@ -138,4 +169,4 @@ jobs:
       - run: npm ci
         working-directory: symphony
       - run: npm run repo:index:check
-      - run: ./scripts/release-ios.sh --phase prepare --mode xcode --dry-run-build-number
+      - run: ./scripts/release-ios.sh --phase prepare --mode xcode --dry-run-build-number --skip-repo-validation

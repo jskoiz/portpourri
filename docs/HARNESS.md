@@ -35,9 +35,9 @@ npm run scaffold:backend-module -- --name moderation
 - `npm run check:changed`
   - chooses the smallest reasonable validation set from git diff, promotes mixed or harness-sensitive changes to `check`, appends `smoke` for smoke-sensitive paths, enforces Storybook co-updates for changed reusable mobile UI surfaces, and can emit machine-readable harness artifacts
 - `npm run check`
-  - full graph: `check:root`, `check:backend`, `check:mobile`, then `check:symphony`
+  - full graph: `check:root`, then the workspace checks for `backend`, `mobile`, and `symphony`
 - `npm run release:ios:prepare`
-  - canonical iOS release-readiness lane: provenance gate, full `npm run check`, live ASC build-number verification or resolution, release manifest write, release context write, and native fast-path classification without uploading
+  - canonical iOS release-readiness lane: provenance gate, live ASC build-number verification or resolution, release manifest write, release context write, and native fast-path classification without uploading
 - `npm run release:ios:ship`
   - canonical iOS upload lane: reuse the prepared release context, archive/upload through Xcode, and wait for ASC processing when API-key auth is available
 - `npm run smoke`
@@ -81,7 +81,7 @@ npm run scaffold:backend-module -- --name moderation
 ## CI Shape
 
 - CI now runs automatically on pull requests and pushes to `main`; local harness commands remain the primary debugging path.
-- CI runs the fast diff-driven lane, the backend migration rehearsal lane, the full `main-check` lane, and a release-readiness lane that runs `npm run check`, `npm run repo:index:check`, and a dry-run `release:ios:prepare`. The release script treats that dry-run path as CI validation when `GITHUB_ACTIONS=true`, so detached PR checkouts can validate the release-prepare flow without relaxing the real branch and upstream requirements for actual release builds.
+- CI runs the fast diff-driven lane, the backend migration rehearsal lane, the full `main-check` lane, and a release-readiness lane that runs after `main-check` on `push` to `main` and `workflow_dispatch`. The release-readiness lane validates release provenance with `repo:index:check` and `release:ios:prepare` without re-running the full repo graph, and manual dispatch remains available for reruns against an existing main SHA.
 - The dedicated iOS simulator workflow still runs only for native-impacting mobile changes such as Expo config, native plugin/dependency changes, generated iOS project changes, or workflow edits.
 - Use `npm run smoke` locally when you need deeper bootstrap/runtime validation, especially after backend auth/discovery/events/matches/notifications/profile changes or matching mobile chat/discovery/events/profile screen changes.
 - Every lane uploads `harness-plan.json`, `harness-results.json`, and `harness-failure-summary.json` as CI artifacts.

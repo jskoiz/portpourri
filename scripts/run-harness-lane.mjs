@@ -48,7 +48,7 @@ function writeStepSummary(artifactsDir) {
   }
 }
 
-function main() {
+async function main() {
   const options = parseArgs(process.argv.slice(2));
 
   if (options.lane === 'pr-fast') {
@@ -80,7 +80,7 @@ function main() {
       : options.lane === 'main-check'
         ? ['npm run check']
         : ['npm run check'];
-  const { exitCode } = runHarnessSteps({
+  const { exitCode } = await runHarnessSteps({
     lane: options.lane,
     selectedCommands,
     changedFiles: [],
@@ -94,5 +94,8 @@ function main() {
 }
 
 if (process.argv[1] === scriptPath) {
-  main();
+  void main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
 }

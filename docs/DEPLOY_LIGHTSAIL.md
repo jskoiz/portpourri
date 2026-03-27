@@ -57,7 +57,7 @@ The host runtime directory should contain only rendered runtime files and pulled
 
 It must not act as a repo checkout.
 
-GitHub Actions now targets the self-hosted runner pool with `runs-on: [self-hosted, Linux, X64, brdg-vps]`. The Lightsail host runs `brdg-vps`, `brdg-vps-2`, and `brdg-vps-3` under that shared label so PR jobs can fan out instead of queueing behind one worker. PR CI skips the `Release readiness` lane; that lane still runs on `main` pushes and `workflow_dispatch`, where release provenance is actually relevant.
+GitHub Actions now targets the self-hosted runner pool with `runs-on: [self-hosted, Linux, X64, brdg-vps]`. The Lightsail host runs `brdg-vps`, `brdg-vps-2`, and `brdg-vps-3` under that shared label so validation jobs can fan out instead of queueing behind one worker.
 
 This keeps PR and deploy workflows off GitHub-hosted minutes, but it also means CI shares CPU, memory, disk, and Docker with the production backend host. Service containers must use dynamically assigned host ports instead of assuming standard ports like `5432` are free on the machine.
 
@@ -87,6 +87,8 @@ The backend workflow supports:
 - `dry_run` to build, render config, and validate without touching the host
 - `rollback_image_tag` to redeploy a previously published GHCR image tag
 
+The deploy workflow is sequenced behind the `main` validation path so it does not start competing with the branch checks that proved the merge. Manual dispatch is still available for a specific `git_sha` when you need to replay or roll back a production rollout.
+
 The workflow:
 
 1. runs `npm run check:backend`
@@ -97,6 +99,8 @@ The workflow:
 6. pulls the exact image tag on Lightsail and restarts `postgres`, `cloudflared`, and `api`
 7. compares the host-local `/health.build` payload against `release-manifest.json`
 8. verifies hosted health and build provenance against the workflow manifest
+
+Because CI and deploy use the same runner pool, this sequencing is important: PR validation gets first access to the shared workers, and production rollout only begins after the mainline checks have completed.
 
 ## Manual validation helpers
 
