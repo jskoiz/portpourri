@@ -18,6 +18,8 @@ jobs:
   backend-migration-rehearsal:
     name: Backend migration rehearsal
     runs-on: [self-hosted, Linux, X64, brdg-vps]
+    env:
+      POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
     services:
       postgres:
         image: postgres:16-alpine
@@ -26,7 +28,7 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
-          - 5432:5432
+          - 5432/tcp
         options: >-
           --health-cmd "pg_isready -U postgres -d brdg_ci"
           --health-interval 5s
@@ -49,7 +51,7 @@ jobs:
         working-directory: backend
       - run: npm run rehearse:backend:legacy-migrations
         env:
-          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/brdg_ci
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:${{ env.POSTGRES_PORT }}/brdg_ci
 
   fast-pr:
     name: PR fast lane
@@ -70,6 +72,8 @@ jobs:
         working-directory: backend
       - run: npm ci
         working-directory: mobile
+      - run: npm ci
+        working-directory: symphony
       - run: |
           git fetch origin main --depth=1
           node ./scripts/run-harness-lane.mjs --lane pr-fast --artifacts-dir artifacts/harness/pr-fast --base origin/main --head HEAD
@@ -98,6 +102,8 @@ jobs:
         working-directory: backend
       - run: npm ci
         working-directory: mobile
+      - run: npm ci
+        working-directory: symphony
       - run: node ./scripts/run-harness-lane.mjs --lane main-check --artifacts-dir artifacts/harness/main-check
       - uses: actions/upload-artifact@v4
         if: always()
@@ -127,6 +133,8 @@ jobs:
         working-directory: backend
       - run: npm ci
         working-directory: mobile
+      - run: npm ci
+        working-directory: symphony
       - run: npm run check
       - run: npm run repo:index:check
       - run: ./scripts/release-ios.sh --phase prepare --mode xcode --dry-run-build-number

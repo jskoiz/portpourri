@@ -57,7 +57,7 @@ The host runtime directory should contain only rendered runtime files and pulled
 
 It must not act as a repo checkout.
 
-GitHub Actions now targets the self-hosted runner with `runs-on: [self-hosted, Linux, X64, brdg-vps]`. That keeps PR and deploy workflows off GitHub-hosted minutes, but it also means CI shares CPU, memory, disk, and Docker with the production backend host.
+GitHub Actions now targets the self-hosted runner with `runs-on: [self-hosted, Linux, X64, brdg-vps]`. That keeps PR and deploy workflows off GitHub-hosted minutes, but it also means CI shares CPU, memory, disk, and Docker with the production backend host. Service containers must use dynamically assigned host ports instead of assuming standard ports like `5432` are free on the machine.
 
 ## Server bootstrap
 
