@@ -62,9 +62,67 @@ enum GroupMode: String, CaseIterable, Identifiable {
     }
 }
 
+struct WatchedPortPreset: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let detail: String
+    let ports: [Int]
+    let isRecommended: Bool
+}
+
 @MainActor
 final class SettingsStore: ObservableObject {
-    static let defaultWatchedPortsText = SnapshotService.defaultWatchedPorts.map(String.init).joined(separator: ",")
+    static let watchedPortPresets: [WatchedPortPreset] = [
+        WatchedPortPreset(
+            id: "frontend",
+            title: "Frontend dev servers",
+            detail: "React, Next, Vite and similar local apps",
+            ports: [3000, 3001, 5173],
+            isRecommended: true
+        ),
+        WatchedPortPreset(
+            id: "storybook",
+            title: "Storybook",
+            detail: "Component playgrounds",
+            ports: [6006],
+            isRecommended: true
+        ),
+        WatchedPortPreset(
+            id: "backend",
+            title: "Backend APIs",
+            detail: "Common local API ports",
+            ports: [8080, 8081],
+            isRecommended: true
+        ),
+        WatchedPortPreset(
+            id: "debugger",
+            title: "Node inspector",
+            detail: "Debugger and attach workflows",
+            ports: [9229],
+            isRecommended: false
+        ),
+        WatchedPortPreset(
+            id: "python",
+            title: "Python and Flask",
+            detail: "Optional local servers like port 5000",
+            ports: [5000],
+            isRecommended: false
+        ),
+        WatchedPortPreset(
+            id: "data",
+            title: "Datastores",
+            detail: "Postgres and Redis defaults",
+            ports: [5432, 5433, 6379],
+            isRecommended: false
+        ),
+    ]
+
+    static let recommendedWatchedPorts = watchedPortPresets
+        .filter(\.isRecommended)
+        .flatMap(\.ports)
+        .sorted()
+
+    static let defaultWatchedPortsText = recommendedWatchedPorts.map(String.init).joined(separator: ",")
 
     var onChange: (() -> Void)?
 
@@ -107,6 +165,12 @@ final class SettingsStore: ObservableObject {
         didSet {
             UserDefaults.standard.set(self.watchedPortsText, forKey: "watchedPortsText")
             self.onChange?()
+        }
+    }
+
+    @Published var hasCompletedPortOnboarding: Bool {
+        didSet {
+            UserDefaults.standard.set(self.hasCompletedPortOnboarding, forKey: "hasCompletedPortOnboarding")
         }
     }
 
@@ -175,13 +239,15 @@ final class SettingsStore: ObservableObject {
 
     init() {
         let defaults = UserDefaults.standard
+        let storedWatchedPortsText = defaults.string(forKey: "watchedPortsText")
         self.launchAtLogin = defaults.object(forKey: "launchAtLogin") as? Bool ?? false
         let rawCadence = defaults.double(forKey: "refreshCadence")
         self.refreshCadence = RefreshCadence(rawValue: rawCadence == 0 ? 60 : rawCadence) ?? .oneMinute
         self.confirmBeforeTerminate = defaults.object(forKey: "confirmBeforeTerminate") as? Bool ?? true
         self.groupMode = GroupMode(rawValue: defaults.string(forKey: "groupMode") ?? GroupMode.project.rawValue) ?? .project
         self.showNonNodeListeners = defaults.object(forKey: "showNonNodeListeners") as? Bool ?? false
-        self.watchedPortsText = defaults.string(forKey: "watchedPortsText") ?? Self.defaultWatchedPortsText
+        self.watchedPortsText = storedWatchedPortsText ?? Self.defaultWatchedPortsText
+        self.hasCompletedPortOnboarding = defaults.object(forKey: "hasCompletedPortOnboarding") as? Bool ?? (storedWatchedPortsText != nil)
         self.menuBarDisplayMode = MenuBarDisplayMode(rawValue: defaults.string(forKey: "menuBarDisplayMode") ?? "") ?? .countAndMemory
         self.enableConflictNotifications = defaults.object(forKey: "enableConflictNotifications") as? Bool ?? true
         self.notificationSound = defaults.object(forKey: "notificationSound") as? Bool ?? true
@@ -194,7 +260,31 @@ final class SettingsStore: ObservableObject {
     }
 
     var watchedPorts: [Int] {
-        let ports = self.watchedPortsText
+        Self.parsePorts(from: self.watchedPortsText)
+    }
+
+    func includesPreset(_ preset: WatchedPortPreset) -> Bool {
+        let watched = Set(self.watchedPorts)
+        return preset.ports.allSatisfy { watched.contains($0) }
+    }
+
+    func setPreset(_ preset: WatchedPortPreset, enabled: Bool) {
+        var updated = Set(self.watchedPorts)
+        if enabled {
+            updated.formUnion(preset.ports)
+        } else {
+            updated.subtract(preset.ports)
+        }
+        self.watchedPortsText = updated.sorted().map(String.init).joined(separator: ",")
+    }
+
+    func completePortOnboarding() {
+        self.hasCompletedPortOnboarding = true
+        self.onChange?()
+    }
+
+    private static func parsePorts(from text: String) -> [Int] {
+        let ports = text
             .split(separator: ",")
             .compactMap { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
         return Array(Set(ports)).sorted()
@@ -209,7 +299,7 @@ final class NodeTrackerStore: ObservableObject {
     @Published var isPopoverPresented = false
     @Published var clipboardNotice: String?
 
-    let settings = SettingsStore()
+    let settings: SettingsStore
     let useSampleData: Bool
 
     private let snapshotService = SnapshotService()
@@ -217,10 +307,12 @@ final class NodeTrackerStore: ObservableObject {
     private var previousConflictPorts: Set<Int> = []
 
     init(useSampleData: Bool) {
+        let settings = SettingsStore()
+        self.settings = settings
         self.useSampleData = useSampleData
         self.snapshot = useSampleData
-            ? SnapshotService.sampleSnapshot()
-            : AppSnapshot.empty(watchedPorts: SnapshotService.defaultWatchedPorts)
+            ? SnapshotService.sampleSnapshot(watchedPorts: settings.watchedPorts)
+            : AppSnapshot.empty(watchedPorts: settings.watchedPorts)
         self.settings.onChange = { [weak self] in
             self?.settingsDidChange()
         }
@@ -238,7 +330,7 @@ final class NodeTrackerStore: ObservableObject {
     }
 
     func refreshNow() {
-        let watchedPorts = self.settings.watchedPorts.isEmpty ? SnapshotService.defaultWatchedPorts : self.settings.watchedPorts
+        let watchedPorts = self.settings.watchedPorts
         let useSampleData = self.useSampleData
         let service = self.snapshotService
 

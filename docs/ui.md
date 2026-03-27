@@ -20,4 +20,5 @@ The popover is a quiet card-based layout:
 
 - `General`: launch at login, cadence, terminate confirmation.
 - `Display`: grouping, watched ports, visibility of non-Node listeners.
+  First-run onboarding should let users opt into common dev-port presets instead of assuming every default port matters.
 - `About`: app info, diagnostics, snapshot export.

@@ -1185,6 +1185,7 @@ private enum DisplayText {
 struct SettingsRootView: View {
     @ObservedObject var store: NodeTrackerStore
     @ObservedObject private var settings: SettingsStore
+    @State private var showPortOnboarding = false
 
     init(store: NodeTrackerStore) {
         self.store = store
@@ -1206,6 +1207,15 @@ struct SettingsRootView: View {
         }
         .padding(20)
         .frame(width: 560, height: 440)
+        .onAppear {
+            self.showPortOnboarding = !self.settings.hasCompletedPortOnboarding
+        }
+        .sheet(isPresented: self.$showPortOnboarding) {
+            WatchedPortsOnboardingView(
+                settings: self.settings,
+                isPresented: self.$showPortOnboarding
+            )
+        }
     }
 }
 
@@ -1294,6 +1304,7 @@ private struct GeneralSettingsView: View {
 
 private struct DisplaySettingsView: View {
     @ObservedObject var settings: SettingsStore
+    @State private var showPortOnboarding = false
 
     var body: some View {
         Form {
@@ -1327,8 +1338,11 @@ private struct DisplaySettingsView: View {
             }
 
             Section("Watched Ports") {
+                Button("Choose common ports…") {
+                    self.showPortOnboarding = true
+                }
                 TextField("Ports", text: self.$settings.watchedPortsText, prompt: Text("3000,5173,8081"))
-                Text("Comma-separated list of ports to highlight in the menu bar and popover.")
+                Text("Pick presets for common local ports, then use the comma-separated field for anything custom.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -1344,6 +1358,82 @@ private struct DisplaySettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .sheet(isPresented: self.$showPortOnboarding) {
+            WatchedPortsOnboardingView(
+                settings: self.settings,
+                isPresented: self.$showPortOnboarding
+            )
+        }
+    }
+}
+
+private struct WatchedPortsOnboardingView: View {
+    @ObservedObject var settings: SettingsStore
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Choose watched ports")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            Text("NodeWatcher only flags the ports you care about. Start with the common presets below, then add anything custom in Display settings.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(SettingsStore.watchedPortPresets) { preset in
+                    Toggle(isOn: self.binding(for: preset)) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text(preset.title)
+                                    .fontWeight(.medium)
+                                if preset.isRecommended {
+                                    StatusTag(text: "recommended", tone: .node)
+                                }
+                            }
+                            Text("\(preset.detail) · \(preset.ports.map(String.init).joined(separator: ", "))")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .toggleStyle(.checkbox)
+                }
+            }
+
+            Text(self.selectionSummary)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            HStack {
+                Spacer()
+                Button("Not now") {
+                    self.isPresented = false
+                }
+                Button("Save") {
+                    self.settings.completePortOnboarding()
+                    self.isPresented = false
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(24)
+        .frame(width: 460)
+    }
+
+    private var selectionSummary: String {
+        let ports = self.settings.watchedPorts
+        if ports.isEmpty {
+            return "No watched ports selected."
+        }
+        return "Watching \(ports.map(String.init).joined(separator: ", "))"
+    }
+
+    private func binding(for preset: WatchedPortPreset) -> Binding<Bool> {
+        Binding(
+            get: { self.settings.includesPreset(preset) },
+            set: { self.settings.setPreset(preset, enabled: $0) }
+        )
     }
 }
 

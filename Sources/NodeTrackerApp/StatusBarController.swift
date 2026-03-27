@@ -27,6 +27,12 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         self.configureNotifications()
         self.observeStore()
         self.updateStatusImage()
+
+        if !store.settings.hasCompletedPortOnboarding {
+            DispatchQueue.main.async { [weak self] in
+                self?.openSettings()
+            }
+        }
     }
 
     func openSettings() {
