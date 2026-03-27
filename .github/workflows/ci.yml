@@ -17,7 +17,7 @@ permissions:
 jobs:
   backend-migration-rehearsal:
     name: Backend migration rehearsal
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, brdg-vps]
     services:
       postgres:
         image: postgres:16-alpine
@@ -53,7 +53,7 @@ jobs:
 
   fast-pr:
     name: PR fast lane
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, brdg-vps]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -81,7 +81,7 @@ jobs:
 
   main-check:
     name: Main check lane
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, brdg-vps]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -107,7 +107,7 @@ jobs:
 
   release-readiness:
     name: Release readiness
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, brdg-vps]
     env:
       EXPO_PUBLIC_API_URL: https://api.example.invalid
       IOS_BUNDLE_IDENTIFIER: com.avmillabs.brdg

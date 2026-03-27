@@ -39,7 +39,7 @@ env:
 jobs:
   deploy:
     name: Build and deploy backend
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, brdg-vps]
     timeout-minutes: 60
     environment: production
     services:
