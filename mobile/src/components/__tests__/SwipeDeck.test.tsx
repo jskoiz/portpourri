@@ -257,6 +257,7 @@ describe('SwipeDeck', () => {
       firstName: 'Quentin',
       photos: [
         {
+          id: 'photo-missing',
           storageKey: 'https://images.example.com/missing.jpg',
           isPrimary: true,
           isHidden: false,

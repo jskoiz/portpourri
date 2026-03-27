@@ -17,6 +17,8 @@ jest.mock('../../../../store/toastStore', () => ({
 function makeProfile() {
   return {
     id: 'user-1',
+    showMeMen: true,
+    showMeWomen: true,
     profile: {
       bio: 'Old bio',
       city: 'Old City',
@@ -105,6 +107,8 @@ describe('useProfileEditor', () => {
       intentDating: false,
       intentWorkout: false,
       intentFriends: false,
+      showMeMen: true,
+      showMeWomen: true,
     });
     expect(updateFitness).toHaveBeenCalledWith({
       intensityLevel: 'high',
@@ -161,6 +165,8 @@ describe('useProfileEditor', () => {
       intentDating: false,
       intentWorkout: false,
       intentFriends: false,
+      showMeMen: true,
+      showMeWomen: true,
     });
     expect(updateFitness).toHaveBeenCalledWith({
       intensityLevel: 'moderate',
@@ -299,6 +305,8 @@ describe('useProfileEditor', () => {
       intentDating: false,
       intentWorkout: false,
       intentFriends: false,
+      showMeMen: true,
+      showMeWomen: true,
     });
   });
 

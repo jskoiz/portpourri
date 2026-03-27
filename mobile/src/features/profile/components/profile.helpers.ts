@@ -33,7 +33,7 @@ export const DISCOVERY_PREFERENCE_OPTIONS = [
   { label: 'Men', value: 'men', subtitle: 'Show men in discovery.' },
   { label: 'Women', value: 'women', subtitle: 'Show women in discovery.' },
   { label: 'Both', value: 'both', subtitle: 'Show both men and women.' },
-];
+] as const;
 
 export function getDiscoveryPreferenceValue(showMeMen?: boolean, showMeWomen?: boolean) {
   if (showMeMen && showMeWomen) return 'both';
