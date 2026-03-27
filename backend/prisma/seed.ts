@@ -1,1578 +1,30 @@
-import { createHash } from 'node:crypto';
-import { PrismaClient, Gender, AuthProvider, IntensityLevel, EventCategory, MessageType } from '@prisma/client';
-import { appConfig } from '../src/config/app.config';
+import { PrismaClient, AuthProvider, MessageType } from '@prisma/client';
+import {
+  DEMO_EMAIL_DOMAIN,
+  LEGACY_SEED_EMAILS,
+  activityCatalog,
+  stableUuid,
+  demoEmail,
+  buildSeedInstant,
+  SEED_ANCHOR,
+} from './seed/config';
+import { seedUsers } from './seed/users';
+import { seedEvents } from './seed/events';
+import { outerIslandEvents } from './seed/events-outer-islands';
+import { extraOahuEvents } from './seed/events-extra';
+import { getPhotosForUser } from './seed/user-photos';
+import { allMatches, allLikes, allPasses, allEventInvites } from './seed/social-graph';
+import {
+  createLikeNotifications,
+  createMatchNotifications,
+  createMessageNotifications,
+  createEventInviteNotification,
+  createEventRsvpNotifications,
+} from './seed/notifications';
 
 const prisma = new PrismaClient();
 
-const BASE_URL = appConfig.seed.assetBaseUrl;
-const DEMO_EMAIL_DOMAIN = 'seed.brdg.app';
-const LEGACY_SEED_EMAILS = [
-  'liam@example.com',
-  'emma@example.com',
-  'noah@example.com',
-  'olivia@example.com',
-  'william@example.com',
-  'ava@example.com',
-  'james@example.com',
-  'sophia@example.com',
-  'benjamin@example.com',
-  'isabella@example.com',
-  'lucas@example.com',
-  'mia@example.com',
-];
-const PHOTO_FILES = [
-  'uifaces-human-avatar.jpg',
-  'uifaces-human-avatar (1).jpg',
-  'uifaces-human-avatar (2).jpg',
-  'uifaces-human-avatar (3).jpg',
-  'uifaces-human-avatar (4).jpg',
-  'uifaces-human-avatar (5).jpg',
-  'uifaces-popular-avatar.jpg',
-  'uifaces-popular-avatar (1).jpg',
-  'uifaces-popular-avatar (2).jpg',
-  'uifaces-popular-avatar (3).jpg',
-  'uifaces-popular-avatar (4).jpg',
-  'uifaces-popular-avatar (5).jpg',
-];
-
-type SeedUser = {
-  slug: string;
-  firstName: string;
-  gender: Gender;
-  birthdate: string;
-  city: string;
-  country: string;
-  latitude: number;
-  longitude: number;
-  bio: string;
-  intentDating: boolean;
-  intentWorkout: boolean;
-  intentFriends: boolean;
-  fitness: {
-    intensityLevel: IntensityLevel;
-    weeklyFrequencyBand: string;
-    primaryGoal: string;
-    secondaryGoal?: string;
-    favoriteActivities: string;
-    trainingStyle: string;
-    prefersMorning?: boolean;
-    prefersEvening?: boolean;
-  };
-  activities: string[];
-  photoCount?: number;
-  showMeMen?: boolean;
-  showMeWomen?: boolean;
-  showMeOther?: boolean;
-  maxDistanceKm?: number;
-  discoveryPaused?: boolean;
-};
-
-type SeedEvent = {
-  slug: string;
-  title: string;
-  description: string;
-  location: string;
-  category: EventCategory;
-  imageUrl: string;
-  hostSlug: string;
-  startDayOffset: number;
-  startHour: number;
-  durationHours: number;
-  attendeeSlugs: string[];
-};
-
-type SeedLike = {
-  slug: string;
-  fromSlug: string;
-  toSlug: string;
-  dayOffset: number;
-  hour: number;
-};
-
-type SeedMatch = {
-  slug: string;
-  userSlugs: [string, string];
-  dayOffset: number;
-  hour: number;
-  isArchived?: boolean;
-  messages: Array<{
-    slug: string;
-    senderSlug: string;
-    body: string;
-    hoursAfterMatch: number;
-    isRead?: boolean;
-  }>;
-};
-
-type SeedEventInvite = {
-  slug: string;
-  eventSlug: string;
-  matchSlug: string;
-  inviterSlug: string;
-  inviteeSlug: string;
-  body: string;
-  dayOffset: number;
-  hour: number;
-};
-
-const activityCatalog = [
-  { slug: 'running', name: 'Running' },
-  { slug: 'yoga', name: 'Yoga' },
-  { slug: 'strength-training', name: 'Strength Training' },
-  { slug: 'surfing', name: 'Surfing' },
-  { slug: 'hiking', name: 'Hiking' },
-  { slug: 'pilates', name: 'Pilates' },
-  { slug: 'swimming', name: 'Swimming' },
-  { slug: 'boxing', name: 'Boxing' },
-  { slug: 'cycling', name: 'Cycling' },
-  { slug: 'volleyball', name: 'Volleyball' },
-  { slug: 'paddling', name: 'Paddling' },
-  { slug: 'climbing', name: 'Climbing' },
-  { slug: 'mobility', name: 'Mobility' },
-  { slug: 'dance', name: 'Dance' },
-];
-
-const coreSeedUsers: SeedUser[] = [
-  {
-    slug: 'kai',
-    firstName: 'Kai',
-    gender: Gender.MALE,
-    birthdate: '1994-05-17',
-    city: 'Kakaako',
-    country: 'USA',
-    latitude: 21.2969,
-    longitude: -157.8572,
-    bio: 'Sunrise run regular, part-time surf chaser, and always down for a coffee walk after a hard session. Best-case week has ocean time, a lower-body lift, and one plan that turns into dinner.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.ADVANCED,
-      weeklyFrequencyBand: '5+',
-      primaryGoal: 'endurance',
-      secondaryGoal: 'strength',
-      favoriteActivities: 'Running, Surfing, Strength Training',
-      trainingStyle: 'Structured weekday training with flexible weekend adventure plans.',
-      prefersMorning: true,
-      prefersEvening: false,
-    },
-    activities: ['running', 'surfing', 'strength-training'],
-  },
-  {
-    slug: 'leilani',
-    firstName: 'Leilani',
-    gender: Gender.FEMALE,
-    birthdate: '1997-08-11',
-    city: 'Waikiki',
-    country: 'USA',
-    latitude: 21.2808,
-    longitude: -157.8294,
-    bio: 'Hot yoga instructor energy without the chaos. I like beach walks, mobility work, and people who actually make the plan they suggest.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '4-5',
-      primaryGoal: 'mobility',
-      secondaryGoal: 'health',
-      favoriteActivities: 'Yoga, Pilates, Swimming',
-      trainingStyle: 'Mobility-first with low-drama consistency and long cooldowns.',
-      prefersMorning: true,
-      prefersEvening: true,
-    },
-    activities: ['yoga', 'pilates', 'swimming', 'mobility'],
-  },
-  {
-    slug: 'mason',
-    firstName: 'Mason',
-    gender: Gender.MALE,
-    birthdate: '1991-02-03',
-    city: 'Ala Moana',
-    country: 'USA',
-    latitude: 21.291,
-    longitude: -157.8438,
-    bio: 'Former college rower who still likes an honest workout. Looking for a training partner for lifts, paddles, and a weekend event that feels worth waking up for.',
-    intentDating: false,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.ADVANCED,
-      weeklyFrequencyBand: '5+',
-      primaryGoal: 'strength',
-      secondaryGoal: 'skill',
-      favoriteActivities: 'Strength Training, Paddling, Cycling',
-      trainingStyle: 'Heavy compounds during the week and outdoor sessions on weekends.',
-      prefersMorning: false,
-      prefersEvening: true,
-    },
-    activities: ['strength-training', 'paddling', 'cycling'],
-  },
-  {
-    slug: 'nia',
-    firstName: 'Nia',
-    gender: Gender.FEMALE,
-    birthdate: '1998-10-26',
-    city: 'Manoa',
-    country: 'USA',
-    latitude: 21.319,
-    longitude: -157.8058,
-    bio: 'Trail girl with a soft spot for matcha runs and last-minute waterfall detours. I like active dates that end with snacks and no pressure.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '3-4',
-      primaryGoal: 'adventure',
-      secondaryGoal: 'endurance',
-      favoriteActivities: 'Hiking, Running, Yoga',
-      trainingStyle: 'Mix of scenic cardio days, recovery yoga, and one challenge hike per week.',
-      prefersMorning: true,
-      prefersEvening: false,
-    },
-    activities: ['hiking', 'running', 'yoga'],
-  },
-  {
-    slug: 'jordan',
-    firstName: 'Jordan',
-    gender: Gender.MALE,
-    birthdate: '1995-12-14',
-    city: 'Kaimuki',
-    country: 'USA',
-    latitude: 21.2834,
-    longitude: -157.7997,
-    bio: 'Boxing gym regular who still sneaks in a sunset jog when work clears. Here for people who like momentum, banter, and showing up on time.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: false,
-    fitness: {
-      intensityLevel: IntensityLevel.ADVANCED,
-      weeklyFrequencyBand: '4-5',
-      primaryGoal: 'conditioning',
-      secondaryGoal: 'strength',
-      favoriteActivities: 'Boxing, Running, Strength Training',
-      trainingStyle: 'Pad rounds, interval blocks, and compact weekday sessions.',
-      prefersMorning: false,
-      prefersEvening: true,
-    },
-    activities: ['boxing', 'running', 'strength-training'],
-  },
-  {
-    slug: 'malia',
-    firstName: 'Malia',
-    gender: Gender.FEMALE,
-    birthdate: '1993-07-09',
-    city: 'Kailua',
-    country: 'USA',
-    latitude: 21.3972,
-    longitude: -157.7394,
-    bio: 'Ocean swims, paddles, and anything that makes Sunday feel extra long. Looking for someone who likes active mornings and easy conversation after.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '4-5',
-      primaryGoal: 'endurance',
-      secondaryGoal: 'health',
-      favoriteActivities: 'Swimming, Paddling, Surfing',
-      trainingStyle: 'Steady endurance work with big emphasis on recovery and beach time.',
-      prefersMorning: true,
-      prefersEvening: false,
-    },
-    activities: ['swimming', 'paddling', 'surfing'],
-  },
-  {
-    slug: 'rowan',
-    firstName: 'Rowan',
-    gender: Gender.MALE,
-    birthdate: '1989-11-02',
-    city: 'Downtown Honolulu',
-    country: 'USA',
-    latitude: 21.3099,
-    longitude: -157.8581,
-    bio: 'Gym rat in a healthy way. I like strong coffee, simple plans, and training blocks with an actual goal attached.',
-    intentDating: false,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.ADVANCED,
-      weeklyFrequencyBand: '6-7',
-      primaryGoal: 'hypertrophy',
-      secondaryGoal: 'strength',
-      favoriteActivities: 'Strength Training, Mobility, Cycling',
-      trainingStyle: 'Progressive overload with a little mobility work to stay useful.',
-      prefersMorning: false,
-      prefersEvening: true,
-    },
-    activities: ['strength-training', 'mobility', 'cycling'],
-  },
-  {
-    slug: 'tessa',
-    firstName: 'Tessa',
-    gender: Gender.FEMALE,
-    birthdate: '1996-03-19',
-    city: 'Kapahulu',
-    country: 'USA',
-    latitude: 21.2749,
-    longitude: -157.8064,
-    bio: 'Pilates, beach volleyball, and the kind of social battery that works better outside. Looking for playful energy, not vague texting.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '3-4',
-      primaryGoal: 'fun',
-      secondaryGoal: 'mobility',
-      favoriteActivities: 'Pilates, Volleyball, Yoga',
-      trainingStyle: 'Balanced week with classes, beach games, and one longer move day.',
-      prefersMorning: false,
-      prefersEvening: true,
-    },
-    activities: ['pilates', 'volleyball', 'yoga'],
-  },
-  {
-    slug: 'keoni',
-    firstName: 'Keoni',
-    gender: Gender.MALE,
-    birthdate: '1992-09-21',
-    city: 'Hawaii Kai',
-    country: 'USA',
-    latitude: 21.2778,
-    longitude: -157.7047,
-    bio: 'Makapuu sunrise hiker, occasional freedive student, and very pro breakfast burrito. I am usually outside before most group chats wake up.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.ADVANCED,
-      weeklyFrequencyBand: '5+',
-      primaryGoal: 'adventure',
-      secondaryGoal: 'endurance',
-      favoriteActivities: 'Hiking, Swimming, Surfing',
-      trainingStyle: 'Adventure-heavy schedule with conditioning built around ocean days.',
-      prefersMorning: true,
-      prefersEvening: false,
-    },
-    activities: ['hiking', 'swimming', 'surfing'],
-  },
-  {
-    slug: 'sasha',
-    firstName: 'Sasha',
-    gender: Gender.FEMALE,
-    birthdate: '1999-01-30',
-    city: 'McCully',
-    country: 'USA',
-    latitude: 21.2922,
-    longitude: -157.8313,
-    bio: 'Dance cardio, reformer classes, and a low-stakes walk to debrief life after. Here for chemistry, consistency, and people who suggest real plans.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '3-4',
-      primaryGoal: 'health',
-      secondaryGoal: 'mobility',
-      favoriteActivities: 'Dance, Pilates, Yoga',
-      trainingStyle: 'Studio classes during the week and one outside day to reset.',
-      prefersMorning: false,
-      prefersEvening: true,
-    },
-    activities: ['dance', 'pilates', 'yoga'],
-  },
-  {
-    slug: 'eli',
-    firstName: 'Eli',
-    gender: Gender.MALE,
-    birthdate: '1997-04-05',
-    city: 'Pearl City',
-    country: 'USA',
-    latitude: 21.3977,
-    longitude: -157.9731,
-    bio: 'Weekend cyclist, weekday lifter, surprisingly patient with beginners. Looking for a ride partner or somebody who wants a first date that involves movement.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '4-5',
-      primaryGoal: 'strength',
-      secondaryGoal: 'endurance',
-      favoriteActivities: 'Cycling, Strength Training, Running',
-      trainingStyle: 'Short focused weekday lifts and one long ride when the weather cooperates.',
-      prefersMorning: true,
-      prefersEvening: true,
-    },
-    activities: ['cycling', 'strength-training', 'running'],
-  },
-  {
-    slug: 'alana',
-    firstName: 'Alana',
-    gender: Gender.FEMALE,
-    birthdate: '1994-12-28',
-    city: 'Kakaako',
-    country: 'USA',
-    latitude: 21.2983,
-    longitude: -157.8566,
-    bio: 'I split my free time between reformer classes, long walks, and trying new fitness concepts before they get overhyped. Looking for people with warm energy and actual follow-through.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.BEGINNER,
-      weeklyFrequencyBand: '2-3',
-      primaryGoal: 'health',
-      secondaryGoal: 'fun',
-      favoriteActivities: 'Pilates, Walking, Yoga',
-      trainingStyle: 'Low-pressure consistency with enough variety to keep it fun.',
-      prefersMorning: false,
-      prefersEvening: true,
-    },
-    activities: ['pilates', 'yoga', 'mobility'],
-  },
-  {
-    slug: 'devon',
-    firstName: 'Devon',
-    gender: Gender.MALE,
-    birthdate: '1990-06-24',
-    city: 'Kaneohe',
-    country: 'USA',
-    latitude: 21.4068,
-    longitude: -157.7911,
-    bio: 'Climbing gym convert with a habit of turning quick sessions into half-day outings. Looking for adventure chemistry more than endless messaging.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.ADVANCED,
-      weeklyFrequencyBand: '4-5',
-      primaryGoal: 'skill',
-      secondaryGoal: 'adventure',
-      favoriteActivities: 'Climbing, Hiking, Strength Training',
-      trainingStyle: 'Technique sessions plus enough strength work to keep the fingers honest.',
-      prefersMorning: true,
-      prefersEvening: false,
-    },
-    activities: ['climbing', 'hiking', 'strength-training'],
-  },
-  {
-    slug: 'priya',
-    firstName: 'Priya',
-    gender: Gender.FEMALE,
-    birthdate: '1995-09-14',
-    city: 'Aiea',
-    country: 'USA',
-    latitude: 21.3866,
-    longitude: -157.9231,
-    bio: 'I like polished plans: strength class, smoothie, maybe a walk if the conversation is good. Competitive in a fun way, especially with step counts.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: false,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '4-5',
-      primaryGoal: 'strength',
-      secondaryGoal: 'health',
-      favoriteActivities: 'Strength Training, Boxing, Yoga',
-      trainingStyle: 'Coach-led classes, a few technical sessions, and very consistent weekdays.',
-      prefersMorning: false,
-      prefersEvening: true,
-    },
-    activities: ['strength-training', 'boxing', 'yoga'],
-  },
-  {
-    slug: 'cole',
-    firstName: 'Cole',
-    gender: Gender.MALE,
-    birthdate: '1998-02-16',
-    city: 'North Shore',
-    country: 'USA',
-    latitude: 21.6379,
-    longitude: -158.062,
-    bio: 'Surf forecast obsessive with enough discipline to still hit the gym. Mostly here for people who like ocean time and can roll with early starts.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.ADVANCED,
-      weeklyFrequencyBand: '5+',
-      primaryGoal: 'fun',
-      secondaryGoal: 'conditioning',
-      favoriteActivities: 'Surfing, Strength Training, Volleyball',
-      trainingStyle: 'Surf around conditions, train around surf, repeat.',
-      prefersMorning: true,
-      prefersEvening: false,
-    },
-    activities: ['surfing', 'strength-training', 'volleyball'],
-  },
-  {
-    slug: 'maren',
-    firstName: 'Maren',
-    gender: Gender.FEMALE,
-    birthdate: '1992-11-08',
-    city: 'Kapolei',
-    country: 'USA',
-    latitude: 21.335,
-    longitude: -158.0566,
-    bio: 'Run club, open water swim, and one adventurous plan every weekend. I like calm confidence, good playlists, and people who can pivot without spiraling.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.ADVANCED,
-      weeklyFrequencyBand: '5+',
-      primaryGoal: 'endurance',
-      secondaryGoal: 'health',
-      favoriteActivities: 'Running, Swimming, Cycling',
-      trainingStyle: 'Endurance blocks, recovery swims, and one social workout each week.',
-      prefersMorning: true,
-      prefersEvening: true,
-    },
-    activities: ['running', 'swimming', 'cycling'],
-  },
-];
-
-const supplementalSeedUsers: SeedUser[] = [
-  {
-    slug: 'noa',
-    firstName: 'Noa',
-    gender: Gender.FEMALE,
-    birthdate: '1996-06-12',
-    city: 'Ewa Beach',
-    country: 'USA',
-    latitude: 21.3152,
-    longitude: -158.0072,
-    bio: 'Boardwalk run person, prone to spontaneous surf checks, and very pro breakfast after any workout that starts before seven.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.ADVANCED,
-      weeklyFrequencyBand: '5+',
-      primaryGoal: 'endurance',
-      secondaryGoal: 'fun',
-      favoriteActivities: 'Running, Surfing, Swimming',
-      trainingStyle: 'Cardio-heavy week with ocean sessions whenever the conditions are decent.',
-      prefersMorning: true,
-      prefersEvening: false,
-    },
-    activities: ['running', 'surfing', 'swimming'],
-  },
-  {
-    slug: 'cameron',
-    firstName: 'Cameron',
-    gender: Gender.MALE,
-    birthdate: '1993-03-28',
-    city: 'Moiliili',
-    country: 'USA',
-    latitude: 21.2987,
-    longitude: -157.8205,
-    bio: 'Commutes by bike when possible, lifts when needed, and likes plans that start with a route and end with food.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '4-5',
-      primaryGoal: 'conditioning',
-      secondaryGoal: 'strength',
-      favoriteActivities: 'Cycling, Running, Strength Training',
-      trainingStyle: 'Midweek rides, compact lifts, and one longer effort on the weekend.',
-      prefersMorning: true,
-      prefersEvening: true,
-    },
-    activities: ['cycling', 'running', 'strength-training'],
-  },
-  {
-    slug: 'isla',
-    firstName: 'Isla',
-    gender: Gender.FEMALE,
-    birthdate: '1997-01-22',
-    city: 'Kahala',
-    country: 'USA',
-    latitude: 21.2714,
-    longitude: -157.7739,
-    bio: 'Equal parts mobility class and ocean dip. I like calm people, early beach light, and plans that feel intentional.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '4-5',
-      primaryGoal: 'mobility',
-      secondaryGoal: 'health',
-      favoriteActivities: 'Yoga, Swimming, Pilates',
-      trainingStyle: 'Studio structure during the week with low-key outdoor recovery days.',
-      prefersMorning: true,
-      prefersEvening: true,
-    },
-    activities: ['yoga', 'swimming', 'pilates'],
-  },
-  {
-    slug: 'rafael',
-    firstName: 'Rafael',
-    gender: Gender.MALE,
-    birthdate: '1991-08-04',
-    city: 'Mililani',
-    country: 'USA',
-    latitude: 21.4507,
-    longitude: -158.0153,
-    bio: 'Mitts, hill sprints, and one hard lift every week no matter what. I like people who can joke mid-set and still finish strong.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.ADVANCED,
-      weeklyFrequencyBand: '5+',
-      primaryGoal: 'conditioning',
-      secondaryGoal: 'strength',
-      favoriteActivities: 'Boxing, Strength Training, Running',
-      trainingStyle: 'Fight-style conditioning blocks with enough lifting to stay durable.',
-      prefersMorning: false,
-      prefersEvening: true,
-    },
-    activities: ['boxing', 'strength-training', 'running'],
-  },
-  {
-    slug: 'ivy',
-    firstName: 'Ivy',
-    gender: Gender.FEMALE,
-    birthdate: '1998-09-03',
-    city: 'Nuuanu',
-    country: 'USA',
-    latitude: 21.3376,
-    longitude: -157.8402,
-    bio: 'Trail switchbacks, slow yoga, and the kind of low-pressure plans that somehow turn into full days outside.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '3-4',
-      primaryGoal: 'adventure',
-      secondaryGoal: 'mobility',
-      favoriteActivities: 'Hiking, Mobility, Yoga',
-      trainingStyle: 'Scenic effort days balanced by recovery-focused movement.',
-      prefersMorning: true,
-      prefersEvening: false,
-    },
-    activities: ['hiking', 'mobility', 'yoga'],
-  },
-  {
-    slug: 'beck',
-    firstName: 'Beck',
-    gender: Gender.MALE,
-    birthdate: '1994-10-08',
-    city: 'Wahiawa',
-    country: 'USA',
-    latitude: 21.5022,
-    longitude: -158.0236,
-    bio: 'Climbing gym regular with a side quest in long rides. Usually saying yes to something active before coffee even kicks in.',
-    intentDating: false,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.ADVANCED,
-      weeklyFrequencyBand: '4-5',
-      primaryGoal: 'skill',
-      secondaryGoal: 'endurance',
-      favoriteActivities: 'Climbing, Cycling, Strength Training',
-      trainingStyle: 'Technique nights, finger strength, and a longer ride to clear the head.',
-      prefersMorning: true,
-      prefersEvening: true,
-    },
-    activities: ['climbing', 'cycling', 'strength-training'],
-  },
-  {
-    slug: 'june',
-    firstName: 'June',
-    gender: Gender.FEMALE,
-    birthdate: '1995-05-30',
-    city: 'Ko Olina',
-    country: 'USA',
-    latitude: 21.3398,
-    longitude: -158.123,
-    bio: 'Lap swim loyalist with a soft spot for sunset paddles and brunch plans that keep rolling into the afternoon.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '4-5',
-      primaryGoal: 'endurance',
-      secondaryGoal: 'health',
-      favoriteActivities: 'Swimming, Pilates, Paddling',
-      trainingStyle: 'Steady volume, low ego, and plenty of recovery in the water.',
-      prefersMorning: true,
-      prefersEvening: true,
-    },
-    activities: ['swimming', 'pilates', 'paddling'],
-  },
-  {
-    slug: 'luca',
-    firstName: 'Luca',
-    gender: Gender.MALE,
-    birthdate: '1996-12-09',
-    city: 'Chinatown',
-    country: 'USA',
-    latitude: 21.3122,
-    longitude: -157.8615,
-    bio: 'Dance cardio convert who still boxes for stress control. I like a plan with movement, music, and a little chaos in a good way.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '3-4',
-      primaryGoal: 'fun',
-      secondaryGoal: 'conditioning',
-      favoriteActivities: 'Dance, Boxing, Running',
-      trainingStyle: 'High-energy classes with a few solo sessions to stay sharp.',
-      prefersMorning: false,
-      prefersEvening: true,
-    },
-    activities: ['dance', 'boxing', 'running'],
-  },
-  {
-    slug: 'arden',
-    firstName: 'Arden',
-    gender: Gender.NON_BINARY,
-    birthdate: '1994-04-18',
-    city: 'Downtown Honolulu',
-    country: 'USA',
-    latitude: 21.3085,
-    longitude: -157.8604,
-    bio: 'Mobility first, good playlist second, and a lot of appreciation for people who can keep a plan simple.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '3-4',
-      primaryGoal: 'mobility',
-      secondaryGoal: 'health',
-      favoriteActivities: 'Yoga, Dance, Mobility',
-      trainingStyle: 'Intentional classes, long cooldowns, and social movement without pressure.',
-      prefersMorning: false,
-      prefersEvening: true,
-    },
-    activities: ['yoga', 'dance', 'mobility'],
-  },
-  {
-    slug: 'hazel',
-    firstName: 'Hazel',
-    gender: Gender.FEMALE,
-    birthdate: '1993-02-26',
-    city: 'Waialae',
-    country: 'USA',
-    latitude: 21.2764,
-    longitude: -157.7811,
-    bio: 'Beach game instigator, occasional run club organizer, and very into making social workouts actually feel social.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '4-5',
-      primaryGoal: 'fun',
-      secondaryGoal: 'endurance',
-      favoriteActivities: 'Volleyball, Running, Yoga',
-      trainingStyle: 'Community-heavy schedule with one harder cardio day and lots of outside time.',
-      prefersMorning: true,
-      prefersEvening: true,
-    },
-    activities: ['volleyball', 'running', 'yoga'],
-  },
-  {
-    slug: 'omar',
-    firstName: 'Omar',
-    gender: Gender.MALE,
-    birthdate: '1992-07-01',
-    city: 'Moanalua',
-    country: 'USA',
-    latitude: 21.3603,
-    longitude: -157.8884,
-    bio: 'Harbor paddle guy who still checks swell reports like it is a full-time job. Looking for steady energy and somebody who likes being outside.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.ADVANCED,
-      weeklyFrequencyBand: '5+',
-      primaryGoal: 'adventure',
-      secondaryGoal: 'endurance',
-      favoriteActivities: 'Paddling, Swimming, Surfing',
-      trainingStyle: 'Ocean sessions first, dryland second, and plenty of early mornings.',
-      prefersMorning: true,
-      prefersEvening: false,
-    },
-    activities: ['paddling', 'swimming', 'surfing'],
-  },
-  {
-    slug: 'celine',
-    firstName: 'Celine',
-    gender: Gender.FEMALE,
-    birthdate: '1997-11-15',
-    city: 'Mililani',
-    country: 'USA',
-    latitude: 21.4519,
-    longitude: -158.0129,
-    bio: 'Cycling at sunrise, pilates after work, and enough structure to make room for spontaneous dessert after.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '4-5',
-      primaryGoal: 'endurance',
-      secondaryGoal: 'mobility',
-      favoriteActivities: 'Cycling, Running, Pilates',
-      trainingStyle: 'Consistent cardio with one longer weekend ride and lots of recovery work.',
-      prefersMorning: true,
-      prefersEvening: true,
-    },
-    activities: ['cycling', 'running', 'pilates'],
-  },
-  {
-    slug: 'leo',
-    firstName: 'Leo',
-    gender: Gender.MALE,
-    birthdate: '1990-01-11',
-    city: 'Makiki',
-    country: 'USA',
-    latitude: 21.3094,
-    longitude: -157.8356,
-    bio: 'Strength block enthusiast, hill hike fan, and generally better company after a training session than before one.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.ADVANCED,
-      weeklyFrequencyBand: '5+',
-      primaryGoal: 'strength',
-      secondaryGoal: 'mobility',
-      favoriteActivities: 'Strength Training, Hiking, Mobility',
-      trainingStyle: 'Simple heavy lifts, steep walks, and enough mobility to keep moving well.',
-      prefersMorning: false,
-      prefersEvening: true,
-    },
-    activities: ['strength-training', 'hiking', 'mobility'],
-  },
-  {
-    slug: 'nora',
-    firstName: 'Nora',
-    gender: Gender.FEMALE,
-    birthdate: '1996-08-19',
-    city: 'Haleiwa',
-    country: 'USA',
-    latitude: 21.5956,
-    longitude: -158.1033,
-    bio: 'North Shore longboard mornings, beach volleyball at dusk, and exactly the right amount of sunscreen advice.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '4-5',
-      primaryGoal: 'fun',
-      secondaryGoal: 'health',
-      favoriteActivities: 'Surfing, Volleyball, Yoga',
-      trainingStyle: 'Ocean-centered week with lighter recovery days and plenty of sunshine.',
-      prefersMorning: true,
-      prefersEvening: true,
-    },
-    activities: ['surfing', 'volleyball', 'yoga'],
-  },
-  {
-    slug: 'finn',
-    firstName: 'Finn',
-    gender: Gender.MALE,
-    birthdate: '1995-06-18',
-    city: 'Aina Haina',
-    country: 'USA',
-    latitude: 21.277,
-    longitude: -157.7453,
-    bio: 'Open water lap person with enough paddling gear to accidentally become the friend with logistics.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.ADVANCED,
-      weeklyFrequencyBand: '5+',
-      primaryGoal: 'endurance',
-      secondaryGoal: 'adventure',
-      favoriteActivities: 'Paddling, Running, Swimming',
-      trainingStyle: 'Steady endurance base with one social session every few days.',
-      prefersMorning: true,
-      prefersEvening: false,
-    },
-    activities: ['paddling', 'running', 'swimming'],
-  },
-  {
-    slug: 'mae',
-    firstName: 'Mae',
-    gender: Gender.FEMALE,
-    birthdate: '1994-09-27',
-    city: 'Waipahu',
-    country: 'USA',
-    latitude: 21.3865,
-    longitude: -158.0096,
-    bio: 'Very into bag rounds, loud playlists, and making post-work classes feel like the best part of the day.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '4-5',
-      primaryGoal: 'conditioning',
-      secondaryGoal: 'strength',
-      favoriteActivities: 'Boxing, Strength Training, Dance',
-      trainingStyle: 'Punchy class schedule with enough lifting to stay grounded.',
-      prefersMorning: false,
-      prefersEvening: true,
-    },
-    activities: ['boxing', 'strength-training', 'dance'],
-  },
-  {
-    slug: 'remy',
-    firstName: 'Remy',
-    gender: Gender.NON_BINARY,
-    birthdate: '1997-10-14',
-    city: 'Kailua',
-    country: 'USA',
-    latitude: 21.392,
-    longitude: -157.7415,
-    bio: 'Bouldering, trail mileage, and mellow yoga to undo all of it. Looking for chemistry with people who actually leave the house.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.INTERMEDIATE,
-      weeklyFrequencyBand: '3-4',
-      primaryGoal: 'skill',
-      secondaryGoal: 'adventure',
-      favoriteActivities: 'Climbing, Yoga, Running',
-      trainingStyle: 'Mix of playful skill work and scenic cardio days.',
-      prefersMorning: true,
-      prefersEvening: true,
-    },
-    activities: ['climbing', 'yoga', 'running'],
-  },
-  {
-    slug: 'yara',
-    firstName: 'Yara',
-    gender: Gender.FEMALE,
-    birthdate: '1998-12-02',
-    city: 'Nuuanu',
-    country: 'USA',
-    latitude: 21.3361,
-    longitude: -157.8339,
-    bio: 'Likes a rainy trail, a cold plunge, and a mat class that leaves enough time for coffee after.',
-    intentDating: true,
-    intentWorkout: true,
-    intentFriends: true,
-    fitness: {
-      intensityLevel: IntensityLevel.BEGINNER,
-      weeklyFrequencyBand: '2-3',
-      primaryGoal: 'health',
-      secondaryGoal: 'adventure',
-      favoriteActivities: 'Hiking, Swimming, Pilates',
-      trainingStyle: 'Low-pressure week with scenic efforts and lots of recovery.',
-      prefersMorning: true,
-      prefersEvening: false,
-    },
-    activities: ['hiking', 'swimming', 'pilates'],
-  },
-];
-
-const seedUsers: SeedUser[] = [...coreSeedUsers, ...supplementalSeedUsers];
-
-const seedLikes: SeedLike[] = [
-  {
-    slug: 'nia-likes-kai',
-    fromSlug: 'nia',
-    toSlug: 'kai',
-    dayOffset: 0,
-    hour: 8,
-  },
-];
-
-const seedMatches: SeedMatch[] = [
-  {
-    slug: 'kai-leilani',
-    userSlugs: ['kai', 'leilani'],
-    dayOffset: 0,
-    hour: 9,
-    messages: [
-      {
-        slug: 'kai-opener',
-        senderSlug: 'kai',
-        body: 'Sunrise run still on if you want a low-pressure first lap.',
-        hoursAfterMatch: 1,
-        isRead: true,
-      },
-      {
-        slug: 'leilani-reply',
-        senderSlug: 'leilani',
-        body: 'Yes. Coffee after if the pace stays conversational.',
-        hoursAfterMatch: 2,
-      },
-    ],
-  },
-  {
-    slug: 'mason-rowan-archived',
-    userSlugs: ['mason', 'rowan'],
-    dayOffset: 1,
-    hour: 18,
-    isArchived: true,
-    messages: [
-      {
-        slug: 'mason-check-in',
-        senderSlug: 'mason',
-        body: 'Good lift. Let me know if you want to repeat it next week.',
-        hoursAfterMatch: 1,
-        isRead: true,
-      },
-    ],
-  },
-];
-
-const seedEventInvites: SeedEventInvite[] = [
-  {
-    slug: 'kai-invites-leilani-to-run',
-    eventSlug: 'ala-moana-sunrise-run',
-    matchSlug: 'kai-leilani',
-    inviterSlug: 'kai',
-    inviteeSlug: 'leilani',
-    body: 'Want to make the chat real and join this one?',
-    dayOffset: 0,
-    hour: 12,
-  },
-];
-
-const coreSeedEvents: SeedEvent[] = [
-  {
-    slug: 'ala-moana-sunrise-run',
-    title: 'Ala Moana Sunrise Run Club',
-    description: 'Easy 4-mile social loop with coffee at the end. Plenty of walk breaks if the heat shows up early.',
-    location: 'Magic Island, Ala Moana Beach Park',
-    category: EventCategory.RUNNING,
-    imageUrl: 'https://images.unsplash.com/photo-1552674605-469523170d9e?w=1200&q=80',
-    hostSlug: 'kai',
-    startDayOffset: 1,
-    startHour: 6,
-    durationHours: 2,
-    attendeeSlugs: ['leilani', 'nia', 'eli', 'alana', 'maren'],
-  },
-  {
-    slug: 'kakaako-rooftop-flow',
-    title: 'Golden Hour Rooftop Flow',
-    description: 'Vinyasa with city light views, then tea and introductions on the deck after class.',
-    location: 'Salt at Our Kakaako Rooftop',
-    category: EventCategory.YOGA,
-    imageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1200&q=80',
-    hostSlug: 'leilani',
-    startDayOffset: 1,
-    startHour: 18,
-    durationHours: 2,
-    attendeeSlugs: ['sasha', 'alana', 'tessa', 'priya'],
-  },
-  {
-    slug: 'diamond-head-power-hike',
-    title: 'Diamond Head Power Hike',
-    description: 'Fast-paced sunset hike with a scenic cooldown at Kapiolani Park after. Bring water and shoes with grip.',
-    location: 'Diamond Head State Monument',
-    category: EventCategory.HIKING,
-    imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80',
-    hostSlug: 'nia',
-    startDayOffset: 2,
-    startHour: 17,
-    durationHours: 2,
-    attendeeSlugs: ['keoni', 'devon', 'maren', 'kai'],
-  },
-  {
-    slug: 'kailua-paddle-social',
-    title: 'Kailua Paddle + Breakfast',
-    description: 'Beginner-friendly paddle session followed by breakfast burritos and shaded hangs on the beach.',
-    location: 'Kailua Beach Park',
-    category: EventCategory.PADDLING,
-    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80',
-    hostSlug: 'malia',
-    startDayOffset: 3,
-    startHour: 8,
-    durationHours: 3,
-    attendeeSlugs: ['mason', 'leilani', 'cole', 'keoni'],
-  },
-  {
-    slug: 'kaimuki-boxing-circuit',
-    title: 'Kaimuki Boxing Circuit Night',
-    description: 'Glove work, bag intervals, and a beginner lane for anyone new but curious.',
-    location: 'Kaimuki Community Boxing Club',
-    category: EventCategory.BOXING,
-    imageUrl: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=1200&q=80',
-    hostSlug: 'jordan',
-    startDayOffset: 3,
-    startHour: 19,
-    durationHours: 2,
-    attendeeSlugs: ['rowan', 'priya', 'eli'],
-  },
-  {
-    slug: 'waikiki-swim-laps',
-    title: 'Waikiki Open Water Swim',
-    description: 'Short buoy loop for steady swimmers with a safety-first pace and post-swim shave ice walk.',
-    location: 'Queen’s Beach, Waikiki',
-    category: EventCategory.SWIMMING,
-    imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1200&q=80',
-    hostSlug: 'malia',
-    startDayOffset: 4,
-    startHour: 7,
-    durationHours: 2,
-    attendeeSlugs: ['leilani', 'keoni', 'maren', 'kai'],
-  },
-  {
-    slug: 'downtown-strength-hour',
-    title: 'Downtown Strength Hour',
-    description: 'Lift-focused small group session: squat emphasis, simple accessories, zero influencer energy.',
-    location: 'Honolulu Strength Lab',
-    category: EventCategory.FITNESS,
-    imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=1200&q=80',
-    hostSlug: 'rowan',
-    startDayOffset: 4,
-    startHour: 18,
-    durationHours: 2,
-    attendeeSlugs: ['mason', 'priya', 'eli', 'cole'],
-  },
-  {
-    slug: 'kapahulu-volleyball-social',
-    title: 'Beach Volleyball Sunset Social',
-    description: 'Drop-in games, rotating teams, beginner-friendly rules, and no one taking it too seriously.',
-    location: 'Kapiolani Park Sand Courts',
-    category: EventCategory.VOLLEYBALL,
-    imageUrl: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=1200&q=80',
-    hostSlug: 'tessa',
-    startDayOffset: 5,
-    startHour: 17,
-    durationHours: 3,
-    attendeeSlugs: ['alana', 'cole', 'kai', 'sasha', 'leilani'],
-  },
-  {
-    slug: 'makapuu-first-light',
-    title: 'Makapuu First Light Hike',
-    description: 'Early climb for sunrise and whale spotting if conditions cooperate. Breakfast stop after for whoever is still awake.',
-    location: 'Makapuu Lighthouse Trail',
-    category: EventCategory.HIKING,
-    imageUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&q=80',
-    hostSlug: 'keoni',
-    startDayOffset: 6,
-    startHour: 5,
-    durationHours: 2,
-    attendeeSlugs: ['nia', 'devon', 'maren', 'kai'],
-  },
-  {
-    slug: 'mccully-dance-night',
-    title: 'Dance Cardio + Mocktails',
-    description: 'High-energy dance class with a social cooldown nearby. Perfect if you want movement without a serious vibe.',
-    location: 'McCully Movement Studio',
-    category: EventCategory.DANCE,
-    imageUrl: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=1200&q=80',
-    hostSlug: 'sasha',
-    startDayOffset: 6,
-    startHour: 18,
-    durationHours: 2,
-    attendeeSlugs: ['tessa', 'alana', 'leilani', 'priya'],
-  },
-  {
-    slug: 'pearl-city-long-ride',
-    title: 'Pearl City Long Ride',
-    description: 'Moderate 25-mile loop with regroup points, good road etiquette, and a cafe stop mid-ride.',
-    location: 'Pearl City Shopping Center lot',
-    category: EventCategory.CYCLING,
-    imageUrl: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=1200&q=80',
-    hostSlug: 'eli',
-    startDayOffset: 7,
-    startHour: 7,
-    durationHours: 3,
-    attendeeSlugs: ['mason', 'rowan', 'maren'],
-  },
-  {
-    slug: 'kakaako-pilates-brunch',
-    title: 'Pilates + Brunch Plans',
-    description: 'Reformer-style mat flow, then brunch for anyone who wants to actually keep hanging out.',
-    location: 'Our Kakaako Courtyard',
-    category: EventCategory.PILATES,
-    imageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1200&q=80',
-    hostSlug: 'alana',
-    startDayOffset: 7,
-    startHour: 10,
-    durationHours: 2,
-    attendeeSlugs: ['leilani', 'tessa', 'sasha', 'priya'],
-  },
-  {
-    slug: 'kaneohe-climb-night',
-    title: 'Climb Night + Technique Laps',
-    description: 'Routes and boulders, plus a mellow intro lane for anyone trying climbing for the first time.',
-    location: 'Kaneohe Climbing Club',
-    category: EventCategory.CLIMBING,
-    imageUrl: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=1200&q=80',
-    hostSlug: 'devon',
-    startDayOffset: 8,
-    startHour: 18,
-    durationHours: 2,
-    attendeeSlugs: ['nia', 'rowan', 'kai'],
-  },
-  {
-    slug: 'aiea-combat-conditioning',
-    title: 'Combat Conditioning Session',
-    description: 'Fast circuits, mitt rounds, and good coaching if you like intensity without chaos.',
-    location: 'Aiea Performance Studio',
-    category: EventCategory.BOXING,
-    imageUrl: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=1200&q=80',
-    hostSlug: 'priya',
-    startDayOffset: 9,
-    startHour: 18,
-    durationHours: 2,
-    attendeeSlugs: ['jordan', 'eli', 'rowan'],
-  },
-  {
-    slug: 'north-shore-surf-morning',
-    title: 'North Shore Surf Carpool',
-    description: 'Carpool up, catch a few beginner-to-intermediate waves, and split poke after if the morning goes well.',
-    location: 'Puaena Point, Haleiwa',
-    category: EventCategory.SURFING,
-    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80',
-    hostSlug: 'cole',
-    startDayOffset: 10,
-    startHour: 6,
-    durationHours: 4,
-    attendeeSlugs: ['kai', 'malia', 'keoni'],
-  },
-  {
-    slug: 'kapolei-endurance-club',
-    title: 'West Side Endurance Club',
-    description: 'Tempo run into recovery swim. Great for people training consistently who still want a social feel.',
-    location: 'Ko Olina Lagoons',
-    category: EventCategory.FITNESS,
-    imageUrl: 'https://images.unsplash.com/photo-1483721310020-03333e577078?w=1200&q=80',
-    hostSlug: 'maren',
-    startDayOffset: 10,
-    startHour: 8,
-    durationHours: 3,
-    attendeeSlugs: ['eli', 'nia', 'kai', 'leilani'],
-  },
-  {
-    slug: 'manoa-reset-walk',
-    title: 'Manoa Reset Walk',
-    description: 'Low-pressure recovery walk for anyone wanting movement, fresh air, and normal conversation after a long week.',
-    location: 'Manoa Valley District Park',
-    category: EventCategory.OTHER,
-    imageUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&q=80',
-    hostSlug: 'nia',
-    startDayOffset: 11,
-    startHour: 17,
-    durationHours: 2,
-    attendeeSlugs: ['alana', 'sasha', 'tessa', 'leilani'],
-  },
-  {
-    slug: 'ala-moana-friends-lift',
-    title: 'Friends Lift + Mobility Night',
-    description: 'Partner sets, mobility finisher, and a beginner lane so new people can get comfortable fast.',
-    location: 'Ala Moana Functional Fitness',
-    category: EventCategory.FITNESS,
-    imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=1200&q=80',
-    hostSlug: 'mason',
-    startDayOffset: 12,
-    startHour: 18,
-    durationHours: 2,
-    attendeeSlugs: ['rowan', 'eli', 'priya', 'kai', 'devon'],
-  },
-];
-
-const supplementalSeedEvents: SeedEvent[] = [
-  {
-    slug: 'ewa-boardwalk-run',
-    title: 'Ewa Boardwalk Run + Smoothies',
-    description: 'Social sunrise miles on the boardwalk with an easy smoothie stop after for whoever wants to linger.',
-    location: 'Ewa Beach Boardwalk',
-    category: EventCategory.RUNNING,
-    imageUrl: 'https://images.unsplash.com/photo-1552674605-469523170d9e?w=1200&q=80',
-    hostSlug: 'noa',
-    startDayOffset: 2,
-    startHour: 6,
-    durationHours: 2,
-    attendeeSlugs: ['maren', 'cameron', 'hazel', 'finn', 'kai'],
-  },
-  {
-    slug: 'kahala-breathe-and-flow',
-    title: 'Kahala Breathe + Flow',
-    description: 'Easy mobility-centered flow with a beach cooldown and zero pressure to be advanced.',
-    location: 'Kahala Beach Park',
-    category: EventCategory.YOGA,
-    imageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1200&q=80',
-    hostSlug: 'isla',
-    startDayOffset: 2,
-    startHour: 18,
-    durationHours: 2,
-    attendeeSlugs: ['leilani', 'june', 'yara', 'hazel'],
-  },
-  {
-    slug: 'moiliili-night-ride',
-    title: 'Moiliili Night Ride',
-    description: 'Short city loop with bright lights, regroup points, and a dessert stop after if the legs still work.',
-    location: 'Old Stadium Park',
-    category: EventCategory.CYCLING,
-    imageUrl: 'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?w=1200&q=80',
-    hostSlug: 'cameron',
-    startDayOffset: 3,
-    startHour: 19,
-    durationHours: 2,
-    attendeeSlugs: ['eli', 'mason', 'celine', 'beck'],
-  },
-  {
-    slug: 'mililani-mitts-and-mobility',
-    title: 'Mililani Mitts + Mobility',
-    description: 'Punch rounds, simple conditioning, and a longer mobility finish than most fight gyms ever allow.',
-    location: 'Mililani Rec Center',
-    category: EventCategory.BOXING,
-    imageUrl: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=1200&q=80',
-    hostSlug: 'rafael',
-    startDayOffset: 4,
-    startHour: 18,
-    durationHours: 2,
-    attendeeSlugs: ['jordan', 'mae', 'priya', 'leo'],
-  },
-  {
-    slug: 'nuuanu-mist-trail-reset',
-    title: 'Nuuanu Mist Trail Reset',
-    description: 'Cool weather hike pace with a recovery-heavy vibe and a good chance of stopping for too many photos.',
-    location: 'Judd Trail, Nuuanu',
-    category: EventCategory.HIKING,
-    imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80',
-    hostSlug: 'ivy',
-    startDayOffset: 5,
-    startHour: 7,
-    durationHours: 3,
-    attendeeSlugs: ['nia', 'yara', 'remy', 'leo'],
-  },
-  {
-    slug: 'wahiawa-grip-night',
-    title: 'Wahiawa Grip Night',
-    description: 'Climb laps, friendly beta sharing, and a low-key strength finisher for whoever still has fingers left.',
-    location: 'Central Oahu Climbing Hangar',
-    category: EventCategory.CLIMBING,
-    imageUrl: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=1200&q=80',
-    hostSlug: 'beck',
-    startDayOffset: 5,
-    startHour: 18,
-    durationHours: 2,
-    attendeeSlugs: ['devon', 'remy', 'rowan', 'cameron'],
-  },
-  {
-    slug: 'ko-olina-sunset-swim-club',
-    title: 'Ko Olina Sunset Swim Club',
-    description: 'Protected-water swim set with an easy social hang after and a no-rush pace for mixed speeds.',
-    location: 'Ko Olina Lagoon 2',
-    category: EventCategory.SWIMMING,
-    imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1200&q=80',
-    hostSlug: 'june',
-    startDayOffset: 6,
-    startHour: 17,
-    durationHours: 2,
-    attendeeSlugs: ['malia', 'isla', 'omar', 'maren'],
-  },
-  {
-    slug: 'chinatown-dance-conditioning',
-    title: 'Chinatown Dance Conditioning',
-    description: 'Sweaty dance intervals with a beginner-friendly start and a social cooldown nearby.',
-    location: 'Chinatown Arts District Studio',
-    category: EventCategory.DANCE,
-    imageUrl: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=1200&q=80',
-    hostSlug: 'luca',
-    startDayOffset: 6,
-    startHour: 19,
-    durationHours: 2,
-    attendeeSlugs: ['sasha', 'mae', 'tessa', 'priya'],
-  },
-  {
-    slug: 'downtown-soft-launch-flow',
-    title: 'Downtown Soft Launch Flow',
-    description: 'Gentle rooftop stretch class for anyone who wants movement without performance mode.',
-    location: 'Bishop Square Rooftop',
-    category: EventCategory.YOGA,
-    imageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1200&q=80',
-    hostSlug: 'arden',
-    startDayOffset: 7,
-    startHour: 18,
-    durationHours: 2,
-    attendeeSlugs: ['sasha', 'isla', 'ivy', 'remy'],
-  },
-  {
-    slug: 'waialae-volley-rounds',
-    title: 'Waialae Volley Rounds',
-    description: 'Rotating beach teams, easygoing rules, and the exact right amount of playful trash talk.',
-    location: 'Waialae Beach Park',
-    category: EventCategory.VOLLEYBALL,
-    imageUrl: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=1200&q=80',
-    hostSlug: 'hazel',
-    startDayOffset: 8,
-    startHour: 17,
-    durationHours: 3,
-    attendeeSlugs: ['tessa', 'nora', 'cole', 'kai', 'noa'],
-  },
-  {
-    slug: 'moanalua-harbor-paddle',
-    title: 'Moanalua Harbor Paddle',
-    description: 'Steady harbor loop with a beginner lane and enough chatter to make the miles pass quickly.',
-    location: 'Keehi Lagoon',
-    category: EventCategory.PADDLING,
-    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80',
-    hostSlug: 'omar',
-    startDayOffset: 8,
-    startHour: 6,
-    durationHours: 2,
-    attendeeSlugs: ['malia', 'keoni', 'june', 'finn'],
-  },
-  {
-    slug: 'mililani-saturday-spin',
-    title: 'Mililani Saturday Spin',
-    description: 'Rolling hills, clean regroup points, and no one gets dropped if they show up ready to ride.',
-    location: 'Mililani Town Center',
-    category: EventCategory.CYCLING,
-    imageUrl: 'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?w=1200&q=80',
-    hostSlug: 'celine',
-    startDayOffset: 9,
-    startHour: 8,
-    durationHours: 3,
-    attendeeSlugs: ['eli', 'cameron', 'beck', 'maren'],
-  },
-  {
-    slug: 'makiki-lift-and-mobility',
-    title: 'Makiki Lift + Mobility',
-    description: 'Compact strength session with a longer cooldown built in so everyone can still walk the next day.',
-    location: 'Makiki Performance Gym',
-    category: EventCategory.FITNESS,
-    imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=1200&q=80',
-    hostSlug: 'leo',
-    startDayOffset: 9,
-    startHour: 18,
-    durationHours: 2,
-    attendeeSlugs: ['rowan', 'mason', 'rafael', 'priya'],
-  },
-  {
-    slug: 'haleiwa-longboard-roll-call',
-    title: 'Haleiwa Longboard Roll Call',
-    description: 'Friendly North Shore paddle-out for people who like mellow waves, sunlight, and a car snack after.',
-    location: 'Alii Beach Park, Haleiwa',
-    category: EventCategory.SURFING,
-    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80',
-    hostSlug: 'nora',
-    startDayOffset: 10,
-    startHour: 7,
-    durationHours: 3,
-    attendeeSlugs: ['cole', 'kai', 'noa', 'omar'],
-  },
-  {
-    slug: 'aina-haina-paddle-laps',
-    title: 'Aina Haina Paddle Laps',
-    description: 'Steady outrigger-style conditioning pace with an optional ocean dip once everyone gets back in.',
-    location: 'Maunalua Bay Launch',
-    category: EventCategory.PADDLING,
-    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80',
-    hostSlug: 'finn',
-    startDayOffset: 11,
-    startHour: 7,
-    durationHours: 2,
-    attendeeSlugs: ['malia', 'omar', 'june', 'keoni'],
-  },
-  {
-    slug: 'waipahu-box-and-burn',
-    title: 'Waipahu Box + Burn',
-    description: 'Bag rounds, short circuits, and enough music to keep the energy up even after work.',
-    location: 'Waipahu Community Fitness Hall',
-    category: EventCategory.BOXING,
-    imageUrl: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=1200&q=80',
-    hostSlug: 'mae',
-    startDayOffset: 11,
-    startHour: 18,
-    durationHours: 2,
-    attendeeSlugs: ['jordan', 'rafael', 'priya', 'luca'],
-  },
-  {
-    slug: 'kailua-boulder-brunch',
-    title: 'Kailua Boulder + Brunch',
-    description: 'Playful climbing session with a low-pressure intro lane and a brunch stop built into the plan.',
-    location: 'Kailua Climb Loft',
-    category: EventCategory.CLIMBING,
-    imageUrl: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=1200&q=80',
-    hostSlug: 'remy',
-    startDayOffset: 12,
-    startHour: 9,
-    durationHours: 3,
-    attendeeSlugs: ['devon', 'beck', 'ivy', 'nia'],
-  },
-  {
-    slug: 'nuuanu-rain-or-shine-pilates',
-    title: 'Nuuanu Rain or Shine Pilates',
-    description: 'Slow burn core session with a cozy post-class coffee plan whether the weather behaves or not.',
-    location: 'Nuuanu YMCA Studio',
-    category: EventCategory.PILATES,
-    imageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1200&q=80',
-    hostSlug: 'yara',
-    startDayOffset: 13,
-    startHour: 10,
-    durationHours: 2,
-    attendeeSlugs: ['isla', 'alana', 'june', 'tessa'],
-  },
-];
-
-function buildEventImage(index: number) {
-  return `${BASE_URL}/pfps/${PHOTO_FILES[(index + 6) % PHOTO_FILES.length]}`;
-}
-
-const seedEvents: SeedEvent[] = [...coreSeedEvents, ...supplementalSeedEvents].map(
-  (event, index) => ({
-    ...event,
-    imageUrl: buildEventImage(index),
-  }),
-);
-
-function demoEmail(slug: string) {
-  return `${slug}@${DEMO_EMAIL_DOMAIN}`;
-}
-
-function stableUuid(...parts: string[]) {
-  const hash = createHash('sha1').update(parts.join(':')).digest('hex').slice(0, 32);
-  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
-}
-
-function buildSeedAnchor(referenceDate = process.env.SEED_NOW_ISO ? new Date(process.env.SEED_NOW_ISO) : new Date()) {
-  return new Date(
-    Date.UTC(
-      referenceDate.getUTCFullYear(),
-      referenceDate.getUTCMonth(),
-      referenceDate.getUTCDate(),
-      12,
-      0,
-      0,
-      0,
-    ),
-  );
-}
-
-const SEED_ANCHOR = buildSeedAnchor();
-
-function buildSeedInstant(dayOffset: number, hour: number, minute = 0) {
-  const startsAt = new Date(SEED_ANCHOR);
-  startsAt.setUTCDate(startsAt.getUTCDate() + dayOffset);
-  startsAt.setUTCHours(hour, minute, 0, 0);
-  return startsAt;
-}
-
-function buildStartsAt(dayOffset: number, hour: number) {
-  return buildSeedInstant(dayOffset, hour);
-}
+// ── Activity catalog upsert ───────────────────────────────────────
 
 async function seedActivities() {
   const created = await Promise.all(
@@ -1584,9 +36,10 @@ async function seedActivities() {
       }),
     ),
   );
-
-  return new Map(created.map((activity) => [activity.slug, activity.id]));
+  return new Map(created.map((a) => [a.slug, a.id]));
 }
+
+// ── Cleanup previous seed data ────────────────────────────────────
 
 async function cleanupPreviousDemoUsers() {
   const deleted = await prisma.user.deleteMany({
@@ -1597,27 +50,29 @@ async function cleanupPreviousDemoUsers() {
       ],
     },
   });
-
   return deleted.count;
 }
 
-async function main() {
-  console.log('Refreshing BRDG demo seed...');
+// ── Main ──────────────────────────────────────────────────────────
 
+async function main() {
+  console.log('Refreshing BRDG demo seed (expanded)...');
+
+  // 1. Seed activities
   const activityIdsBySlug = await seedActivities();
+
+  // 2. Cleanup previous demo users
   const deletedUsers = await cleanupPreviousDemoUsers();
   console.log(`Removed ${deletedUsers} previous demo users.`);
 
+  // 3. Create users in batches of 20
   const createdUsers = new Map<string, { id: string; firstName: string }>();
+  const BATCH_SIZE = 20;
 
-  // Batch user creation in a single transaction for efficiency
-  const BATCH_SIZE = 10;
   for (let i = 0; i < seedUsers.length; i += BATCH_SIZE) {
     const batch = seedUsers.slice(i, i + BATCH_SIZE);
     await prisma.$transaction(async (tx) => {
-      for (const [batchIndex, user] of batch.entries()) {
-        const index = i + batchIndex;
-        const photo = PHOTO_FILES[index % PHOTO_FILES.length];
+      for (const user of batch) {
         const created = await tx.user.create({
           data: {
             id: stableUuid('seed-user', user.slug),
@@ -1658,11 +113,13 @@ async function main() {
               },
             },
             photos: {
-              create: Array.from({ length: user.photoCount ?? (createdUsers.size < 6 ? 2 : 1) }, (_, photoIndex) => ({
-                storageKey: `${BASE_URL}/pfps/${PHOTO_FILES[(index + photoIndex) % PHOTO_FILES.length]}`,
-                isPrimary: photoIndex === 0,
-                sortOrder: photoIndex,
-              })),
+              create: getPhotosForUser(user.slug, user.photoCount ?? 4, user.activities).map(
+                (url, photoIndex) => ({
+                  storageKey: url,
+                  isPrimary: photoIndex === 0,
+                  sortOrder: photoIndex,
+                }),
+              ),
             },
             notificationPreferences: {
               create: {
@@ -1682,6 +139,7 @@ async function main() {
           firstName: created.firstName,
         });
 
+        // Link user to fitness activities
         const activityRows = user.activities
           .map((slug) => activityIdsBySlug.get(slug))
           .filter((activityId): activityId is number => typeof activityId === 'number')
@@ -1703,15 +161,18 @@ async function main() {
     console.log(`Created demo profiles batch: ${names}`);
   }
 
+  // 4. Create ALL events (main + outer island + extra) with RSVPs
+  const allEvents = [...seedEvents, ...outerIslandEvents, ...extraOahuEvents];
   let createdEventCount = 0;
   let createdRsvpCount = 0;
+  let createdNotificationCount = 0;
   const createdEventIds = new Map<string, string>();
 
-  for (const event of seedEvents) {
+  for (const event of allEvents) {
     const host = createdUsers.get(event.hostSlug);
     if (!host) continue;
 
-    const startsAt = buildStartsAt(event.startDayOffset, event.startHour);
+    const startsAt = buildSeedInstant(event.startDayOffset, event.startHour);
     const endsAt = new Date(
       startsAt.getTime() + event.durationHours * 60 * 60 * 1000,
     );
@@ -1733,6 +194,7 @@ async function main() {
     createdEventIds.set(event.slug, createdEvent.id);
     createdEventCount += 1;
 
+    // Create RSVPs for host + attendees
     const attendeeIds = [
       host.id,
       ...event.attendeeSlugs
@@ -1752,17 +214,27 @@ async function main() {
       createdRsvpCount += result.count;
     }
 
+    // Create RSVP notifications for event host
+    const rsvpNotifs = await createEventRsvpNotifications(
+      prisma,
+      createdEvent.id,
+      host.id,
+      host.firstName,
+      uniqueAttendeeIds,
+      event.title,
+      startsAt,
+    );
+    createdNotificationCount += rsvpNotifs;
+
     console.log(
       `Created event: ${createdEvent.title} (${uniqueAttendeeIds.length} RSVPs)`,
     );
   }
 
-  let createdMatchCount = 0;
-  let createdMessageCount = 0;
-  let createdNotificationCount = 0;
-  let createdInviteCount = 0;
+  // 5. Create likes + notifications
+  let createdLikeCount = 0;
 
-  for (const like of seedLikes) {
+  for (const like of allLikes) {
     const fromUser = createdUsers.get(like.fromSlug);
     const toUser = createdUsers.get(like.toSlug);
     if (!fromUser || !toUser) continue;
@@ -1774,27 +246,41 @@ async function main() {
         createdAt,
         fromUserId: fromUser.id,
         toUserId: toUser.id,
+        isSuperLike: like.isSuperLike ?? false,
       },
     });
-
-    await prisma.notification.create({
-      data: {
-        id: stableUuid('seed-notification', `${like.slug}-to`),
-        userId: toUser.id,
-        type: 'like_received',
-        title: 'New like',
-        body: `${fromUser.firstName} liked your profile.`,
-        data: { fromUserId: fromUser.id },
-        createdAt,
-        updatedAt: createdAt,
-      },
-    });
-    createdNotificationCount += 1;
+    createdLikeCount += 1;
   }
 
+  const likeNotifCount = await createLikeNotifications(prisma, allLikes, createdUsers);
+  createdNotificationCount += likeNotifCount;
+
+  // 6. Create passes
+  let createdPassCount = 0;
+
+  for (const pass of allPasses) {
+    const fromUser = createdUsers.get(pass.fromSlug);
+    const toUser = createdUsers.get(pass.toSlug);
+    if (!fromUser || !toUser) continue;
+
+    const createdAt = buildSeedInstant(pass.dayOffset, pass.hour);
+    await prisma.pass.create({
+      data: {
+        id: stableUuid('seed-pass', pass.slug),
+        createdAt,
+        fromUserId: fromUser.id,
+        toUserId: toUser.id,
+      },
+    });
+    createdPassCount += 1;
+  }
+
+  // 7. Create matches + messages + notifications
+  let createdMatchCount = 0;
+  let createdMessageCount = 0;
   const createdMatchIds = new Map<string, string>();
 
-  for (const seedMatch of seedMatches) {
+  for (const seedMatch of allMatches) {
     const users = seedMatch.userSlugs
       .map((slug) => createdUsers.get(slug))
       .filter((user): user is { id: string; firstName: string } => Boolean(user));
@@ -1812,36 +298,30 @@ async function main() {
         updatedAt: matchCreatedAt,
         userAId,
         userBId,
-        isDatingMatch: true,
-        isWorkoutMatch: true,
+        isDatingMatch: seedMatch.isDatingMatch ?? true,
+        isWorkoutMatch: seedMatch.isWorkoutMatch ?? true,
         isArchived: seedMatch.isArchived ?? false,
+        isBlocked: seedMatch.isBlocked ?? false,
       },
     });
     createdMatchCount += 1;
 
-    for (const user of users) {
-      const counterpart = users.find((candidate) => candidate.id !== user.id);
-      if (!counterpart) continue;
-      await prisma.notification.create({
-        data: {
-          id: stableUuid('seed-notification', `${seedMatch.slug}-${user.id}-match`),
-          userId: user.id,
-          type: 'match_created',
-          title: "It's a match!",
-          body: `You matched with ${counterpart.firstName}.`,
-          data: { matchId, withUserId: counterpart.id },
-          createdAt: matchCreatedAt,
-          updatedAt: matchCreatedAt,
-        },
-      });
-      createdNotificationCount += 1;
-    }
+    // Match notifications
+    const matchNotifCount = await createMatchNotifications(
+      prisma,
+      seedMatch,
+      matchId,
+      users,
+      matchCreatedAt,
+    );
+    createdNotificationCount += matchNotifCount;
 
+    // Messages
     for (const message of seedMatch.messages) {
       const sender = createdUsers.get(message.senderSlug);
       if (!sender) continue;
 
-      const createdAt = new Date(
+      const msgCreatedAt = new Date(
         matchCreatedAt.getTime() + message.hoursAfterMatch * 60 * 60 * 1000,
       );
       await prisma.message.create({
@@ -1852,33 +332,35 @@ async function main() {
           body: message.body,
           type: MessageType.TEXT,
           isRead: message.isRead ?? false,
-          readAt: message.isRead ? createdAt : null,
-          createdAt,
+          readAt: message.isRead ? msgCreatedAt : null,
+          createdAt: msgCreatedAt,
         },
       });
       createdMessageCount += 1;
 
-      const recipient = users.find((candidate) => candidate.id !== sender.id);
-      if (!recipient) continue;
-      await prisma.notification.create({
-        data: {
-          id: stableUuid('seed-notification', `${seedMatch.slug}-${message.slug}-message`),
-          userId: recipient.id,
-          type: 'message_received',
-          title: 'New message',
-          body: message.body,
-          data: { matchId, senderId: sender.id },
-          read: message.isRead ?? false,
-          readAt: message.isRead ? createdAt : null,
-          createdAt,
-          updatedAt: createdAt,
-        },
-      });
-      createdNotificationCount += 1;
+      // Message notification
+      const recipient = users.find((u) => u.id !== sender.id);
+      if (recipient) {
+        const msgNotifCount = await createMessageNotifications(
+          prisma,
+          seedMatch.slug,
+          message.slug,
+          matchId,
+          sender,
+          recipient,
+          message.body,
+          msgCreatedAt,
+          message.isRead ?? false,
+        );
+        createdNotificationCount += msgNotifCount;
+      }
     }
   }
 
-  for (const invite of seedEventInvites) {
+  // 8. Create event invites + messages + notifications
+  let createdInviteCount = 0;
+
+  for (const invite of allEventInvites) {
     const eventId = createdEventIds.get(invite.eventSlug);
     const matchId = createdMatchIds.get(invite.matchSlug);
     const inviter = createdUsers.get(invite.inviterSlug);
@@ -1898,6 +380,7 @@ async function main() {
         updatedAt: createdAt,
       },
     });
+
     await prisma.message.create({
       data: {
         id: stableUuid('seed-message', invite.slug),
@@ -1908,25 +391,27 @@ async function main() {
         createdAt,
       },
     });
-    await prisma.notification.create({
-      data: {
-        id: stableUuid('seed-notification', `${invite.slug}-notification`),
-        userId: invitee.id,
-        type: 'event_reminder',
-        title: 'Event invite',
-        body: `${inviter.firstName} invited you to an event.`,
-        data: { eventId, matchId, type: 'event_invite' },
-        createdAt,
-        updatedAt: createdAt,
-      },
-    });
+
+    const inviteNotifCount = await createEventInviteNotification(
+      prisma,
+      invite.slug,
+      eventId,
+      matchId,
+      inviter,
+      invitee,
+      createdAt,
+    );
+    createdNotificationCount += inviteNotifCount;
+
     createdInviteCount += 1;
     createdMessageCount += 1;
-    createdNotificationCount += 1;
   }
 
+  // 9. Print summary
   console.log(
-    `Seed finished with ${createdUsers.size} demo profiles, ${createdEventCount} events, ${createdRsvpCount} RSVPs, ${createdMatchCount} matches, ${createdMessageCount} messages, ${createdInviteCount} invites, and ${createdNotificationCount} notifications.`,
+    `Seed complete: ${createdUsers.size} users, ${createdEventCount} events, ${createdRsvpCount} RSVPs, ` +
+    `${createdMatchCount} matches, ${createdMessageCount} messages, ${createdLikeCount} likes, ${createdPassCount} passes, ` +
+    `${createdInviteCount} invites, ${createdNotificationCount} notifications`,
   );
 }
 
