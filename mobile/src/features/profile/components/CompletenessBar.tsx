@@ -11,15 +11,27 @@ const TEXT_MUTED = '#8C8279';
 const SUCCESS = '#8BAA7A';
 
 interface CompletenessBarProps {
+  earned: number;
   score: number;
   missing: ProfileCompletenessMissingItem[];
+  total: number;
   onPressMissing: (item: ProfileCompletenessMissingItem) => void;
 }
 
-export function CompletenessBar({ score, missing, onPressMissing }: CompletenessBarProps) {
-  if (score >= 80) return null;
+export function CompletenessBar({
+  earned,
+  score,
+  missing,
+  total,
+  onPressMissing,
+}: CompletenessBarProps) {
+  if (missing.length === 0) return null;
 
-  const barColor = score >= 60 ? SUCCESS : PRIMARY;
+  const clampedScore = Math.min(score, 100);
+  const barColor = clampedScore >= 60 ? SUCCESS : PRIMARY;
+  const remainingCount = missing.length;
+  const stepLabel = remainingCount === 1 ? '1 step left to finish' : `${remainingCount} steps left to finish`;
+  const progressLabel = total > 0 ? `${earned} of ${total} profile details complete` : `${clampedScore}% complete`;
 
   return (
     <View
@@ -30,37 +42,44 @@ export function CompletenessBar({ score, missing, onPressMissing }: Completeness
       accessibilityValue={{
         min: 0,
         max: 100,
-        now: Math.min(score, 100),
-        text: `${Math.min(score, 100)}% complete`,
+        now: clampedScore,
+        text: `${clampedScore}% complete`,
       }}
     >
       <Card style={styles.card}>
         <View style={styles.header}>
-          <Text style={styles.title}>Complete your profile</Text>
-          <Text style={styles.percentage}>{score}%</Text>
+          <View style={styles.headerCopy}>
+            <Text style={styles.title}>Complete your profile</Text>
+            <Text style={styles.subtitle}>{stepLabel}</Text>
+          </View>
+          <Text style={styles.percentage}>{clampedScore}%</Text>
         </View>
 
         <View style={styles.trackOuter}>
           <View
-            style={[styles.trackFill, { width: `${Math.min(score, 100)}%`, backgroundColor: barColor }]}
+            style={[styles.trackFill, { width: `${clampedScore}%`, backgroundColor: barColor }]}
           />
         </View>
 
-        {missing.length > 0 ? (
-          <View style={styles.chips}>
-            {missing.map((item) => (
-              <Pressable
-                key={item.field}
-                style={styles.chip}
-                onPress={() => onPressMissing(item)}
-                accessibilityRole="button"
-                accessibilityLabel={item.label}
-              >
-                <Text style={styles.chipText}>{item.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
+        <Text style={styles.progressLabel}>{progressLabel}</Text>
+
+        <View style={styles.checklist}>
+          {missing.map((item) => (
+            <Pressable
+              key={item.field}
+              style={styles.checklistRow}
+              onPress={() => onPressMissing(item)}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              accessibilityHint="Opens profile editing so you can complete this step"
+            >
+              <View style={styles.checklistBadge}>
+                <View style={styles.checklistBadgeDot} />
+              </View>
+              <Text style={styles.checklistText}>{item.label}</Text>
+            </Pressable>
+          ))}
+        </View>
       </Card>
     </View>
   );
@@ -89,12 +108,21 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  headerCopy: {
+    flex: 1,
+    gap: spacing.xs,
   },
   title: {
     fontSize: typography.bodySmall,
     fontWeight: '800',
     color: TEXT_PRIMARY,
+  },
+  subtitle: {
+    fontSize: typography.caption,
+    color: TEXT_SECONDARY,
   },
   percentage: {
     fontSize: typography.bodySmall,
@@ -111,19 +139,38 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: radii.pill,
   },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: spacing.xs,
+  progressLabel: {
+    fontSize: typography.caption,
+    color: TEXT_MUTED,
   },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: radii.pill,
+  checklist: {
+    gap: spacing.sm,
+  },
+  checklistRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
     backgroundColor: 'rgba(196,168,130,0.10)',
   },
-  chipText: {
+  checklistBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(196,168,130,0.16)',
+  },
+  checklistBadgeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: radii.pill,
+    backgroundColor: PRIMARY,
+  },
+  checklistText: {
+    flex: 1,
     fontSize: 13,
     fontWeight: '700',
     color: TEXT_SECONDARY,

@@ -24,8 +24,10 @@ import {
 import { ProfileSettingsSection } from './ProfileSettingsSection';
 
 export function ProfileScreenContent({
+  completenessEarned,
   completenessScore,
   completenessMissing,
+  completenessTotal,
   deletingAccount,
   editingPhotos,
   bio,
@@ -73,8 +75,10 @@ export function ProfileScreenContent({
   showBuildInfo,
   weeklyFrequencyBand,
 }: {
+  completenessEarned: number;
   completenessScore: number;
   completenessMissing: ProfileCompletenessMissingItem[];
+  completenessTotal: number;
   deletingAccount: boolean;
   editingPhotos: boolean;
   bio: string;
@@ -152,8 +156,10 @@ export function ProfileScreenContent({
         <ProfileHero profile={profile} primaryGoal={primaryGoal} />
 
         <ProfileCompletenessSection
+          completenessEarned={completenessEarned}
           completenessScore={completenessScore}
           completenessMissing={completenessMissing}
+          completenessTotal={completenessTotal}
           editMode={editMode}
           onSave={onSave}
         />

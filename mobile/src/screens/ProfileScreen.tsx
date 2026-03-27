@@ -35,7 +35,12 @@ export default function ProfileScreen({ navigation }: MainTabScreenProps<'You'>)
     isDeletingPhoto,
   } = useProfile();
   const [deletingAccount, setDeletingAccount] = useState(false);
-  const { score: completenessScore, missing: completenessMissing } = useProfileCompleteness();
+  const {
+    earned: completenessEarned,
+    score: completenessScore,
+    missing: completenessMissing,
+    total: completenessTotal,
+  } = useProfileCompleteness();
   const knownLocationSuggestions = useKnownLocationSuggestions();
   const editor = useProfileEditor({
     profile,
@@ -91,8 +96,10 @@ export default function ProfileScreen({ navigation }: MainTabScreenProps<'You'>)
 
   return (
     <ProfileScreenContent
+      completenessEarned={completenessEarned}
       completenessScore={completenessScore}
       completenessMissing={completenessMissing}
+      completenessTotal={completenessTotal}
       deletingAccount={deletingAccount}
       editingPhotos={photos.isEditingPhotos || isUploadingPhoto || isUpdatingPhoto || isDeletingPhoto}
       bio={editor.bio}

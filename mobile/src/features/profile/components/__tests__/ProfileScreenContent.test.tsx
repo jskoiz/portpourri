@@ -89,8 +89,10 @@ function renderContent(overrides: Partial<React.ComponentProps<typeof ProfileScr
 
     return (
       <ProfileScreenContent
+        completenessEarned={8}
         completenessScore={100}
         completenessMissing={[]}
+        completenessTotal={8}
         deletingAccount={false}
         editingPhotos={false}
         bio="Training for the next sunrise session."

@@ -18,7 +18,7 @@ describe('CompletenessBar', () => {
 
   it('renders at 0% with all missing items', () => {
     const { getByTestId, getByText } = render(
-      <CompletenessBar score={0} missing={MISSING_ITEMS} onPressMissing={onPressMissing} />,
+      <CompletenessBar earned={0} score={0} missing={MISSING_ITEMS} total={8} onPressMissing={onPressMissing} />,
     );
 
     expect(getByTestId('completeness-bar')).toBeTruthy();
@@ -31,6 +31,8 @@ describe('CompletenessBar', () => {
     });
     expect(getByText('0%')).toBeTruthy();
     expect(getByText('Complete your profile')).toBeTruthy();
+    expect(getByText('3 steps left to finish')).toBeTruthy();
+    expect(getByText('0 of 8 profile details complete')).toBeTruthy();
     expect(getByText('Add a bio')).toBeTruthy();
     expect(getByText('Add more photos')).toBeTruthy();
     expect(getByText('Set your city')).toBeTruthy();
@@ -38,16 +40,27 @@ describe('CompletenessBar', () => {
 
   it('renders at 50% with some missing items', () => {
     const { getByText } = render(
-      <CompletenessBar score={50} missing={[MISSING_ITEMS[0]]} onPressMissing={onPressMissing} />,
+      <CompletenessBar earned={4} score={50} missing={[MISSING_ITEMS[0]]} total={8} onPressMissing={onPressMissing} />,
     );
 
     expect(getByText('50%')).toBeTruthy();
+    expect(getByText('1 step left to finish')).toBeTruthy();
     expect(getByText('Add a bio')).toBeTruthy();
   });
 
-  it('does not render when score >= 80%', () => {
+  it('keeps rendering when the profile is still incomplete above 80%', () => {
+    const { getByText } = render(
+      <CompletenessBar earned={7} score={88} missing={[MISSING_ITEMS[0]]} total={8} onPressMissing={onPressMissing} />,
+    );
+
+    expect(getByText('88%')).toBeTruthy();
+    expect(getByText('7 of 8 profile details complete')).toBeTruthy();
+    expect(getByText('1 step left to finish')).toBeTruthy();
+  });
+
+  it('does not render when there are no missing steps', () => {
     const { queryByTestId } = render(
-      <CompletenessBar score={80} missing={[]} onPressMissing={onPressMissing} />,
+      <CompletenessBar earned={8} score={80} missing={[]} total={8} onPressMissing={onPressMissing} />,
     );
 
     expect(queryByTestId('completeness-bar')).toBeNull();
@@ -55,15 +68,15 @@ describe('CompletenessBar', () => {
 
   it('does not render at 100%', () => {
     const { queryByTestId } = render(
-      <CompletenessBar score={100} missing={[]} onPressMissing={onPressMissing} />,
+      <CompletenessBar earned={8} score={100} missing={[]} total={8} onPressMissing={onPressMissing} />,
     );
 
     expect(queryByTestId('completeness-bar')).toBeNull();
   });
 
-  it('calls onPressMissing when a chip is tapped', () => {
+  it('calls onPressMissing when a checklist row is tapped', () => {
     const { getByText } = render(
-      <CompletenessBar score={50} missing={MISSING_ITEMS} onPressMissing={onPressMissing} />,
+      <CompletenessBar earned={4} score={50} missing={MISSING_ITEMS} total={8} onPressMissing={onPressMissing} />,
     );
 
     fireEvent.press(getByText('Add a bio'));

@@ -1,23 +1,32 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
+import type { ProfileCompletenessMissingItem } from '../api/types';
 import { createLocationSuggestion } from '../features/locations/locationSuggestions';
 import { ProfileScreenContent } from '../features/profile/components/ProfileScreenContent';
 import type { PhotoOperationState } from '../features/profile/hooks/usePhotoManager';
 import { LOW_CONTRAST_HERO_PHOTO, makeUser, makeUserPhoto, withStoryScreenFrame } from './support';
 
 function ProfileScreenContentStory({
+  completenessEarned = 8,
+  completenessMissing = [],
   editMode = false,
   errorMessage = null,
   isSaving = false,
   lowContrastHero = false,
   photoOperation = null,
   showBuildInfo = false,
+  completenessScore = 100,
+  completenessTotal = 8,
 }: {
+  completenessEarned?: number;
+  completenessMissing?: ProfileCompletenessMissingItem[];
   editMode?: boolean;
   errorMessage?: string | null;
   isSaving?: boolean;
   lowContrastHero?: boolean;
   photoOperation?: PhotoOperationState;
   showBuildInfo?: boolean;
+  completenessScore?: number;
+  completenessTotal?: number;
 }) {
   const profile = makeUser({
     firstName: 'Lana',
@@ -38,8 +47,10 @@ function ProfileScreenContentStory({
 
   return (
     <ProfileScreenContent
-      completenessScore={80}
-      completenessMissing={[]}
+      completenessEarned={completenessEarned}
+      completenessScore={completenessScore}
+      completenessMissing={completenessMissing}
+      completenessTotal={completenessTotal}
       deletingAccount={false}
       editingPhotos={Boolean(photoOperation)}
       bio={profile.profile?.bio ?? ''}
@@ -103,7 +114,21 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+const INCOMPLETE_CHECKLIST_MISSING: ProfileCompletenessMissingItem[] = [
+  { field: 'photos', label: 'Add more photos', route: 'EditPhotos' },
+  { field: 'availability', label: 'Set your availability', route: 'EditFitness' },
+];
+
 export const Default: Story = {};
+
+export const IncompleteChecklist: Story = {
+  args: {
+    completenessEarned: 6,
+    completenessScore: 75,
+    completenessTotal: 8,
+    completenessMissing: INCOMPLETE_CHECKLIST_MISSING,
+  },
+};
 
 export const EditMode: Story = {
   args: {
