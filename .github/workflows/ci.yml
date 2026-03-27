@@ -74,7 +74,7 @@ jobs:
       - run: npm ci
         working-directory: symphony
       - run: |
-          git fetch origin main --depth=1
+          git fetch origin main
           node ./scripts/run-harness-lane.mjs --lane pr-fast --artifacts-dir artifacts/harness/pr-fast --base origin/main --head HEAD
       - uses: actions/upload-artifact@v4
         if: always()
