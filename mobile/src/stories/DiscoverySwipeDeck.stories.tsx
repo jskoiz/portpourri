@@ -147,7 +147,7 @@ export const DiscoveryScreenPreview: Story = {
           feedCount={17}
           filterCount={1}
           greeting="Evening, Lana"
-          intentOption={{ label: 'Open to both', color: '#8BAA7A' }}
+          intentOption={{ label: '2 intents', color: '#8BAA7A' }}
           onPressNotifications={() => undefined}
           unreadCount={4}
         />

@@ -8,7 +8,7 @@ import { Screen, ScreenScaffold, StatePanel } from '../design/primitives';
 import { useDiscoveryActions } from '../features/discovery/hooks/useDiscoveryActions';
 import { useMatches } from '../features/matches/hooks/useMatches';
 import { useSheetController } from '../design/sheets/useSheetController';
-import { parseFavoriteActivities } from '../lib/profile-helpers';
+import { getIntentLabels, parseFavoriteActivities } from '../lib/profile-helpers';
 import { getPrimaryPhotoUri } from '../lib/profilePhotos';
 import { ReportSheet } from '../features/moderation/components/ReportSheet';
 import { useBlock } from '../features/moderation/hooks/useBlock';
@@ -54,13 +54,8 @@ export default function ProfileDetailScreen({
     user.fitnessProfile?.favoriteActivities,
   );
 
-  const intentFlags = [
-    user.profile?.intentDating ? 'Dating' : null,
-    user.profile?.intentWorkout ? 'Training partner' : null,
-    user.profile?.intentFriends ? 'Friends' : null,
-  ].filter(Boolean);
-
-  const intentDisplay = intentFlags.length > 0 ? intentFlags.join(' + ') : null;
+  const intentLabels = getIntentLabels(user);
+  const intentDisplay = intentLabels.length > 0 ? intentLabels.join(' · ') : null;
   const isBusy = submitting || isBlocking;
   const structuredRows: ProfileDetailRow[] = [
     {

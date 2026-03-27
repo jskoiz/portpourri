@@ -21,8 +21,7 @@ import {
   countActiveFilters,
   FilterModalState,
   getGreeting,
-  getUserIntent,
-  INTENT_OPTIONS,
+  getIntentOption,
   type QuickFilterKey,
 } from '../features/discovery/components/discoveryFilters';
 
@@ -69,7 +68,7 @@ export default function HomeScreen({ navigation }: MainTabScreenProps<'Discover'
     }
   }, [isAuthLoaded, navigation, user]);
 
-  const intentOption = INTENT_OPTIONS.find((option) => option.value === getUserIntent(user)) || INTENT_OPTIONS[2];
+  const intentOption = getIntentOption(user);
   const activeFilterCount = countActiveFilters(currentFilters, appliedFilterState);
 
   if (isLoading) {

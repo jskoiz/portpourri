@@ -149,7 +149,7 @@ describe('ProfileDetailScreen', () => {
 
     render(<ProfileDetailScreen navigation={mockNavigation} route={friendsRoute as any} />);
 
-    const matches = await screen.findAllByText('Dating + Training partner + Friends');
+    const matches = await screen.findAllByText('Dating · Training · Friends');
     expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 

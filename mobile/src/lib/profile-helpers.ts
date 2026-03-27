@@ -51,11 +51,22 @@ export function getProfileChips(user: Pick<User, 'fitnessProfile'> | null | unde
   return chips.slice(0, 2);
 }
 
+export function getIntentLabels(user: Pick<User, 'profile'> | null | undefined): string[] {
+  const labels: string[] = [];
+
+  if (user?.profile?.intentDating) labels.push('Dating');
+  if (user?.profile?.intentWorkout) labels.push('Training');
+  if (user?.profile?.intentFriends) labels.push('Friends');
+
+  return labels;
+}
+
 export function getIntentLabel(user: Pick<User, 'profile'> | null | undefined): string {
-  if (user?.profile?.intentDating && user?.profile?.intentWorkout) return 'Open to both';
-  if (user?.profile?.intentDating) return 'Dating';
-  if (user?.profile?.intentWorkout) return 'Training';
-  return 'Open to both';
+  const labels = getIntentLabels(user);
+
+  if (labels.length === 0) return 'Intent not set';
+  if (labels.length === 1) return labels[0];
+  return `${labels.length} intents`;
 }
 
 export function getPresenceLabel(user: Pick<User, 'profile'> | null | undefined): string {

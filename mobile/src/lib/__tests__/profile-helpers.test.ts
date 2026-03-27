@@ -2,6 +2,7 @@ import {
   formatProfileLabel,
   getActivityTag,
   getIntentLabel,
+  getIntentLabels,
   getPresenceLabel,
   getProfileChips,
   getTempoLabel,
@@ -50,8 +51,17 @@ describe('profile-helpers', () => {
   });
 
   it('derives intent and presence labels from the profile payload', () => {
-    expect(getIntentLabel({ profile: { intentDating: true, intentWorkout: true } })).toBe('Open to both');
+    expect(getIntentLabel({ profile: { intentDating: true, intentWorkout: true } })).toBe('2 intents');
     expect(getIntentLabel({ profile: { intentDating: false, intentWorkout: true } })).toBe('Training');
+    expect(getIntentLabel({ profile: { intentDating: false, intentWorkout: false, intentFriends: true } })).toBe('Friends');
+    expect(getIntentLabel({ profile: { intentDating: true, intentWorkout: false, intentFriends: true } })).toBe('2 intents');
+    expect(getIntentLabel({ profile: { intentDating: true, intentWorkout: true, intentFriends: true } })).toBe('3 intents');
+    expect(getIntentLabel({ profile: {} })).toBe('Intent not set');
+    expect(getIntentLabels({ profile: { intentDating: true, intentWorkout: true, intentFriends: true } })).toEqual([
+      'Dating',
+      'Training',
+      'Friends',
+    ]);
     expect(getPresenceLabel({ profile: { city: 'Honolulu' } })).toBe('Available tonight');
     expect(getPresenceLabel({ profile: {} })).toBe('Nearby now');
   });

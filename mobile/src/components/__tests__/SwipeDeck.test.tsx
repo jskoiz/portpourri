@@ -195,6 +195,24 @@ describe('SwipeDeck', () => {
     expect(getByText('Training')).toBeTruthy();
   });
 
+  it('shows a friends badge when discovery intent is friends-only', () => {
+    const user = {
+      id: 'u6b',
+      firstName: 'Skye',
+      profile: {
+        intentDating: false,
+        intentWorkout: false,
+        intentFriends: true,
+      },
+    };
+
+    const { getByText } = render(
+      <SwipeDeck data={[user]} onSwipeLeft={noop} onSwipeRight={noop} />,
+    );
+
+    expect(getByText('Friends')).toBeTruthy();
+  });
+
   it('shows zero distance instead of hiding it', () => {
     const user = {
       id: 'u7',

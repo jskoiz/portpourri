@@ -59,7 +59,7 @@ function HomeScreenContentStory({
       filterState={filterState}
       feed={feed}
       greeting="Evening, Lana"
-      intentOption={{ color: lightTheme.accentPrimary, label: 'Open to both' }}
+      intentOption={{ color: lightTheme.accentPrimary, label: '2 intents' }}
       onApplyFilters={() => undefined}
       onMatchAnimationFinish={() => undefined}
       onOpenFilters={() => undefined}

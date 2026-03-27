@@ -39,7 +39,7 @@ function ProfileDetailHeroStory() {
       age={user.age}
       city={user.profile?.city}
       firstName={user.firstName}
-      intentDisplay="Dating + Training partner + Friends"
+      intentDisplay="Dating · Training · Friends"
       onBack={() => undefined}
       onBlock={() => undefined}
       onReport={() => undefined}
@@ -57,7 +57,7 @@ function ProfileDetailInfoStory() {
       structuredRows={[
         { label: 'Pace', value: 'moderate' },
         { label: 'Prefers', value: 'Trail Runs / Coffee Walks' },
-        { label: 'Intent', value: 'Dating + Training partner' },
+        { label: 'Intent', value: 'Dating · Training' },
       ]}
       weeklyFrequencyBand="4-5"
     />

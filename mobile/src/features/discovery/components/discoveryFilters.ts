@@ -51,6 +51,15 @@ export const QUICK_FILTERS: Array<{
   { id: 'evening', label: 'Evening', availability: ['evening'] },
 ];
 
+const INTENT_BADGE_COLORS = {
+  dating: '#D4A59A',
+  friends: '#8BAA7A',
+  multiple: '#8BAA7A',
+  open: '#8BAA7A',
+  training: '#B8A9C4',
+  unset: '#A89D90',
+} as const;
+
 export function getGreeting(name?: string) {
   const hour = new Date().getHours();
   const timeWord = hour < 12 ? 'Morning' : hour < 17 ? 'Afternoon' : 'Evening';
@@ -83,6 +92,35 @@ export function getUserIntent(user?: User | null): SessionIntent {
   if (user?.profile?.intentDating) return 'dating';
   if (user?.profile?.intentWorkout) return 'workout';
   return 'both';
+}
+
+export function getIntentOption(user?: User | null) {
+  const hasDating = Boolean(user?.profile?.intentDating);
+  const hasWorkout = Boolean(user?.profile?.intentWorkout);
+  const hasFriends = Boolean(user?.profile?.intentFriends);
+  const selectedCount = [hasDating, hasWorkout, hasFriends].filter(Boolean).length;
+
+  if (selectedCount === 0) {
+    return { color: INTENT_BADGE_COLORS.unset, label: 'Intent not set' };
+  }
+
+  if (selectedCount === 3) {
+    return { color: INTENT_BADGE_COLORS.open, label: '3 intents' };
+  }
+
+  if (selectedCount > 1) {
+    return { color: INTENT_BADGE_COLORS.multiple, label: '2 intents' };
+  }
+
+  if (hasDating) {
+    return { color: INTENT_BADGE_COLORS.dating, label: 'Dating' };
+  }
+
+  if (hasWorkout) {
+    return { color: INTENT_BADGE_COLORS.training, label: 'Training' };
+  }
+
+  return { color: INTENT_BADGE_COLORS.friends, label: 'Friends' };
 }
 
 export function buildDiscoveryFilters(
