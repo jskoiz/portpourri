@@ -52,6 +52,16 @@ export const SmallPhonePreview: Story = {
   },
 };
 
+export const ConstrainedHeightPreview: Story = {
+  args: {
+    cardHeight: 320,
+    data: mockProfiles,
+    onPress: () => undefined,
+    onSwipeLeft: () => undefined,
+    onSwipeRight: () => undefined,
+  },
+};
+
 export const ZeroDistancePreview: Story = {
   args: {
     cardHeight: 620,

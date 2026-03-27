@@ -8,7 +8,7 @@ import { getPrimaryPhotoUri } from '../../lib/profilePhotos';
 import type { SwipeDeckUser } from './swipeDeck.types';
 
 const DEFAULT_CARD_HEIGHT = 520;
-const MIN_CARD_HEIGHT = 360;
+const MIN_CARD_HEIGHT = 300;
 const MAX_CARD_HEIGHT = 680;
 const DEFAULT_BIO =
   'Aligned on rhythm, intent, and the kind of plans that actually happen.';

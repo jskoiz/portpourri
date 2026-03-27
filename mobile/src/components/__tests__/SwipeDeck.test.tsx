@@ -338,7 +338,7 @@ describe('swipe deck presentation helpers', () => {
   it('clamps card height to allowed range with a sane default', () => {
     expect(clampCardHeight()).toBe(520);
     expect(clampCardHeight(Number.NaN)).toBe(520);
-    expect(clampCardHeight(100)).toBe(360);
+    expect(clampCardHeight(100)).toBe(300);
     expect(clampCardHeight(900)).toBe(680);
   });
 

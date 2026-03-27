@@ -195,4 +195,18 @@ describe('HomeScreen', () => {
       expect(screen.getByText('Swipe deck 440')).toBeTruthy();
     });
   });
+
+  it('allows compact deck heights on shorter screens without forcing the old floor', async () => {
+    render(<HomeScreen navigation={navigation} route={route} />);
+
+    expect(await screen.findByText('Swipe deck 520')).toBeTruthy();
+
+    fireEvent(screen.getByTestId('discovery-deck-area'), 'layout', {
+      nativeEvent: { layout: { height: 322 } },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Swipe deck 320')).toBeTruthy();
+    });
+  });
 });
