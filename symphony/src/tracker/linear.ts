@@ -300,7 +300,7 @@ export class LinearTracker {
   async getWorkpadComment(issueId: string): Promise<{ id: string; body: string } | null> {
     const data = await this.query<CommentsQueryPayload>(
       `
-        query SymphonyIssueComments($issueId: String!) {
+        query SymphonyIssueComments($issueId: ID!) {
           comments(first: 50, filter: { issue: { id: { eq: $issueId } } }) {
             nodes {
               id
