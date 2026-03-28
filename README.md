@@ -69,12 +69,6 @@ NodeWatcher builds a snapshot of local listening processes in a pipeline:
 
 This is why NodeWatcher says "3000 is blocked by Docker" or "8081 is owned by the Expo app in `~/projects/mobile`" instead of just "PID 12345 is using port 3000."
 
-Expand the process list to see every Node process grouped by tool, with memory usage and bulk actions:
-
-<p align="center">
-  <img src=".github/images/process-list.png" width="520" alt="NodeWatcher process list showing grouped Node processes with memory usage">
-</p>
-
 ## CLI
 
 ```bash
