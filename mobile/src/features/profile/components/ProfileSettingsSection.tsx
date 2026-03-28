@@ -6,6 +6,10 @@ import { Card, SectionBlock } from '../../../design/primitives';
 import { useTheme } from '../../../theme/useTheme';
 import { profileStyles as styles } from './profile.styles';
 
+function formatGitReference(value: string) {
+  return /^[0-9a-f]{7,40}$/i.test(value) ? value.slice(0, 7) : value;
+}
+
 function SettingsRow({
   accessory = '›',
   icon,
@@ -91,18 +95,19 @@ function BuildInfoRow({ label, value }: { label: string; value: string }) {
 function BuildProvenancePanel() {
   const resolvedBuildInfo = useResolvedBuildDisplayInfo();
   const buildRows = [
-    { label: 'App env', value: resolvedBuildInfo.appEnv },
     { label: 'Version', value: `${resolvedBuildInfo.version} (${resolvedBuildInfo.iosBuildNumber})` },
-    { label: 'Binary branch', value: resolvedBuildInfo.binaryBranch },
-    { label: 'Binary git SHA', value: resolvedBuildInfo.binaryGitSha },
+    { label: 'App env', value: resolvedBuildInfo.appEnv },
     { label: 'API URL', value: resolvedBuildInfo.apiBaseUrl || 'not set' },
-    { label: 'Binary built at', value: resolvedBuildInfo.binaryBuiltAt },
-    { label: 'Binary release path', value: resolvedBuildInfo.binaryReleasePath },
-    ...(buildInfo.releaseMode === 'runtime'
+    ...(resolvedBuildInfo.binaryGitSha !== 'unknown'
+      ? [{ label: 'Shipped commit', value: formatGitReference(resolvedBuildInfo.binaryGitSha) }]
+      : []),
+    ...(resolvedBuildInfo.binaryBuiltAt !== 'unknown'
+      ? [{ label: 'Shipped at', value: resolvedBuildInfo.binaryBuiltAt }]
+      : []),
+    ...(buildInfo.releaseMode === 'runtime' && buildInfo.gitSha !== 'unknown'
       ? [
-          { label: 'Bundle git SHA', value: buildInfo.gitSha },
+          { label: 'Current bundle', value: formatGitReference(buildInfo.gitSha) },
           { label: 'Bundle built at', value: buildInfo.buildDate },
-          { label: 'Bundle release path', value: buildInfo.releaseMode },
         ]
       : []),
   ];

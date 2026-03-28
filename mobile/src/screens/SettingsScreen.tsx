@@ -33,6 +33,10 @@ import {
 } from '../features/profile/components/profile.helpers';
 import type { RootStackScreenProps } from '../core/navigation/types';
 
+function formatGitReference(value: string) {
+  return /^[0-9a-f]{7,40}$/i.test(value) ? value.slice(0, 7) : value;
+}
+
 export default function SettingsScreen({
   navigation,
 }: RootStackScreenProps<'Settings'>) {
@@ -52,6 +56,36 @@ export default function SettingsScreen({
     updateFitness: async () => {},
     updateProfile,
   });
+  const buildRows = [
+    {
+      label: 'Version',
+      value: `${resolvedBuildInfo.version} (${resolvedBuildInfo.iosBuildNumber})`,
+    },
+    { label: 'App env', value: resolvedBuildInfo.appEnv },
+    { label: 'API URL', value: resolvedBuildInfo.apiBaseUrl || 'not set' },
+    { label: 'Update source', value: otaInfo.launchSourceLabel },
+    ...(otaInfo.channel ? [{ label: 'Channel', value: otaInfo.channel }] : []),
+    ...(otaInfo.runtimeVersion
+      ? [{ label: 'Runtime', value: otaInfo.runtimeVersion }]
+      : []),
+    ...(otaInfo.updateId ? [{ label: 'Update ID', value: otaInfo.updateId }] : []),
+    { label: 'Update published', value: otaInfo.publishedSummary },
+    ...(otaInfo.launchSource === 'downloaded'
+      ? [{ label: 'Update received', value: otaInfo.firstSeenSummary }]
+      : []),
+    ...(resolvedBuildInfo.binaryGitSha !== 'unknown'
+      ? [{ label: 'Shipped commit', value: formatGitReference(resolvedBuildInfo.binaryGitSha) }]
+      : []),
+    ...(resolvedBuildInfo.binaryBuiltAt !== 'unknown'
+      ? [{ label: 'Shipped at', value: resolvedBuildInfo.binaryBuiltAt }]
+      : []),
+    ...(otaInfo.launchSource === 'downloaded' &&
+    buildInfo.gitSha !== 'unknown' &&
+    (resolvedBuildInfo.binaryGitSha === 'unknown' ||
+      resolvedBuildInfo.binaryGitSha !== buildInfo.gitSha)
+      ? [{ label: 'Current bundle', value: formatGitReference(buildInfo.gitSha) }]
+      : []),
+  ];
 
   useEffect(() => {
     loadHapticsPreference().then(setHapticsOn).catch(() => {});
@@ -201,32 +235,7 @@ export default function SettingsScreen({
           </TouchableOpacity>
           {showBuildInfo ? (
             <Card style={[styles.card, { backgroundColor: theme.surfaceElevated }]}>
-              {[
-                { label: 'Update source', value: otaInfo.launchSourceLabel },
-                { label: 'Update ID', value: otaInfo.updateId ?? 'unavailable' },
-                { label: 'Update channel', value: otaInfo.channel ?? 'unavailable' },
-                { label: 'Runtime version', value: otaInfo.runtimeVersion ?? 'unavailable' },
-                { label: 'Update published', value: otaInfo.publishedSummary },
-                { label: 'Update received', value: otaInfo.firstSeenSummary },
-                { label: 'App env', value: resolvedBuildInfo.appEnv },
-                {
-                  label: 'Version',
-                  value: `${resolvedBuildInfo.version} (${resolvedBuildInfo.iosBuildNumber})`,
-                },
-                { label: 'Binary branch', value: resolvedBuildInfo.binaryBranch },
-                { label: 'Binary git SHA', value: resolvedBuildInfo.binaryGitSha },
-                { label: 'Binary built at', value: resolvedBuildInfo.binaryBuiltAt },
-                { label: 'Binary release path', value: resolvedBuildInfo.binaryReleasePath },
-                { label: 'API URL', value: resolvedBuildInfo.apiBaseUrl || 'not set' },
-                ...(otaInfo.launchSource === 'downloaded'
-                  ? [
-                      { label: 'Bundle branch', value: buildInfo.gitBranch },
-                      { label: 'Bundle git SHA', value: buildInfo.gitSha },
-                      { label: 'Bundle built at', value: buildInfo.buildDate },
-                      { label: 'Bundle release path', value: buildInfo.releaseMode },
-                    ]
-                  : []),
-              ].map((row, index, arr) => (
+              {buildRows.map((row, index, arr) => (
                 <React.Fragment key={row.label}>
                   <View style={styles.buildRow}>
                     <Text style={[styles.buildLabel, { color: theme.textMuted }]}>{row.label}</Text>
