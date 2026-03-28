@@ -6,11 +6,12 @@ export function useGoogleAuth() {
   const [isLoading, setIsLoading] = useState(false);
 
   const [request, , promptAsync] = Google.useIdTokenAuthRequest({
+    iosClientId: env.googleClientId ?? undefined,
     clientId: env.googleClientId ?? undefined,
   });
 
   const signIn = useCallback(async (): Promise<string | null> => {
-    if (!env.googleClientId) {
+    if (!env.googleClientId || !promptAsync) {
       return null;
     }
 
