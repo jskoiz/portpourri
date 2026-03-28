@@ -1,16 +1,7 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { ScrollView } from 'react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { createScreenNavigation, createScreenRoute } from '../../lib/testing/screenProps';
-import CreateScreen, { buildStartDate } from '../CreateScreen';
-import { getFloatingTabBarReservedHeight } from '../../design/layout/tabBarLayout';
-import {
-  formatPlanDetailsSummary,
-  getPlanDetailsActionLabel,
-  getPlanDetailsHint,
-  formatTimingSummary,
-} from '../../features/events/create/create.helpers';
-import { screenLayout } from '../../design/primitives';
+import CreateScreen from '../CreateScreen';
 
 const mockCreateEvent = jest.fn();
 const mockReset = jest.fn();
@@ -24,8 +15,22 @@ jest.mock('../../features/events/hooks/useCreateEvent', () => ({
   }),
 }));
 
+jest.mock('../../features/events/hooks/useInviteToEvent', () => ({
+  useInviteToEvent: () => ({
+    invite: jest.fn().mockResolvedValue({}),
+    isInviting: false,
+  }),
+}));
+
 jest.mock('../../features/locations/useKnownLocationSuggestions', () => ({
   useKnownLocationSuggestions: () => [],
+}));
+
+jest.mock('../../features/matches/hooks/useMatches', () => ({
+  useMatches: () => ({
+    matches: [],
+    isLoading: false,
+  }),
 }));
 
 jest.mock('../../components/ui/AppIcon', () => {
@@ -33,6 +38,24 @@ jest.mock('../../components/ui/AppIcon', () => {
   const { Text } = require('react-native');
 
   return () => <Text>icon</Text>;
+});
+
+jest.mock('../../components/ui/AppBackButton', () => {
+  const React = require('react');
+  const { Pressable, Text } = require('react-native');
+
+  return ({ onPress }: { onPress: () => void }) => (
+    <Pressable onPress={onPress}>
+      <Text>Back</Text>
+    </Pressable>
+  );
+});
+
+jest.mock('../../components/ui/AppBackdrop', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  return () => <View />;
 });
 
 jest.mock('../../components/form/LocationField', () => {
@@ -70,6 +93,16 @@ jest.mock('../../components/form/LocationField', () => {
   };
 });
 
+jest.mock('@react-native-community/datetimepicker', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  return {
+    __esModule: true,
+    default: () => <View testID="datetime-picker" />,
+  };
+});
+
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
   const { View } = require('react-native');
@@ -97,66 +130,45 @@ describe('CreateScreen', () => {
     });
   });
 
-  it('keeps typed event details intact through the create flow', async () => {
+  it('renders the first step with activity picker', () => {
     render(<CreateScreen navigation={navigation} route={route} />);
 
-    const noteInput = screen.getByPlaceholderText(
-      'Easy pace, bring water, no experience needed...',
-    );
-    fireEvent.changeText(noteInput, 'Bring water and meet by the tennis courts.');
-
-    expect(screen.getByDisplayValue('Bring water and meet by the tennis courts.')).toBeTruthy();
+    expect(screen.getByText('What are you doing?')).toBeTruthy();
+    expect(screen.getByText('Run')).toBeTruthy();
+    expect(screen.getByText('Yoga')).toBeTruthy();
   });
 
-  it('does not force-scroll when the note input gains focus', () => {
-    jest.useFakeTimers();
-    const scrollToEnd = jest.spyOn(ScrollView.prototype, 'scrollToEnd');
-    try {
-      render(<CreateScreen navigation={navigation} route={route} />);
-
-      act(() => {
-        fireEvent(
-          screen.getByPlaceholderText('Easy pace, bring water, no experience needed...'),
-          'focus',
-        );
-        jest.runOnlyPendingTimers();
-      });
-
-      expect(scrollToEnd).not.toHaveBeenCalled();
-    } finally {
-      scrollToEnd.mockRestore();
-      jest.useRealTimers();
-    }
-  });
-
-  it('reserves space for the floating tab bar below the form', () => {
-    render(<CreateScreen navigation={navigation} route={route} />);
-
-    const contentContainerStyle = screen.getByTestId('create-screen-scroll-view').props
-      .contentContainerStyle;
-    const scrollViewStyles = Array.isArray(contentContainerStyle)
-      ? Object.assign({}, ...contentContainerStyle)
-      : contentContainerStyle;
-
-    expect(scrollViewStyles.paddingBottom - screenLayout.screenBottomPadding).toBe(
-      getFloatingTabBarReservedHeight(0),
-    );
-  });
-
-  it('shows an inline success card after posting an activity', async () => {
+  it('advances to step 2 after selecting an activity', () => {
     render(<CreateScreen navigation={navigation} route={route} />);
 
     fireEvent.press(screen.getByText('Run'));
-    fireEvent.press(screen.getByText('Tomorrow'));
-    fireEvent.press(screen.getByText('Evening'));
-    fireEvent.changeText(screen.getByPlaceholderText('Runyon Canyon, Venice Beach...'), 'Magic Island');
+    fireEvent.press(screen.getByText('Next'));
+
+    expect(screen.getByText('When and where?')).toBeTruthy();
+  });
+
+  it('shows success card after completing the flow and posting', async () => {
+    render(<CreateScreen navigation={navigation} route={route} />);
+
+    // Step 1: Select activity
+    fireEvent.press(screen.getByText('Run'));
+    fireEvent.press(screen.getByText('Next'));
+
+    // Step 2: Location (date/time are pre-filled)
+    fireEvent.changeText(screen.getByPlaceholderText('Where are you meeting?'), 'Magic Island');
     fireEvent.press(screen.getByText('Use "Magic Island"'));
-    fireEvent.press(screen.getByText('Post Run'));
+    fireEvent.press(screen.getByText('Next'));
+
+    // Step 3: Details — advance to invite step
+    fireEvent.press(screen.getAllByText('Next')[0]);
+
+    // Step 4: Invite — post without invites
+    fireEvent.press(screen.getByText('Post without invites'));
 
     await waitFor(() => {
       expect(mockCreateEvent).toHaveBeenCalledWith(
         expect.objectContaining({
-          category: 'Run',
+          category: 'RUNNING',
           location: 'Magic Island',
           title: 'Run at Magic Island',
         }),
@@ -165,9 +177,6 @@ describe('CreateScreen', () => {
 
     expect(await screen.findByText('INVITE POSTED')).toBeTruthy();
     expect(screen.getByText('Run at Magic Island')).toBeTruthy();
-    expect(screen.getByText('View event')).toBeTruthy();
-    expect(screen.getByText('Share')).toBeTruthy();
-    expect(screen.getByText('Create another')).toBeTruthy();
 
     fireEvent.press(screen.getByText('View event'));
 
@@ -175,102 +184,26 @@ describe('CreateScreen', () => {
       expect(navigation.navigate).toHaveBeenCalledWith('EventDetail', { eventId: 'event-1' });
     });
   });
-});
 
-describe('buildStartDate', () => {
-  function mockDateToDay(dayOfWeek: number, hour = 8) {
-    // dayOfWeek: 0=Sun, 1=Mon, ..., 6=Sat
-    const fakeNow = new Date(2024, 0, 1); // Jan 1 2024 = Monday
-    // advance to the desired day of week
-    const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    fakeNow.setDate(fakeNow.getDate() + mondayOffset);
-    fakeNow.setHours(hour, 0, 0, 0);
-    jest.useFakeTimers({ now: fakeNow });
-    jest.setSystemTime(fakeNow);
-    return fakeNow;
-  }
+  it('sends the correct category enum value', async () => {
+    render(<CreateScreen navigation={navigation} route={route} />);
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
+    fireEvent.press(screen.getByText('Yoga'));
+    fireEvent.press(screen.getByText('Next'));
 
-  it('returns a Saturday when "This Weekend" is selected on a Monday morning', () => {
-    mockDateToDay(1, 8); // Monday 8am
-    const result = buildStartDate('This Weekend', 'Morning');
-    expect(result.getDay()).toBe(6); // Saturday
-  });
+    fireEvent.changeText(screen.getByPlaceholderText('Where are you meeting?'), 'Beach Park');
+    fireEvent.press(screen.getByText('Use "Beach Park"'));
+    fireEvent.press(screen.getByText('Next'));
 
-  it('returns a Sunday (not next Saturday) when "This Weekend" is selected on a Sunday morning', () => {
-    mockDateToDay(0, 8); // Sunday 8am
-    const result = buildStartDate('This Weekend', 'Morning');
-    // Should stay within the current weekend (Sunday), not jump 6 days to next Saturday
-    expect(result.getDay()).toBe(0); // Sunday
-  });
+    fireEvent.press(screen.getAllByText('Next')[0]);
+    fireEvent.press(screen.getByText('Post without invites'));
 
-  it('returns tomorrow when "Tomorrow" is selected', () => {
-    const now = mockDateToDay(1, 8); // Monday 8am
-    const result = buildStartDate('Tomorrow', 'Morning');
-    expect(result.getDate()).toBe(now.getDate() + 1);
-  });
-
-  it('returns next Monday when "Next Week" is selected midweek', () => {
-    mockDateToDay(3, 8); // Wednesday 8am
-    const result = buildStartDate('Next Week', 'Morning');
-    expect(result.getDay()).toBe(1); // Monday
-    expect(result.getDate()).toBe(8); // Jan 8 2024
-  });
-
-  it('sets morning hours to 9am', () => {
-    mockDateToDay(1, 8); // Monday 8am
-    const result = buildStartDate('Tomorrow', 'Morning');
-    expect(result.getHours()).toBe(9);
-  });
-
-  it('sets afternoon hours to 2pm', () => {
-    mockDateToDay(1, 8); // Monday 8am
-    const result = buildStartDate('Tomorrow', 'Afternoon');
-    expect(result.getHours()).toBe(14);
-  });
-
-  it('sets evening hours to 6pm', () => {
-    mockDateToDay(1, 8); // Monday 8am
-    const result = buildStartDate('Tomorrow', 'Evening');
-    expect(result.getHours()).toBe(18);
-  });
-
-  it('bumps to next day when resulting time is in the past', () => {
-    mockDateToDay(1, 20); // Monday 8pm — "Morning" on "Today" would be 9am, already past
-    const result = buildStartDate('Today', 'Morning');
-    // 9am today has passed (it's 8pm), so it should advance to Tuesday
-    expect(result.getDay()).toBe(2); // Tuesday
-    expect(result.getHours()).toBe(9);
-  });
-});
-
-describe('create timing summary copy', () => {
-  it('shows the missing day when only a time window is selected', () => {
-    expect(formatTimingSummary('', 'Afternoon')).toBe('Choose day / Afternoon');
-    expect(formatPlanDetailsSummary('', 'Afternoon', '')).toBe('Choose day / Afternoon');
-    expect(getPlanDetailsActionLabel('', 'Afternoon')).toBe('Choose day');
-    expect(getPlanDetailsHint('', 'Afternoon')).toBe('Pick a day to finish the timing.');
-  });
-
-  it('shows the missing time window when only a day is selected', () => {
-    expect(formatTimingSummary('Tomorrow', '')).toBe('Tomorrow / Choose time');
-    expect(formatPlanDetailsSummary('Tomorrow', '', 'Intermediate')).toBe(
-      'Tomorrow / Choose time · Intermediate',
-    );
-    expect(getPlanDetailsActionLabel('Tomorrow', '')).toBe('Choose time');
-    expect(getPlanDetailsHint('Tomorrow', '')).toBe('Pick a time window to finish the timing.');
-  });
-
-  it('uses a generic setup prompt before anything is selected', () => {
-    expect(getPlanDetailsActionLabel('', '')).toBe('Choose day and time');
-    expect(getPlanDetailsHint('', '')).toBe('Choose both a day and a time window before posting.');
-  });
-
-  it('falls back to edit copy once timing is complete', () => {
-    expect(getPlanDetailsActionLabel('Tomorrow', 'Afternoon')).toBe('Edit plan details');
-    expect(getPlanDetailsHint('Tomorrow', 'Afternoon')).toBeNull();
+    await waitFor(() => {
+      expect(mockCreateEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          category: 'YOGA',
+        }),
+      );
+    });
   });
 });

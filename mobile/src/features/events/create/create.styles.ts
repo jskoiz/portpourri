@@ -13,13 +13,8 @@ const TEXT_MUTED = lightTheme.textMuted;
 const ERROR = lightTheme.danger;
 
 /**
- * Shared / layout styles consumed by CreateScreenContent and re-used
- * across multiple create-flow sub-components (Details, Timing, etc.).
- *
- * Component-specific styles live in co-located files:
- *   createHeader.styles.ts
- *   createDetails.styles.ts
- *   createTiming.styles.ts
+ * Shared / layout styles consumed across the create-event flow
+ * (activity picker, success card, etc.).
  */
 export const createStyles = StyleSheet.create({
   /* ── Layout / scaffold ──────────────────────────────────── */
