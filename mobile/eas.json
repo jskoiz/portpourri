@@ -23,7 +23,8 @@
       "autoIncrement": true,
       "channel": "production",
       "env": {
-        "APP_ENV": "production"
+        "APP_ENV": "production",
+        "EXPO_PUBLIC_API_URL": "https://api.brdg.social"
       }
     }
   },
