@@ -13,12 +13,6 @@ export const myEventsStyles = StyleSheet.create({
   headerCopy: {
     flex: 1,
   },
-  eyebrow: {
-    fontSize: typography.caption,
-    fontWeight: '800',
-    letterSpacing: 2.2,
-    marginBottom: spacing.xs,
-  },
   title: {
     fontSize: typography.h1,
     fontWeight: '800',

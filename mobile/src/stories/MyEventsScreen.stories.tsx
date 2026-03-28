@@ -117,9 +117,6 @@ function MyEventsScreenStory({ mode }: { mode: ViewMode }) {
       >
         <AppBackButton onPress={() => undefined} />
         <View style={{ flex: 1 }}>
-          <Text style={{ color: theme.accentPrimary, fontSize: typography.caption, fontWeight: '800' }}>
-            EVENTS
-          </Text>
           <Text style={{ color: theme.textPrimary, fontSize: typography.h2, fontWeight: '800' }}>
             My Events
           </Text>

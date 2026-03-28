@@ -107,9 +107,6 @@ function NotificationsScreenStory({ mode }: { mode: PreviewMode }) {
       >
         <AppBackButton onPress={() => undefined} />
         <View style={{ flex: 1 }}>
-          <Text style={{ color: theme.accentPrimary, fontSize: typography.caption, fontWeight: '800' }}>
-            NOTIFICATIONS
-          </Text>
           <Text style={{ color: theme.textPrimary, fontSize: typography.h2, fontWeight: '800' }}>
             Notifications
           </Text>

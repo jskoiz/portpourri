@@ -29,14 +29,6 @@ export const homeStyles = StyleSheet.create({
   headerCopy: {
     flex: 1,
   },
-  greetingEyebrow: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    color: TEXT_MUTED,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-  },
   greeting: {
     fontSize: 24,
     fontWeight: '700',

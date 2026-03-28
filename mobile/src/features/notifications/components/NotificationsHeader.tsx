@@ -22,9 +22,6 @@ export function NotificationsHeader({
     <View style={styles.header}>
       <AppBackButton onPress={onGoBack} />
       <View style={styles.copy}>
-        <Text style={[styles.eyebrow, { color: theme.accentPrimary }]}>
-          NOTIFICATIONS
-        </Text>
         <Text
           style={[styles.title, { color: theme.textPrimary }]}
           accessibilityRole="header"
@@ -61,12 +58,6 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
-  },
-  eyebrow: {
-    fontSize: typography.caption,
-    fontWeight: '800',
-    letterSpacing: 2.2,
-    marginBottom: spacing.xs,
   },
   title: {
     fontSize: typography.h2,

@@ -127,13 +127,6 @@ export default function MatchesScreen({ navigation }: MainTabScreenProps<'Inbox'
         backgroundColor: theme.primary,
         opacity: 0.04,
       },
-      eyebrow: {
-        fontSize: 10,
-        fontWeight: '900' as const,
-        letterSpacing: 3.5,
-        color: theme.accent,
-        marginBottom: spacing.sm,
-      },
       title: {
         fontSize: 32,
         fontFamily: fontFamily.serifBold,
@@ -157,7 +150,6 @@ export default function MatchesScreen({ navigation }: MainTabScreenProps<'Inbox'
       <View style={dynamicStyles.ambientGlow} pointerEvents="none" />
 
       <View style={styles.header}>
-        <Text style={dynamicStyles.eyebrow}>MATCHES</Text>
         <Text style={dynamicStyles.title} accessibilityRole="header">Matches</Text>
         {matches.length > 0 && (
           <View style={styles.countBadge}>

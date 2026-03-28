@@ -63,7 +63,6 @@ export function MyEventsScreenContent({
         <View style={styles.header}>
           {canGoBack ? <AppBackButton onPress={onGoBack} /> : null}
           <View style={styles.headerCopy}>
-            <Text style={[styles.eyebrow, { color: theme.accentPrimary }]}>EVENTS</Text>
             <Text style={[styles.title, { color: theme.textPrimary }]}>My Events</Text>
           </View>
         </View>
