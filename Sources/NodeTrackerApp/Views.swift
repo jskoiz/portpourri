@@ -15,6 +15,7 @@ struct PopoverRootView: View {
 
     var body: some View {
         let conflicts = self.store.snapshot.watchedPorts.filter(\.isConflict)
+            .filter { !$0.ownerSummary.localizedCaseInsensitiveContains("ControlCenter") }
             .sorted(by: DisplayText.compareWatchedPorts)
         let nodeOwnedPorts = self.store.snapshot.watchedPorts
             .filter { $0.isBusy && $0.isNodeOwned && !$0.isConflict }
@@ -82,7 +83,7 @@ struct PopoverRootView: View {
             .padding(.vertical, 12)
             .animation(.easeInOut(duration: 0.2), value: self.showProcessDrawer)
         }
-        .frame(width: 340)
+        .frame(width: 330)
         .overlay(alignment: .bottomTrailing) {
             if let notice = self.store.clipboardNotice {
                 Text(notice)
@@ -243,11 +244,14 @@ private struct ProjectDashboardRow: View {
     @ObservedObject var store: NodeTrackerStore
     let project: ProjectSnapshot
     @State private var isExpanded = false
+    @State private var isHovered = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
-                self.isExpanded.toggle()
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    self.isExpanded.toggle()
+                }
             } label: {
                 HStack(alignment: .center, spacing: 6) {
                     Circle()
@@ -256,7 +260,7 @@ private struct ProjectDashboardRow: View {
 
                     Text(self.project.displayName)
                         .font(.subheadline)
-                        .fontWeight(.medium)
+                        .fontWeight(.semibold)
                         .foregroundStyle(.primary)
                         .lineLimit(1)
 
@@ -273,9 +277,11 @@ private struct ProjectDashboardRow: View {
 
                     PortBadgeRow(ports: self.project.ports)
 
-                    Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
+                    Image(systemName: "chevron.right")
                         .font(.caption2)
                         .foregroundStyle(Readability.secondaryText)
+                        .rotationEffect(.degrees(self.isExpanded ? 90 : 0))
+                        .animation(.easeInOut(duration: 0.15), value: self.isExpanded)
                 }
                 .contentShape(Rectangle())
             }
@@ -306,6 +312,15 @@ private struct ProjectDashboardRow: View {
                         .frame(width: 1)
                 }
             }
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .background(
+            RoundedRectangle(cornerRadius: 5)
+                .fill(self.isHovered ? Color.primary.opacity(0.04) : Color.clear)
+        )
+        .onHover { hovering in
+            self.isHovered = hovering
         }
     }
 }
@@ -340,9 +355,11 @@ private struct NodeProcessDrawerToggle: View {
                             : Readability.secondaryText
                     )
                 Spacer()
-                Image(systemName: self.isOpen ? "chevron.down" : "chevron.up")
+                Image(systemName: "chevron.right")
                     .font(.caption2)
                     .foregroundStyle(Readability.secondaryText)
+                    .rotationEffect(.degrees(self.isOpen ? 90 : 0))
+                    .animation(.easeInOut(duration: 0.15), value: self.isOpen)
             }
             .contentShape(Rectangle())
         }
@@ -361,30 +378,71 @@ private struct NodeProcessDrawerToggle: View {
 private struct NodeProcessGroupRow: View {
     @ObservedObject var store: NodeTrackerStore
     let group: NodeProcessGroup
+    @State private var isExpanded = false
+    @State private var isHovered = false
 
     var body: some View {
-        HStack(alignment: .center, spacing: 6) {
-            Text("\(self.group.count)\u{00D7}")
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Readability.secondaryText)
-                .frame(width: 28, alignment: .trailing)
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    self.isExpanded.toggle()
+                }
+            } label: {
+                HStack(alignment: .center, spacing: 6) {
+                    Text("\(self.group.count)\u{00D7}")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(Readability.secondaryText)
+                        .frame(width: 28, alignment: .trailing)
 
-            Text(self.group.toolLabel)
-                .font(.caption)
-                .fontWeight(.medium)
-                .lineLimit(1)
+                    Text(self.group.toolLabel)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
 
-            Spacer(minLength: 4)
+                    Spacer(minLength: 4)
 
-            Text(self.group.formattedMemory)
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Readability.secondaryText)
+                    Text(self.group.formattedMemory)
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(
+                            self.group.totalMemoryBytes > 500 * 1024 * 1024
+                                ? Palette.mutedRed
+                                : Readability.secondaryText
+                        )
 
-            InlineAccentButton("Kill all", tone: .conflict) {
-                self.store.terminateGroup(self.group)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 8))
+                        .foregroundStyle(Readability.secondaryText)
+                        .rotationEffect(.degrees(self.isExpanded ? 90 : 0))
+                        .animation(.easeInOut(duration: 0.15), value: self.isExpanded)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if self.isExpanded {
+                HStack(spacing: 8) {
+                    InlineAccentButton("Kill all", tone: .conflict) {
+                        self.store.terminateGroup(self.group)
+                    }
+
+                    InlineTextButton("Copy PIDs") {
+                        let pids = self.group.pids.map(String.init).joined(separator: ", ")
+                        self.store.copyText(pids, label: "PIDs")
+                    }
+                }
+                .padding(.top, 6)
+                .padding(.leading, 34)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
+        .padding(.horizontal, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(self.isHovered || self.isExpanded ? Color.primary.opacity(0.03) : Color.clear)
+        )
+        .onHover { hovering in
+            self.isHovered = hovering
+        }
     }
 }
 
@@ -542,7 +600,10 @@ private struct CompactHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Image(systemName: "network")
+                    .font(.caption)
+                    .foregroundStyle(Readability.secondaryText)
                 Text("NodeWatcher")
                     .font(.subheadline)
                     .fontWeight(.semibold)
@@ -580,7 +641,10 @@ private struct CompactHeader: View {
             )
         }
         if self.projectCount > 0 {
-            parts.append(Text("\(self.projectCount) running"))
+            parts.append(
+                Text("\(Image(systemName: "circle.fill"))").font(.system(size: 5)).foregroundColor(Palette.mutedGreen)
+                + Text(" \(self.projectCount) running")
+            )
         }
         let separator = Text("  \u{00B7}  ").foregroundColor(Readability.secondaryText)
         var result = Text("")
@@ -701,7 +765,7 @@ private enum Palette {
 }
 
 private enum Readability {
-    static let secondaryText = Color.primary.opacity(0.78)
+    static let secondaryText = Color(nsColor: .secondaryLabelColor)
 }
 
 private struct PortBadge: View {
@@ -793,8 +857,8 @@ private struct InlineAccentButton: View {
 private struct PopoverMaterialBackground: View {
     var body: some View {
         ZStack {
-            VisualEffectView(material: .popover, blendingMode: .behindWindow, state: .active)
-            Color.white.opacity(0.10)
+            VisualEffectView(material: .popover, blendingMode: .behindWindow, state: .active, isEmphasized: true)
+            Color(nsColor: .windowBackgroundColor).opacity(0.3)
         }
         .ignoresSafeArea()
     }
@@ -802,10 +866,7 @@ private struct PopoverMaterialBackground: View {
 
 private struct PopoverCapsuleBackground: View {
     var body: some View {
-        ZStack {
-            VisualEffectView(material: .sidebar, blendingMode: .withinWindow, state: .active)
-            Color.white.opacity(0.12)
-        }
+        VisualEffectView(material: .sidebar, blendingMode: .withinWindow, state: .active)
     }
 }
 
@@ -813,13 +874,14 @@ private struct VisualEffectView: NSViewRepresentable {
     let material: NSVisualEffectView.Material
     let blendingMode: NSVisualEffectView.BlendingMode
     let state: NSVisualEffectView.State
+    var isEmphasized: Bool = false
 
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
         view.material = self.material
         view.blendingMode = self.blendingMode
         view.state = self.state
-        view.isEmphasized = false
+        view.isEmphasized = self.isEmphasized
         return view
     }
 
@@ -827,7 +889,7 @@ private struct VisualEffectView: NSViewRepresentable {
         nsView.material = self.material
         nsView.blendingMode = self.blendingMode
         nsView.state = self.state
-        nsView.isEmphasized = false
+        nsView.isEmphasized = self.isEmphasized
     }
 }
 

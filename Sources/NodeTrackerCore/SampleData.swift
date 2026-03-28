@@ -134,12 +134,10 @@ public extension SnapshotService {
         }
 
         let sampleNodeGroups = [
-            NodeProcessGroup(toolLabel: "playwright-mcp", count: 41, totalMemoryBytes: 2987 * 1024 * 1024, pids: Array(20000..<20041)),
-            NodeProcessGroup(toolLabel: "mcp-server", count: 40, totalMemoryBytes: 3000 * 1024 * 1024, pids: Array(21000..<21040)),
-            NodeProcessGroup(toolLabel: "node", count: 11, totalMemoryBytes: 362 * 1024 * 1024, pids: Array(22000..<22011)),
-            NodeProcessGroup(toolLabel: "serve", count: 4, totalMemoryBytes: 137 * 1024 * 1024, pids: Array(23000..<23004)),
-            NodeProcessGroup(toolLabel: "expo start", count: 3, totalMemoryBytes: 94 * 1024 * 1024, pids: Array(24000..<24003)),
-            NodeProcessGroup(toolLabel: "nest", count: 2, totalMemoryBytes: 88 * 1024 * 1024, pids: Array(25000..<25002)),
+            NodeProcessGroup(toolLabel: "node", count: 14, totalMemoryBytes: 481 * 1024 * 1024, pids: Array(22000..<22014)),
+            NodeProcessGroup(toolLabel: "npm", count: 9, totalMemoryBytes: 172 * 1024 * 1024, pids: Array(23000..<23009)),
+            NodeProcessGroup(toolLabel: "nest", count: 3, totalMemoryBytes: 94 * 1024 * 1024, pids: Array(24000..<24003)),
+            NodeProcessGroup(toolLabel: "expo start", count: 3, totalMemoryBytes: 88 * 1024 * 1024, pids: Array(25000..<25003)),
         ]
 
         let totalCount = sampleNodeGroups.reduce(0) { $0 + $1.count }
