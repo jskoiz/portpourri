@@ -913,6 +913,19 @@ private struct AIToolsSection: View {
                         totalSize: self.aiTools.codexTotalSize
                     )
                 }
+
+                if self.aiTools.totalStaleCount > 0 {
+                    HStack {
+                        Text("\(self.aiTools.totalStaleCount) stale (3+ days)")
+                            .font(.caption)
+                            .foregroundStyle(Readability.secondaryText)
+                        Spacer()
+                        InlineAccentButton("Clear stale", tone: .conflict) {
+                            self.store.deleteStaleWorktrees()
+                        }
+                    }
+                    .padding(.top, 2)
+                }
             }
         }
     }
@@ -1043,6 +1056,7 @@ private struct AIWorktreeRow: View {
                 HStack(alignment: .center, spacing: 6) {
                     Text(self.entry.name)
                         .font(.caption)
+                        .foregroundStyle(self.entry.isStale ? Readability.secondaryText : .primary)
                         .lineLimit(1)
                         .truncationMode(.middle)
 
@@ -1051,6 +1065,12 @@ private struct AIWorktreeRow: View {
                             .font(.caption2)
                             .foregroundStyle(Readability.secondaryText)
                             .lineLimit(1)
+                    }
+
+                    if self.entry.daysSinceModified > 0 {
+                        Text("\(self.entry.daysSinceModified)d")
+                            .font(.caption2)
+                            .foregroundStyle(self.entry.isStale ? Palette.mutedRed : Readability.secondaryText)
                     }
 
                     Spacer(minLength: 4)

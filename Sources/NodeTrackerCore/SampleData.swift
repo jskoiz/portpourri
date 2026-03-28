@@ -189,16 +189,16 @@ public extension SnapshotService {
         // --- AI Tools ---
         let aiTools = AIToolSnapshot(
             claudeWorktrees: [
-                AIWorktreeEntry(path: "/Users/dev/myapp/.claude/worktrees/feature-auth", name: "feature-auth", sizeBytes: 280 * 1024 * 1024, projectName: "myapp"),
-                AIWorktreeEntry(path: "/Users/dev/myapp/.claude/worktrees/fix-ci", name: "fix-ci", sizeBytes: 245 * 1024 * 1024, projectName: "myapp"),
-                AIWorktreeEntry(path: "/Users/dev/docs-site/.claude/worktrees/rewrite", name: "rewrite", sizeBytes: 62 * 1024 * 1024, projectName: "docs-site"),
+                AIWorktreeEntry(path: "/Users/dev/myapp/.claude/worktrees/feature-auth", name: "feature-auth", sizeBytes: 280 * 1024 * 1024, projectName: "myapp", lastModified: Date().addingTimeInterval(-2 * 3600)),
+                AIWorktreeEntry(path: "/Users/dev/myapp/.claude/worktrees/fix-ci", name: "fix-ci", sizeBytes: 245 * 1024 * 1024, projectName: "myapp", lastModified: Date().addingTimeInterval(-5 * 86400)),
+                AIWorktreeEntry(path: "/Users/dev/docs-site/.claude/worktrees/rewrite", name: "rewrite", sizeBytes: 62 * 1024 * 1024, projectName: "docs-site", lastModified: Date().addingTimeInterval(-8 * 86400)),
             ],
             codexWorktrees: [
-                AIWorktreeEntry(path: "/Users/dev/.codex/worktrees/a1b2", name: "a1b2", sizeBytes: 890 * 1024 * 1024, projectName: nil),
-                AIWorktreeEntry(path: "/Users/dev/.codex/worktrees/c3d4", name: "c3d4", sizeBytes: 720 * 1024 * 1024, projectName: nil),
-                AIWorktreeEntry(path: "/Users/dev/.codex/worktrees/e5f6", name: "e5f6", sizeBytes: 410 * 1024 * 1024, projectName: nil),
-                AIWorktreeEntry(path: "/Users/dev/.codex/worktrees/g7h8", name: "g7h8", sizeBytes: 380 * 1024 * 1024, projectName: nil),
-                AIWorktreeEntry(path: "/Users/dev/.codex/worktrees/i9j0", name: "i9j0", sizeBytes: 195 * 1024 * 1024, projectName: nil),
+                AIWorktreeEntry(path: "/Users/dev/.codex/worktrees/a1b2", name: "a1b2", sizeBytes: 890 * 1024 * 1024, projectName: nil, lastModified: Date().addingTimeInterval(-1 * 3600)),
+                AIWorktreeEntry(path: "/Users/dev/.codex/worktrees/c3d4", name: "c3d4", sizeBytes: 720 * 1024 * 1024, projectName: nil, lastModified: Date().addingTimeInterval(-4 * 86400)),
+                AIWorktreeEntry(path: "/Users/dev/.codex/worktrees/e5f6", name: "e5f6", sizeBytes: 410 * 1024 * 1024, projectName: nil, lastModified: Date().addingTimeInterval(-7 * 86400)),
+                AIWorktreeEntry(path: "/Users/dev/.codex/worktrees/g7h8", name: "g7h8", sizeBytes: 380 * 1024 * 1024, projectName: nil, lastModified: Date().addingTimeInterval(-10 * 86400)),
+                AIWorktreeEntry(path: "/Users/dev/.codex/worktrees/i9j0", name: "i9j0", sizeBytes: 195 * 1024 * 1024, projectName: nil, lastModified: Date().addingTimeInterval(-14 * 86400)),
             ],
             claudeSessionCount: 8,
             codexSessionCount: 42,

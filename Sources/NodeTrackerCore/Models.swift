@@ -191,12 +191,14 @@ public struct AIWorktreeEntry: Codable, Hashable, Sendable, Identifiable {
     public let name: String
     public let sizeBytes: Int64
     public let projectName: String?
+    public let lastModified: Date
 
-    public init(path: String, name: String, sizeBytes: Int64, projectName: String?) {
+    public init(path: String, name: String, sizeBytes: Int64, projectName: String?, lastModified: Date = Date()) {
         self.path = path
         self.name = name
         self.sizeBytes = sizeBytes
         self.projectName = projectName
+        self.lastModified = lastModified
     }
 
     public var id: String { self.path }
@@ -207,6 +209,14 @@ public struct AIWorktreeEntry: Codable, Hashable, Sendable, Identifiable {
             return String(format: "%.1f GB", mb / 1024)
         }
         return String(format: "%.0f MB", mb)
+    }
+
+    public var daysSinceModified: Int {
+        Int(Date().timeIntervalSince(self.lastModified) / 86400)
+    }
+
+    public var isStale: Bool {
+        self.daysSinceModified >= 3
     }
 }
 
@@ -244,6 +254,23 @@ public struct AIToolSnapshot: Codable, Hashable, Sendable {
     public var hasContent: Bool {
         !self.claudeWorktrees.isEmpty || !self.codexWorktrees.isEmpty
             || self.claudeSessionCount > 0 || self.codexSessionCount > 0
+    }
+
+    public var staleClaudeWorktrees: [AIWorktreeEntry] {
+        self.claudeWorktrees.filter(\.isStale)
+    }
+
+    public var staleCodexWorktrees: [AIWorktreeEntry] {
+        self.codexWorktrees.filter(\.isStale)
+    }
+
+    public var totalStaleCount: Int {
+        self.staleClaudeWorktrees.count + self.staleCodexWorktrees.count
+    }
+
+    public var totalStaleSize: Int64 {
+        self.staleClaudeWorktrees.reduce(0) { $0 + $1.sizeBytes }
+            + self.staleCodexWorktrees.reduce(0) { $0 + $1.sizeBytes }
     }
 }
 

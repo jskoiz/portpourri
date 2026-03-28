@@ -35,12 +35,14 @@ public struct AIToolProbe: AIToolProbing, Sendable {
                     var isDir: ObjCBool = false
                     guard fm.fileExists(atPath: fullPath, isDirectory: &isDir), isDir.boolValue else { continue }
                     let size = Self.directorySize(at: fullPath)
+                    let modified = Self.directoryLastModified(at: fullPath)
                     let projectName = Self.decodeProjectName(projectDir)
                     claudeWorktrees.append(AIWorktreeEntry(
                         path: fullPath,
                         name: entry,
                         sizeBytes: size,
-                        projectName: projectName
+                        projectName: projectName,
+                        lastModified: modified
                     ))
                 }
             }
@@ -66,11 +68,13 @@ public struct AIToolProbe: AIToolProbing, Sendable {
                 var isDir: ObjCBool = false
                 guard fm.fileExists(atPath: fullPath, isDirectory: &isDir), isDir.boolValue else { continue }
                 let size = Self.directorySize(at: fullPath)
+                let modified = Self.directoryLastModified(at: fullPath)
                 codexWorktrees.append(AIWorktreeEntry(
                     path: fullPath,
                     name: entry,
                     sizeBytes: size,
-                    projectName: nil
+                    projectName: nil,
+                    lastModified: modified
                 ))
             }
         }
@@ -113,6 +117,16 @@ public struct AIToolProbe: AIToolProbing, Sendable {
         return total
     }
 
+    private static func directoryLastModified(at path: String) -> Date {
+        let fm = FileManager.default
+        // Use the directory's own modification date (updated when contents change)
+        if let attrs = try? fm.attributesOfItem(atPath: path),
+           let modified = attrs[.modificationDate] as? Date {
+            return modified
+        }
+        return Date.distantPast
+    }
+
     private static func countEntries(at path: String) -> Int {
         let fm = FileManager.default
         guard fm.fileExists(atPath: path) else { return 0 }
@@ -150,11 +164,13 @@ public struct AIToolProbe: AIToolProbing, Sendable {
                     var wtIsDir: ObjCBool = false
                     guard fm.fileExists(atPath: wtPath, isDirectory: &wtIsDir), wtIsDir.boolValue else { continue }
                     let size = directorySize(at: wtPath)
+                    let modified = directoryLastModified(at: wtPath)
                     results.append(AIWorktreeEntry(
                         path: wtPath,
                         name: wt,
                         sizeBytes: size,
-                        projectName: entry
+                        projectName: entry,
+                        lastModified: modified
                     ))
                 }
             }

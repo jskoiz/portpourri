@@ -513,6 +513,12 @@ final class NodeTrackerStore: ObservableObject {
         }
     }
 
+    func deleteStaleWorktrees() {
+        let stale = self.snapshot.aiTools.staleClaudeWorktrees + self.snapshot.aiTools.staleCodexWorktrees
+        guard !stale.isEmpty else { return }
+        self.deleteAllWorktrees(stale)
+    }
+
     func deleteAllWorktrees(_ entries: [AIWorktreeEntry]) {
         guard !entries.isEmpty else { return }
         let totalSize = entries.reduce(Int64(0)) { $0 + $1.sizeBytes }
