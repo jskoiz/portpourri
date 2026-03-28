@@ -151,6 +151,79 @@ export function useProfileEditor({
     setEditMode(false);
     setError(null);
   }, [profile, syncFromProfile]);
+  // Per-section save: bio + city. Returns true on success, false on failure.
+  const saveBio = useCallback(async (): Promise<boolean> => {
+    const f = formRef.current;
+    setError(null);
+    const nextBio = f.bio.trim();
+    const currentBio = profileRef.current?.profile?.bio?.trim() ?? '';
+    const isAddingFirstBio = currentBio.length === 0 && nextBio.length > 0;
+    if (isAddingFirstBio && nextBio.length < PROFILE_COMPLETENESS_BIO_MIN_CHARS) {
+      void triggerErrorHaptic();
+      setError(BIO_COMPLETENESS_ERROR);
+      return false;
+    }
+    try {
+      await updateProfile({
+        bio: nextBio,
+        city: f.city.trim(),
+        latitude: f.citySelection?.latitude,
+        longitude: f.citySelection?.longitude,
+      });
+      void triggerSuccessHaptic();
+      showToast('About updated', 'success');
+      return true;
+    } catch (err) {
+      void triggerErrorHaptic();
+      setError(normalizeApiError(err).message);
+      return false;
+    }
+  }, [updateProfile]);
+
+  // Per-section save: intent. Returns true on success, false on failure.
+  const saveIntent = useCallback(async (): Promise<boolean> => {
+    const f = formRef.current;
+    setError(null);
+    try {
+      await updateProfile({
+        intentDating: f.intentDating,
+        intentWorkout: f.intentWorkout,
+        intentFriends: f.intentFriends,
+      });
+      void triggerSuccessHaptic();
+      showToast('Intent updated', 'success');
+      return true;
+    } catch (err) {
+      void triggerErrorHaptic();
+      setError(normalizeApiError(err).message);
+      return false;
+    }
+  }, [updateProfile]);
+
+  // Per-section save: fitness profile. Returns true on success, false on failure.
+  const saveFitness = useCallback(async (): Promise<boolean> => {
+    const f = formRef.current;
+    setError(null);
+    try {
+      await updateFitness({
+        intensityLevel: f.intensityLevel,
+        weeklyFrequencyBand: f.weeklyFrequencyBand,
+        primaryGoal: f.primaryGoal,
+        favoriteActivities: f.selectedActivities.join(', '),
+        prefersMorning: f.selectedSchedule.includes('Morning'),
+        prefersEvening: f.selectedSchedule.includes('Evening'),
+      });
+      void triggerSuccessHaptic();
+      showToast('Fitness profile updated', 'success');
+      return true;
+    } catch (err) {
+      void triggerErrorHaptic();
+      setError(normalizeApiError(err).message);
+      return false;
+    }
+  }, [updateFitness]);
+
+  // Legacy full save (keeps backward compatibility with old ProfileScreenContent)
   const save = useCallback(async () => {
     const f = formRef.current;
     if (!f.editMode) {
@@ -176,11 +249,6 @@ export function useProfileEditor({
         getDiscoveryPreferenceValue(profileRef.current?.showMeMen, profileRef.current?.showMeWomen),
       );
 
-      // Send both updates in parallel. The fitness API layer strips empty
-      // strings so backend enum validators don't reject unset optional fields.
-      // Each mutation's onSuccess writes to cache independently; the last to
-      // settle wins. invalidateProfileSurfaces then triggers a background
-      // refetch so the cache converges to the authoritative server state.
       const [profileResult, fitnessResult] = await Promise.allSettled([
         updateProfile({
           bio: nextBio,
@@ -261,5 +329,8 @@ export function useProfileEditor({
     toggleSchedule,
     cancelEdit,
     save,
+    saveBio,
+    saveFitness,
+    saveIntent,
   };
 }

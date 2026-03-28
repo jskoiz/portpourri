@@ -22,6 +22,7 @@ import { ActivityIndicator, View } from "react-native";
 import EventDetailScreen from "../screens/EventDetailScreen";
 import MyEventsScreen from "../screens/MyEventsScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
+import SettingsScreen from "../screens/SettingsScreen";
 import { refreshUserLocation } from "../lib/location";
 import {
   getLastNotificationResponseSafe,
@@ -219,6 +220,10 @@ export default function AppNavigator() {
             <Stack.Screen
               name="Notifications"
               component={NotificationsScreen}
+            />
+            <Stack.Screen
+              name="Settings"
+              component={SettingsScreen}
             />
           </>
         ) : (

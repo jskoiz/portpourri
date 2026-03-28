@@ -32,6 +32,7 @@ export type RootStackParamList = {
   };
   MyEvents: undefined;
   Notifications: undefined;
+  Settings: undefined;
   Login: undefined;
   Signup: undefined;
 };
