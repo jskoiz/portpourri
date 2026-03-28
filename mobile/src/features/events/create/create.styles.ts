@@ -266,6 +266,8 @@ export const createStyles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radii.xl,
     backgroundColor: SURFACE_ELEVATED,
+  },
+  successCardInner: {
     gap: spacing.md,
   },
   successHeader: {
