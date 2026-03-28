@@ -74,11 +74,9 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         self.popover.behavior = .semitransient
         self.popover.delegate = self
         self.popover.animates = true
-        self.popover.appearance = NSAppearance(named: .aqua)
         self.popover.contentSize = NSSize(width: 400, height: 100)
         let rootView = PopoverRootView(store: self.store)
         let hostingController = NSHostingController(rootView: rootView)
-        hostingController.view.appearance = NSAppearance(named: .aqua)
         // Let the view size itself; cap at a max height
         hostingController.sizingOptions = [.preferredContentSize]
         self.popover.contentViewController = hostingController

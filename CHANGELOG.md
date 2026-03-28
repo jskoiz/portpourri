@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.2.9
+
+### Dark Mode
+- Popover now follows system appearance (light/dark) automatically
+- Removed forced light mode — all colors use system-adaptive tokens
+
+### Polish Pass
+- Consistent text sizing across all rows (no more tiny caption2 mixed with caption)
+- Process group counts, memory values, and port badges all bumped to caption size
+- Unified chevron size (9pt) across all expandable rows
+- AI tool icons slightly larger with better baseline alignment
+- Worktree tag bumped from 9pt to 10pt
+- Port badge padding refined
+
 ## v0.2.8
 
 ### New: Dot Matrix Menu Bar Mode

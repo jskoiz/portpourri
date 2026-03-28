@@ -399,9 +399,9 @@ private struct NodeProcessGroupRow: View {
             } label: {
                 HStack(alignment: .center, spacing: 6) {
                     Text("\(self.group.count)\u{00D7}")
-                        .font(.system(.caption2, design: .monospaced))
+                        .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(Readability.secondaryText)
-                        .frame(width: 28, alignment: .trailing)
+                        .frame(width: 30, alignment: .trailing)
 
                     Text(self.group.toolLabel)
                         .font(.caption)
@@ -411,7 +411,7 @@ private struct NodeProcessGroupRow: View {
                     Spacer(minLength: 4)
 
                     Text(self.group.formattedMemory)
-                        .font(.system(.caption2, design: .monospaced))
+                        .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(
                             self.group.totalMemoryBytes > 500 * 1024 * 1024
                                 ? Palette.mutedRed
@@ -419,7 +419,7 @@ private struct NodeProcessGroupRow: View {
                         )
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 8))
+                        .font(.system(size: 9))
                         .foregroundStyle(Readability.secondaryText)
                         .rotationEffect(.degrees(self.isExpanded ? 90 : 0))
                         .animation(.easeInOut(duration: 0.15), value: self.isExpanded)
@@ -796,10 +796,10 @@ private struct PortBadge: View {
 
     var body: some View {
         Text(verbatim: String(self.port))
-            .font(.system(.caption2, design: .monospaced))
-            .fontWeight(.semibold)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
+            .font(.system(.caption, design: .monospaced))
+            .fontWeight(.medium)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
             .background(self.tone.fill, in: Capsule())
     }
 }
@@ -822,7 +822,7 @@ private struct StatusTag: View {
 
     var body: some View {
         Text(self.text)
-            .font(.system(size: 9, weight: .semibold))
+            .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(self.tone.foreground)
             .padding(.horizontal, 5)
             .padding(.vertical, 2)
@@ -949,17 +949,17 @@ private struct AIToolSourceRow: View {
                             Image(nsImage: img)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
-                                .frame(width: 12, height: 12)
+                                .frame(width: 13, height: 13)
                         } else {
                             Image(systemName: "questionmark.circle")
-                                .font(.caption2)
+                                .font(.caption)
                         }
                     }
-                    .frame(width: 14)
+                    .frame(width: 16)
 
                     Text(self.label)
                         .font(.caption)
-                        .fontWeight(.medium)
+                        .fontWeight(.semibold)
 
                     Text("\(self.worktrees.count) worktree\(self.worktrees.count == 1 ? "" : "s")")
                         .font(.caption)
@@ -974,7 +974,7 @@ private struct AIToolSourceRow: View {
                     Spacer(minLength: 4)
 
                     Text(self.formattedSize)
-                        .font(.system(.caption2, design: .monospaced))
+                        .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(
                             self.totalSize > 1024 * 1024 * 1024
                                 ? Palette.mutedRed
@@ -982,7 +982,7 @@ private struct AIToolSourceRow: View {
                         )
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 8))
+                        .font(.system(size: 9))
                         .foregroundStyle(Readability.secondaryText)
                         .rotationEffect(.degrees(self.isExpanded ? 90 : 0))
                         .animation(.easeInOut(duration: 0.15), value: self.isExpanded)
