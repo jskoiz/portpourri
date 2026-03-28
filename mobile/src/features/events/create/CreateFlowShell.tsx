@@ -1,8 +1,9 @@
 import React from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppBackButton from '../../../components/ui/AppBackButton';
 import AppBackdrop from '../../../components/ui/AppBackdrop';
+import { getFloatingTabBarReservedHeight } from '../../../design/layout/tabBarLayout';
 import { useTheme } from '../../../theme/useTheme';
 import { spacing } from '../../../theme/tokens';
 
@@ -22,6 +23,8 @@ export function CreateFlowShell({
   showBackButton,
 }: CreateFlowShellProps) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const tabBarReserved = getFloatingTabBarReservedHeight(insets.bottom);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
@@ -58,7 +61,7 @@ export function CreateFlowShell({
         <Text style={[styles.chapterLabel, { color: theme.accent }]}>{chapter}</Text>
       </View>
 
-      <View style={styles.content}>
+      <View style={[styles.content, { paddingBottom: tabBarReserved }]}>
         {children}
       </View>
     </SafeAreaView>
