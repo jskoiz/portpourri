@@ -53,7 +53,7 @@ jobs:
             echo "channel=${{ inputs.channel }}" >> "$GITHUB_OUTPUT"
             echo "message=${{ inputs.message || format('Manual update from {0}', github.sha) }}" >> "$GITHUB_OUTPUT"
           else
-            echo "channel=preview" >> "$GITHUB_OUTPUT"
+            echo "channel=production" >> "$GITHUB_OUTPUT"
             echo "message=$(git log -1 --pretty=%s)" >> "$GITHUB_OUTPUT"
           fi
 

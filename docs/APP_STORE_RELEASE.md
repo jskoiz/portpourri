@@ -140,6 +140,40 @@ If you intentionally need the Expo/EAS path instead, call it explicitly:
 ./scripts/release-ios.sh --mode eas
 ```
 
+## EAS builds and OTA updates
+
+The canonical BRDG TestFlight path is the local Xcode flow. However, **OTA updates via `expo-updates` only work when the binary was built through EAS** — a Xcode-built binary has no EAS channel embedded and cannot receive OTA updates.
+
+If you want testers to receive JS-only bug fixes without a full TestFlight resubmission cycle, you must first get an EAS-built binary into TestFlight, then publish updates to the `production` channel.
+
+### One-time setup: get an EAS binary into TestFlight
+
+Requires `EXPO_TOKEN` in GitHub repository secrets (Settings → Secrets → Actions).
+
+Trigger the **Deploy to TestFlight (EAS)** workflow from GitHub Actions with `submit: true`. This runs:
+
+```
+eas build --profile production --platform ios --non-interactive --auto-submit
+```
+
+The `production` EAS profile in `eas.json` sets `APP_ENV=production`, `channel=production`, and `autoIncrement=true` automatically. EAS auto-sets `EAS_PROJECT_ID` during the build so the `updates.url` is correct.
+
+After the build is processed by App Store Connect (usually 15–30 minutes), it will appear in TestFlight.
+
+### Publishing OTA updates after that
+
+Every push to `main` that touches `mobile/**` or `shared/contracts/**` automatically triggers the **EAS Update (OTA)** workflow, which publishes to the `production` channel. The app checks for updates on launch (`checkAutomatically: "ON_LOAD"`) and applies them silently.
+
+To publish manually:
+
+```bash
+cd mobile && npx eas update --channel production --message "fix: your description"
+```
+
+### Runtime version compatibility
+
+The app uses `runtimeVersion.policy: "appVersion"` in `app.config.ts`. OTA updates are only delivered to devices running the exact same app version. If a native dependency changed, you must ship a new binary — OTA updates will not apply.
+
 ## Release provenance guardrails
 
 Before any production or TestFlight archive:

@@ -1,16 +1,47 @@
-name: Deploy to TestFlight
+name: Deploy to TestFlight (EAS)
 
 on:
   workflow_dispatch:
+    inputs:
+      submit:
+        description: 'Submit to TestFlight after build'
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
 
+concurrency:
+  group: eas-build-production
+  cancel-in-progress: false
+
 jobs:
-  deploy:
-    name: Deprecated EAS Build & Submit
+  build:
+    name: EAS Build & Submit (iOS Production)
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          echo "The canonical BRDG TestFlight path is the local Xcode release flow."
-          echo "Use npm run release:ios:prepare and npm run release:ios:ship from a clean main checkout."
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: cd mobile && npm ci
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: EAS Build
+        working-directory: mobile
+        run: |
+          npx eas build \
+            --profile production \
+            --platform ios \
+            --non-interactive \
+            ${{ inputs.submit && '--auto-submit' || '' }}

@@ -91,7 +91,7 @@ const config: ExpoConfig = {
     policy: "appVersion",
   },
   updates: {
-    url: `https://u.expo.dev/${process.env.EAS_PROJECT_ID ?? ""}`,
+    url: `https://u.expo.dev/${process.env.EAS_PROJECT_ID ?? "db508a88-7192-45a4-898d-61216f8fc50a"}`,
     fallbackToCacheTimeout: 0,
     checkAutomatically: "ON_LOAD",
     enabled: appEnv !== "development",
