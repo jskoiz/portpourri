@@ -560,6 +560,60 @@ print_preflight_summary() {
   echo "    ASC_BUILD_NUMBER_VERIFIED_AT: $(get_env_source ASC_BUILD_NUMBER_VERIFIED_AT)"
 }
 
+sync_ios_updates_config() {
+  local expo_plist="$IOS_DIR/BRDG/Supporting/Expo.plist"
+  [[ -f "$expo_plist" ]] || fail "unable to locate Expo.plist at $expo_plist"
+
+  local updates_url="https://u.expo.dev/${EAS_PROJECT_ID}"
+  local update_channel="${EXPO_PUBLIC_UPDATE_CHANNEL:-}"
+
+  if [[ -z "$update_channel" ]]; then
+    case "$APP_ENV" in
+      production)
+        update_channel="production"
+        ;;
+      preview)
+        update_channel="preview"
+        ;;
+      *)
+        update_channel=""
+        ;;
+    esac
+  fi
+
+  python3 - <<'PY' "$expo_plist" "$APP_VERSION" "$updates_url" "$update_channel"
+import pathlib
+import plistlib
+import sys
+
+expo_plist = pathlib.Path(sys.argv[1])
+runtime_version = sys.argv[2]
+updates_url = sys.argv[3]
+update_channel = sys.argv[4]
+
+with expo_plist.open("rb") as handle:
+    payload = plistlib.load(handle)
+
+payload["EXUpdatesEnabled"] = True
+payload["EXUpdatesCheckOnLaunch"] = "ALWAYS"
+payload["EXUpdatesLaunchWaitMs"] = 0
+payload["EXUpdatesRuntimeVersion"] = runtime_version
+payload["EXUpdatesURL"] = updates_url
+
+if update_channel:
+    headers = dict(payload.get("EXUpdatesRequestHeaders") or {})
+    headers["expo-channel-name"] = update_channel
+    payload["EXUpdatesRequestHeaders"] = headers
+else:
+    payload.pop("EXUpdatesRequestHeaders", None)
+
+with expo_plist.open("wb") as handle:
+    plistlib.dump(payload, handle, sort_keys=False)
+PY
+
+  echo "release-ios: synced Expo updates config at $expo_plist (runtime=$APP_VERSION channel=${update_channel:-none})"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --check-only)
@@ -666,11 +720,13 @@ export IOS_BUILD_NUMBER="${IOS_BUILD_NUMBER:-}"
 export IOS_BUNDLE_IDENTIFIER="${IOS_BUNDLE_IDENTIFIER:-}"
 export IOS_DEVELOPMENT_TEAM="${IOS_DEVELOPMENT_TEAM:-}"
 export EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-}"
+export EXPO_PUBLIC_UPDATE_CHANNEL="${EXPO_PUBLIC_UPDATE_CHANNEL:-}"
 export ASC_API_KEY_ID="${ASC_API_KEY_ID:-}"
 export ASC_API_ISSUER_ID="${ASC_API_ISSUER_ID:-}"
 export ASC_API_KEY_PATH="${ASC_API_KEY_PATH:-}"
 export ASC_LIVE_BUILD_NUMBER="${ASC_LIVE_BUILD_NUMBER:-}"
 export ASC_BUILD_NUMBER_VERIFIED_AT="${ASC_BUILD_NUMBER_VERIFIED_AT:-}"
+export EAS_PROJECT_ID="${EAS_PROJECT_ID:-db508a88-7192-45a4-898d-61216f8fc50a}"
 export TESTFLIGHT_NOTES_PATH="${TESTFLIGHT_NOTES_PATH:-$TESTFLIGHT_NOTES_PATH_DEFAULT}"
 export TESTFLIGHT_NOTES_LOCALE="${TESTFLIGHT_NOTES_LOCALE:-en-US}"
 export TESTFLIGHT_NOTES_PUBLISH="${TESTFLIGHT_NOTES_PUBLISH:-auto}"
@@ -812,6 +868,8 @@ case "$MODE" in
     else
       echo "release-ios: reusing existing iOS project"
     fi
+
+    sync_ios_updates_config
 
     IFS=":" read -r XCODE_CONTAINER_KIND XCODE_CONTAINER_PATH <<<"$(detect_xcode_container)"
     XCODE_SCHEME="$(detect_xcode_scheme "$XCODE_CONTAINER_PATH")"

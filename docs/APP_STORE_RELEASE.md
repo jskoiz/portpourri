@@ -142,9 +142,11 @@ If you intentionally need the Expo/EAS path instead, call it explicitly:
 
 ## EAS builds and OTA updates
 
-The canonical BRDG TestFlight path is the local Xcode flow. However, **OTA updates via `expo-updates` only work when the binary was built through EAS** — a Xcode-built binary has no EAS channel embedded and cannot receive OTA updates.
+The canonical BRDG TestFlight path is the local Xcode flow. BRDG now embeds the `production` Expo Updates channel in the native iOS config used by that Xcode release path, so a Xcode-built TestFlight binary can receive `production` OTA updates as long as the runtime version still matches.
 
-If you want testers to receive JS-only bug fixes without a full TestFlight resubmission cycle, you must first get an EAS-built binary into TestFlight, then publish updates to the `production` channel.
+Historical note: build 21 was produced before this native channel header was embedded. That specific TestFlight binary cannot receive `production` OTA updates, even though updates were published successfully.
+
+If you want testers to receive JS-only bug fixes without a full TestFlight resubmission cycle, publish updates to the `production` channel and make sure the installed binary was built after the native channel embedding fix or through an EAS profile that sets the same channel.
 
 ### One-time setup: get an EAS binary into TestFlight
 
@@ -156,18 +158,18 @@ Trigger the **Deploy to TestFlight (EAS)** workflow from GitHub Actions with `su
 eas build --profile production --platform ios --non-interactive --auto-submit
 ```
 
-The `production` EAS profile in `eas.json` sets `APP_ENV=production`, `channel=production`, and `autoIncrement=true` automatically. EAS auto-sets `EAS_PROJECT_ID` during the build so the `updates.url` is correct.
+The `production` EAS profile in `eas.json` sets `APP_ENV=production` and `channel=production`. EAS auto-sets `EAS_PROJECT_ID` during the build so the `updates.url` is correct.
 
 After the build is processed by App Store Connect (usually 15–30 minutes), it will appear in TestFlight.
 
 ### Publishing OTA updates after that
 
-Every push to `main` that touches `mobile/**` or `shared/contracts/**` automatically triggers the **EAS Update (OTA)** workflow, which publishes to the `production` channel. The app checks for updates on launch (`checkAutomatically: "ON_LOAD"`) and applies them silently.
+Every push to `main` that touches `mobile/**` or `shared/contracts/**` automatically triggers the **EAS Update (OTA)** workflow, which publishes to the `production` channel. That workflow explicitly exports `APP_ENV=production`, `EXPO_PUBLIC_API_URL=https://api.brdg.social`, and the target update channel before calling `eas update`, because EAS Update does not inherit `eas.json` build-profile env values. The app checks for updates on launch (`checkAutomatically: "ON_LOAD"`) and applies them silently.
 
 To publish manually:
 
 ```bash
-cd mobile && npx eas update --channel production --message "fix: your description"
+cd mobile && npm run update:production -- --message "fix: your description"
 ```
 
 ### Runtime version compatibility

@@ -57,8 +57,18 @@ jobs:
             echo "message=$(git log -1 --pretty=%s)" >> "$GITHUB_OUTPUT"
           fi
 
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.channel }}" = "preview" ]; then
+            echo "app_env=preview" >> "$GITHUB_OUTPUT"
+          else
+            echo "app_env=production" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish update
         working-directory: mobile
+        env:
+          APP_ENV: ${{ steps.params.outputs.app_env }}
+          EXPO_PUBLIC_API_URL: https://api.brdg.social
+          EXPO_PUBLIC_UPDATE_CHANNEL: ${{ steps.params.outputs.channel }}
         run: |
           eas update \
             --channel "${{ steps.params.outputs.channel }}" \

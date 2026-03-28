@@ -26,6 +26,14 @@ const androidVersionCode = Number.isFinite(parsedAndroidVersionCode)
 const appEnv = process.env.APP_ENV?.trim() || "development";
 const apiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 const iosBuildNumber = process.env.IOS_BUILD_NUMBER?.trim() || "1";
+const explicitUpdateChannel = process.env.EXPO_PUBLIC_UPDATE_CHANNEL?.trim();
+const updateChannel =
+  explicitUpdateChannel ||
+  (appEnv === "production"
+    ? "production"
+    : appEnv === "preview"
+      ? "preview"
+      : null);
 
 const readGitValue = (
   envKey: string,
@@ -95,6 +103,11 @@ const config: ExpoConfig = {
     fallbackToCacheTimeout: 0,
     checkAutomatically: "ON_LOAD",
     enabled: appEnv !== "development",
+    requestHeaders: updateChannel
+      ? {
+          "expo-channel-name": updateChannel,
+        }
+      : undefined,
   },
   splash: {
     image: "./assets/splash-icon.png",

@@ -34,6 +34,8 @@ function createFixture({ withUpstream = true, withReleaseTag = false } = {}) {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'brdg-release-ios-'));
   fs.mkdirSync(path.join(repoRoot, 'scripts', '__tests__'), { recursive: true });
   fs.mkdirSync(path.join(repoRoot, 'mobile'), { recursive: true });
+  fs.mkdirSync(path.join(repoRoot, 'mobile', 'ios', 'BRDG', 'Supporting'), { recursive: true });
+  fs.mkdirSync(path.join(repoRoot, 'mobile', 'ios', 'BRDG.xcodeproj'), { recursive: true });
   fs.mkdirSync(path.join(repoRoot, 'bin'), { recursive: true });
 
   fs.copyFileSync(releaseScriptPath, path.join(repoRoot, 'scripts/release-ios.sh'));
@@ -66,6 +68,22 @@ function createFixture({ withUpstream = true, withReleaseTag = false } = {}) {
       'ASC_BUILD_NUMBER_VERIFIED_AT=2026-03-25T12:00:00Z',
     ].join('\n') + '\n',
   );
+  fs.writeFileSync(
+    path.join(repoRoot, 'mobile', 'ios', 'BRDG', 'Supporting', 'Expo.plist'),
+    [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
+      '<plist version="1.0">',
+      '<dict>',
+      '  <key>EXUpdatesEnabled</key>',
+      '  <true/>',
+      '  <key>EXUpdatesURL</key>',
+      '  <string>https://u.expo.dev/placeholder-project</string>',
+      '</dict>',
+      '</plist>',
+      '',
+    ].join('\n'),
+  );
   fs.writeFileSync(path.join(repoRoot, 'mobile/src-screen.tsx'), 'export const screen = true;\n');
 
   writeExecutable(
@@ -90,6 +108,17 @@ exit 0
 set -euo pipefail
 if [[ "$1" == "expo" && "$2" == "prebuild" ]]; then
   mkdir -p "${path.join(repoRoot, 'mobile/ios/BRDG.xcodeproj')}"
+  mkdir -p "${path.join(repoRoot, 'mobile/ios/BRDG/Supporting')}"
+  cat > "${path.join(repoRoot, 'mobile/ios/BRDG/Supporting/Expo.plist')}" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>EXUpdatesEnabled</key>
+  <true/>
+</dict>
+</plist>
+EOF
   exit 0
 fi
 if [[ "$1" == "-y" && "$2" == "eas-cli" ]]; then

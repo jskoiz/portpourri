@@ -16,8 +16,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --max-old-space-size=8192 ./node_modules/jest/bin/jest.js --detectOpenHandles --forceExit",
     "check": "npm run lint && npm run test",
-    "update:preview": "npx eas update --channel preview",
-    "update:production": "npx eas update --channel production"
+    "update:preview": "APP_ENV=preview EXPO_PUBLIC_API_URL=https://api.brdg.social EXPO_PUBLIC_UPDATE_CHANNEL=preview npx eas update --channel preview",
+    "update:production": "APP_ENV=production EXPO_PUBLIC_API_URL=https://api.brdg.social EXPO_PUBLIC_UPDATE_CHANNEL=production npx eas update --channel production"
   },
   "expo": {
     "install": {
