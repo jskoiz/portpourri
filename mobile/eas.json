@@ -24,7 +24,7 @@
         "APP_ENV": "production",
         "EXPO_PUBLIC_API_URL": "https://api.brdg.social",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true",
-        "IOS_BUILD_NUMBER": "19"
+        "IOS_BUILD_NUMBER": "20"
       }
     }
   },
