@@ -24,7 +24,8 @@
       "channel": "production",
       "env": {
         "APP_ENV": "production",
-        "EXPO_PUBLIC_API_URL": "https://api.brdg.social"
+        "EXPO_PUBLIC_API_URL": "https://api.brdg.social",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     }
   },
