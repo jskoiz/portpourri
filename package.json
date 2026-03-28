@@ -45,7 +45,7 @@
     "rehearse:backend:legacy-migrations": "node ./scripts/rehearse-legacy-backend-migrations.mjs",
     "scaffold:mobile-feature": "npm --prefix mobile run feature:new --",
     "scaffold:backend-module": "npm --prefix backend run module:new --",
-    "test:root": "node --test scripts/__tests__/*.test.mjs",
+    "test:root": "node --test --test-concurrency=1 scripts/__tests__/*.test.mjs",
     "test:backend": "npm --prefix backend run test",
     "test:mobile": "npm --prefix mobile run test",
     "screenshots": "./scripts/screenshot-all.sh",
