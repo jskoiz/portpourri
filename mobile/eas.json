@@ -1,7 +1,6 @@
 {
   "cli": {
-    "version": ">= 16.18.0",
-    "appVersionSource": "remote"
+    "version": ">= 16.18.0"
   },
   "build": {
     "development": {
@@ -20,12 +19,12 @@
       }
     },
     "production": {
-      "autoIncrement": true,
       "channel": "production",
       "env": {
         "APP_ENV": "production",
         "EXPO_PUBLIC_API_URL": "https://api.brdg.social",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
+        "IOS_BUILD_NUMBER": "19"
       }
     }
   },
