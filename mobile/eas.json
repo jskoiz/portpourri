@@ -7,6 +7,7 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "channel": "development",
       "env": {
         "APP_ENV": "development"
       }
@@ -29,7 +30,6 @@
   "submit": {
     "production": {
       "ios": {
-        "ascAppId": "",
         "appleTeamId": "H8PYU9TN9X"
       }
     }

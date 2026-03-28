@@ -50,7 +50,9 @@
     "test:backend": "npm --prefix backend run test",
     "test:mobile": "npm --prefix mobile run test",
     "screenshots": "./scripts/screenshot-all.sh",
-    "screenshots:quick": "./scripts/screenshot-all.sh --quick"
+    "screenshots:quick": "./scripts/screenshot-all.sh --quick",
+    "update:preview": "npm --prefix mobile run update:preview --",
+    "update:production": "npm --prefix mobile run update:production --"
   },
   "devDependencies": {
     "zod": "^4.3.6"

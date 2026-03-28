@@ -1,0 +1,66 @@
+name: EAS Update (OTA)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - 'shared/contracts/**'
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: 'Update channel'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - preview
+          - production
+      message:
+        description: 'Update message (optional)'
+        required: false
+        type: string
+
+concurrency:
+  group: eas-update-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    name: Publish OTA Update
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: cd mobile && npm ci
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Determine channel and message
+        id: params
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "channel=${{ inputs.channel }}" >> "$GITHUB_OUTPUT"
+            echo "message=${{ inputs.message || format('Manual update from {0}', github.sha) }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "channel=preview" >> "$GITHUB_OUTPUT"
+            echo "message=$(git log -1 --pretty=%s)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish update
+        working-directory: mobile
+        run: |
+          npx eas update \
+            --channel "${{ steps.params.outputs.channel }}" \
+            --message "${{ steps.params.outputs.message }}" \
+            --non-interactive

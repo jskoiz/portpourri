@@ -15,7 +15,9 @@
     "feature:new": "node ./scripts/scaffold-feature.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --max-old-space-size=8192 ./node_modules/jest/bin/jest.js --detectOpenHandles --forceExit",
-    "check": "npm run lint && npm run test"
+    "check": "npm run lint && npm run test",
+    "update:preview": "npx eas update --channel preview",
+    "update:production": "npx eas update --channel production"
   },
   "expo": {
     "install": {
@@ -59,6 +61,7 @@
     "expo-notifications": "~0.32.16",
     "expo-secure-store": "~15.0.8",
     "expo-status-bar": "~3.0.9",
+    "expo-updates": "^0.28.18",
     "lottie-react-native": "~7.3.1",
     "react": "19.1.0",
     "react-dom": "^19.1.0",
