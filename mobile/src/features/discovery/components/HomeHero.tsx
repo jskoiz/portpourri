@@ -9,7 +9,7 @@ import { homeStyles as styles } from './home.styles';
 type IntentOption = {
   color: string;
   label: string;
-};
+} | null;
 
 export function HomeHero({
   feedCount,
@@ -48,17 +48,19 @@ export function HomeHero({
         />
       </View>
 
-      <View style={styles.heroSummaryRow} accessibilityLabel={`${intentOption.label}. ${summaryLabel}`}>
-        <View style={styles.intentBadgeWrap} importantForAccessibility="no">
-          <LinearGradient
-            colors={[intentOption.color + '14', intentOption.color + '08']}
-            style={styles.intentBadge}
-          >
-            <Text style={[styles.intentBadgeText, { color: intentOption.color }]}>
-              {intentOption.label}
-            </Text>
-          </LinearGradient>
-        </View>
+      <View style={styles.heroSummaryRow} accessibilityLabel={`${intentOption ? `${intentOption.label}. ` : ''}${summaryLabel}`}>
+        {intentOption && (
+          <View style={styles.intentBadgeWrap} importantForAccessibility="no">
+            <LinearGradient
+              colors={[intentOption.color + '14', intentOption.color + '08']}
+              style={styles.intentBadge}
+            >
+              <Text style={[styles.intentBadgeText, { color: intentOption.color }]}>
+                {intentOption.label}
+              </Text>
+            </LinearGradient>
+          </View>
+        )}
 
         <Text style={styles.heroSummaryText} importantForAccessibility="no">{summaryLabel}</Text>
       </View>

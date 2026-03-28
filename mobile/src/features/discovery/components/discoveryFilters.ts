@@ -101,7 +101,7 @@ export function getIntentOption(user?: User | null) {
   const selectedCount = [hasDating, hasWorkout, hasFriends].filter(Boolean).length;
 
   if (selectedCount === 0) {
-    return { color: INTENT_BADGE_COLORS.unset, label: 'Intent not set' };
+    return null;
   }
 
   if (selectedCount === 3) {
