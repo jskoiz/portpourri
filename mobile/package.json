@@ -14,7 +14,7 @@
     "check:boundaries": "node ../scripts/check-repo-policies.mjs --scope mobile",
     "feature:new": "node ./scripts/scaffold-feature.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --max-old-space-size=8192 ./node_modules/jest/bin/jest.js --detectOpenHandles",
+    "test": "node --max-old-space-size=8192 ./node_modules/jest/bin/jest.js --detectOpenHandles --forceExit",
     "check": "npm run lint && npm run test"
   },
   "expo": {
