@@ -155,8 +155,38 @@ exit 0
 }
 
 function releaseEnv(repoRoot, extra = {}) {
-  return {
+  const env = {
     ...process.env,
+  };
+  for (const key of [
+    'APP_VERSION',
+    'IOS_BUILD_NUMBER',
+    'IOS_BUNDLE_IDENTIFIER',
+    'EXPO_PUBLIC_API_URL',
+    'IOS_DEVELOPMENT_TEAM',
+    'ASC_API_KEY_ID',
+    'ASC_API_ISSUER_ID',
+    'ASC_API_KEY_PATH',
+    'ASC_LIVE_BUILD_NUMBER',
+    'ASC_BUILD_NUMBER_VERIFIED_AT',
+    'TESTFLIGHT_NOTES_PATH',
+    'TESTFLIGHT_NOTES_BASE_REF',
+    'TESTFLIGHT_NOTES_LOCALE',
+    'TESTFLIGHT_NOTES_PUBLISH',
+    'TESTFLIGHT_NOTES_PUBLISHED',
+    'TESTFLIGHT_NOTES_PUBLISHED_AT',
+    'BRDG_BUILD_DATE',
+    'BRDG_RELEASE_MODE',
+    'BRDG_RELEASE_PROFILE',
+    'BRDG_RELEASE_PHASE',
+    'BRDG_GIT_BRANCH',
+    'BRDG_GIT_SHA',
+  ]) {
+    delete env[key];
+  }
+
+  return {
+    ...env,
     PATH: `${path.join(repoRoot, 'bin')}:${process.env.PATH}`,
     ...extra,
   };
