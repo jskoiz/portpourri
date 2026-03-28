@@ -236,3 +236,77 @@ Run this against a clean release candidate after the automated checks pass:
    - create activity/timing substeps
    - chat quick-action suggestions
 6. Re-open the build provenance panel before handoff and confirm the metadata still matches the release manifest after the final build command.
+
+## Release troubleshooting
+
+Common blockers encountered during past releases and how to resolve them:
+
+### `expo prebuild` fails: Cannot find module
+
+If `xcodebuild archive` fails with errors like `Cannot find module '@expo/cli/build/src/export/embed/exportEmbedAsync'`, a native dependency is mismatched with the installed Expo SDK version. Run:
+
+```bash
+cd mobile && npx expo install --check
+```
+
+This shows which packages are out of range. Fix with `npx expo install <package>`, commit the updated `package.json` + `package-lock.json`, push to main, and re-run prepare + ship.
+
+**Root cause**: PRs that add Expo native packages (like `expo-updates`, `expo-apple-authentication`) sometimes install the wrong major version. Always verify with `npx expo install --check` after adding native deps.
+
+### CocoaPods fails: Unicode Normalization error
+
+If `pod install` fails with `Encoding::CompatibilityError` (ASCII-8BIT), set the locale before running ship:
+
+```bash
+export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+```
+
+This is a Ruby 4.0 + CocoaPods compatibility issue. The release script handles this automatically on retry.
+
+### Build number collision
+
+If ship fails because the build number already exists in App Store Connect, update `mobile/.env.production`:
+
+```
+IOS_BUILD_NUMBER=<next number>
+ASC_LIVE_BUILD_NUMBER=<current highest in ASC>
+ASC_BUILD_NUMBER_VERIFIED_AT=<current ISO timestamp>
+```
+
+When ASC API-key auth is available, the release script now auto-verifies the live build number and warns if `.env.production` is stale.
+
+### TestFlight notes not published automatically
+
+Without ASC API-key auth (xcode-account mode), the script generates notes at `mobile/build/testflight-notes.md` but cannot publish them. Copy the contents and paste into App Store Connect > TestFlight > Build > Test Details > What to Test.
+
+### `npm run release:ios:prepare` is slow or flaky
+
+Use the fast path when CI has already validated the commit:
+
+```bash
+npm run release:ios:prepare:fast
+```
+
+This skips the full `npm run check` suite. Only use from a green main.
+
+### Stale `artifacts/repo-index.json`
+
+The release script now auto-refreshes this during prepare. If it still fails, manually run:
+
+```bash
+npm run repo:index
+git add artifacts/repo-index.json
+git commit -m "chore: refresh repo index"
+git push origin main
+```
+
+### Quick reference: full release from green main
+
+```bash
+git checkout main && git pull --ff-only
+# Update mobile/.env.production with correct build numbers if needed
+set -a && source mobile/.env.production && set +a
+npm run release:ios:prepare:fast
+npm run release:ios:ship
+# Paste mobile/build/testflight-notes.md into ASC if not using API-key auth
+```
