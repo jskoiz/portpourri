@@ -38,7 +38,7 @@
     "release:ios:prepare": "./scripts/release-ios.sh --phase prepare --mode xcode",
     "release:ios:ship": "./scripts/release-ios.sh --phase ship --mode xcode",
     "release:ios:check": "./scripts/release-ios.sh --phase prepare --mode xcode",
-    "release:ios:prepare:fast": "SKIP_REPO_VALIDATION=1 RELEASE_SKIP_VALIDATION=1 ./scripts/release-ios.sh --phase prepare --mode xcode",
+    "release:ios:prepare:fast": "RELEASE_SKIP_VALIDATION=1 ./scripts/release-ios.sh --phase prepare --mode xcode --skip-repo-validation",
     "release:ios:notes": "node ./scripts/release-testflight-notes.mjs",
     "release:ios:fast-path": "node ./scripts/release-ios-fast-path.mjs classify --cwd .",
     "release:ios:asc": "node ./scripts/app-store-connect-build.mjs",
