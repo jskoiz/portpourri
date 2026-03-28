@@ -604,6 +604,7 @@ private struct OtherListenerSummaryRow: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+        .help(self.process.process.commandLine)
     }
 }
 
