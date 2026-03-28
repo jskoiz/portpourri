@@ -599,23 +599,21 @@ private struct CompactHeader: View {
     let projectCount: Int
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Image(systemName: "network")
-                    .font(.caption)
-                    .foregroundStyle(Readability.secondaryText)
-                Text("NodeWatcher")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                Spacer()
-                Text(self.useSampleData ? "Sample data mode" : self.relativeUpdatedText)
-                    .font(.caption)
-                    .foregroundStyle(Readability.secondaryText)
-            }
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: "network")
+                .font(.caption)
+                .foregroundStyle(Readability.secondaryText)
+            Text("NodeWatcher")
+                .font(.subheadline)
+                .fontWeight(.semibold)
 
             self.summaryLine
                 .font(.caption)
-                .foregroundStyle(.primary)
+
+            Spacer()
+            Text(self.useSampleData ? "Sample data mode" : self.relativeUpdatedText)
+                .font(.caption)
+                .foregroundStyle(Readability.secondaryText)
         }
     }
 
