@@ -22,6 +22,7 @@ enum RefreshCadence: Double, CaseIterable, Identifiable {
 }
 
 enum MenuBarDisplayMode: String, CaseIterable, Identifiable {
+    case dotMatrix
     case countAndMemory
     case countOnly
     case memoryOnly
@@ -31,6 +32,7 @@ enum MenuBarDisplayMode: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
+        case .dotMatrix: "Dot Matrix"
         case .countAndMemory: "Projects + Memory"
         case .countOnly: "Project Count"
         case .memoryOnly: "Memory Usage"
@@ -40,6 +42,7 @@ enum MenuBarDisplayMode: String, CaseIterable, Identifiable {
 
     var description: String {
         switch self {
+        case .dotMatrix: "\u{25CF}\u{25CF}\u{25CF}  \u{25A0}\u{25A0}\u{25A1}"
         case .countAndMemory: "3 \u{00B7} 2.1G"
         case .countOnly: "3"
         case .memoryOnly: "2.1G"
@@ -313,9 +316,13 @@ final class NodeTrackerStore: ObservableObject {
         let settings = SettingsStore()
         self.settings = settings
         self.useSampleData = useSampleData
-        self.snapshot = useSampleData
+        let initialSnapshot = useSampleData
             ? SnapshotService.sampleSnapshot(watchedPorts: settings.watchedPorts)
             : AppSnapshot.empty(watchedPorts: settings.watchedPorts)
+        self.snapshot = initialSnapshot
+        if useSampleData {
+            self.cachedAITools = initialSnapshot.aiTools
+        }
         self.settings.onChange = { [weak self] in
             self?.settingsDidChange()
         }

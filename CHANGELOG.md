@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.2.8
+
+### New: Dot Matrix Menu Bar Mode
+- Visual dot matrix display mode — top row shows project dots, bottom row shows memory gauge blocks
+- Green→amber→red color coding based on memory pressure thresholds
+- Select in Settings → Display → Menu bar display
+
+### New: Brand Icons
+- Claude Code and Codex rows now show their actual brand logos (SVG assets)
+- Template images adapt automatically to light/dark menu bar
+
+### Sample Data Overhaul
+- Fully synthetic screenshot-ready demo: monorepo with api, web, mobile projects
+- Realistic process groups, port assignments, and AI tool worktree counts
+- Removed misleading Docker "conflict" (Docker on Postgres port is normal)
+- Removed "Sample data mode" label for clean screenshots
+
+### Polish
+- Node processes expanded by default
+- Shorter timestamp ("Just now" instead of "Updated just now")
+- Tighter header spacing — summary stays on one line
+- "Scanning worktrees..." loading state while AI tools probe runs
+
 ## v0.2.7
 
 ### New: AI Tools Section

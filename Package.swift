@@ -24,7 +24,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "NodeTrackerApp",
-            dependencies: ["NodeTrackerCore"]
+            dependencies: ["NodeTrackerCore"],
+            resources: [
+                .process("Resources"),
+            ]
         ),
         .testTarget(
             name: "NodeTrackerCoreTests",

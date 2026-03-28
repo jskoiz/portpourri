@@ -247,6 +247,20 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         let showBadge = self.store.settings.showConflictBadge
         let displayMode = self.store.settings.menuBarDisplayMode
 
+        // Dot matrix mode uses its own renderer
+        if displayMode == .dotMatrix {
+            let buttonAppearance = button.effectiveAppearance
+            let image = StatusChipRenderer.dotMatrixImage(
+                summary: summary,
+                conflicts: conflicts,
+                showBadge: showBadge,
+                buttonAppearance: buttonAppearance
+            )
+            image.isTemplate = false
+            button.image = image
+            return
+        }
+
         // Build the status text based on display mode
         let statusText = StatusChipRenderer.statusText(for: summary, displayMode: displayMode)
 
@@ -414,6 +428,9 @@ enum StatusChipRenderer {
         let isActive = projects > 0 || memBytes > 100 * 1024 * 1024
 
         switch displayMode {
+        case .dotMatrix:
+            return "N"  // Not used for dot matrix rendering, but needed for exhaustiveness
+
         case .iconOnly:
             return "N"
 
@@ -471,6 +488,133 @@ enum StatusChipRenderer {
                 height: strSize.height
             )
             str.draw(in: rect)
+            return true
+        }
+    }
+
+    /// Dot matrix image: top row = project dots, bottom row = memory gauge blocks.
+    static func dotMatrixImage(
+        summary: SnapshotSummary,
+        conflicts: Int,
+        showBadge: Bool,
+        buttonAppearance: NSAppearance? = nil
+    ) -> NSImage {
+        let isDark = buttonAppearance?.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+
+        let projectCount = min(summary.nodeProjectCount, 8)
+        let memBytes = summary.nodeProcessTotalMemoryBytes
+        let isIdle = projectCount == 0 && memBytes < 50 * 1024 * 1024
+
+        // Layout constants
+        let dotSize: CGFloat = 4.0
+        let dotGap: CGFloat = 2.5
+        let blockWidth: CGFloat = 4.0
+        let blockHeight: CGFloat = 3.0
+        let blockGap: CGFloat = 1.5
+        let rowGap: CGFloat = 2.0
+        let totalBlocks = 5
+
+        // Memory pressure: 0-5 blocks filled. Scale: 0=0MB, 5=2GB+
+        let memMB = Double(memBytes) / (1024 * 1024)
+        let filledBlocks: Int
+        if memMB < 50 { filledBlocks = 0 }
+        else if memMB < 200 { filledBlocks = 1 }
+        else if memMB < 500 { filledBlocks = 2 }
+        else if memMB < 1000 { filledBlocks = 3 }
+        else if memMB < 2000 { filledBlocks = 4 }
+        else { filledBlocks = 5 }
+
+        // Calculate widths
+        let dotsWidth = projectCount > 0
+            ? CGFloat(projectCount) * dotSize + CGFloat(projectCount - 1) * dotGap
+            : dotSize
+        let blocksWidth = CGFloat(totalBlocks) * blockWidth + CGFloat(totalBlocks - 1) * blockGap
+        let contentWidth = max(dotsWidth, blocksWidth)
+
+        let badgeSize: CGFloat = 12
+        let badgeGap: CGFloat = 2
+        let hasBadge = conflicts > 0 && showBadge
+        let hPad: CGFloat = 3
+        let totalWidth = contentWidth + hPad * 2 + (hasBadge ? badgeGap + badgeSize : 0)
+        let height: CGFloat = 18
+        let size = NSSize(width: totalWidth, height: height)
+
+        // Row positions (centered vertically)
+        let totalContentHeight = dotSize + rowGap + blockHeight
+        let topRowY = (height + totalContentHeight) / 2 - dotSize  // top row (dots)
+        let bottomRowY = topRowY - rowGap - blockHeight             // bottom row (blocks)
+
+        return NSImage(size: size, flipped: false) { _ in
+            let baseColor: NSColor = isDark ? .white : .black
+            let dimAlpha: CGFloat = 0.25
+            let activeGreen = NSColor(calibratedRed: 0.30, green: 0.65, blue: 0.40, alpha: 1.0)
+            let amber = NSColor(calibratedRed: 0.85, green: 0.60, blue: 0.20, alpha: 1.0)
+            let red = NSColor(calibratedRed: 0.75, green: 0.30, blue: 0.28, alpha: 1.0)
+
+            // --- Top row: project dots ---
+            if isIdle {
+                // Single dim dot when idle
+                let x = hPad + (contentWidth - dotSize) / 2
+                baseColor.withAlphaComponent(dimAlpha).setFill()
+                NSBezierPath(ovalIn: NSRect(x: x, y: topRowY, width: dotSize, height: dotSize)).fill()
+            } else {
+                let dotsStartX = hPad + (contentWidth - dotsWidth) / 2
+                for i in 0..<projectCount {
+                    let x = dotsStartX + CGFloat(i) * (dotSize + dotGap)
+                    activeGreen.setFill()
+                    NSBezierPath(ovalIn: NSRect(x: x, y: topRowY, width: dotSize, height: dotSize)).fill()
+                }
+            }
+
+            // --- Bottom row: memory gauge blocks ---
+            let blocksStartX = hPad + (contentWidth - blocksWidth) / 2
+            for i in 0..<totalBlocks {
+                let x = blocksStartX + CGFloat(i) * (blockWidth + blockGap)
+                let rect = NSRect(x: x, y: bottomRowY, width: blockWidth, height: blockHeight)
+
+                if i < filledBlocks {
+                    // Color: green for 1-2, amber for 3-4, red for 5
+                    let blockColor: NSColor
+                    if filledBlocks >= 5 { blockColor = red }
+                    else if filledBlocks >= 3 { blockColor = amber }
+                    else { blockColor = activeGreen }
+                    blockColor.setFill()
+                } else {
+                    baseColor.withAlphaComponent(dimAlpha).setFill()
+                }
+                NSBezierPath(roundedRect: rect, xRadius: 0.5, yRadius: 0.5).fill()
+            }
+
+            // --- Conflict badge ---
+            if hasBadge {
+                let badgeRect = NSRect(
+                    x: totalWidth - badgeSize,
+                    y: height - badgeSize,
+                    width: badgeSize,
+                    height: badgeSize
+                )
+                (isDark ? NSColor.white.withAlphaComponent(0.85) : NSColor.black.withAlphaComponent(0.70)).setFill()
+                NSBezierPath(ovalIn: badgeRect).fill()
+
+                let badgeTextColor: NSColor = isDark ? .black : .white
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.alignment = .center
+                let badgeAttrs: [NSAttributedString.Key: Any] = [
+                    .font: NSFont.systemFont(ofSize: 8, weight: .bold),
+                    .foregroundColor: badgeTextColor,
+                    .paragraphStyle: paragraphStyle,
+                ]
+                let badgeText = NSAttributedString(string: "\(min(conflicts, 9))", attributes: badgeAttrs)
+                let badgeTextSize = badgeText.size()
+                let badgeTextRect = NSRect(
+                    x: badgeRect.midX - badgeTextSize.width / 2,
+                    y: badgeRect.midY - badgeTextSize.height / 2,
+                    width: badgeTextSize.width,
+                    height: badgeTextSize.height
+                )
+                badgeText.draw(in: badgeTextRect)
+            }
+
             return true
         }
     }

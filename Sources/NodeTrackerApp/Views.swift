@@ -11,7 +11,7 @@ struct PopoverRootView: View {
         self._settings = ObservedObject(wrappedValue: store.settings)
     }
 
-    @State private var showProcessDrawer = false
+    @State private var showProcessDrawer = true
 
     var body: some View {
         let conflicts = self.store.snapshot.watchedPorts.filter(\.isConflict)
@@ -620,7 +620,7 @@ private struct CompactHeader: View {
                 .font(.caption)
 
             Spacer()
-            Text(self.useSampleData ? "Sample data mode" : self.relativeUpdatedText)
+            Text(self.relativeUpdatedText)
                 .font(.caption)
                 .foregroundStyle(Readability.secondaryText)
         }
@@ -634,8 +634,8 @@ private struct CompactHeader: View {
 
     private var relativeUpdatedText: String {
         let elapsed = Date().timeIntervalSince(self.snapshot.generatedAt)
-        guard elapsed > 3 else { return "Updated just now" }
-        return "Updated \(Self.relativeDateFormatter.localizedString(fromTimeInterval: -elapsed))"
+        guard elapsed > 3 else { return "Just now" }
+        return Self.relativeDateFormatter.localizedString(fromTimeInterval: -elapsed)
     }
 
     private var summaryLine: Text {
@@ -653,7 +653,7 @@ private struct CompactHeader: View {
                 + Text(" \(self.projectCount) running")
             )
         }
-        let separator = Text("  \u{00B7}  ").foregroundColor(Readability.secondaryText)
+        let separator = Text(" \u{00B7} ").foregroundColor(Readability.secondaryText)
         var result = Text("")
         for (i, part) in parts.enumerated() {
             if i > 0 { result = result + separator }
@@ -882,26 +882,37 @@ private struct AIToolsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            if !self.aiTools.claudeWorktrees.isEmpty {
-                AIToolSourceRow(
-                    store: self.store,
-                    icon: "terminal",
-                    label: "Claude Code",
-                    worktrees: self.aiTools.claudeWorktrees,
-                    sessionCount: self.aiTools.claudeSessionCount,
-                    totalSize: self.aiTools.claudeTotalSize
-                )
-            }
+            if !self.aiTools.hasContent {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Scanning worktrees\u{2026}")
+                        .font(.caption)
+                        .foregroundStyle(Readability.secondaryText)
+                }
+                .padding(.vertical, 4)
+            } else {
+                if !self.aiTools.claudeWorktrees.isEmpty || self.aiTools.claudeSessionCount > 0 {
+                    AIToolSourceRow(
+                        store: self.store,
+                        iconImage: BrandIcon.claude,
+                        label: "Claude Code",
+                        worktrees: self.aiTools.claudeWorktrees,
+                        sessionCount: self.aiTools.claudeSessionCount,
+                        totalSize: self.aiTools.claudeTotalSize
+                    )
+                }
 
-            if !self.aiTools.codexWorktrees.isEmpty || self.aiTools.codexSessionCount > 0 {
-                AIToolSourceRow(
-                    store: self.store,
-                    icon: "sparkle",
-                    label: "Codex",
-                    worktrees: self.aiTools.codexWorktrees,
-                    sessionCount: self.aiTools.codexSessionCount,
-                    totalSize: self.aiTools.codexTotalSize
-                )
+                if !self.aiTools.codexWorktrees.isEmpty || self.aiTools.codexSessionCount > 0 {
+                    AIToolSourceRow(
+                        store: self.store,
+                        iconImage: BrandIcon.codex,
+                        label: "Codex",
+                        worktrees: self.aiTools.codexWorktrees,
+                        sessionCount: self.aiTools.codexSessionCount,
+                        totalSize: self.aiTools.codexTotalSize
+                    )
+                }
             }
         }
     }
@@ -909,7 +920,7 @@ private struct AIToolsSection: View {
 
 private struct AIToolSourceRow: View {
     @ObservedObject var store: NodeTrackerStore
-    let icon: String
+    let iconImage: NSImage?
     let label: String
     let worktrees: [AIWorktreeEntry]
     let sessionCount: Int
@@ -933,10 +944,18 @@ private struct AIToolSourceRow: View {
                 }
             } label: {
                 HStack(alignment: .center, spacing: 6) {
-                    Image(systemName: self.icon)
-                        .font(.caption2)
-                        .foregroundStyle(Readability.secondaryText)
-                        .frame(width: 14)
+                    Group {
+                        if let img = self.iconImage {
+                            Image(nsImage: img)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 12, height: 12)
+                        } else {
+                            Image(systemName: "questionmark.circle")
+                                .font(.caption2)
+                        }
+                    }
+                    .frame(width: 14)
 
                     Text(self.label)
                         .font(.caption)
@@ -1064,6 +1083,23 @@ private struct AIWorktreeRow: View {
                 .padding(.bottom, 4)
             }
         }
+    }
+}
+
+// MARK: - Brand Icons
+
+private enum BrandIcon {
+    static let claude: NSImage? = loadIcon("ProviderIcon-claude")
+    static let codex: NSImage? = loadIcon("ProviderIcon-codex")
+
+    private static func loadIcon(_ name: String) -> NSImage? {
+        guard let url = Bundle.module.url(forResource: name, withExtension: "svg"),
+              let image = NSImage(contentsOf: url) else {
+            return nil
+        }
+        image.size = NSSize(width: 14, height: 14)
+        image.isTemplate = true
+        return image
     }
 }
 
