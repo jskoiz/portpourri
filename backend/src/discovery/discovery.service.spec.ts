@@ -925,6 +925,46 @@ describe('DiscoveryService', () => {
     expect(result).toEqual({ status: 'liked' });
   });
 
+  describe('invalidateUserFeedCache', () => {
+    it('deletes all feed keys when store.keys is available', async () => {
+      const keysSpy = jest.fn().mockResolvedValue(['feed:user-1:abc', 'feed:user-1:def']);
+      const cacheWithStore = {
+        get: jest.fn().mockResolvedValue(undefined),
+        set: jest.fn().mockResolvedValue(undefined),
+        del: jest.fn().mockResolvedValue(undefined),
+        store: { keys: keysSpy },
+      };
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          DiscoveryService,
+          { provide: PrismaService, useValue: prismaMock },
+          { provide: NotificationsService, useValue: notificationsMock },
+          { provide: BlockService, useValue: blockServiceMock },
+          { provide: CACHE_MANAGER, useValue: cacheWithStore },
+        ],
+      }).compile();
+
+      const svc = module.get<DiscoveryService>(DiscoveryService);
+      await svc.invalidateUserFeedCache('user-1');
+
+      expect(keysSpy).toHaveBeenCalledWith('feed:user-1:*');
+      expect(cacheWithStore.del).toHaveBeenCalledWith('blocked:user-1');
+      expect(cacheWithStore.del).toHaveBeenCalledWith('feed:user-1:abc');
+      expect(cacheWithStore.del).toHaveBeenCalledWith('feed:user-1:def');
+    });
+
+    it('falls back to deleting only blocked key and logs a warning when store.keys is unavailable', async () => {
+      await service.invalidateUserFeedCache('user-1');
+
+      expect(cacheMock.del).toHaveBeenCalledWith('blocked:user-1');
+      expect(cacheMock.del).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('store_keys_unavailable'),
+      );
+    });
+  });
+
   describe('concurrent operations', () => {
     it('mutual like creates match with lexicographic userAId/userBId ordering', async () => {
       // User B ('user-2') already liked user A ('user-1').

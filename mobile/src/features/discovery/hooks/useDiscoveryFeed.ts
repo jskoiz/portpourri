@@ -35,9 +35,6 @@ export function useDiscoveryFeed(filters?: DiscoveryFiltersInput) {
     onError: (_error, _userId, context) => {
       restoreDiscoveryFeedFamily(queryClient, context?.previousFeeds);
     },
-    onSettled: () => {
-      void invalidateQueryScopes(queryClient, queryInvalidationScopes.discoveryAction);
-    },
   });
 
   const like = useMutation({
@@ -53,9 +50,6 @@ export function useDiscoveryFeed(filters?: DiscoveryFiltersInput) {
     },
     onError: (_error, _userId, context) => {
       restoreDiscoveryFeedFamily(queryClient, context?.previousFeeds);
-    },
-    onSettled: () => {
-      void invalidateQueryScopes(queryClient, queryInvalidationScopes.discoveryAction);
     },
   });
 

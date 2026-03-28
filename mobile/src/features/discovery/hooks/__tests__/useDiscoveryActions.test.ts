@@ -18,14 +18,11 @@ describe('useDiscoveryActions', () => {
     jest.clearAllMocks();
   });
 
-  it('invalidates discovery surfaces after passing from outside the feed hook', async () => {
+  it('optimistically removes passed user from all feed caches', async () => {
     mockPass.mockResolvedValue({ data: { status: 'passed' } });
     const { queryClient, wrapper } = createQueryTestHarness();
     const defaultKey = queryKeys.discovery.feed();
     const filteredKey = queryKeys.discovery.feed({ distanceKm: 10 });
-    const invalidateSpy = jest
-      .spyOn(queryClient, 'invalidateQueries')
-      .mockResolvedValue(undefined as never);
 
     queryClient.setQueryData(defaultKey, [
       { id: 'user-2', firstName: 'Lana' },
@@ -48,12 +45,6 @@ describe('useDiscoveryActions', () => {
     expect(queryClient.getQueryData(filteredKey)).toEqual([
       { id: 'user-3', firstName: 'Mason' },
     ]);
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: queryKeys.discovery.feeds(),
-    });
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: queryKeys.matches.list(),
-    });
   });
 
   it('invalidates matches when an external like creates a match', async () => {

@@ -5,7 +5,6 @@ import {
   removeUserFromDiscoveryFeedFamily,
   restoreDiscoveryFeedFamily,
 } from '../../../lib/query/discoveryFeedCache';
-import { invalidateQueryScopes, queryInvalidationScopes } from '../../../lib/query/queryInvalidation';
 import { queryKeys } from '../../../lib/query/queryKeys';
 
 /**
@@ -23,9 +22,6 @@ export function useDiscoveryActions() {
     onError: (_error, _userId, context) => {
       restoreDiscoveryFeedFamily(queryClient, context?.previousFeeds);
     },
-    onSettled: () => {
-      void invalidateQueryScopes(queryClient, queryInvalidationScopes.discoveryAction);
-    },
   });
 
   const like = useMutation({
@@ -41,9 +37,6 @@ export function useDiscoveryActions() {
     },
     onError: (_error, _userId, context) => {
       restoreDiscoveryFeedFamily(queryClient, context?.previousFeeds);
-    },
-    onSettled: () => {
-      void invalidateQueryScopes(queryClient, queryInvalidationScopes.discoveryAction);
     },
   });
 

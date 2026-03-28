@@ -183,9 +183,22 @@ export class DiscoveryService {
   }
 
   async invalidateUserFeedCache(userId: string): Promise<void> {
-    await this.cache.del(this.blockedCacheKey(userId));
-    // Feed entries with user-specific prefix — we can't easily glob-delete,
-    // so we rely on the short 2min TTL for feed results
+    const store = (this.cache as { store?: { keys?: (pattern: string) => Promise<string[]> } }).store;
+    if (store && typeof store.keys === 'function') {
+      const feedKeys = await store.keys(`feed:${userId}:*`);
+      await Promise.all([
+        this.cache.del(this.blockedCacheKey(userId)),
+        ...feedKeys.map((key) => this.cache.del(key)),
+      ]);
+    } else {
+      this.logger.warn(
+        asLogMessage('discovery.cache.store_keys_unavailable', {
+          userId,
+          hint: 'feed entries may be stale until TTL expires',
+        }),
+      );
+      await this.cache.del(this.blockedCacheKey(userId));
+    }
   }
 
   private async getRequesterOrThrow(userId: string): Promise<DiscoveryRequester> {
@@ -278,6 +291,7 @@ export class DiscoveryService {
           },
         },
       },
+      orderBy: { id: 'asc' },
       take: DISCOVERY_FEED_QUERY_LIMIT,
     });
   }
