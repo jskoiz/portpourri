@@ -16,33 +16,21 @@ let package = Package(
             name: "PortpourriCore",
             resources: [
                 .process("Resources"),
-            ],
-            swiftSettings: [
-                .enableUpcomingFeature("StrictConcurrency"),
             ]
         ),
         .executableTarget(
             name: "PortpourriCLI",
-            dependencies: ["PortpourriCore"],
-            swiftSettings: [
-                .enableUpcomingFeature("StrictConcurrency"),
-            ]
+            dependencies: ["PortpourriCore"]
         ),
         .executableTarget(
             name: "PortpourriApp",
-            dependencies: ["PortpourriCore"],
-            swiftSettings: [
-                .enableUpcomingFeature("StrictConcurrency"),
-            ]
+            dependencies: ["PortpourriCore"]
         ),
         .testTarget(
             name: "PortpourriCoreTests",
             dependencies: ["PortpourriCore"],
             resources: [
                 .process("Fixtures"),
-            ],
-            swiftSettings: [
-                .enableUpcomingFeature("StrictConcurrency"),
             ]
         ),
     ]
