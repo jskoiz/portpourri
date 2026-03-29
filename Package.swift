@@ -2,36 +2,36 @@
 import PackageDescription
 
 let package = Package(
-    name: "NodeTracker",
+    name: "Portpourri",
     platforms: [
         .macOS(.v14),
     ],
     products: [
-        .library(name: "NodeTrackerCore", targets: ["NodeTrackerCore"]),
-        .executable(name: "nodetracker", targets: ["NodeTrackerCLI"]),
-        .executable(name: "NodeTrackerApp", targets: ["NodeTrackerApp"]),
+        .library(name: "PortpourriCore", targets: ["PortpourriCore"]),
+        .executable(name: "portpourri", targets: ["PortpourriCLI"]),
+        .executable(name: "PortpourriApp", targets: ["PortpourriApp"]),
     ],
     targets: [
         .target(
-            name: "NodeTrackerCore",
+            name: "PortpourriCore",
             resources: [
                 .process("Resources"),
             ]
         ),
         .executableTarget(
-            name: "NodeTrackerCLI",
-            dependencies: ["NodeTrackerCore"]
+            name: "PortpourriCLI",
+            dependencies: ["PortpourriCore"]
         ),
         .executableTarget(
-            name: "NodeTrackerApp",
-            dependencies: ["NodeTrackerCore"],
+            name: "PortpourriApp",
+            dependencies: ["PortpourriCore"],
             resources: [
                 .process("Resources"),
             ]
         ),
         .testTarget(
-            name: "NodeTrackerCoreTests",
-            dependencies: ["NodeTrackerCore"],
+            name: "PortpourriCoreTests",
+            dependencies: ["PortpourriCore"],
             resources: [
                 .process("Fixtures"),
             ]

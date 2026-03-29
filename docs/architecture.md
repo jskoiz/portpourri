@@ -2,15 +2,15 @@
 
 ## Summary
 
-NodeTracker follows a CodexBar-style split:
+Portpourri follows a CodexBar-style split:
 
-- `NodeTrackerCore`: probes, parsers, normalization, project resolution, fixtures, and JSON export.
-- `NodeTrackerCLI`: diagnostics and fixture access over the same core models.
-- `NodeTrackerApp`: menu bar host, popover UI, settings, and safe quick actions.
+- `PortpourriCore`: probes, parsers, normalization, project resolution, fixtures, and JSON export.
+- `PortpourriCLI`: diagnostics and fixture access over the same core models.
+- `PortpourriApp`: menu bar host, popover UI, settings, and safe quick actions.
 
 ## Boundaries
 
-- `NodeTrackerCore` must stay UI-free.
+- `PortpourriCore` must stay UI-free.
 - Shell commands run only in the probe layer.
 - App state is derived from typed snapshots emitted by the core.
 - Tests validate parsers with deterministic fixtures before live-process integration.

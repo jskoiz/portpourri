@@ -1,7 +1,7 @@
 import AppKit
 import Darwin
 import Foundation
-import NodeTrackerCore
+import PortpourriCore
 import ServiceManagement
 import UserNotifications
 
@@ -295,7 +295,7 @@ final class SettingsStore: ObservableObject {
 }
 
 @MainActor
-final class NodeTrackerStore: ObservableObject {
+final class PortpourriStore: ObservableObject {
     @Published var snapshot: AppSnapshot
     @Published var isRefreshing = false
     @Published var lastError: String?
@@ -395,7 +395,9 @@ final class NodeTrackerStore: ObservableObject {
 
     func visibleOtherProcesses() -> [TrackedProcessSnapshot] {
         self.snapshot.otherProcesses.filter { process in
-            self.settings.showNonNodeListeners || process.isWatchedConflict
+            self.settings.showNonNodeListeners
+                || process.isWatchedConflict
+                || process.process.isDevServer
         }
     }
 

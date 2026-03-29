@@ -20,11 +20,11 @@ What you expected to happen.
 **Environment**
 - macOS version:
 - Xcode/Swift version:
-- NodeWatcher version/commit:
+- Portpourri version/commit:
 
 **CLI output (if applicable)**
 ```
-swift run nodetracker snapshot --json
+swift run portpourri snapshot --json
 ```
 
 **Additional context**

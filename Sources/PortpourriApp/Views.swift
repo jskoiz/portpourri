@@ -1,12 +1,12 @@
 import AppKit
 import SwiftUI
-import NodeTrackerCore
+import PortpourriCore
 
 struct PopoverRootView: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     @ObservedObject private var settings: SettingsStore
 
-    init(store: NodeTrackerStore) {
+    init(store: PortpourriStore) {
         self.store = store
         self._settings = ObservedObject(wrappedValue: store.settings)
     }
@@ -22,6 +22,8 @@ struct PopoverRootView: View {
             .sorted(by: DisplayText.compareWatchedPorts)
         let allProjects = SnapshotDetails.sortedProjects(self.store.snapshot.projects)
         let visibleOtherProcesses = self.store.visibleOtherProcesses()
+        let devServers = visibleOtherProcesses.filter { $0.process.isDevServer }
+        let otherListeners = visibleOtherProcesses.filter { !$0.process.isDevServer }
         let significantGroups = self.store.snapshot.nodeProcessGroups.filter { $0.count >= 3 }
 
         ZStack {
@@ -32,7 +34,7 @@ struct PopoverRootView: View {
                     snapshot: self.store.snapshot,
                     useSampleData: self.store.useSampleData,
                     conflictCount: conflicts.count,
-                    projectCount: allProjects.count
+                    projectCount: allProjects.count + devServers.count
                 )
 
                 if conflicts.isEmpty && allProjects.isEmpty && nodeOwnedPorts.isEmpty
@@ -57,9 +59,14 @@ struct PopoverRootView: View {
                     )
                 }
 
-                if self.settings.showNonNodeListeners, !visibleOtherProcesses.isEmpty {
+                if !devServers.isEmpty {
                     Divider()
-                    OtherListenersSection(processes: visibleOtherProcesses)
+                    OtherListenersSection(title: "Dev servers", processes: devServers)
+                }
+
+                if !otherListeners.isEmpty {
+                    Divider()
+                    OtherListenersSection(title: "Other listeners", processes: otherListeners)
                 }
 
                 // Bottom drawer toggle for node process groups
@@ -118,7 +125,7 @@ struct PopoverRootView: View {
 // MARK: - Zone 1: Conflict Triage
 
 private struct ConflictSection: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let conflicts: [WatchedPortStatus]
     let visibleOtherProcesses: [TrackedProcessSnapshot]
 
@@ -143,7 +150,7 @@ private struct ConflictSection: View {
 }
 
 private struct ConflictCard: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let status: WatchedPortStatus
     let otherProcesses: [TrackedProcessSnapshot]
     let projects: [ProjectSnapshot]
@@ -228,7 +235,7 @@ private struct ConflictCard: View {
 // MARK: - Zone 2: Project Dashboard
 
 private struct ProjectDashboardSection: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let projects: [ProjectSnapshot]
     let nodeOwnedPorts: [WatchedPortStatus]
 
@@ -248,7 +255,7 @@ private struct ProjectDashboardSection: View {
 }
 
 private struct ProjectDashboardRow: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let project: ProjectSnapshot
     @State private var isExpanded = false
     @State private var isHovered = false
@@ -385,7 +392,7 @@ private struct NodeProcessDrawerToggle: View {
 }
 
 private struct NodeProcessGroupRow: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let group: NodeProcessGroup
     @State private var isExpanded = false
     @State private var isHovered = false
@@ -458,7 +465,7 @@ private struct NodeProcessGroupRow: View {
 // MARK: - Process Detail (collapsed by default)
 
 private struct ProcessDetailRow: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let process: TrackedProcessSnapshot
     let portContext: Int?
 
@@ -544,13 +551,14 @@ private struct ProcessDetailRow: View {
 // MARK: - Other Listeners (optional)
 
 private struct OtherListenersSection: View {
+    let title: String
     let processes: [TrackedProcessSnapshot]
     @State private var isExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             DisclosureToggle(
-                title: "Other listeners",
+                title: self.title,
                 countText: "\(self.processes.count)",
                 isExpanded: self.$isExpanded
             )
@@ -596,6 +604,7 @@ private struct OtherListenerSummaryRow: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+        .help(self.process.process.commandLine)
     }
 }
 
@@ -612,7 +621,7 @@ private struct CompactHeader: View {
             Image(systemName: "network")
                 .font(.caption)
                 .foregroundStyle(Readability.secondaryText)
-            Text("NodeWatcher")
+            Text("Portpourri")
                 .font(.subheadline)
                 .fontWeight(.semibold)
 
@@ -666,7 +675,7 @@ private struct CompactHeader: View {
 // MARK: - Shared Components
 
 private struct ProcessActionsMenu: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let process: TrackedProcessSnapshot
     let canTerminate: Bool
 
@@ -877,7 +886,7 @@ private struct InlineAccentButton: View {
 // MARK: - AI Tools Section
 
 private struct AIToolsSection: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let aiTools: AIToolSnapshot
 
     var body: some View {
@@ -932,7 +941,7 @@ private struct AIToolsSection: View {
 }
 
 private struct AIToolSourceRow: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let iconImage: NSImage?
     let label: String
     let worktrees: [AIWorktreeEntry]
@@ -1042,7 +1051,7 @@ private struct AIToolSourceRow: View {
 }
 
 private struct AIWorktreeRow: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let entry: AIWorktreeEntry
     @State private var isExpanded = false
 
@@ -1252,6 +1261,10 @@ private enum ResolutionAdvisor {
         // infrastructure — no action button, just informational display.
         if self.applicationBundlePath(from: command)?.localizedCaseInsensitiveContains("/Docker.app") == true {
             return nil
+        }
+
+        if process.process.isDevServer, ProcessActionPolicy.canTerminate(process) {
+            return ResolutionAction(title: "Stop server", tone: .conflict, kind: .terminate)
         }
 
         if ProcessActionPolicy.canTerminate(process) {
@@ -1517,11 +1530,11 @@ private enum DisplayText {
 // MARK: - Settings
 
 struct SettingsRootView: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     @ObservedObject private var settings: SettingsStore
     @State private var showPortOnboarding = false
 
-    init(store: NodeTrackerStore) {
+    init(store: PortpourriStore) {
         self.store = store
         self._settings = ObservedObject(wrappedValue: store.settings)
     }
@@ -1554,7 +1567,7 @@ struct SettingsRootView: View {
 }
 
 private struct GeneralSettingsView: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     @ObservedObject var settings: SettingsStore
 
     private static let modifierOptions = ["ctrl+shift", "cmd+shift", "cmd+opt", "ctrl+opt"]
@@ -1607,7 +1620,7 @@ private struct GeneralSettingsView: View {
                         .background(.quaternary)
                         .cornerRadius(6)
                 }
-                Text("Global shortcut to toggle the NodeWatcher popover.")
+                Text("Global shortcut to toggle the Portpourri popover.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -1711,7 +1724,7 @@ private struct WatchedPortsOnboardingView: View {
                 .font(.title3)
                 .fontWeight(.semibold)
 
-            Text("NodeWatcher only flags the ports you care about. Start with the common presets below, then add anything custom in Display settings.")
+            Text("Portpourri only flags the ports you care about. Start with the common presets below, then add anything custom in Display settings.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
@@ -1790,7 +1803,7 @@ private struct NotificationsSettingsView: View {
 }
 
 private struct AdvancedSettingsView: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
 
     var body: some View {
         Form {
@@ -1818,7 +1831,7 @@ private struct AdvancedSettingsView: View {
 }
 
 private struct AboutSettingsView: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     @ObservedObject var settings: SettingsStore
     @State private var updateStatus: String?
 
@@ -1842,7 +1855,7 @@ private struct AboutSettingsView: View {
                         .font(.system(size: 40))
                         .foregroundStyle(.secondary)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("NodeWatcher")
+                        Text("Portpourri")
                             .font(.title2.bold())
                         Text("v\(self.appVersion) (build \(self.buildNumber))")
                             .font(.subheadline)
@@ -1870,7 +1883,7 @@ private struct AboutSettingsView: View {
             }
 
             Section("Links") {
-                Link(destination: URL(string: "https://github.com/nicktoonz/node-tracker")!) {
+                Link(destination: URL(string: "https://github.com/jskoiz/portpourri")!) {
                     HStack {
                         Image(systemName: "chevron.left.forwardslash.chevron.right")
                             .frame(width: 20)

@@ -1,5 +1,5 @@
 import XCTest
-@testable import NodeTrackerCore
+@testable import PortpourriCore
 
 final class ParsingTests: XCTestCase {
     func testLsofParserDetectsLoopbackAndWildcardListeners() throws {
@@ -23,12 +23,12 @@ final class ParsingTests: XCTestCase {
     }
 
     func testSampleSnapshotCollapsesDuplicateIPv4IPv6Listener() {
-        let snapshot = SnapshotService.sampleSnapshot(watchedPorts: [3000, 5173, 5433, 8081])
-        let backend = snapshot.projects.first { $0.displayName == "@acme/backend" }
+        let snapshot = SnapshotService.sampleSnapshot(watchedPorts: [3000, 5173, 8081])
+        let backend = snapshot.projects.first { $0.displayName == "api" }
 
         XCTAssertEqual(backend?.ports, [3000])
         XCTAssertEqual(snapshot.summary.nodeProjectCount, 3)
-        XCTAssertEqual(snapshot.watchedPorts.first(where: { $0.port == 5433 })?.isConflict, true)
+        XCTAssertEqual(snapshot.watchedPorts.first(where: { $0.port == 8081 })?.isConflict, false)
     }
 
     func testProcessClassifierLabelsCommonNodeTools() {

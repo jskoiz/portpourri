@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in NodeWatcher, please report it responsibly.
+If you discover a security vulnerability in Portpourri, please report it responsibly.
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
@@ -16,7 +16,7 @@ You should receive a response within 48 hours. We will work with you to understa
 
 ## Scope
 
-NodeWatcher runs locally on macOS and interacts with the system through:
+Portpourri runs locally on macOS and interacts with the system through:
 
 - `lsof` — to probe TCP listeners
 - `ps` — to gather process metadata

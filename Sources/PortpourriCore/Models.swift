@@ -50,6 +50,7 @@ public struct ProcessSnapshot: Codable, Hashable, Sendable, Identifiable {
     public let parentCommandLine: String?
     public let cwd: String?
     public let isNodeFamily: Bool
+    public let isDevServer: Bool
     public let toolLabel: String
 
     public init(
@@ -61,6 +62,7 @@ public struct ProcessSnapshot: Codable, Hashable, Sendable, Identifiable {
         parentCommandLine: String?,
         cwd: String?,
         isNodeFamily: Bool,
+        isDevServer: Bool = false,
         toolLabel: String
     ) {
         self.pid = pid
@@ -71,6 +73,7 @@ public struct ProcessSnapshot: Codable, Hashable, Sendable, Identifiable {
         self.parentCommandLine = parentCommandLine
         self.cwd = cwd
         self.isNodeFamily = isNodeFamily
+        self.isDevServer = isDevServer
         self.toolLabel = toolLabel
     }
 

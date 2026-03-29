@@ -68,6 +68,11 @@ public struct SnapshotService: Sendable {
         let listenersByPID = Dictionary(grouping: listeners, by: \.pid)
         let tracked = processes
             .filter { listenersByPID[$0.pid] != nil }
+            .filter { process in
+                // Drop pure macOS system daemons — they're never actionable
+                let commandName = listenersByPID[process.pid]?.first?.commandName ?? ""
+                return !self.classifier.isSystemProcess(commandName: commandName)
+            }
             .map { process -> TrackedProcessSnapshot in
                 let ownedListeners = (listenersByPID[process.pid] ?? []).sorted {
                     if $0.port == $1.port {
@@ -77,7 +82,7 @@ public struct SnapshotService: Sendable {
                 }
                 let displayProcess = self.decorate(process: process, listeners: ownedListeners)
                 let ports = Array(Set(ownedListeners.map(\.port))).sorted()
-                let isWatchedConflict = ports.contains(where: watchedPorts.contains) && !displayProcess.isNodeFamily
+                let isWatchedConflict = ports.contains(where: watchedPorts.contains) && !displayProcess.isNodeFamily && !displayProcess.isDevServer
                 return TrackedProcessSnapshot(
                     process: displayProcess,
                     listeners: ownedListeners,
@@ -243,7 +248,7 @@ public struct SnapshotService: Sendable {
             }
             .joined(separator: ", ")
 
-        let nodeOwned = isBusy && owners.allSatisfy { $0.process.isNodeFamily }
+        let nodeOwned = isBusy && owners.allSatisfy { $0.process.isNodeFamily || $0.process.isDevServer }
         let isConflict = isBusy && (!nodeOwned || owners.count > 1)
 
         return WatchedPortStatus(
@@ -256,7 +261,9 @@ public struct SnapshotService: Sendable {
     }
 
     private func decorate(process: ProcessSnapshot, listeners: [ListenerSnapshot]) -> ProcessSnapshot {
-        guard !process.isNodeFamily, let commandName = listeners.first?.commandName, !commandName.isEmpty else {
+        // Node family and dev servers already have good labels from the classifier
+        guard !process.isNodeFamily, !process.isDevServer,
+              let commandName = listeners.first?.commandName, !commandName.isEmpty else {
             return process
         }
 
@@ -269,6 +276,7 @@ public struct SnapshotService: Sendable {
             parentCommandLine: process.parentCommandLine,
             cwd: process.cwd,
             isNodeFamily: process.isNodeFamily,
+            isDevServer: process.isDevServer,
             toolLabel: commandName
         )
     }
