@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.2
+
+### App Icon
+- App now has a proper icon visible in Finder, Dock, and Launchpad
+- `Scripts/make_icns.swift` renders the logo SVG to all required sizes and packages into `.icns` at build time
+- `iconOnly` menu bar display mode now shows the Portpourri logo instead of a placeholder
+
+### GitHub Branding
+- README header replaced with the Portpourri wordmark SVG
+- Logo assets added to `.github/images/`
+
 ## v0.3.1
 
 ### App Renamed to Portpourri
