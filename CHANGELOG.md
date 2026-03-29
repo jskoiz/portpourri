@@ -1,5 +1,48 @@
 # Changelog
 
+## v0.4.0
+
+### App Renamed to Portpourri
+- App renamed from NodeWatcher to **Portpourri**
+- GitHub repository moved to [jskoiz/portpourri](https://github.com/jskoiz/portpourri)
+- Swift modules renamed: `NodeTrackerCore` → `PortpourriCore`, `NodeTrackerApp` → `PortpourriApp`, `NodeTrackerCLI` → `PortpourriCLI`
+- CLI binary renamed: `nodetracker` → `portpourri`
+- Bundle ID updated to `dev.portpourri.app`
+- Homebrew cask updated to `portpourri`
+
+### Fixes
+- Fix pre-existing test assertions to match current sample data (display names and port setup)
+
+## v0.3.0
+
+### New: Full Settings Window
+- 5-tab preferences window: General, Display, Watched Ports, Shortcuts, About
+- Configurable global hotkey — set any modifier+key combination to toggle the popover
+- Watched ports onboarding flow on first launch with preset port groups
+- Port suggestion command template — customize what gets copied when suggesting a free port (default: `PORT={port}`)
+
+### New: Dev Servers Section
+- "Other listeners" renamed and split into a dedicated **Dev Servers** section
+- Accurate running count in section header
+- Full command line shown as tooltip on hover for dev server rows
+
+### New: Stale Worktree Detection
+- Worktrees untouched for 3+ days are flagged as stale with a visual indicator
+- Stale worktrees surfaced for cleanup actions in the AI Tools section
+
+### UX Overhaul
+- Fixed layout with animated drawer for node process groups (replaces scrolling popover)
+- Process groups only shown when 3+ instances exist — reduces noise
+- Smarter conflict actions: SSH tunnels through Docker now show "Stop tunnel" instead of "Open Docker"
+- Removed low-value buttons ("Copy all fixes", "Open Docker")
+- Drawer animates open/close instead of pushing content
+
+### Dev Experience
+- Added LICENSE (MIT), CONTRIBUTING.md, issue/PR templates, and CI workflow
+- Swift 6 concurrency fixes for brand icon rendering
+- Memory leak fixes and cancellable cleanup
+- Trimmed dead code and hardened for distribution
+
 ## v0.2.9
 
 ### Dark Mode
