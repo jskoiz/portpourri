@@ -359,10 +359,12 @@ final class PortpourriStore: ObservableObject {
 
     private let snapshotService = SnapshotService()
     private let aiToolProbe = AIToolProbe()
+    private let refreshCoordinator = SnapshotRefreshCoordinator()
     private var refreshTimer: Timer?
+    private var refreshTask: Task<Void, Never>?
     private var aiRefreshTask: Task<Void, Never>?
     private var lastAIToolRefreshAt: Date?
-    private var previousConflictPorts: Set<Int> = []
+    private var notificationTracker = ConflictNotificationTracker()
 
     init(useSampleData: Bool) {
         self.useSampleData = useSampleData
@@ -384,6 +386,8 @@ final class PortpourriStore: ObservableObject {
     func stop() {
         self.refreshTimer?.invalidate()
         self.refreshTimer = nil
+        self.refreshTask?.cancel()
+        self.refreshTask = nil
         self.aiRefreshTask?.cancel()
         self.aiRefreshTask = nil
     }
@@ -396,7 +400,10 @@ final class PortpourriStore: ObservableObject {
         self.isRefreshing = true
         self.lastError = nil
 
-        Task {
+        self.refreshTask?.cancel()
+        self.refreshTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            let generation = await self.refreshCoordinator.beginRefresh()
             let result = await Task.detached(priority: .userInitiated) {
                 if useSampleData {
                     return Result<AppSnapshot, Error>.success(SnapshotService.sampleSnapshot(watchedPorts: watchedPorts))
@@ -406,11 +413,14 @@ final class PortpourriStore: ObservableObject {
                 }
             }.value
 
+            guard !Task.isCancelled else { return }
+            guard await self.refreshCoordinator.shouldApplyResult(for: generation) else { return }
+
             self.isRefreshing = false
             switch result {
             case let .success(snapshot):
                 self.snapshot = snapshot
-                self.checkForNewConflicts(in: snapshot)
+                self.postNotificationsForNewConflicts(in: snapshot)
             case let .failure(error):
                 self.lastError = error.localizedDescription
                 self.snapshot = AppSnapshot.empty(watchedPorts: watchedPorts, source: "error")
@@ -563,30 +573,27 @@ final class PortpourriStore: ObservableObject {
         return nil
     }
 
-    private func checkForNewConflicts(in snapshot: AppSnapshot) {
-        let currentConflicts = Set(snapshot.watchedPorts.filter(\.isConflict).map(\.port))
-        let newConflicts = currentConflicts.subtracting(self.previousConflictPorts)
-        self.previousConflictPorts = currentConflicts
-
+    private func postNotificationsForNewConflicts(in snapshot: AppSnapshot) {
         guard self.settings.enableConflictNotifications else { return }
         guard Bundle.main.bundleIdentifier != nil else { return }
 
-        for port in newConflicts.sorted() {
-            guard let status = snapshot.watchedPorts.first(where: { $0.port == port }) else { continue }
-            let owner = status.ownerSummary
-            let suggested = self.nextAvailablePort(after: port)
+        let newConflicts = self.notificationTracker.newExternalConflicts(in: snapshot.watchedPorts)
+
+        for conflict in newConflicts {
+            let suggested = self.nextAvailablePort(after: conflict.port)
             let body = suggested != nil
-                ? "\(owner) \u{2014} use port \(suggested!) instead"
-                : "\(owner) is blocking this port"
+                ? "\(conflict.ownerSummary) \u{2014} use port \(suggested!) instead"
+                : "\(conflict.ownerSummary) is blocking this port"
 
             let content = UNMutableNotificationContent()
-            content.title = "Port \(port) blocked"
+            content.title = "Port \(conflict.port) blocked"
             content.body = body
             content.sound = self.settings.notificationSound ? .default : nil
-            content.userInfo = ["port": port, "suggestedPort": suggested ?? 0]
+            content.userInfo = ["port": conflict.port, "suggestedPort": suggested ?? 0]
+            content.categoryIdentifier = "PORT_CONFLICT"
 
             let request = UNNotificationRequest(
-                identifier: "conflict-\(port)",
+                identifier: "conflict-\(conflict.port)",
                 content: content,
                 trigger: nil
             )

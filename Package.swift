@@ -33,5 +33,9 @@ let package = Package(
                 .process("Fixtures"),
             ]
         ),
+        .testTarget(
+            name: "PortpourriAppTests",
+            dependencies: ["PortpourriApp", "PortpourriCore"]
+        ),
     ]
 )

@@ -194,6 +194,72 @@ public struct ProbeDiagnostics: Codable, Hashable, Sendable {
     }
 }
 
+public struct PortOwnershipSnapshot: Codable, Hashable, Sendable {
+    public let generatedAt: Date
+    public let watchedPorts: [WatchedPortStatus]
+    public let projects: [ProjectSnapshot]
+    public let otherProcesses: [TrackedProcessSnapshot]
+    public let diagnostics: ProbeDiagnostics
+
+    public init(
+        generatedAt: Date,
+        watchedPorts: [WatchedPortStatus],
+        projects: [ProjectSnapshot],
+        otherProcesses: [TrackedProcessSnapshot],
+        diagnostics: ProbeDiagnostics
+    ) {
+        self.generatedAt = generatedAt
+        self.watchedPorts = watchedPorts
+        self.projects = projects
+        self.otherProcesses = otherProcesses
+        self.diagnostics = diagnostics
+    }
+
+    public static func empty(watchedPorts: [Int], source: String = "empty") -> PortOwnershipSnapshot {
+        let statuses = watchedPorts.sorted().map {
+            WatchedPortStatus(port: $0, isBusy: false, ownerSummary: "Free", isNodeOwned: false, isConflict: false)
+        }
+        return PortOwnershipSnapshot(
+            generatedAt: Date(),
+            watchedPorts: statuses,
+            projects: [],
+            otherProcesses: [],
+            diagnostics: ProbeDiagnostics(commands: SnapshotService.diagnosticCommands, source: source)
+        )
+    }
+
+    public var summary: SnapshotSummary {
+        SnapshotSummary(
+            nodeProjectCount: self.projects.count,
+            watchedBusyCount: self.watchedPorts.filter(\.isBusy).count,
+            otherListenerCount: self.otherProcesses.count,
+            watchedNonNodeConflictCount: self.watchedPorts.filter(\.isConflict).count
+        )
+    }
+}
+
+public struct ProcessInventorySnapshot: Codable, Hashable, Sendable {
+    public let generatedAt: Date
+    public let nodeProcessGroups: [NodeProcessGroup]
+
+    public init(generatedAt: Date, nodeProcessGroups: [NodeProcessGroup]) {
+        self.generatedAt = generatedAt
+        self.nodeProcessGroups = nodeProcessGroups
+    }
+
+    public static var empty: ProcessInventorySnapshot {
+        ProcessInventorySnapshot(generatedAt: Date(), nodeProcessGroups: [])
+    }
+
+    public var totalNodeCount: Int {
+        self.nodeProcessGroups.reduce(0) { $0 + $1.count }
+    }
+
+    public var totalNodeMemoryBytes: Int {
+        self.nodeProcessGroups.reduce(0) { $0 + $1.totalMemoryBytes }
+    }
+}
+
 public struct AppSnapshot: Codable, Hashable, Sendable {
     public let generatedAt: Date
     public let summary: SnapshotSummary
@@ -221,24 +287,25 @@ public struct AppSnapshot: Codable, Hashable, Sendable {
         self.diagnostics = diagnostics
     }
 
-    public static func empty(watchedPorts: [Int], source: String = "empty") -> AppSnapshot {
-        let statuses = watchedPorts.sorted().map {
-            WatchedPortStatus(port: $0, isBusy: false, ownerSummary: "Free", isNodeOwned: false, isConflict: false)
-        }
-        return AppSnapshot(
-            generatedAt: Date(),
-            summary: SnapshotSummary(
-                nodeProjectCount: 0,
-                watchedBusyCount: 0,
-                otherListenerCount: 0,
-                watchedNonNodeConflictCount: 0
-            ),
-            watchedPorts: statuses,
-            projects: [],
-            otherProcesses: [],
-            nodeProcessGroups: [],
-            diagnostics: ProbeDiagnostics(commands: SnapshotService.diagnosticCommands, source: source)
+    public init(ownership: PortOwnershipSnapshot, inventory: ProcessInventorySnapshot = .empty) {
+        self.generatedAt = ownership.generatedAt
+        self.summary = SnapshotSummary(
+            nodeProjectCount: ownership.summary.nodeProjectCount,
+            watchedBusyCount: ownership.summary.watchedBusyCount,
+            otherListenerCount: ownership.summary.otherListenerCount,
+            watchedNonNodeConflictCount: ownership.summary.watchedNonNodeConflictCount,
+            nodeProcessTotalCount: inventory.totalNodeCount,
+            nodeProcessTotalMemoryBytes: inventory.totalNodeMemoryBytes
         )
+        self.watchedPorts = ownership.watchedPorts
+        self.projects = ownership.projects
+        self.otherProcesses = ownership.otherProcesses
+        self.nodeProcessGroups = inventory.nodeProcessGroups
+        self.diagnostics = ownership.diagnostics
+    }
+
+    public static func empty(watchedPorts: [Int], source: String = "empty") -> AppSnapshot {
+        AppSnapshot(ownership: .empty(watchedPorts: watchedPorts, source: source))
     }
 
     public var allProcesses: [TrackedProcessSnapshot] {
