@@ -65,6 +65,154 @@ enum GroupMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum DestructiveActionKind {
+    case stopServer
+    case freePort
+    case stopTunnel
+    case stopBlocker
+    case killGroup
+
+    var label: String {
+        switch self {
+        case .stopServer: "Stop server"
+        case .freePort: "Free port"
+        case .stopTunnel: "Stop tunnel"
+        case .stopBlocker: "Stop blocker"
+        case .killGroup: "Kill group"
+        }
+    }
+}
+
+struct ActiveListenerGroup: Identifiable, Hashable {
+    let projectRoot: String
+    let displayName: String
+    let isWorktreeLike: Bool
+    let toolLabel: String
+    let processes: [TrackedProcessSnapshot]
+
+    var id: String { "\(self.projectRoot)#\(self.toolLabel)" }
+    var count: Int { self.processes.count }
+    var pids: [Int] { self.processes.map(\.process.pid) }
+}
+
+struct DestructiveActionConfirmation {
+    let kind: DestructiveActionKind
+    let messageText: String
+    let informativeText: String
+    let confirmButtonTitle: String
+}
+
+enum DestructiveActionAdvisor {
+    static func kind(for process: TrackedProcessSnapshot, portContext: Int?) -> DestructiveActionKind? {
+        let command = process.process.commandLine
+        let lowercasedCommand = command.lowercased()
+        let tool = process.process.toolLabel.lowercased()
+
+        if process.process.isNodeFamily, portContext != nil {
+            return .stopServer
+        }
+
+        let listenerIsSSH = process.listeners.contains {
+            $0.commandName.lowercased() == "ssh" || $0.commandName.lowercased() == "sshd"
+        }
+        if tool == "ssh" || tool == "sshd" || lowercasedCommand.hasPrefix("ssh ") || listenerIsSSH {
+            return .stopTunnel
+        }
+
+        if DestructiveActionPolicy.canTerminate(process) {
+            return portContext != nil ? .freePort : .stopBlocker
+        }
+
+        return nil
+    }
+
+    static func confirmation(for process: TrackedProcessSnapshot, portContext: Int?) -> DestructiveActionConfirmation? {
+        guard let kind = self.kind(for: process, portContext: portContext) else { return nil }
+        let pid = process.process.pid
+        let target = process.process.toolLabel
+        let portText = portContext.map { " on port \($0)" } ?? ""
+        let command = process.process.commandLine
+
+        switch kind {
+        case .stopServer:
+            return DestructiveActionConfirmation(
+                kind: kind,
+                messageText: "Stop server listening\(portText)?",
+                informativeText: "Sends SIGTERM to \(target) (PID \(pid)) only. Other Node work stays untouched.\n\(command)",
+                confirmButtonTitle: kind.label
+            )
+        case .freePort:
+            return DestructiveActionConfirmation(
+                kind: kind,
+                messageText: "Free port\(portText) by stopping \(target)?",
+                informativeText: "Sends SIGTERM to PID \(pid) only. Portpourri will not terminate unrelated listeners.\n\(command)",
+                confirmButtonTitle: kind.label
+            )
+        case .stopTunnel:
+            return DestructiveActionConfirmation(
+                kind: kind,
+                messageText: "Stop tunnel\(portText)?",
+                informativeText: "Sends SIGTERM to the SSH process (PID \(pid)) and closes this tunnel only.\n\(command)",
+                confirmButtonTitle: kind.label
+            )
+        case .stopBlocker:
+            return DestructiveActionConfirmation(
+                kind: kind,
+                messageText: "Stop blocker \(target)?",
+                informativeText: "Sends SIGTERM to PID \(pid) only.\n\(command)",
+                confirmButtonTitle: kind.label
+            )
+        case .killGroup:
+            return nil
+        }
+    }
+
+    static func confirmation(for group: ActiveListenerGroup) -> DestructiveActionConfirmation {
+        let ports = Set(group.processes.flatMap(\.ports)).sorted()
+        let portList = ports.map(String.init).joined(separator: ", ")
+        let portText = portList.isEmpty ? "active listeners" : "ports \(portList)"
+        return DestructiveActionConfirmation(
+            kind: .killGroup,
+            messageText: "Kill \(group.toolLabel) group for \(group.displayName)?",
+            informativeText: "Sends SIGTERM to \(group.count) active-listener process\(group.count == 1 ? "" : "es") in \(group.displayName) tied to \(portText) only. Other projects and unrelated Node processes are excluded.",
+            confirmButtonTitle: DestructiveActionKind.killGroup.label
+        )
+    }
+}
+
+private enum DestructiveActionPolicy {
+    static func hasMeaningfulDirectory(_ process: TrackedProcessSnapshot) -> Bool {
+        guard let cwd = process.process.cwd, cwd != "/" else { return false }
+        return FileManager.default.fileExists(atPath: cwd)
+    }
+
+    static func canTerminate(_ process: TrackedProcessSnapshot) -> Bool {
+        if process.process.isNodeFamily {
+            return true
+        }
+
+        guard hasMeaningfulDirectory(process) else { return false }
+
+        let command = process.process.commandLine
+        if command.hasPrefix("/System/") || command.hasPrefix("/usr/") || command.hasPrefix("/Applications/") {
+            return false
+        }
+
+        return true
+    }
+
+    static func sortedProcesses(_ processes: [TrackedProcessSnapshot]) -> [TrackedProcessSnapshot] {
+        processes.sorted { lhs, rhs in
+            let lhsPorts = lhs.ports.map(String.init).joined(separator: ",")
+            let rhsPorts = rhs.ports.map(String.init).joined(separator: ",")
+            if lhsPorts == rhsPorts {
+                return lhs.process.toolLabel.localizedCaseInsensitiveCompare(rhs.process.toolLabel) == .orderedAscending
+            }
+            return lhsPorts.localizedStandardCompare(rhsPorts) == .orderedAscending
+        }
+    }
+}
+
 @MainActor
 final class SettingsStore: ObservableObject {
     static let defaultWatchedPortsText = SnapshotService.defaultWatchedPorts.map(String.init).joined(separator: ",")
@@ -313,40 +461,39 @@ final class PortpourriStore: ObservableObject {
         self.copyText(text, label: "Command copied")
     }
 
-
-    func terminateAllNodeProcessesOnWatchedPorts() {
-        let watchedPortSet = Set(self.snapshot.watchedPorts.filter(\.isBusy).map(\.port))
-        let nodeProcesses = self.snapshot.projects
-            .flatMap(\.processes)
-            .filter { process in
-                process.process.isNodeFamily && !Set(process.ports).isDisjoint(with: watchedPortSet)
+    var activeListenerGroups: [ActiveListenerGroup] {
+        self.snapshot.projects
+            .flatMap { project -> [ActiveListenerGroup] in
+                let listenerProcesses = project.processes.filter { !$0.listeners.isEmpty }
+                let grouped = Dictionary(grouping: listenerProcesses, by: { $0.process.toolLabel })
+                return grouped.values.map {
+                    ActiveListenerGroup(
+                        projectRoot: project.projectRoot,
+                        displayName: project.displayName,
+                        isWorktreeLike: project.isWorktreeLike,
+                        toolLabel: $0.first?.process.toolLabel ?? "node",
+                        processes: DestructiveActionPolicy.sortedProcesses($0)
+                    )
+                }
             }
-
-        guard !nodeProcesses.isEmpty else { return }
-
-        if self.settings.confirmBeforeTerminate {
-            let alert = NSAlert()
-            alert.messageText = "Terminate \(nodeProcesses.count) Node process\(nodeProcesses.count == 1 ? "" : "es")?"
-            alert.informativeText = "This will free all watched ports owned by Node apps."
-            alert.addButton(withTitle: "Terminate All")
-            alert.addButton(withTitle: "Cancel")
-            if alert.runModal() != .alertFirstButtonReturn {
-                return
+            .sorted {
+                if $0.count == $1.count {
+                    if $0.displayName == $1.displayName {
+                        return $0.toolLabel.localizedCaseInsensitiveCompare($1.toolLabel) == .orderedAscending
+                    }
+                    return $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+                }
+                return $0.count > $1.count
             }
-        }
-
-        for process in nodeProcesses {
-            kill(pid_t(process.process.pid), SIGTERM)
-        }
-        self.refreshNow()
     }
 
-    func terminateGroup(_ group: NodeProcessGroup) {
+    func terminateGroup(_ group: ActiveListenerGroup) {
         if self.settings.confirmBeforeTerminate {
+            let confirmation = DestructiveActionAdvisor.confirmation(for: group)
             let alert = NSAlert()
-            alert.messageText = "Terminate \(group.count) \(group.toolLabel) process\(group.count == 1 ? "" : "es")?"
-            alert.informativeText = "This will free \(group.formattedMemory) of memory."
-            alert.addButton(withTitle: "Terminate All")
+            alert.messageText = confirmation.messageText
+            alert.informativeText = confirmation.informativeText
+            alert.addButton(withTitle: confirmation.confirmButtonTitle)
             alert.addButton(withTitle: "Cancel")
             if alert.runModal() != .alertFirstButtonReturn {
                 return
@@ -376,12 +523,13 @@ final class PortpourriStore: ObservableObject {
         try? process.run()
     }
 
-    func terminate(process: TrackedProcessSnapshot) {
-        if self.settings.confirmBeforeTerminate {
+    func terminate(process: TrackedProcessSnapshot, portContext: Int? = nil) {
+        if self.settings.confirmBeforeTerminate,
+           let confirmation = DestructiveActionAdvisor.confirmation(for: process, portContext: portContext) {
             let alert = NSAlert()
-            alert.messageText = "Terminate process \(process.process.pid)?"
-            alert.informativeText = process.process.commandLine
-            alert.addButton(withTitle: "Terminate")
+            alert.messageText = confirmation.messageText
+            alert.informativeText = confirmation.informativeText
+            alert.addButton(withTitle: confirmation.confirmButtonTitle)
             alert.addButton(withTitle: "Cancel")
             if alert.runModal() != .alertFirstButtonReturn {
                 return

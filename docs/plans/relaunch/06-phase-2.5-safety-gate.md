@@ -107,8 +107,26 @@ Publicly exposed actions are safely bounded, and the main user journey is clear 
 
 The next phase may assume:
 - the public surface is safe enough to harden internally
-- scenario behavior has been manually verified
+- scenario behavior has been manually verified only after the required running-app safety check passes
 - destructive actions are no longer ambiguous
+
+## Handoff update
+
+Implemented safety-gate behavior:
+- removed the leftover bulk watched-port terminate path
+- kept grouped cleanup only for active-listener Node groups inside an explicit project ownership boundary
+- made confirmation prompts action-specific for Stop server, Free port, Stop tunnel, and Kill group
+- kept AI tools read-only in the UI with no cleanup affordance
+- aligned UI copy and docs to the bounded-action model
+
+Manual closeout completed:
+- verified in a real running app session that two simultaneous watched-port `node` projects sharing a tool label did not expose a shared Kill group action
+- the ambiguous shared-label case remained non-destructive in the live UI, so `status.md` can move to `completed`
+
+Not carried into this phase:
+- Phase 3 app/core decomposition
+- Phase 4 CLI expansion
+- any broader machine-wide process-management affordance
 
 ## Agent instruction block
 

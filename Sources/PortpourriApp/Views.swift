@@ -18,7 +18,7 @@ struct PopoverRootView: View {
         let allWatchedPorts = self.store.snapshot.watchedPorts
             .sorted(by: DisplayText.compareWatchedPorts)
         let visibleOtherProcesses = self.store.visibleOtherProcesses()
-        let significantGroups = self.store.snapshot.nodeProcessGroups.filter { $0.count >= 3 }
+        let significantGroups = self.store.activeListenerGroups.filter { $0.count >= 3 }
         let conflictCount = allWatchedPorts.filter(\.isConflict).count
         let projectCount = SnapshotDetails.sortedProjects(self.store.snapshot.projects).count
         let aiSnapshot = self.store.aiSnapshot
@@ -55,7 +55,7 @@ struct PopoverRootView: View {
                 if !significantGroups.isEmpty {
                     Divider()
                     NodeProcessDrawerToggle(
-                        summary: self.store.snapshot.summary,
+                        groups: significantGroups,
                         significantGroupCount: significantGroups.count,
                         isOpen: self.$showProcessDrawer
                     )
@@ -73,7 +73,7 @@ struct PopoverRootView: View {
                     }
                 }
 
-                // 5. AI tools / workspace cleanup
+                // 5. AI tools
                 if hasAITools {
                     Divider()
                     AIToolsSection(aiSnapshot: aiSnapshot, isExpanded: self.$showAITools)
@@ -202,7 +202,7 @@ private struct WatchedPortRow: View {
             switch resolution.kind {
             case .terminate:
                 InlineAccentButton(resolution.title, tone: resolution.tone) {
-                    self.store.terminate(process: process)
+                    self.store.terminate(process: process, portContext: self.status.port)
                 }
             case let .openApplication(path):
                 InlineAccentButton(resolution.title, tone: resolution.tone) {
@@ -316,7 +316,7 @@ private struct ProjectDashboardRow: View {
 // MARK: - Node Process Groups
 
 private struct NodeProcessDrawerToggle: View {
-    let summary: SnapshotSummary
+    let groups: [ActiveListenerGroup]
     let significantGroupCount: Int
     @Binding var isOpen: Bool
 
@@ -325,23 +325,19 @@ private struct NodeProcessDrawerToggle: View {
             self.isOpen.toggle()
         } label: {
             HStack(alignment: .center, spacing: 6) {
-                Text("Node processes")
+                Text("Process groups")
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(Readability.secondaryText)
-                Text("\(self.summary.nodeProcessTotalCount)")
+                Text("\(self.totalProcessCount)")
                     .font(.caption)
                     .foregroundStyle(Readability.secondaryText)
                 Text("\u{00B7}")
                     .foregroundStyle(Readability.secondaryText)
-                Text(self.formattedTotalMemory)
+                Text("\(self.significantGroupCount) group\(self.significantGroupCount == 1 ? "" : "s")")
                     .font(.caption)
                     .fontWeight(.medium)
-                    .foregroundStyle(
-                        self.summary.nodeProcessTotalMemoryBytes > 2 * 1024 * 1024 * 1024
-                            ? Palette.mutedRed
-                            : Readability.secondaryText
-                    )
+                    .foregroundStyle(Readability.secondaryText)
                 Spacer()
                 Image(systemName: self.isOpen ? "chevron.down" : "chevron.up")
                     .font(.caption2)
@@ -352,18 +348,14 @@ private struct NodeProcessDrawerToggle: View {
         .buttonStyle(.plain)
     }
 
-    private var formattedTotalMemory: String {
-        let mb = Double(self.summary.nodeProcessTotalMemoryBytes) / (1024 * 1024)
-        if mb >= 1024 {
-            return String(format: "%.1f GB", mb / 1024)
-        }
-        return String(format: "%.0f MB", mb)
+    private var totalProcessCount: Int {
+        self.groups.reduce(0) { $0 + $1.count }
     }
 }
 
 private struct NodeProcessGroupRow: View {
     @ObservedObject var store: PortpourriStore
-    let group: NodeProcessGroup
+    let group: ActiveListenerGroup
 
     var body: some View {
         HStack(alignment: .center, spacing: 6) {
@@ -372,14 +364,26 @@ private struct NodeProcessGroupRow: View {
                 .foregroundStyle(Readability.secondaryText)
                 .frame(width: 28, alignment: .trailing)
 
-            Text(self.group.toolLabel)
-                .font(.caption)
-                .fontWeight(.medium)
-                .lineLimit(1)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(self.group.toolLabel)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+
+                HStack(spacing: 4) {
+                    Text(self.group.displayName)
+                        .font(.caption2)
+                        .foregroundStyle(Readability.secondaryText)
+                        .lineLimit(1)
+                    if self.group.isWorktreeLike {
+                        StatusTag(text: "worktree", tone: .neutral)
+                    }
+                }
+            }
 
             Spacer(minLength: 4)
 
-            Text(self.group.formattedMemory)
+            Text(self.groupPortSummary)
                 .font(.system(.caption2, design: .monospaced))
                 .foregroundStyle(Readability.secondaryText)
 
@@ -388,6 +392,12 @@ private struct NodeProcessGroupRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    private var groupPortSummary: String {
+        let ports = Set(self.group.processes.flatMap(\.ports)).sorted()
+        guard !ports.isEmpty else { return "listeners" }
+        return ports.map(String.init).joined(separator: ",")
     }
 }
 
@@ -470,7 +480,7 @@ private struct ProcessDetailRow: View {
     private func run(_ action: ResolutionAction) {
         switch action.kind {
         case .terminate:
-            self.store.terminate(process: self.process)
+            self.store.terminate(process: self.process, portContext: self.portContext)
         case let .openApplication(path):
             self.store.openApplication(at: path)
         }
@@ -612,7 +622,7 @@ private struct ProcessActionsMenu: View {
             }
             if self.canTerminate {
                 Divider()
-                Button("Terminate", role: .destructive) {
+                Button(self.terminateLabel, role: .destructive) {
                     self.store.terminate(process: self.process)
                 }
             }
@@ -626,6 +636,10 @@ private struct ProcessActionsMenu: View {
             .foregroundStyle(.secondary)
         }
         .menuStyle(BorderlessButtonMenuStyle())
+    }
+
+    private var terminateLabel: String {
+        DestructiveActionAdvisor.kind(for: self.process, portContext: nil)?.label ?? "Stop process"
     }
 }
 
@@ -980,19 +994,6 @@ private struct ResolutionAction {
 private enum ResolutionAdvisor {
     static func primaryAction(for process: TrackedProcessSnapshot, portContext: Int?) -> ResolutionAction? {
         let command = process.process.commandLine
-        let lowercasedCommand = command.lowercased()
-        let tool = process.process.toolLabel.lowercased()
-
-        if process.process.isNodeFamily, portContext != nil {
-            return ResolutionAction(title: "Stop server", tone: .node, kind: .terminate)
-        }
-
-        let listenerIsSSH = process.listeners.contains {
-            $0.commandName.lowercased() == "ssh" || $0.commandName.lowercased() == "sshd"
-        }
-        if tool == "ssh" || tool == "sshd" || lowercasedCommand.hasPrefix("ssh ") || listenerIsSSH {
-            return ResolutionAction(title: "Stop tunnel", tone: .conflict, kind: .terminate)
-        }
 
         // Docker-owned ports (postgres, redis, etc.) are typically intentional
         // infrastructure — no action button, just informational display.
@@ -1000,9 +1001,15 @@ private enum ResolutionAdvisor {
             return nil
         }
 
-        if ProcessActionPolicy.canTerminate(process) {
-            let label = portContext != nil ? "Free port" : "Stop blocker"
-            return ResolutionAction(title: label, tone: .conflict, kind: .terminate)
+        if let kind = DestructiveActionAdvisor.kind(for: process, portContext: portContext) {
+            let tone: AccentTone
+            switch kind {
+            case .stopServer:
+                tone = .node
+            case .freePort, .stopTunnel, .stopBlocker, .killGroup:
+                tone = .conflict
+            }
+            return ResolutionAction(title: kind.label, tone: tone, kind: .terminate)
         }
 
         return nil
@@ -1305,7 +1312,10 @@ private struct GeneralSettingsView: View {
             }
 
             Section("Safety") {
-                Toggle("Confirm before terminate", isOn: self.$settings.confirmBeforeTerminate)
+                Toggle("Confirm destructive actions", isOn: self.$settings.confirmBeforeTerminate)
+                Text("Shows action-specific confirmation copy for Stop server, Free port, Stop tunnel, and Kill group.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Notifications") {

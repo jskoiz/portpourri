@@ -90,7 +90,7 @@ Target section order:
 1. Watched ports
 2. Other listeners / blockers
 3. Process groups
-4. AI tools / workspace cleanup
+4. AI tools
 
 ## Settings contract
 
