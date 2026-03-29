@@ -1,0 +1,16 @@
+{
+  "version": "0.3.2",
+  "build": "0.3.2",
+  "gitSha": "c88743f",
+  "publishedAt": "2026-03-29T02:36:37Z",
+  "assetName": "Portpourri-0.3.2-mac.zip",
+  "assetUrl": "https://github.com/jskoiz/portpourri/releases/download/v0.3.2/Portpourri-0.3.2-mac.zip",
+  "repoUrl": "https://github.com/jskoiz/portpourri",
+  "releaseNotesUrl": "https://github.com/jskoiz/portpourri/releases/tag/v0.3.2",
+  "websiteUrl": "https://www.portpourri.com",
+  "highlights": [
+    "Renamed to Portpourri with new app icon",
+    "Stale worktree detection and cleanup",
+    "Dark mode and dot matrix menu bar"
+  ]
+}

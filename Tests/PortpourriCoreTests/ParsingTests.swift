@@ -24,7 +24,7 @@ final class ParsingTests: XCTestCase {
 
     func testSampleSnapshotCollapsesDuplicateIPv4IPv6Listener() {
         let snapshot = SnapshotService.sampleSnapshot(watchedPorts: [3000, 5173, 8081])
-        let backend = snapshot.projects.first { $0.displayName == "api" }
+        let backend = snapshot.projects.first { $0.displayName == "@acme/backend" }
 
         XCTAssertEqual(backend?.ports, [3000])
         XCTAssertEqual(snapshot.summary.nodeProjectCount, 3)

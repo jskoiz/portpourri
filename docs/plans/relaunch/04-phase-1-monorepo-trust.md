@@ -137,9 +137,34 @@ The app repo, packaged app, release assets, and live site all point to the same 
 
 The next phase may assume:
 - the site lives in `site/`
-- all public links point to the canonical app repo
-- version and asset metadata come from canonical sources
-- fake update UI is gone
+- all public links point to the canonical app repo (`jskoiz/portpourri`)
+- canonical website URL is `https://www.portpourri.com`
+- version and asset metadata come from `VERSION` and `release-manifest.json`
+- `package_app.sh` reads version from `VERSION` file
+- site reads version/download info from `site/data/release-manifest.json`
+- fake update UI and `checkForUpdatesAutomatically` setting are removed
+- About window links to website, GitHub, and X (all canonical)
+- `NODETRACKER_SAMPLE_DATA` env var renamed to `PORTPOURRI_SAMPLE_DATA`
+- `AIToolSnapshot` and `AIWorktreeEntry` types restored in `Models.swift` (lost in rename merge)
+
+### Models.swift exception review
+The prior agent restored `AIToolSnapshot` and `AIWorktreeEntry` in `Sources/PortpourriCore/Models.swift`.
+This file is normally forbidden in Phase 1. Review classification:
+
+- **Classification**: acceptable exception required to restore build health
+- **Evidence**: The two structs are byte-identical to their originals in commit `46faa7e` (pre-rename path `Sources/NodeTrackerCore/Models.swift`). They were lost when commit `b9a3055` renamed the module. Without them, `AIToolProbe.swift` fails to compile and `swift build` cannot pass on `origin/main`.
+- **Scope**: No new logic, no behavioral change, no API surface change. Pure recovery of dropped code.
+
+### Remaining before phase completion
+- Merge this PR to main
+- Repoint Vercel project to `jskoiz/portpourri` with `site/` as root directory
+- Verify `https://www.portpourri.com` serves manifest-driven content with v0.3.2
+- Mark phase complete in `status.md`
+- Old `portpourri-site` repo must not be archived until live deploy is confirmed
+
+### Pre-existing issues (not Phase 1 scope)
+- `testSampleSnapshotCollapsesDuplicateIPv4IPv6Listener` fails due to sample data shape mismatch
+- `CHANGELOG.md` only documents up to 0.2.0 while public releases go to 0.3.2
 
 ## Agent instruction block
 

@@ -8,6 +8,7 @@ MACOS_DIR="$APP_DIR/Contents/MacOS"
 RESOURCES_DIR="$APP_DIR/Contents/Resources"
 
 cd "$ROOT"
+VERSION="$(cat "$ROOT/VERSION" | tr -d '[:space:]')"
 swift build -c release --product PortpourriApp
 
 rm -rf "$APP_DIR"
@@ -31,9 +32,9 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.1.0</string>
+  <string>${VERSION}</string>
   <key>CFBundleVersion</key>
-  <string>1</string>
+  <string>${VERSION}</string>
   <key>LSUIElement</key>
   <true/>
   <key>NSHighResolutionCapable</key>
@@ -44,4 +45,4 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-echo "Packaged $APP_DIR"
+echo "Packaged $APP_DIR (v$VERSION)"

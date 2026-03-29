@@ -274,3 +274,93 @@ public protocol ProjectResolving: Sendable {
 public protocol SnapshotExporting: Sendable {
     func export(snapshot: AppSnapshot) throws -> Data
 }
+
+// MARK: - AI Tool Models
+
+public struct AIWorktreeEntry: Codable, Hashable, Sendable, Identifiable {
+    public let path: String
+    public let name: String
+    public let sizeBytes: Int64
+    public let projectName: String?
+    public let lastModified: Date
+
+    public init(path: String, name: String, sizeBytes: Int64, projectName: String?, lastModified: Date = Date()) {
+        self.path = path
+        self.name = name
+        self.sizeBytes = sizeBytes
+        self.projectName = projectName
+        self.lastModified = lastModified
+    }
+
+    public var id: String { self.path }
+
+    public var formattedSize: String {
+        let mb = Double(self.sizeBytes) / (1024 * 1024)
+        if mb >= 1024 {
+            return String(format: "%.1f GB", mb / 1024)
+        }
+        return String(format: "%.0f MB", mb)
+    }
+
+    public var daysSinceModified: Int {
+        Int(Date().timeIntervalSince(self.lastModified) / 86400)
+    }
+
+    public var isStale: Bool {
+        self.daysSinceModified >= 3
+    }
+}
+
+public struct AIToolSnapshot: Codable, Hashable, Sendable {
+    public let claudeWorktrees: [AIWorktreeEntry]
+    public let codexWorktrees: [AIWorktreeEntry]
+    public let claudeSessionCount: Int
+    public let codexSessionCount: Int
+    public let totalSizeBytes: Int64
+
+    public init(
+        claudeWorktrees: [AIWorktreeEntry] = [],
+        codexWorktrees: [AIWorktreeEntry] = [],
+        claudeSessionCount: Int = 0,
+        codexSessionCount: Int = 0,
+        totalSizeBytes: Int64 = 0
+    ) {
+        self.claudeWorktrees = claudeWorktrees
+        self.codexWorktrees = codexWorktrees
+        self.claudeSessionCount = claudeSessionCount
+        self.codexSessionCount = codexSessionCount
+        self.totalSizeBytes = totalSizeBytes
+    }
+
+    public static let empty = AIToolSnapshot()
+
+    public var claudeTotalSize: Int64 {
+        self.claudeWorktrees.reduce(0) { $0 + $1.sizeBytes }
+    }
+
+    public var codexTotalSize: Int64 {
+        self.codexWorktrees.reduce(0) { $0 + $1.sizeBytes }
+    }
+
+    public var hasContent: Bool {
+        !self.claudeWorktrees.isEmpty || !self.codexWorktrees.isEmpty
+            || self.claudeSessionCount > 0 || self.codexSessionCount > 0
+    }
+
+    public var staleClaudeWorktrees: [AIWorktreeEntry] {
+        self.claudeWorktrees.filter(\.isStale)
+    }
+
+    public var staleCodexWorktrees: [AIWorktreeEntry] {
+        self.codexWorktrees.filter(\.isStale)
+    }
+
+    public var totalStaleCount: Int {
+        self.staleClaudeWorktrees.count + self.staleCodexWorktrees.count
+    }
+
+    public var totalStaleSize: Int64 {
+        self.staleClaudeWorktrees.reduce(0) { $0 + $1.sizeBytes }
+            + self.staleCodexWorktrees.reduce(0) { $0 + $1.sizeBytes }
+    }
+}

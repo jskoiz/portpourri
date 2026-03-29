@@ -26,6 +26,10 @@ If you've ever had multiple projects fighting over ports 3000, 5173, or 8081 and
 
 ## Install
 
+### Download
+
+Grab the latest signed release from [GitHub Releases](https://github.com/jskoiz/portpourri/releases/latest). Unzip, drag to Applications, and launch — the app appears in the menu bar.
+
 ### Build from source
 
 ```bash
@@ -83,6 +87,11 @@ Tests/
 Scripts/
   package_app.sh      # Build and wrap into .app bundle
   dev_harness.sh      # Spin up local test listeners for manual testing
+site/
+  index.html          # Marketing homepage
+  css/                # Styles
+  js/                 # Interactive demo and animations
+  data/               # Release manifest (version, download URL)
 docs/
   product.md          # Product spec and design philosophy
   architecture.md     # Module boundaries and data flow

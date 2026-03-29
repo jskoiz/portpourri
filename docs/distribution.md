@@ -161,17 +161,32 @@ provides a great user experience without sandbox constraints.
 
 ---
 
+## Monorepo site layout
+
+The marketing website lives in `site/` within this repo. It is deployed via Vercel with `site/` as the publish root.
+
+The site reads release metadata from `site/data/release-manifest.json` to display the current version and download links. This file should always match the root-level `release-manifest.json`.
+
+See `site/README.md` for local preview instructions.
+
+---
+
 ## Version checklist
 
 When releasing a new version:
 
-1. Update `CHANGELOG.md` with the new version and changes
-2. Commit: `git commit -m "Prepare v0.2.0 release"`
-3. Tag: `git tag -a v0.2.0 -m "v0.2.0: Description"`
-4. Push: `git push origin main --tags`
-5. The release workflow handles the rest
+1. Update `VERSION` with the new version number
+2. Update `release-manifest.json` with the new version, asset URL, highlights, and publishedAt
+3. Copy `release-manifest.json` to `site/data/release-manifest.json`
+4. Update `CHANGELOG.md` with the new version and changes
+5. Commit: `git commit -m "Prepare v0.x.0 release"`
+6. Tag: `git tag -a v0.x.0 -m "v0.x.0: Description"`
+7. Push: `git push origin main --tags`
+8. The release workflow handles the rest
 
 The version flows automatically from the git tag into:
 - `CFBundleShortVersionString` in Info.plist
 - GitHub Release title
 - Homebrew cask formula
+
+Local builds via `Scripts/package_app.sh` read the version from the `VERSION` file at the repo root.

@@ -131,12 +131,6 @@ final class SettingsStore: ObservableObject {
         }
     }
 
-    @Published var checkForUpdatesAutomatically: Bool {
-        didSet {
-            UserDefaults.standard.set(self.checkForUpdatesAutomatically, forKey: "checkForUpdatesAutomatically")
-            self.onChange?()
-        }
-    }
 
     @Published var hideWhenIdle: Bool {
         didSet {
@@ -185,7 +179,6 @@ final class SettingsStore: ObservableObject {
         self.menuBarDisplayMode = MenuBarDisplayMode(rawValue: defaults.string(forKey: "menuBarDisplayMode") ?? "") ?? .countAndMemory
         self.enableConflictNotifications = defaults.object(forKey: "enableConflictNotifications") as? Bool ?? true
         self.notificationSound = defaults.object(forKey: "notificationSound") as? Bool ?? true
-        self.checkForUpdatesAutomatically = defaults.object(forKey: "checkForUpdatesAutomatically") as? Bool ?? true
         self.hideWhenIdle = defaults.object(forKey: "hideWhenIdle") as? Bool ?? false
         self.showConflictBadge = defaults.object(forKey: "showConflictBadge") as? Bool ?? true
         self.hotkeyModifiers = defaults.string(forKey: "hotkeyModifiers") ?? "ctrl+shift"

@@ -1300,7 +1300,6 @@ private struct AdvancedSettingsView: View {
 private struct AboutSettingsView: View {
     @ObservedObject var store: PortpourriStore
     @ObservedObject var settings: SettingsStore
-    @State private var updateStatus: String?
 
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
@@ -1335,22 +1334,19 @@ private struct AboutSettingsView: View {
                 .padding(.vertical, 4)
             }
 
-            Section("Updates") {
-                Toggle("Check for updates automatically", isOn: self.$settings.checkForUpdatesAutomatically)
-                HStack {
-                    Button("Check for Updates Now") {
-                        self.updateStatus = "You\u{2019}re on the latest version."
-                    }
-                    if let status = self.updateStatus {
-                        Text(status)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+            Section("Links") {
+                Link(destination: URL(string: "https://www.portpourri.com")!) {
+                    HStack {
+                        Image(systemName: "globe")
+                            .frame(width: 20)
+                        Text("Website")
+                        Spacer()
+                        Image(systemName: "arrow.up.right.square")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
                 }
-            }
-
-            Section("Links") {
-                Link(destination: URL(string: "https://github.com/nicktoonz/portpourri")!) {
+                Link(destination: URL(string: "https://github.com/jskoiz/portpourri")!) {
                     HStack {
                         Image(systemName: "chevron.left.forwardslash.chevron.right")
                             .frame(width: 20)
@@ -1361,7 +1357,7 @@ private struct AboutSettingsView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
-                Link(destination: URL(string: "https://x.com/nicktoonz")!) {
+                Link(destination: URL(string: "https://x.com/jskoiz")!) {
                     HStack {
                         Image(systemName: "at")
                             .frame(width: 20)
