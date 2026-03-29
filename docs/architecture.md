@@ -14,6 +14,7 @@ Phase 3 hardens the split inside the core and app without changing the product s
 - `ProcessInventorySnapshot` holds machine-wide Node inventory used for secondary surfaces.
 - `AppSnapshot` remains a temporary adapter that composes ownership + inventory for one release line.
 - App refresh application is coordinated so stale results cannot overwrite newer state.
+- `PortpourriApp` is decomposed into focused settings, process-action, refresh-support, launch-at-login, shared-view, and settings-view modules instead of one dominant store/view pair.
 
 ## Boundaries
 
@@ -38,6 +39,15 @@ Phase 3 hardens the split inside the core and app without changing the product s
 - Older detached refresh work may finish, but stale generations are dropped instead of overwriting the latest state.
 - AI/worktree scanning remains on its own async path.
 - Conflict notifications are deduped by explicit external-conflict state, not by timer cadence alone.
+
+## App layer
+
+- `Store.swift` now focuses on app orchestration and state ownership.
+- `AppSettings.swift` holds menu bar display and persisted settings types.
+- `ProcessActions.swift` centralizes destructive-action policy, grouping eligibility, and confirmation copy.
+- `RefreshSupport.swift` isolates generation gating and conflict-notification state tracking.
+- `LaunchAtLoginManager.swift` isolates launch-at-login behavior.
+- `Views.swift`, `ViewSupport.swift`, and `SettingsViews.swift` split the popover shell, shared controls, and settings UI into focused files without changing the Phase 2.5 product surface.
 
 ## Packaging
 

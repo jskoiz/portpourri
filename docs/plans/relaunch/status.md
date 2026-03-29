@@ -1,20 +1,19 @@
 current_phase: phase-3-architecture-hardening
-phase_state: in_progress
+phase_state: completed
 
 phase_owner:
   agent: codex
   human: jerry
 
 started_at: 2026-03-28
-completed_at:
+completed_at: 2026-03-29
 
 blockers: []
 
 exact_next_task: >
-  Review and merge Phase 3 PR 1 (core model split + refresh correctness), then
-  start PR 2 for app-layer decomposition. PR 2 may assume ownership and
-  inventory snapshots are split, AppSnapshot remains the adapter surface, and
-  refresh application is generation-gated.
+  Review and merge Phase 3 PR 1 (core model split + refresh correctness) and
+  Phase 3 PR 2 (app-layer decomposition) in order, then move the control plane
+  to Phase 4 CLI core work.
 
 files_allowed_to_change:
   - docs/architecture.md
@@ -42,10 +41,10 @@ validation_required:
   - AppSnapshot remains compatible adapter surface for app and CLI
 
 stop_condition: >
-  Phase 3 PR 1 lands the ownership/inventory split, generation-gated refresh
-  application, and state-based notification dedupe without changing the public
-  product story. Phase 3 remains in progress until PR 2 decomposes the app
-  layer.
+  Phase 3 is complete when PR 1 lands the ownership/inventory split,
+  generation-gated refresh application, and state-based notification dedupe,
+  and PR 2 decomposes the concentrated app layer without changing the public
+  product story.
 
 validation_results:
   swift_build: pass (existing SwiftPM unhandled-resource warnings unchanged)
@@ -56,7 +55,8 @@ validation_results:
   ownership_inventory_split: pass — SnapshotService now builds PortOwnershipSnapshot and ProcessInventorySnapshot separately, with AppSnapshot as adapter
   refresh_generation: pass — SnapshotRefreshCoordinator tests prove stale generations do not apply
   notification_state_dedupe: pass — ConflictNotificationTracker tests prove only new external conflict states notify
-  docs_alignment: pass — architecture doc and relaunch control plane reflect PR 1 boundaries
+  app_layer_decomposition: pass — Store.swift and Views.swift are no longer the dominant concentration points; focused app/service/view files now own settings, process actions, shared controls, and settings UI
+  docs_alignment: pass — architecture doc and relaunch control plane reflect both PR 1 and PR 2 boundaries
 
 noted_exceptions: []
 
@@ -71,10 +71,10 @@ canonical_decisions:
   refresh_boundary: "main snapshot refresh is generation-gated; AI/worktree refresh remains separate"
 
 handoff_notes: >
-  Phase 3 PR 1 is implemented on this branch. Core now separates
-  PortOwnershipSnapshot from ProcessInventorySnapshot, while AppSnapshot stays
-  alive as the compatibility adapter for the app and CLI. PortpourriStore now
-  applies refresh results through a generation gate so stale refreshes cannot
-  overwrite newer state, and watched-port conflict notifications are deduped by
-  explicit external-conflict state instead of timer timing. PR 2 should assume
-  those guarantees and focus only on decomposing the concentrated app layer.
+  Phase 3 is complete across 2 PRs. PR 1 split ownership snapshots from
+  machine-wide inventory, kept AppSnapshot as the compatibility adapter, and
+  made refresh and notification application state-safe. PR 2 decomposed the
+  concentrated app layer into focused settings, process-action, refresh-support,
+  launch-at-login, shared-view, and settings-view files without changing the
+  Phase 2.5 product surface. Phase 4 may assume the internal boundaries are
+  hardened and can build CLI depth on top of the new adapter/core split.
