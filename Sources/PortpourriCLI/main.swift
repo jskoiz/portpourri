@@ -1,5 +1,5 @@
 import Foundation
-import NodeTrackerCore
+import PortpourriCore
 
 enum CLIError: Error, CustomStringConvertible {
     case usage(String)
@@ -14,7 +14,7 @@ enum CLIError: Error, CustomStringConvertible {
 }
 
 @main
-struct NodeTrackerCLI {
+struct PortpourriCLI {
     static func main() {
         do {
             try Self.run(arguments: Array(CommandLine.arguments.dropFirst()))
@@ -70,7 +70,7 @@ struct NodeTrackerCLI {
         guard let nameIndex = arguments.firstIndex(of: "--name"),
               arguments.indices.contains(nameIndex + 1)
         else {
-            throw CLIError.usage("Usage: nodetracker fixtures --name <fixture> [--json]")
+            throw CLIError.usage("Usage: portpourri fixtures --name <fixture> [--json]")
         }
 
         let name = arguments[nameIndex + 1]
@@ -91,7 +91,7 @@ struct NodeTrackerCLI {
     }
 
     private static func printSummary(_ snapshot: AppSnapshot) {
-        print("NodeTracker snapshot")
+        print("Portpourri snapshot")
         print("Updated: \(snapshot.generatedAt)")
         print("Node projects: \(snapshot.summary.nodeProjectCount)")
         print("Busy watched ports: \(snapshot.summary.watchedBusyCount)")
@@ -113,8 +113,8 @@ struct NodeTrackerCLI {
 
     private static let helpText = """
     Usage:
-      nodetracker snapshot [--json] [--sample-data]
-      nodetracker fixtures --list
-      nodetracker fixtures --name mixed [--json]
+      portpourri snapshot [--json] [--sample-data]
+      portpourri fixtures --list
+      portpourri fixtures --name mixed [--json]
     """
 }

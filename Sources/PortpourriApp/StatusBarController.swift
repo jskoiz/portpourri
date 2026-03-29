@@ -1,12 +1,12 @@
 import AppKit
 import Combine
-import NodeTrackerCore
+import PortpourriCore
 import SwiftUI
 import UserNotifications
 
 @MainActor
 final class StatusBarController: NSObject, NSPopoverDelegate {
-    private let store: NodeTrackerStore
+    private let store: PortpourriStore
     private let statusItem: NSStatusItem
     private let popover = NSPopover()
     private var settingsWindow: NSWindow?
@@ -16,7 +16,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
     private var hotkeyMonitor: Any?
     private var localHotkeyMonitor: Any?
 
-    init(store: NodeTrackerStore) {
+    init(store: PortpourriStore) {
         self.store = store
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
@@ -40,7 +40,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         let hostingController = NSHostingController(rootView: settingsView)
 
         let window = NSWindow(contentViewController: hostingController)
-        window.title = "NodeWatcher Settings"
+        window.title = "Portpourri Settings"
         window.styleMask = [.titled, .closable]
         window.center()
         window.isReleasedWhenClosed = false
@@ -61,7 +61,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         button.action = #selector(self.togglePopover(_:))
         button.target = self
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-        button.toolTip = "NodeWatcher (\u{2303}\u{21E7}P)"
+        button.toolTip = "Portpourri (\u{2303}\u{21E7}P)"
     }
 
     private func configurePopover() {
@@ -136,7 +136,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
 
         // Update tooltip
         let symbolStr = Self.modifierSymbols(self.store.settings.hotkeyModifiers) + self.store.settings.hotkeyKey.uppercased()
-        self.statusItem.button?.toolTip = "NodeWatcher (\(symbolStr))"
+        self.statusItem.button?.toolTip = "Portpourri (\(symbolStr))"
     }
 
     static func parseModifiers(_ str: String) -> NSEvent.ModifierFlags {

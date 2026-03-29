@@ -1,5 +1,5 @@
 import XCTest
-@testable import NodeTrackerCore
+@testable import PortpourriCore
 
 final class SnapshotServiceTests: XCTestCase {
     func testProjectsSortDeterministicallyWhenDisplayNamesMatch() throws {

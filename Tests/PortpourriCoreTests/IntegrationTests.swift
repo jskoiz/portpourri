@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import NodeTrackerCore
+@testable import PortpourriCore
 
 final class IntegrationTests: XCTestCase {
     func testLiveSnapshotFindsNodeListenerAndProcessCanBeTerminated() throws {

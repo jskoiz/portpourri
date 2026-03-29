@@ -1,13 +1,13 @@
-# NodeWatcher
+# Portpourri
 
-[![CI](https://github.com/jskoiz/node-watcher/actions/workflows/ci.yml/badge.svg)](https://github.com/jskoiz/node-watcher/actions/workflows/ci.yml)
+[![CI](https://github.com/jskoiz/portpourri/actions/workflows/ci.yml/badge.svg)](https://github.com/jskoiz/portpourri/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black.svg)](https://www.apple.com/macos/)
 [![Swift 6.0](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
 
 A macOS menu bar app that answers one question instantly: **which local ports are in use, who owns them, and is it my dev server or something blocking it?**
 
-If you've ever had multiple projects fighting over ports 3000, 5173, or 8081 and resorted to a pile of `lsof` and `ps` commands, NodeWatcher replaces that with a single glance.
+If you've ever had multiple projects fighting over ports 3000, 5173, or 8081 and resorted to a pile of `lsof` and `ps` commands, Portpourri replaces that with a single glance.
 
 ## Features
 
@@ -17,7 +17,7 @@ If you've ever had multiple projects fighting over ports 3000, 5173, or 8081 and
 - **Conflict detection** — distinguishes "your app owns this port" from "Docker is blocking it" or "an SSH tunnel is occupying it"
 - **Safe actions** — context-aware resolution (free port, stop tunnel, configurable port command template) with no destructive force-kill
 - **Configurable** — settings for watched ports, refresh cadence, display modes, hotkeys, port command template, and grouping
-- **CLI included** — `nodetracker snapshot --json` for scripting and CI
+- **CLI included** — `portpourri snapshot --json` for scripting and CI
 
 ## Requirements
 
@@ -29,8 +29,8 @@ If you've ever had multiple projects fighting over ports 3000, 5173, or 8081 and
 ### Build from source
 
 ```bash
-git clone https://github.com/jskoiz/node-watcher.git
-cd node-watcher
+git clone https://github.com/jskoiz/portpourri.git
+cd portpourri
 swift build -c release
 ```
 
@@ -39,28 +39,28 @@ swift build -c release
 ```bash
 # As a menu bar app
 ./Scripts/package_app.sh
-open .build/NodeWatcher.app
+open .build/Portpourri.app
 
 # Or directly (development mode)
-swift run NodeTrackerApp
+swift run PortpourriApp
 
 # With sample data (no real processes needed)
-swift run NodeTrackerApp --sample-data
+swift run PortpourriApp --sample-data
 ```
 
 ### CLI
 
 ```bash
 # Live snapshot of all listening processes
-swift run nodetracker snapshot --json
+swift run portpourri snapshot --json
 
 # Dump test fixtures
-swift run nodetracker fixtures --name mixed --json
+swift run portpourri fixtures --name mixed --json
 ```
 
 ## How It Works
 
-NodeWatcher builds a snapshot of local listening processes in a pipeline:
+Portpourri builds a snapshot of local listening processes in a pipeline:
 
 1. **Probe** — scans TCP sockets via `lsof`
 2. **Enrich** — adds process metadata from `ps`
@@ -69,17 +69,17 @@ NodeWatcher builds a snapshot of local listening processes in a pipeline:
 5. **Collapse** — deduplicates IPv4/IPv6 listeners into one logical port owner
 6. **Assess** — marks watched ports as owned by your app or blocked by something else
 
-This is why NodeWatcher says "3000 is blocked by Docker" or "8081 is owned by the Expo app in `~/projects/mobile`" instead of just "PID 12345 is using port 3000."
+This is why Portpourri says "3000 is blocked by Docker" or "8081 is owned by the Expo app in `~/projects/mobile`" instead of just "PID 12345 is using port 3000."
 
 ## Architecture
 
 ```
 Sources/
-  NodeTrackerCore/    # Models, parsers, classifier, snapshot service (no UI)
-  NodeTrackerApp/     # SwiftUI menu bar app
-  NodeTrackerCLI/     # CLI commands (snapshot, fixtures)
+  PortpourriCore/    # Models, parsers, classifier, snapshot service (no UI)
+  PortpourriApp/     # SwiftUI menu bar app
+  PortpourriCLI/     # CLI commands (snapshot, fixtures)
 Tests/
-  NodeTrackerCoreTests/   # Fixture-based parser, resolver, and integration tests
+  PortpourriCoreTests/   # Fixture-based parser, resolver, and integration tests
 Scripts/
   package_app.sh      # Build and wrap into .app bundle
   dev_harness.sh      # Spin up local test listeners for manual testing
@@ -90,7 +90,7 @@ docs/
   dev-harness.md      # Testing strategy and validation commands
 ```
 
-The core library (`NodeTrackerCore`) is deliberately free of AppKit/SwiftUI so it can be tested independently and reused by both the GUI and CLI.
+The core library (`PortpourriCore`) is deliberately free of AppKit/SwiftUI so it can be tested independently and reused by both the GUI and CLI.
 
 ## Development
 
@@ -102,7 +102,7 @@ swift build
 swift test
 
 # Run with sample data
-swift run NodeTrackerApp --sample-data
+swift run PortpourriApp --sample-data
 
 # Run the dev harness (creates real test listeners)
 ./Scripts/dev_harness.sh

@@ -19,3 +19,4 @@ xcuserdata/
 # Environment
 .env
 .env.local
+.claude/

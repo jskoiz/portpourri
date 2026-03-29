@@ -1,4 +1,4 @@
-# NodeTracker Agent Guide
+# Portpourri Agent Guide
 
 This file is the map, not the manual. Treat `docs/` as the source of truth.
 
@@ -12,7 +12,7 @@ This file is the map, not the manual. Treat `docs/` as the source of truth.
 
 ## Repo rules
 
-- Keep `NodeTrackerCore` free of `AppKit` and `SwiftUI`.
+- Keep `PortpourriCore` free of `AppKit` and `SwiftUI`.
 - Parse shell output once at the edge, then operate on typed models.
 - Prefer small, legible types over clever abstractions.
 - When changing architecture or workflows, update the matching doc in `docs/`.
@@ -31,5 +31,5 @@ When working in this repo, keep four things explicit:
 
 - `swift build` succeeds.
 - `swift test` succeeds.
-- `swift run nodetracker snapshot --json` produces a valid snapshot.
+- `swift run portpourri snapshot --json` produces a valid snapshot.
 - The menu bar app can launch in sample mode and in live mode.

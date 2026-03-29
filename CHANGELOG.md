@@ -37,5 +37,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dev harness script for local testing with real listeners
 - App bundle packaging script
 
-[0.2.0]: https://github.com/jskoiz/node-watcher/releases/tag/v0.2.0
-[0.1.0]: https://github.com/jskoiz/node-watcher/releases/tag/v0.1.0
+[0.2.0]: https://github.com/jskoiz/portpourri/releases/tag/v0.2.0
+[0.1.0]: https://github.com/jskoiz/portpourri/releases/tag/v0.1.0

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TMP_DIR="${TMPDIR:-/tmp}/nodetracker-harness"
+TMP_DIR="${TMPDIR:-/tmp}/portpourri-harness"
 mkdir -p "$TMP_DIR"
 
 cat > "$TMP_DIR/node-server.js" <<'EOF'
