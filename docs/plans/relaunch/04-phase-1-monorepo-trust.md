@@ -145,7 +145,12 @@ The next phase may assume:
 - fake update UI and `checkForUpdatesAutomatically` setting are removed
 - About window links to website, GitHub, and X (all canonical)
 - `NODETRACKER_SAMPLE_DATA` env var renamed to `PORTPOURRI_SAMPLE_DATA`
-- `AIToolSnapshot` and `AIWorktreeEntry` types restored in `Models.swift` (lost in rename merge)
+- `AIToolSnapshot` and `AIWorktreeEntry` types restored in `Models.swift` as a
+  reviewed recovery exception
+- the live Vercel deployment is serving `main` from `site/`
+- `https://www.portpourri.com` reflects the manifest-driven `v0.3.2` release
+- the old separate site repo should remain untouched until you explicitly
+  choose to archive or freeze it outside this phase
 
 ### Models.swift exception review
 The prior agent restored `AIToolSnapshot` and `AIWorktreeEntry` in `Sources/PortpourriCore/Models.swift`.
@@ -154,13 +159,6 @@ This file is normally forbidden in Phase 1. Review classification:
 - **Classification**: acceptable exception required to restore build health
 - **Evidence**: The two structs are byte-identical to their originals in commit `46faa7e` (pre-rename path `Sources/NodeTrackerCore/Models.swift`). They were lost when commit `b9a3055` renamed the module. Without them, `AIToolProbe.swift` fails to compile and `swift build` cannot pass on `origin/main`.
 - **Scope**: No new logic, no behavioral change, no API surface change. Pure recovery of dropped code.
-
-### Remaining before phase completion
-- Merge this PR to main
-- Repoint Vercel project to `jskoiz/portpourri` with `site/` as root directory
-- Verify `https://www.portpourri.com` serves manifest-driven content with v0.3.2
-- Mark phase complete in `status.md`
-- Old `portpourri-site` repo must not be archived until live deploy is confirmed
 
 ### Pre-existing issues (not Phase 1 scope)
 - `testSampleSnapshotCollapsesDuplicateIPv4IPv6Listener` fails due to sample data shape mismatch

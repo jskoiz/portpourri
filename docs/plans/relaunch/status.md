@@ -1,4 +1,4 @@
-current_phase: phase-1-monorepo-trust
+current_phase: phase-2-product-ui
 phase_state: in_progress
 
 phase_owner:
@@ -10,64 +10,46 @@ completed_at:
 
 blockers:
   - description: >
-      Live Vercel deploy not yet switched. The current Vercel project (node-tracker-site)
-      deploys from the separate portpourri-site repo. It must be repointed to the app
-      repo (jskoiz/portpourri) with site/ as the root directory AFTER this PR merges.
-      Cannot be done before merge because site/ does not exist on main yet.
-    severity: blocking-completion
-    phase: phase-1
-  - description: >
       Pre-existing test failure: testSampleSnapshotCollapsesDuplicateIPv4IPv6Listener.
-      Sample data fixture does not match current SampleData shape. This test was already
-      failing on origin/main (which also had a build failure from missing AI types).
-      Not caused by Phase 1 changes.
+      Sample data fixture does not match current SampleData shape. This issue
+      predates the Phase 1 work and should not be treated as a regression.
     severity: low
     phase: pre-existing
 
 exact_next_task: >
-  1. Merge this PR to main.
-  2. In Vercel dashboard, repoint the project to jskoiz/portpourri with root directory set to site/.
-  3. Verify https://www.portpourri.com serves manifest-driven content with v0.3.2 in the hero badge.
-  4. Mark phase complete.
+  Align the app UI and website around the watched-port ownership story:
+  Dot Matrix semantics, popover hierarchy, settings structure, and a
+  conflict-first homepage.
 
 files_allowed_to_change:
-  - VERSION
-  - release-manifest.json
   - site/**
-  - Scripts/package_app.sh
-  - README.md
-  - docs/distribution.md
+  - docs/ui.md
   - docs/plans/relaunch/**
   - Sources/PortpourriApp/**
+  - screenshot assets
 
 files_forbidden_to_change:
-  - Sources/PortpourriCore/**
+  - Sources/PortpourriCore/** except tiny local changes strictly required to
+    express already-locked UI semantics safely
   - Sources/PortpourriCLI/**
-  - Tests/** except tests directly needed for packaging/version trust checks
+  - release/version pipeline files unless a Phase 1 regression must be fixed
 
 external_systems_required:
-  - system: github-releases
-    required_state: canonical repo release metadata and asset URLs are correct
-    verification: >
-      VERIFIED: /releases/latest redirects to v0.3.2. Direct asset URL
-      (Portpourri-0.3.2-mac.zip) returns 302 to CDN. Manifest assetUrl matches.
-  - system: vercel
-    required_state: deploy target points at the app repo and publishes from site/
-    verification: >
-      NOT YET VERIFIED. Current project (node-tracker-site) deploys from separate repo.
-      Must be repointed after PR merge.
+  - system: live-site
+    required_state: homepage reflects the new literal watched-port story
+    verification: live homepage copy, demo, and links match Phase 2 semantics
 
 validation_required:
   - swift build
   - swift test
-  - packaged app version matches VERSION
-  - homepage version matches release-manifest.json
-  - homepage download link resolves to canonical release asset
-  - homepage GitHub link resolves to jskoiz/portpourri
+  - swift run portpourri snapshot --json
+  - sample-mode app launch
+  - live-mode app launch
+  - docs, settings, tooltip, homepage, and screenshots describe the same Dot Matrix semantics
 
 stop_condition: >
-  The app repo, packaged app, release assets, and live site all point to the
-  same canonical identity and working install path, with no separate site repo required.
+  The menu bar glyph, popover hierarchy, settings copy, screenshots, and
+  website all reinforce the same watched-port ownership story.
 
 validation_results:
   swift_build: pass
@@ -95,36 +77,11 @@ canonical_decisions:
   repo_url: "https://github.com/jskoiz/portpourri"
   asset_naming: "Portpourri-{version}-mac.zip"
 
-vercel_repoint_checklist:
-  - step: 1
-    action: Merge this PR to main
-  - step: 2
-    action: >
-      In Vercel dashboard (vercel.com), go to project node-tracker-site → Settings → Git.
-      Change the connected repository from the portpourri-site repo to jskoiz/portpourri.
-      Set Root Directory to "site".
-  - step: 3
-    action: >
-      Alternatively, create a new Vercel project: vercel link in the app repo root,
-      then set Root Directory to site/ in project settings.
-  - step: 4
-    action: >
-      Trigger a production deploy (push to main or vercel --prod from repo root).
-  - step: 5
-    action: >
-      Verify https://www.portpourri.com shows v0.3.2 in the hero badge, Download for Mac
-      links to /releases/latest, View on GitHub links to jskoiz/portpourri.
-  - step: 6
-    action: >
-      Once verified, mark phase_state as complete and set completed_at date.
-      Only then may the old portpourri-site repo be archived/frozen.
-
 handoff_notes: >
-  All Phase 1 code changes are implemented, reviewed, and validated. The branch is
-  ready for PR. The Models.swift change has been reviewed and classified as an acceptable
-  exception: it restores two structs (AIToolSnapshot, AIWorktreeEntry) that were
-  byte-identical to their originals and lost in a rename merge. Without them swift build
-  fails on origin/main. Phase remains in_progress because the Vercel deploy cannot be
-  switched until the PR merges (site/ must exist on main first). See
-  vercel_repoint_checklist above for the exact post-merge steps. The old portpourri-site
-  repo must NOT be archived until the live deploy is confirmed at www.portpourri.com.
+  Phase 1 completed on 2026-03-28. The website now lives under site/ in the
+  canonical app repo, root VERSION and release-manifest.json drive packaging
+  and site metadata, the fake updater UI is removed, About links point to the
+  canonical jskoiz surfaces, and the live Vercel deployment is serving the
+  merged main branch at https://www.portpourri.com with the manifest-driven
+  v0.3.2 hero and canonical GitHub/download links. Phase 2 is now active and
+  should focus only on semantic/UI alignment around watched-port ownership.
