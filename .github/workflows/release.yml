@@ -1,0 +1,215 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-sign-release:
+    name: Build, Sign & Release
+    runs-on: macos-15
+    env:
+      APP_NAME: Portpourri
+      BUNDLE_ID: dev.portpourri.app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE" ]; then XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1); fi
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release binary
+        run: swift build -c release --product PortpourriApp
+
+      - name: Package app bundle
+        run: |
+          BUILD_DIR=".build/release"
+          APP_DIR=".build/${{ env.APP_NAME }}.app"
+          MACOS_DIR="$APP_DIR/Contents/MacOS"
+          RESOURCES_DIR="$APP_DIR/Contents/Resources"
+
+          rm -rf "$APP_DIR"
+          mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
+          cp "$BUILD_DIR/PortpourriApp" "$MACOS_DIR/PortpourriApp"
+
+          # Generate app icon from SVG
+          swift Scripts/make_icns.swift \
+            Sources/PortpourriApp/Resources/MenuBarIcon.svg \
+            "$RESOURCES_DIR/AppIcon.icns"
+
+          BUILD_TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M UTC')"
+          VERSION="${{ steps.version.outputs.version }}"
+
+          cat > "$APP_DIR/Contents/Info.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleExecutable</key>
+            <string>PortpourriApp</string>
+            <key>CFBundleIconFile</key>
+            <string>AppIcon</string>
+            <key>CFBundleIdentifier</key>
+            <string>${{ env.BUNDLE_ID }}</string>
+            <key>CFBundleName</key>
+            <string>${{ env.APP_NAME }}</string>
+            <key>CFBundleDisplayName</key>
+            <string>${{ env.APP_NAME }}</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${VERSION}</string>
+            <key>CFBundleVersion</key>
+            <string>${VERSION}</string>
+            <key>LSUIElement</key>
+            <true/>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+            <key>LSMinimumSystemVersion</key>
+            <string>14.0</string>
+            <key>NWBuildTimestamp</key>
+            <string>${BUILD_TIMESTAMP}</string>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Import signing certificate
+        env:
+          CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import certificate
+          echo "$CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" \
+            -P "$CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+
+          # Allow codesign to access keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+      - name: Code sign app
+        env:
+          SIGNING_IDENTITY: ${{ secrets.DEVELOPER_ID_SIGNING_IDENTITY }}
+        run: |
+          APP_DIR=".build/${{ env.APP_NAME }}.app"
+
+          codesign --force --options runtime \
+            --entitlements Entitlements/DevID.entitlements \
+            --sign "$SIGNING_IDENTITY" \
+            --timestamp \
+            "$APP_DIR/Contents/MacOS/PortpourriApp"
+
+          codesign --force --options runtime \
+            --entitlements Entitlements/DevID.entitlements \
+            --sign "$SIGNING_IDENTITY" \
+            --timestamp \
+            "$APP_DIR"
+
+          # Verify
+          codesign --verify --deep --strict "$APP_DIR"
+          echo "Code signing verified"
+
+      - name: Notarize app
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          APP_DIR=".build/${{ env.APP_NAME }}.app"
+          ZIP_PATH=".build/${{ env.APP_NAME }}-notarize.zip"
+
+          # Create zip for notarization
+          ditto -c -k --keepParent "$APP_DIR" "$ZIP_PATH"
+
+          # Submit for notarization
+          xcrun notarytool submit "$ZIP_PATH" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          # Staple the ticket
+          xcrun stapler staple "$APP_DIR"
+          echo "Notarization complete"
+
+      - name: Create release zip
+        run: |
+          cd .build
+          ditto -c -k --keepParent "${{ env.APP_NAME }}.app" "${{ env.APP_NAME }}-${{ steps.version.outputs.version }}-mac.zip"
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: .build/${{ env.APP_NAME }}-${{ steps.version.outputs.version }}-mac.zip
+          generate_release_notes: false
+          body: |
+            ## Install
+
+            1. Download `${{ env.APP_NAME }}-${{ steps.version.outputs.version }}-mac.zip` below
+            2. Unzip and drag `${{ env.APP_NAME }}.app` to your Applications folder
+            3. Launch from Applications — it appears in the menu bar
+
+            Requires macOS 14 (Sonoma) or later.
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
+
+      - name: Update Homebrew tap
+        if: success()
+        env:
+          TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          ZIP_URL="https://github.com/jskoiz/portpourri/releases/download/v${VERSION}/Portpourri-${VERSION}-mac.zip"
+          SHA256=$(shasum -a 256 ".build/${{ env.APP_NAME }}-${VERSION}-mac.zip" | awk '{print $1}')
+
+          # Clone tap repo and update formula
+          git clone "https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/jskoiz/homebrew-portpourri.git" /tmp/tap
+          cat > /tmp/tap/Casks/portpourri.rb <<CASK
+          cask "portpourri" do
+            version "${VERSION}"
+            sha256 "${SHA256}"
+
+            url "https://github.com/jskoiz/portpourri/releases/download/v#{version}/Portpourri-#{version}-mac.zip"
+            name "Portpourri"
+            desc "macOS menu bar app for monitoring local dev port usage"
+            homepage "https://github.com/jskoiz/portpourri"
+
+            depends_on macos: ">= :sonoma"
+
+            app "Portpourri.app"
+
+            zap trash: [
+              "~/Library/Preferences/dev.portpourri.app.plist",
+            ]
+          end
+          CASK
+
+          cd /tmp/tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/portpourri.rb
+          git commit -m "Update portpourri to ${VERSION}" || echo "No changes"
+          git push
