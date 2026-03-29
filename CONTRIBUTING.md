@@ -1,4 +1,4 @@
-# Contributing to NodeWatcher
+# Contributing to Portpourri
 
 Thanks for your interest in contributing! This guide will help you get started.
 
@@ -7,8 +7,8 @@ Thanks for your interest in contributing! This guide will help you get started.
 1. **Fork** the repository on GitHub
 2. **Clone** your fork locally:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/node-watcher.git
-   cd node-watcher
+   git clone https://github.com/YOUR_USERNAME/portpourri.git
+   cd portpourri
    ```
 3. **Build and test** to make sure everything works:
    ```bash
@@ -26,8 +26,8 @@ Thanks for your interest in contributing! This guide will help you get started.
 ```bash
 swift build                              # Build all targets
 swift test                               # Run all tests
-swift run nodetracker snapshot --json    # Live port snapshot
-swift run NodeTrackerApp --sample-data   # Launch app with fixture data
+swift run portpourri snapshot --json     # Live port snapshot
+swift run PortpourriApp --sample-data    # Launch app with fixture data
 ./Scripts/dev_harness.sh                 # Spin up test listeners
 ```
 
@@ -35,15 +35,15 @@ swift run NodeTrackerApp --sample-data   # Launch app with fixture data
 
 | Directory | Purpose |
 |-----------|---------|
-| `Sources/NodeTrackerCore/` | Models, parsers, classifier, snapshot service — **no UI imports** |
-| `Sources/NodeTrackerApp/` | SwiftUI menu bar app |
-| `Sources/NodeTrackerCLI/` | CLI commands |
-| `Tests/NodeTrackerCoreTests/` | Fixture-based tests |
+| `Sources/PortpourriCore/` | Models, parsers, classifier, snapshot service — **no UI imports** |
+| `Sources/PortpourriApp/` | SwiftUI menu bar app |
+| `Sources/PortpourriCLI/` | CLI commands |
+| `Tests/PortpourriCoreTests/` | Fixture-based tests |
 | `docs/` | Product spec, architecture, UI design, dev harness |
 
 ### Key Rules
 
-- **Keep `NodeTrackerCore` free of AppKit/SwiftUI.** The core library must be testable without a GUI.
+- **Keep `PortpourriCore` free of AppKit/SwiftUI.** The core library must be testable without a GUI.
 - **Parse shell output once at the edge, then operate on typed models.** Don't re-parse strings in business logic.
 - **Prefer small, legible types over clever abstractions.**
 - **No privileged or force-kill behavior** unless explicitly requested by the user through the UI.
@@ -59,7 +59,7 @@ swift run NodeTrackerApp --sample-data   # Launch app with fixture data
    ```bash
    swift build
    swift test
-   swift run nodetracker snapshot --json  # Should produce valid output
+   swift run portpourri snapshot --json   # Should produce valid output
    ```
 4. **Update docs** if you changed architecture or module boundaries (see `docs/`)
 
@@ -82,16 +82,16 @@ Update classifier to recognize Storybook dev server
 
 ## Reporting Bugs
 
-Open a [GitHub Issue](https://github.com/jskoiz/node-watcher/issues/new?template=bug_report.md) with:
+Open a [GitHub Issue](https://github.com/jskoiz/portpourri/issues/new?template=bug_report.md) with:
 
 - macOS version
 - Steps to reproduce
 - Expected vs actual behavior
-- Relevant output from `swift run nodetracker snapshot --json` if applicable
+- Relevant output from `swift run portpourri snapshot --json` if applicable
 
 ## Suggesting Features
 
-Open a [GitHub Issue](https://github.com/jskoiz/node-watcher/issues/new?template=feature_request.md) describing:
+Open a [GitHub Issue](https://github.com/jskoiz/portpourri/issues/new?template=feature_request.md) describing:
 
 - The problem you're trying to solve
 - Your proposed solution

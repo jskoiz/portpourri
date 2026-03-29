@@ -1,9 +1,9 @@
 # Distribution Guide
 
-NodeWatcher ships through three channels:
+Portpourri ships through three channels:
 
 1. **GitHub Releases** — signed and notarized `.app` zip (primary)
-2. **Homebrew** — `brew install --cask jskoiz/nodewatcher/nodewatcher`
+2. **Homebrew** — `brew install --cask jskoiz/portpourri/portpourri`
 3. **Mac App Store** — sandboxed build (may have limitations)
 
 ---
@@ -62,18 +62,18 @@ Set these in **Settings > Secrets and variables > Actions**:
 security find-identity -v -p codesigning
 
 # Build and sign
-swift build -c release --product NodeTrackerApp
+swift build -c release --product PortpourriApp
 ./Scripts/package_app.sh
 
 codesign --force --options runtime \
   --entitlements Entitlements/DevID.entitlements \
   --sign "Developer ID Application: Your Name (TEAMID)" \
   --timestamp \
-  .build/NodeWatcher.app
+  .build/Portpourri.app
 
 # Verify
-codesign --verify --deep --strict .build/NodeWatcher.app
-spctl --assess --type execute .build/NodeWatcher.app
+codesign --verify --deep --strict .build/Portpourri.app
+spctl --assess --type execute .build/Portpourri.app
 ```
 
 ---
@@ -82,12 +82,12 @@ spctl --assess --type execute .build/NodeWatcher.app
 
 ### Setup (one-time)
 
-1. Create a new GitHub repo: `jskoiz/homebrew-nodewatcher`
-2. Create `Casks/nodewatcher.rb` (the release workflow updates this automatically)
+1. Create a new GitHub repo: `jskoiz/homebrew-portpourri`
+2. Create `Casks/portpourri.rb` (the release workflow updates this automatically)
 3. Users install with:
    ```bash
-   brew tap jskoiz/nodewatcher
-   brew install --cask nodewatcher
+   brew tap jskoiz/portpourri
+   brew install --cask portpourri
    ```
 
 ### Initial cask formula
@@ -95,21 +95,21 @@ spctl --assess --type execute .build/NodeWatcher.app
 The release workflow auto-generates this, but for bootstrapping:
 
 ```ruby
-cask "nodewatcher" do
+cask "portpourri" do
   version "0.1.0"
   sha256 "FILL_AFTER_FIRST_RELEASE"
 
-  url "https://github.com/jskoiz/node-watcher/releases/download/v#{version}/NodeWatcher-#{version}-mac.zip"
-  name "NodeWatcher"
+  url "https://github.com/jskoiz/portpourri/releases/download/v#{version}/Portpourri-#{version}-mac.zip"
+  name "Portpourri"
   desc "macOS menu bar app for monitoring local dev port usage"
-  homepage "https://github.com/jskoiz/node-watcher"
+  homepage "https://github.com/jskoiz/portpourri"
 
   depends_on macos: ">= :sonoma"
 
-  app "NodeWatcher.app"
+  app "Portpourri.app"
 
   zap trash: [
-    "~/Library/Preferences/dev.nodewatcher.app.plist",
+    "~/Library/Preferences/dev.portpourri.app.plist",
   ]
 end
 ```
@@ -120,7 +120,7 @@ end
 
 ### Sandbox limitations
 
-NodeWatcher uses `lsof` and `ps` to probe system state. The Mac App Store
+Portpourri uses `lsof` and `ps` to probe system state. The Mac App Store
 requires App Sandbox, which restricts subprocess execution. This means:
 
 - The app needs temporary exception entitlements
@@ -129,26 +129,26 @@ requires App Sandbox, which restricts subprocess execution. This means:
 
 ### If you want to try
 
-1. Create an App ID at developer.apple.com with bundle ID `dev.nodewatcher.app`
+1. Create an App ID at developer.apple.com with bundle ID `dev.portpourri.app`
 2. Create a **Mac App Distribution** provisioning profile
 3. Build with App Store entitlements:
    ```bash
-   swift build -c release --product NodeTrackerApp
+   swift build -c release --product PortpourriApp
 
    codesign --force --options runtime \
      --entitlements Entitlements/AppStore.entitlements \
      --sign "3rd Party Mac Developer Application: Your Name (TEAMID)" \
-     .build/release/NodeTrackerApp
+     .build/release/PortpourriApp
    ```
 4. Package as `.pkg`:
    ```bash
-   productbuild --component .build/NodeWatcher.app /Applications \
+   productbuild --component .build/Portpourri.app /Applications \
      --sign "3rd Party Mac Developer Installer: Your Name (TEAMID)" \
-     NodeWatcher.pkg
+     Portpourri.pkg
    ```
 5. Upload via Transporter or:
    ```bash
-   xcrun altool --upload-app -f NodeWatcher.pkg \
+   xcrun altool --upload-app -f Portpourri.pkg \
      -t macos -u "your@apple.id" -p "app-specific-password"
    ```
 

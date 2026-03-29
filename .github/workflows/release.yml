@@ -13,8 +13,8 @@ jobs:
     name: Build, Sign & Release
     runs-on: macos-15
     env:
-      APP_NAME: NodeWatcher
-      BUNDLE_ID: dev.nodewatcher.app
+      APP_NAME: Portpourri
+      BUNDLE_ID: dev.portpourri.app
 
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +30,7 @@ jobs:
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Build release binary
-        run: swift build -c release --product NodeTrackerApp
+        run: swift build -c release --product PortpourriApp
 
       - name: Package app bundle
         run: |
@@ -41,7 +41,7 @@ jobs:
 
           rm -rf "$APP_DIR"
           mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
-          cp "$BUILD_DIR/NodeTrackerApp" "$MACOS_DIR/NodeTrackerApp"
+          cp "$BUILD_DIR/PortpourriApp" "$MACOS_DIR/PortpourriApp"
 
           BUILD_TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M UTC')"
           VERSION="${{ steps.version.outputs.version }}"
@@ -52,7 +52,7 @@ jobs:
           <plist version="1.0">
           <dict>
             <key>CFBundleExecutable</key>
-            <string>NodeTrackerApp</string>
+            <string>PortpourriApp</string>
             <key>CFBundleIdentifier</key>
             <string>${{ env.BUNDLE_ID }}</string>
             <key>CFBundleName</key>
@@ -111,7 +111,7 @@ jobs:
             --entitlements Entitlements/DevID.entitlements \
             --sign "$SIGNING_IDENTITY" \
             --timestamp \
-            "$APP_DIR/Contents/MacOS/NodeTrackerApp"
+            "$APP_DIR/Contents/MacOS/PortpourriApp"
 
           codesign --force --options runtime \
             --entitlements Entitlements/DevID.entitlements \
@@ -175,27 +175,27 @@ jobs:
           TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          ZIP_URL="https://github.com/jskoiz/node-watcher/releases/download/v${VERSION}/NodeWatcher-${VERSION}-mac.zip"
+          ZIP_URL="https://github.com/jskoiz/portpourri/releases/download/v${VERSION}/Portpourri-${VERSION}-mac.zip"
           SHA256=$(shasum -a 256 ".build/${{ env.APP_NAME }}-${VERSION}-mac.zip" | awk '{print $1}')
 
           # Clone tap repo and update formula
-          git clone "https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/jskoiz/homebrew-nodewatcher.git" /tmp/tap
-          cat > /tmp/tap/Casks/nodewatcher.rb <<CASK
-          cask "nodewatcher" do
+          git clone "https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/jskoiz/homebrew-portpourri.git" /tmp/tap
+          cat > /tmp/tap/Casks/portpourri.rb <<CASK
+          cask "portpourri" do
             version "${VERSION}"
             sha256 "${SHA256}"
 
-            url "https://github.com/jskoiz/node-watcher/releases/download/v#{version}/NodeWatcher-#{version}-mac.zip"
-            name "NodeWatcher"
+            url "https://github.com/jskoiz/portpourri/releases/download/v#{version}/Portpourri-#{version}-mac.zip"
+            name "Portpourri"
             desc "macOS menu bar app for monitoring local dev port usage"
-            homepage "https://github.com/jskoiz/node-watcher"
+            homepage "https://github.com/jskoiz/portpourri"
 
             depends_on macos: ">= :sonoma"
 
-            app "NodeWatcher.app"
+            app "Portpourri.app"
 
             zap trash: [
-              "~/Library/Preferences/dev.nodewatcher.app.plist",
+              "~/Library/Preferences/dev.portpourri.app.plist",
             ]
           end
           CASK
@@ -203,6 +203,6 @@ jobs:
           cd /tmp/tap
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/nodewatcher.rb
-          git commit -m "Update nodewatcher to ${VERSION}" || echo "No changes"
+          git add Casks/portpourri.rb
+          git commit -m "Update portpourri to ${VERSION}" || echo "No changes"
           git push

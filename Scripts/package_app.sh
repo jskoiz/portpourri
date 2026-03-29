@@ -3,17 +3,17 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="$ROOT/.build/release"
-APP_DIR="$ROOT/.build/NodeWatcher.app"
+APP_DIR="$ROOT/.build/Portpourri.app"
 MACOS_DIR="$APP_DIR/Contents/MacOS"
 RESOURCES_DIR="$APP_DIR/Contents/Resources"
 
 cd "$ROOT"
-swift build -c release --product NodeTrackerApp
+swift build -c release --product PortpourriApp
 
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
-cp "$BUILD_DIR/NodeTrackerApp" "$MACOS_DIR/NodeTrackerApp"
+cp "$BUILD_DIR/PortpourriApp" "$MACOS_DIR/PortpourriApp"
 
 BUILD_TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M UTC')"
 
@@ -23,11 +23,11 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
 <plist version="1.0">
 <dict>
   <key>CFBundleExecutable</key>
-  <string>NodeTrackerApp</string>
+  <string>PortpourriApp</string>
   <key>CFBundleIdentifier</key>
-  <string>dev.nodewatcher.app</string>
+  <string>dev.portpourri.app</string>
   <key>CFBundleName</key>
-  <string>NodeWatcher</string>
+  <string>Portpourri</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>

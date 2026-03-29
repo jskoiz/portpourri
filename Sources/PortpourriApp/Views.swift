@@ -1,12 +1,12 @@
 import AppKit
 import SwiftUI
-import NodeTrackerCore
+import PortpourriCore
 
 struct PopoverRootView: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     @ObservedObject private var settings: SettingsStore
 
-    init(store: NodeTrackerStore) {
+    init(store: PortpourriStore) {
         self.store = store
         self._settings = ObservedObject(wrappedValue: store.settings)
     }
@@ -125,7 +125,7 @@ struct PopoverRootView: View {
 // MARK: - Zone 1: Conflict Triage
 
 private struct ConflictSection: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let conflicts: [WatchedPortStatus]
     let visibleOtherProcesses: [TrackedProcessSnapshot]
 
@@ -150,7 +150,7 @@ private struct ConflictSection: View {
 }
 
 private struct ConflictCard: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let status: WatchedPortStatus
     let otherProcesses: [TrackedProcessSnapshot]
     let projects: [ProjectSnapshot]
@@ -235,7 +235,7 @@ private struct ConflictCard: View {
 // MARK: - Zone 2: Project Dashboard
 
 private struct ProjectDashboardSection: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let projects: [ProjectSnapshot]
     let nodeOwnedPorts: [WatchedPortStatus]
 
@@ -255,7 +255,7 @@ private struct ProjectDashboardSection: View {
 }
 
 private struct ProjectDashboardRow: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let project: ProjectSnapshot
     @State private var isExpanded = false
     @State private var isHovered = false
@@ -392,7 +392,7 @@ private struct NodeProcessDrawerToggle: View {
 }
 
 private struct NodeProcessGroupRow: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let group: NodeProcessGroup
     @State private var isExpanded = false
     @State private var isHovered = false
@@ -465,7 +465,7 @@ private struct NodeProcessGroupRow: View {
 // MARK: - Process Detail (collapsed by default)
 
 private struct ProcessDetailRow: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let process: TrackedProcessSnapshot
     let portContext: Int?
 
@@ -621,7 +621,7 @@ private struct CompactHeader: View {
             Image(systemName: "network")
                 .font(.caption)
                 .foregroundStyle(Readability.secondaryText)
-            Text("NodeWatcher")
+            Text("Portpourri")
                 .font(.subheadline)
                 .fontWeight(.semibold)
 
@@ -675,7 +675,7 @@ private struct CompactHeader: View {
 // MARK: - Shared Components
 
 private struct ProcessActionsMenu: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let process: TrackedProcessSnapshot
     let canTerminate: Bool
 
@@ -886,7 +886,7 @@ private struct InlineAccentButton: View {
 // MARK: - AI Tools Section
 
 private struct AIToolsSection: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let aiTools: AIToolSnapshot
 
     var body: some View {
@@ -941,7 +941,7 @@ private struct AIToolsSection: View {
 }
 
 private struct AIToolSourceRow: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let iconImage: NSImage?
     let label: String
     let worktrees: [AIWorktreeEntry]
@@ -1051,7 +1051,7 @@ private struct AIToolSourceRow: View {
 }
 
 private struct AIWorktreeRow: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     let entry: AIWorktreeEntry
     @State private var isExpanded = false
 
@@ -1530,11 +1530,11 @@ private enum DisplayText {
 // MARK: - Settings
 
 struct SettingsRootView: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     @ObservedObject private var settings: SettingsStore
     @State private var showPortOnboarding = false
 
-    init(store: NodeTrackerStore) {
+    init(store: PortpourriStore) {
         self.store = store
         self._settings = ObservedObject(wrappedValue: store.settings)
     }
@@ -1567,7 +1567,7 @@ struct SettingsRootView: View {
 }
 
 private struct GeneralSettingsView: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     @ObservedObject var settings: SettingsStore
 
     private static let modifierOptions = ["ctrl+shift", "cmd+shift", "cmd+opt", "ctrl+opt"]
@@ -1620,7 +1620,7 @@ private struct GeneralSettingsView: View {
                         .background(.quaternary)
                         .cornerRadius(6)
                 }
-                Text("Global shortcut to toggle the NodeWatcher popover.")
+                Text("Global shortcut to toggle the Portpourri popover.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -1724,7 +1724,7 @@ private struct WatchedPortsOnboardingView: View {
                 .font(.title3)
                 .fontWeight(.semibold)
 
-            Text("NodeWatcher only flags the ports you care about. Start with the common presets below, then add anything custom in Display settings.")
+            Text("Portpourri only flags the ports you care about. Start with the common presets below, then add anything custom in Display settings.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
@@ -1803,7 +1803,7 @@ private struct NotificationsSettingsView: View {
 }
 
 private struct AdvancedSettingsView: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
 
     var body: some View {
         Form {
@@ -1831,7 +1831,7 @@ private struct AdvancedSettingsView: View {
 }
 
 private struct AboutSettingsView: View {
-    @ObservedObject var store: NodeTrackerStore
+    @ObservedObject var store: PortpourriStore
     @ObservedObject var settings: SettingsStore
     @State private var updateStatus: String?
 
@@ -1855,7 +1855,7 @@ private struct AboutSettingsView: View {
                         .font(.system(size: 40))
                         .foregroundStyle(.secondary)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("NodeWatcher")
+                        Text("Portpourri")
                             .font(.title2.bold())
                         Text("v\(self.appVersion) (build \(self.buildNumber))")
                             .font(.subheadline)
@@ -1883,7 +1883,7 @@ private struct AboutSettingsView: View {
             }
 
             Section("Links") {
-                Link(destination: URL(string: "https://github.com/nicktoonz/node-tracker")!) {
+                Link(destination: URL(string: "https://github.com/jskoiz/portpourri")!) {
                     HStack {
                         Image(systemName: "chevron.left.forwardslash.chevron.right")
                             .frame(width: 20)

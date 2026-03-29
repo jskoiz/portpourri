@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import NodeTrackerCore
+@testable import PortpourriCore
 
 final class StructureTests: XCTestCase {
     func testCoreTargetDoesNotImportUIFrameworks() throws {
@@ -8,7 +8,7 @@ final class StructureTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let coreDirectory = repoRoot.appendingPathComponent("Sources/NodeTrackerCore", isDirectory: true)
+        let coreDirectory = repoRoot.appendingPathComponent("Sources/PortpourriCore", isDirectory: true)
 
         let enumerator = FileManager.default.enumerator(at: coreDirectory, includingPropertiesForKeys: nil)
         while let fileURL = enumerator?.nextObject() as? URL {

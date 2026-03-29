@@ -4,9 +4,9 @@ import UserNotifications
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    let store = NodeTrackerStore(
+    let store = PortpourriStore(
         useSampleData: ProcessInfo.processInfo.arguments.contains("--sample-data") ||
-            ProcessInfo.processInfo.environment["NODETRACKER_SAMPLE_DATA"] == "1"
+            ProcessInfo.processInfo.environment["PORTPOURRI_SAMPLE_DATA"] == "1"
     )
 
     private var statusBarController: StatusBarController?
@@ -34,7 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct NodeTrackerAppMain: App {
+struct PortpourriAppMain: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
