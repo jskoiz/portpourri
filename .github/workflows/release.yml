@@ -43,6 +43,11 @@ jobs:
           mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
           cp "$BUILD_DIR/PortpourriApp" "$MACOS_DIR/PortpourriApp"
 
+          # Generate app icon from SVG
+          swift Scripts/make_icns.swift \
+            Sources/PortpourriApp/Resources/MenuBarIcon.svg \
+            "$RESOURCES_DIR/AppIcon.icns"
+
           BUILD_TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M UTC')"
           VERSION="${{ steps.version.outputs.version }}"
 
@@ -53,6 +58,8 @@ jobs:
           <dict>
             <key>CFBundleExecutable</key>
             <string>PortpourriApp</string>
+            <key>CFBundleIconFile</key>
+            <string>AppIcon</string>
             <key>CFBundleIdentifier</key>
             <string>${{ env.BUNDLE_ID }}</string>
             <key>CFBundleName</key>

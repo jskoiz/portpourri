@@ -245,6 +245,15 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         let showBadge = self.store.settings.showConflictBadge
         let displayMode = self.store.settings.menuBarDisplayMode
 
+        // Icon-only mode: show the Portpourri SVG logo
+        if displayMode == .iconOnly {
+            if let icon = StatusChipRenderer.menuBarIcon() {
+                icon.isTemplate = true
+                button.image = icon
+            }
+            return
+        }
+
         // Dot matrix mode uses its own renderer
         if displayMode == .dotMatrix {
             let buttonAppearance = button.effectiveAppearance
@@ -689,5 +698,13 @@ enum StatusChipRenderer {
             badgeText.draw(in: badgeTextRect)
             return true
         }
+    }
+
+    /// The Portpourri SVG logo sized for the menu bar.
+    static func menuBarIcon() -> NSImage? {
+        guard let url = Bundle.module.url(forResource: "MenuBarIcon", withExtension: "svg"),
+              let image = NSImage(contentsOf: url) else { return nil }
+        image.size = NSSize(width: 18, height: 18)
+        return image
     }
 }

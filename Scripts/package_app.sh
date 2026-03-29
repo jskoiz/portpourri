@@ -15,6 +15,11 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
 cp "$BUILD_DIR/PortpourriApp" "$MACOS_DIR/PortpourriApp"
 
+# Generate app icon
+swift "$ROOT/Scripts/make_icns.swift" \
+  "$ROOT/Sources/PortpourriApp/Resources/MenuBarIcon.svg" \
+  "$RESOURCES_DIR/AppIcon.icns"
+
 BUILD_TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M UTC')"
 
 cat > "$APP_DIR/Contents/Info.plist" <<PLIST
@@ -24,6 +29,8 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
 <dict>
   <key>CFBundleExecutable</key>
   <string>PortpourriApp</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
   <key>CFBundleIdentifier</key>
   <string>dev.portpourri.app</string>
   <key>CFBundleName</key>

@@ -1,5 +1,6 @@
 <p align="center">
-  <h1 align="center">Portpourri</h1>
+  <img src=".github/images/logo-wordmark.svg" alt="Portpourri" height="48">
+  <br><br>
   <p align="center">
     A macOS menu bar app that shows which local ports are in use, who owns them, and whether it's your dev server or something blocking it.
   </p>
