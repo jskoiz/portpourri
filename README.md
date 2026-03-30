@@ -17,7 +17,7 @@ If you've ever had multiple projects fighting over ports 3000, 5173, or 8081 and
 - **Conflict detection** — distinguishes "your app owns this port" from "Docker is blocking it" or "an SSH tunnel is occupying it"
 - **Safe actions** — context-aware resolution (free port, stop tunnel, configurable port command template) with no destructive force-kill
 - **Configurable** — settings for watched ports, refresh cadence, display modes, hotkeys, port command template, and grouping
-- **CLI included** — `portpourri snapshot --json` for scripting and CI
+- **CLI included** — `snapshot`, `why`, `list`, and `doctor` for scripting, CI, and terminal-first diagnosis
 
 ## Requirements
 
@@ -55,10 +55,22 @@ swift run PortpourriApp --sample-data
 ### CLI
 
 ```bash
-# Live snapshot of all listening processes
+# Live snapshot of all listening processes (schemaVersion + snapshot envelope)
 swift run portpourri snapshot --json
 
-# Dump test fixtures
+# Explain one port
+swift run portpourri why 3000
+
+# Show watched-port status
+swift run portpourri list --watched
+
+# Show all current listeners
+swift run portpourri list --all
+
+# Run a human-readable diagnostics pass
+swift run portpourri doctor
+
+# Dump test fixtures with the same JSON envelope
 swift run portpourri fixtures --name mixed --json
 ```
 
@@ -118,6 +130,7 @@ swift run PortpourriApp --sample-data
 ```
 
 See [`docs/dev-harness.md`](docs/dev-harness.md) for the full testing strategy.
+See [`docs/troubleshooting.md`](docs/troubleshooting.md) for common failure cases and the probe commands Portpourri uses under the hood.
 
 ## Contributing
 

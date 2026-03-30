@@ -23,7 +23,9 @@ final class StructureTests: XCTestCase {
         let snapshot = SnapshotService.sampleSnapshot()
         let data = try SnapshotService().exportJSON(snapshot: snapshot)
         let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let exportedSnapshot = object?["snapshot"] as? [String: Any]
 
-        XCTAssertEqual(object?["projects"] as? [[String: Any]] != nil, true)
+        XCTAssertEqual(object?["schemaVersion"] as? String, SnapshotExportEnvelope.currentSchemaVersion)
+        XCTAssertEqual(exportedSnapshot?["projects"] as? [[String: Any]] != nil, true)
     }
 }

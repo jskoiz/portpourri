@@ -1,0 +1,116 @@
+{
+  "schemaVersion" : "0.1",
+  "snapshot" : {
+    "diagnostics" : {
+      "commands" : [
+        "lsof -nP -Fpcuftn -iTCP -sTCP:LISTEN",
+        "ps -p <pids> -o pid=,ppid=,etime=,state=,command=",
+        "lsof -a -p <pid> -d cwd -Fn",
+        "ps -eo pid=,rss=,command="
+      ],
+      "source" : "fixture"
+    },
+    "generatedAt" : "2026-03-29T00:00:00Z",
+    "nodeProcessGroups" : [
+      {
+        "count" : 3,
+        "pids" : [
+          123,
+          124,
+          125
+        ],
+        "toolLabel" : "vite",
+        "totalMemoryBytes" : 150994944
+      }
+    ],
+    "otherProcesses" : [
+      {
+        "isWatchedConflict" : true,
+        "listeners" : [
+          {
+            "commandName" : "python3",
+            "hostScope" : "loopback",
+            "pid" : 456,
+            "port" : 5433,
+            "transport" : "tcp4"
+          }
+        ],
+        "ports" : [
+          5433
+        ],
+        "process" : {
+          "commandLine" : "python3 -m http.server 5433",
+          "cwd" : "/Users/example/tools",
+          "isNodeFamily" : false,
+          "pid" : 456,
+          "ppid" : 1,
+          "state" : "S",
+          "toolLabel" : "python3",
+          "uptime" : "00:05"
+        }
+      }
+    ],
+    "projects" : [
+      {
+        "displayName" : "@acme/web",
+        "isWorktreeLike" : false,
+        "ports" : [
+          3000
+        ],
+        "processes" : [
+          {
+            "isWatchedConflict" : false,
+            "listeners" : [
+              {
+                "commandName" : "node",
+                "hostScope" : "loopback",
+                "pid" : 123,
+                "port" : 3000,
+                "transport" : "tcp4"
+              }
+            ],
+            "ports" : [
+              3000
+            ],
+            "process" : {
+              "commandLine" : "node /Users/example/acme/web/node_modules/.bin/vite",
+              "cwd" : "/Users/example/acme/web",
+              "isNodeFamily" : true,
+              "parentCommandLine" : "npm exec vite",
+              "pid" : 123,
+              "ppid" : 1,
+              "state" : "S",
+              "toolLabel" : "vite",
+              "uptime" : "00:10"
+            }
+          }
+        ],
+        "projectRoot" : "/Users/example/acme/web"
+      }
+    ],
+    "summary" : {
+      "nodeProcessTotalCount" : 3,
+      "nodeProcessTotalMemoryBytes" : 150994944,
+      "nodeProjectCount" : 1,
+      "otherListenerCount" : 1,
+      "watchedBusyCount" : 2,
+      "watchedNonNodeConflictCount" : 1
+    },
+    "watchedPorts" : [
+      {
+        "isBusy" : true,
+        "isConflict" : false,
+        "isNodeOwned" : true,
+        "ownerSummary" : "vite (123)",
+        "port" : 3000
+      },
+      {
+        "isBusy" : true,
+        "isConflict" : true,
+        "isNodeOwned" : false,
+        "ownerSummary" : "python3 (456)",
+        "port" : 5433
+      }
+    ]
+  }
+}

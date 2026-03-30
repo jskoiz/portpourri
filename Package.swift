@@ -37,5 +37,12 @@ let package = Package(
             name: "PortpourriAppTests",
             dependencies: ["PortpourriApp", "PortpourriCore"]
         ),
+        .testTarget(
+            name: "PortpourriCLITests",
+            dependencies: ["PortpourriCLI", "PortpourriCore"],
+            resources: [
+                .process("Fixtures"),
+            ]
+        ),
     ]
 )

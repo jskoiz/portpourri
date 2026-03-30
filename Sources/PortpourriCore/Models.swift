@@ -313,6 +313,58 @@ public struct AppSnapshot: Codable, Hashable, Sendable {
     }
 }
 
+public struct SnapshotExportEnvelope: Codable, Hashable, Sendable {
+    public static let currentSchemaVersion = "0.1"
+
+    public let schemaVersion: String
+    public let snapshot: AppSnapshot
+
+    public init(schemaVersion: String = Self.currentSchemaVersion, snapshot: AppSnapshot) {
+        self.schemaVersion = schemaVersion
+        self.snapshot = snapshot
+    }
+}
+
+public enum ProbeCheckStatus: String, Codable, CaseIterable, Sendable {
+    case ok
+    case failed
+}
+
+public struct ProbeCheckResult: Codable, Hashable, Sendable {
+    public let status: ProbeCheckStatus
+    public let detail: String?
+
+    public init(status: ProbeCheckStatus, detail: String? = nil) {
+        self.status = status
+        self.detail = detail
+    }
+}
+
+public struct SnapshotDoctorReport: Codable, Hashable, Sendable {
+    public let generatedAt: Date
+    public let watchedPorts: [Int]
+    public let diagnostics: ProbeDiagnostics
+    public let listenerProbe: ProbeCheckResult
+    public let metadataEnrichment: ProbeCheckResult
+    public let inventoryScan: ProbeCheckResult
+
+    public init(
+        generatedAt: Date,
+        watchedPorts: [Int],
+        diagnostics: ProbeDiagnostics,
+        listenerProbe: ProbeCheckResult,
+        metadataEnrichment: ProbeCheckResult,
+        inventoryScan: ProbeCheckResult
+    ) {
+        self.generatedAt = generatedAt
+        self.watchedPorts = watchedPorts
+        self.diagnostics = diagnostics
+        self.listenerProbe = listenerProbe
+        self.metadataEnrichment = metadataEnrichment
+        self.inventoryScan = inventoryScan
+    }
+}
+
 public struct ResolvedProject: Codable, Hashable, Sendable {
     public let rootPath: String
     public let displayName: String

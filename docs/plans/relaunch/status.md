@@ -1,32 +1,34 @@
-current_phase: phase-3-architecture-hardening
+current_phase: phase-4-cli-core
 phase_state: completed
 
 phase_owner:
   agent: codex
   human: jerry
 
-started_at: 2026-03-28
+started_at: 2026-03-29
 completed_at: 2026-03-29
 
 blockers: []
 
 exact_next_task: >
-  Review and merge Phase 3 PR 1 (core model split + refresh correctness) and
-  Phase 3 PR 2 (app-layer decomposition) in order, then move the control plane
-  to Phase 4 CLI core work.
+  Start Phase 5 launch-readiness work: refresh screenshots/demo assets, verify
+  release/install/docs consistency, and make the launch-facing surfaces match
+  the current app and CLI.
 
 files_allowed_to_change:
-  - docs/architecture.md
+  - README.md
+  - docs/dev-harness.md
+  - docs/troubleshooting.md
   - docs/plans/relaunch/**
   - Sources/PortpourriCore/**
-  - Sources/PortpourriApp/**
+  - Sources/PortpourriCLI/**
   - Tests/**
 
 files_forbidden_to_change:
-  - Sources/PortpourriCLI/**
   - site/**
-  - broad feature expansion
-  - release/version pipeline files
+  - Sources/PortpourriApp/**
+  - destructive app actions
+  - broad non-Node ecosystem expansion
 
 external_systems_required: []
 
@@ -34,29 +36,30 @@ validation_required:
   - swift build
   - swift test
   - swift run portpourri snapshot --json
-  - sample-data mode launches
-  - live mode launches
-  - refresh generation tests prove stale results do not apply
-  - notification dedupe tests prove new external conflict states notify once
-  - AppSnapshot remains compatible adapter surface for app and CLI
+  - swift run portpourri fixtures --name mixed --json
+  - swift run portpourri why 3000
+  - swift run portpourri list --watched
+  - swift run portpourri list --all
+  - swift run portpourri doctor
+  - snapshot --json includes schemaVersion and the snapshot envelope
+  - deterministic tests cover why/list/doctor and the JSON contract
 
 stop_condition: >
-  Phase 3 is complete when PR 1 lands the ownership/inventory split,
-  generation-gated refresh application, and state-based notification dedupe,
-  and PR 2 decomposes the concentrated app layer without changing the public
-  product story.
+  The CLI is a real read-only companion with stable-enough machine output and
+  useful human-readable diagnosis, without changing app UI semantics or adding
+  destructive CLI commands.
 
 validation_results:
   swift_build: pass (existing SwiftPM unhandled-resource warnings unchanged)
-  swift_test: 14/14 pass (0 failures) — added coverage for ownership+inventory composition and app refresh support helpers
-  snapshot_json: valid output with source "live"
-  sample_mode_launch: pass — app built and launched cleanly under PORTPOURRI_SAMPLE_DATA=1
-  live_mode_launch: pass — app built and launched cleanly against live snapshot mode
-  ownership_inventory_split: pass — SnapshotService now builds PortOwnershipSnapshot and ProcessInventorySnapshot separately, with AppSnapshot as adapter
-  refresh_generation: pass — SnapshotRefreshCoordinator tests prove stale generations do not apply
-  notification_state_dedupe: pass — ConflictNotificationTracker tests prove only new external conflict states notify
-  app_layer_decomposition: pass — Store.swift and Views.swift are no longer the dominant concentration points; focused app/service/view files now own settings, process actions, shared controls, and settings UI
-  docs_alignment: pass — architecture doc and relaunch control plane reflect both PR 1 and PR 2 boundaries
+  swift_test: 23/23 pass (0 failures) — added explicit CLI coverage for why/list/doctor and a golden snapshot envelope fixture
+  snapshot_json: pass — schemaVersion envelope wraps the existing AppSnapshot payload
+  fixtures_json: pass — fixtures emit the same schemaVersion envelope as live snapshot export
+  why_command: pass — human-readable explanation works for watched free, watched owned, watched blocked, and unwatched busy cases
+  list_commands: pass — deterministic watched-port and all-listener listings are covered by fixture-backed tests
+  doctor_command: pass — human-readable diagnostics include probe status headings and the exact probe commands
+  sample_mode_launch: pass — app still builds and launches under PORTPOURRI_SAMPLE_DATA=1
+  live_mode_launch: pass — app still builds and launches against live snapshot mode
+  docs_alignment: pass — README, dev harness, troubleshooting, and relaunch docs all reflect the Phase 4 CLI surface
 
 noted_exceptions: []
 
@@ -69,12 +72,15 @@ canonical_decisions:
   app_snapshot_role: "temporary adapter for one release line"
   inventory_boundary: "machine-wide Node inventory is separate from ownership capture"
   refresh_boundary: "main snapshot refresh is generation-gated; AI/worktree refresh remains separate"
+  phase4_pr_shape: "1 PR"
+  snapshot_schema_version: "0.1"
+  doctor_output_mode: "human-readable only"
 
 handoff_notes: >
-  Phase 3 is complete across 2 PRs. PR 1 split ownership snapshots from
-  machine-wide inventory, kept AppSnapshot as the compatibility adapter, and
-  made refresh and notification application state-safe. PR 2 decomposed the
-  concentrated app layer into focused settings, process-action, refresh-support,
-  launch-at-login, shared-view, and settings-view files without changing the
-  Phase 2.5 product surface. Phase 4 may assume the internal boundaries are
-  hardened and can build CLI depth on top of the new adapter/core split.
+  Phase 4 is complete in one PR. The CLI now provides read-only `why`, `list`,
+  and `doctor` commands on top of the Phase 3 adapter/core split, while
+  `snapshot --json` remains canonical under a versioned schema envelope.
+  Deterministic CLI tests now protect the JSON contract and the human-readable
+  outputs for watched-port diagnosis. Phase 5 may assume the CLI is a real
+  companion surface and focus only on launch-readiness, screenshots, and
+  release/docs consistency.

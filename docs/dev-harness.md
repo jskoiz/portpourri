@@ -19,4 +19,8 @@ swift build
 swift test
 swift run portpourri fixtures --name mixed --json
 swift run portpourri snapshot --json
+swift run portpourri why 3000
+swift run portpourri list --watched
+swift run portpourri list --all
+swift run portpourri doctor
 ```

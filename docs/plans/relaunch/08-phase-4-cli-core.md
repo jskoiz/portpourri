@@ -102,3 +102,31 @@ Use plan mode first, then implement.
 Complete Phase 4 only.
 Keep the wedge tight.
 This is about read-only utility and contributor leverage, not turning Portpourri into a CLI process manager.
+
+## Handoff update
+
+Implemented in Phase 4:
+- added `portpourri why <port>`
+- added `portpourri list --watched`
+- added `portpourri list --all`
+- added `portpourri doctor`
+- wrapped `snapshot --json` and fixture JSON export in a top-level `schemaVersion` envelope
+- added a dedicated CLI test target with deterministic fixture-backed tests and a golden snapshot-envelope fixture
+- updated README, dev harness docs, and troubleshooting guidance to match the new CLI surface
+
+Validation completed for the full phase:
+- `swift build`
+- `swift test`
+- `swift run portpourri snapshot --json`
+- `swift run portpourri fixtures --name mixed --json`
+- `swift run portpourri why 3000`
+- `swift run portpourri list --watched`
+- `swift run portpourri list --all`
+- `swift run portpourri doctor`
+- sample-data mode launch smoke test
+- live mode launch smoke test
+
+Phase 5 may assume:
+- the CLI is a real read-only companion, not just a snapshot sidecar
+- machine-readable output has a named schema version
+- docs and examples cover the primary CLI commands contributors and terminal-first users need

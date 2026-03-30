@@ -49,6 +49,71 @@ public struct SnapshotService: Sendable {
         try self.exporter.export(snapshot: snapshot)
     }
 
+    public func captureDoctorReport(watchedPorts: [Int]) -> SnapshotDoctorReport {
+        let diagnostics = ProbeDiagnostics(commands: Self.diagnosticCommands, source: "live")
+        let generatedAt = Date()
+
+        let listenerResult: ProbeCheckResult
+        let metadataResult: ProbeCheckResult
+
+        do {
+            let listeners = self.normalizeListeners(try self.listenerProbe.listeners())
+            listenerResult = ProbeCheckResult(
+                status: .ok,
+                detail: "Found \(listeners.count) listener\(listeners.count == 1 ? "" : "s")"
+            )
+
+            do {
+                let pidSet = Array(Set(listeners.map(\.pid))).sorted()
+                let rawProcesses = try self.metadataProbe.processes(for: pidSet)
+                _ = try self.metadataProbe.currentWorkingDirectories(for: pidSet)
+                let parentIDs = Array(Set(rawProcesses.values.map(\.ppid))).sorted()
+                _ = try self.metadataProbe.processes(for: parentIDs)
+                metadataResult = ProbeCheckResult(
+                    status: .ok,
+                    detail: "Resolved \(rawProcesses.count) process\(rawProcesses.count == 1 ? "" : "es")"
+                )
+            } catch {
+                metadataResult = ProbeCheckResult(
+                    status: .failed,
+                    detail: String(describing: error)
+                )
+            }
+        } catch {
+            listenerResult = ProbeCheckResult(
+                status: .failed,
+                detail: String(describing: error)
+            )
+            metadataResult = ProbeCheckResult(
+                status: .failed,
+                detail: "Skipped because listener probe failed"
+            )
+        }
+
+        let inventoryResult: ProbeCheckResult
+        do {
+            let inventory = try self.captureLiveProcessInventory()
+            inventoryResult = ProbeCheckResult(
+                status: .ok,
+                detail: "Found \(inventory.nodeProcessGroups.count) node process group\(inventory.nodeProcessGroups.count == 1 ? "" : "s")"
+            )
+        } catch {
+            inventoryResult = ProbeCheckResult(
+                status: .failed,
+                detail: String(describing: error)
+            )
+        }
+
+        return SnapshotDoctorReport(
+            generatedAt: generatedAt,
+            watchedPorts: watchedPorts.sorted(),
+            diagnostics: diagnostics,
+            listenerProbe: listenerResult,
+            metadataEnrichment: metadataResult,
+            inventoryScan: inventoryResult
+        )
+    }
+
     private func buildOwnershipSnapshot(
         listeners: [ListenerSnapshot],
         watchedPorts: [Int],
@@ -294,6 +359,6 @@ public struct JSONSnapshotExporter: SnapshotExporting {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
-        return try encoder.encode(snapshot)
+        return try encoder.encode(SnapshotExportEnvelope(snapshot: snapshot))
     }
 }
