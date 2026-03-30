@@ -142,3 +142,32 @@ Implemented in PR 1:
 Remaining for PR 2:
 - break up the concentrated app layer (`Views.swift`, `Store.swift`, and adjacent helpers)
 - preserve all Phase 2.5 user-facing behavior while moving logic into focused files/services
+
+## PR 2 handoff update
+
+Implemented in PR 2:
+- split settings persistence and display-mode types into `AppSettings.swift`
+- split destructive-action policy and confirmation logic into `ProcessActions.swift`
+- isolated launch-at-login handling in `LaunchAtLoginManager.swift`
+- moved shared popover and utility views into `ViewSupport.swift`
+- moved settings UI into `SettingsViews.swift`
+- reduced `Store.swift` and `Views.swift` to focused orchestration and section composition roles
+
+Phase 3 completion state:
+- `PortOwnershipSnapshot` and `ProcessInventorySnapshot` are separate internal domains
+- `AppSnapshot` remains the adapter surface for the current release line
+- refresh application is generation-gated
+- external conflict notifications are state-deduped
+- the app layer is decomposed into focused files instead of one dominant store/view pair
+
+Validation completed for the full phase:
+- `swift build`
+- `swift test`
+- `swift run portpourri snapshot --json`
+- sample-data mode launch smoke test
+- live mode launch smoke test
+
+Phase 4 may assume:
+- core ownership vs inventory boundaries are stable
+- refresh/notification correctness no longer needs structural work
+- app-layer seams are clear enough to extend CLI and adapter behavior without another giant-file refactor
