@@ -476,13 +476,13 @@ final class PortpourriStore: ObservableObject {
             .flatMap { project -> [ActiveListenerGroup] in
                 let listenerProcesses = project.processes.filter { !$0.listeners.isEmpty }
                 let grouped = Dictionary(grouping: listenerProcesses, by: { $0.process.toolLabel })
-                return grouped.values.map {
+                return grouped.map { toolLabel, processes in
                     ActiveListenerGroup(
                         projectRoot: project.projectRoot,
                         displayName: project.displayName,
                         isWorktreeLike: project.isWorktreeLike,
-                        toolLabel: $0.first?.process.toolLabel ?? "node",
-                        processes: DestructiveActionPolicy.sortedProcesses($0)
+                        toolLabel: toolLabel,
+                        processes: DestructiveActionPolicy.sortedProcesses(processes)
                     )
                 }
             }
