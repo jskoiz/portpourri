@@ -1,66 +1,62 @@
-current_phase: phase-2-product-ui
-phase_state: completed
+current_phase: phase-3-architecture-hardening
+phase_state: in_progress
 
 phase_owner:
   agent: codex
   human: jerry
 
 started_at: 2026-03-28
-completed_at: 2026-03-28
+completed_at:
 
 blockers: []
 
 exact_next_task: >
-  Phase 2 is complete. The next phase is Phase 2.5 (safety gate) which
-  covers destructive action boundaries, confirmation prompts, and
-  AI tool cleanup actions.
+  Review and merge Phase 3 PR 1 (core model split + refresh correctness), then
+  start PR 2 for app-layer decomposition. PR 2 may assume ownership and
+  inventory snapshots are split, AppSnapshot remains the adapter surface, and
+  refresh application is generation-gated.
 
 files_allowed_to_change:
-  - site/**
-  - docs/ui.md
+  - docs/architecture.md
   - docs/plans/relaunch/**
+  - Sources/PortpourriCore/**
   - Sources/PortpourriApp/**
-  - screenshot assets
+  - Tests/**
 
 files_forbidden_to_change:
-  - Sources/PortpourriCore/** except tiny local changes strictly required to
-    express already-locked UI semantics safely
   - Sources/PortpourriCLI/**
-  - release/version pipeline files unless a Phase 1 regression must be fixed
+  - site/**
+  - broad feature expansion
+  - release/version pipeline files
 
-external_systems_required:
-  - system: live-site
-    required_state: homepage reflects the new literal watched-port story
-    verification: live homepage copy, demo, and links match Phase 2 semantics
+external_systems_required: []
 
 validation_required:
   - swift build
   - swift test
   - swift run portpourri snapshot --json
-  - sample-mode app launch
-  - live-mode app launch
-  - docs, settings, tooltip, homepage, and screenshots describe the same Dot Matrix semantics
+  - sample-data mode launches
+  - live mode launches
+  - refresh generation tests prove stale results do not apply
+  - notification dedupe tests prove new external conflict states notify once
+  - AppSnapshot remains compatible adapter surface for app and CLI
 
 stop_condition: >
-  The menu bar glyph, popover hierarchy, settings copy, screenshots, and
-  website all reinforce the same watched-port ownership story.
+  Phase 3 PR 1 lands the ownership/inventory split, generation-gated refresh
+  application, and state-based notification dedupe without changing the public
+  product story. Phase 3 remains in progress until PR 2 decomposes the app
+  layer.
 
 validation_results:
-  swift_build: pass
-  swift_test: 11/11 pass (0 failures)
+  swift_build: pass (existing SwiftPM unhandled-resource warnings unchanged)
+  swift_test: 14/14 pass (0 failures) — added coverage for ownership+inventory composition and app refresh support helpers
   snapshot_json: valid output with source "live"
-  package_app_version: 0.3.2 matches VERSION
-  homepage_version: 0.3.2 in hero badge fallback and release-manifest.json
-  download_link: https://github.com/jskoiz/portpourri/releases/latest
-  github_link: https://github.com/jskoiz/portpourri
-  stale_string_scan: zero hits for "Kill all" or old "Free port" on Node processes
-  ai_refresh_path: separate from main snapshot refresh
-  show_non_node_toggle: restored — Other listeners section follows the Display setting
-  sample_mode_launch: pass
-  live_mode_launch: pass
-  settings_structure: pass — General, Display, Ports, Advanced, About
-  tooltip: pass — dynamic watched-port summary shown in live mode
-  live_site: pass — homepage reflects the literal watched-port ownership story
+  sample_mode_launch: pass — app built and launched cleanly under PORTPOURRI_SAMPLE_DATA=1
+  live_mode_launch: pass — app built and launched cleanly against live snapshot mode
+  ownership_inventory_split: pass — SnapshotService now builds PortOwnershipSnapshot and ProcessInventorySnapshot separately, with AppSnapshot as adapter
+  refresh_generation: pass — SnapshotRefreshCoordinator tests prove stale generations do not apply
+  notification_state_dedupe: pass — ConflictNotificationTracker tests prove only new external conflict states notify
+  docs_alignment: pass — architecture doc and relaunch control plane reflect PR 1 boundaries
 
 noted_exceptions: []
 
@@ -69,28 +65,16 @@ canonical_decisions:
   website_url: "https://www.portpourri.com"
   repo_url: "https://github.com/jskoiz/portpourri"
   asset_naming: "Portpourri-{version}-mac.zip"
-  dot_matrix_states:
-    free: "dim — port not busy"
-    owned: "green — busy, single Node owner, no conflict"
-    blocked: "amber — busy, non-Node owner"
-    conflict: "red — busy, multiple Node owners"
-  action_labels:
-    node_owned: "Stop server"
-    external_blocker: "Free port"
-    ssh_tunnel: "Stop tunnel"
-    generic: "Stop blocker"
-    group: "Kill group"
-  settings_tabs: "General, Display, Ports, Advanced, About"
-  popover_sections: "Watched Ports, Other Listeners, Process Groups, AI Tools"
+  phase3_pr_shape: "2 PRs"
+  app_snapshot_role: "temporary adapter for one release line"
+  inventory_boundary: "machine-wide Node inventory is separate from ownership capture"
+  refresh_boundary: "main snapshot refresh is generation-gated; AI/worktree refresh remains separate"
 
 handoff_notes: >
-  Phase 2 completed on 2026-03-28. The Dot Matrix contract, popover ordering,
-  ownership-aware labels, settings restructure, tooltip, homepage rewrite, and
-  docs updates are all implemented and manually verified. AI/worktree scanning
-  now runs on its own async refresh path instead of blocking the main port
-  snapshot refresh, the non-Node listener toggle is functional again, sample-
-  mode and live-mode app launches passed, settings structure passed, the live
-  tooltip showed a dynamic watched-port summary, and the live homepage now
-  reflects the literal watched-port ownership story. Phase 2.5 should focus on
-  destructive action boundaries, confirmation prompts, and AI tool cleanup
-  actions.
+  Phase 3 PR 1 is implemented on this branch. Core now separates
+  PortOwnershipSnapshot from ProcessInventorySnapshot, while AppSnapshot stays
+  alive as the compatibility adapter for the app and CLI. PortpourriStore now
+  applies refresh results through a generation gate so stale refreshes cannot
+  overwrite newer state, and watched-port conflict notifications are deduped by
+  explicit external-conflict state instead of timer timing. PR 2 should assume
+  those guarantees and focus only on decomposing the concentrated app layer.

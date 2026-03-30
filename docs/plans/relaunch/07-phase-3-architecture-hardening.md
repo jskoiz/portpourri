@@ -106,13 +106,20 @@ Refresh behavior is serialized, destructive ownership boundaries are explicit in
 
 - `AppSnapshot` survives for one release as an adapter
 - AI/worktree scanning gets a clearer separate async boundary
+- Phase 3 is split across 2 PRs:
+  - PR 1 = ownership/inventory split + refresh/notification correctness
+  - PR 2 = app-layer decomposition
 
 ## Next phase handoff
 
 The next phase may assume:
-- internals are stable enough for CLI depth
-- refresh/state correctness has tests
-- the app layer is no longer a single large concentration point
+- PR 1 assumptions:
+  - ownership and inventory snapshots are split internally
+  - `AppSnapshot` still bridges the app and CLI surface
+  - refresh/state correctness has focused tests
+- PR 2 assumptions after merge:
+  - the app layer can be decomposed without redefining snapshot ownership rules
+  - refresh/state correctness no longer needs structural changes
 
 ## Agent instruction block
 
@@ -121,3 +128,17 @@ Use plan mode first, then implement.
 Complete Phase 3 only.
 Do not broaden the feature set.
 Prefer clearer seams and safer state handling over ambitious abstraction.
+
+## PR 1 handoff update
+
+Implemented in PR 1:
+- introduced `PortOwnershipSnapshot` and `ProcessInventorySnapshot`
+- kept `AppSnapshot` as the compatibility adapter
+- split `SnapshotService` so ownership capture and inventory capture are explicit paths
+- added `SnapshotRefreshCoordinator` to gate stale refresh application
+- moved conflict notification dedupe behind explicit external-conflict state tracking
+- added tests for snapshot composition and app refresh support helpers
+
+Remaining for PR 2:
+- break up the concentrated app layer (`Views.swift`, `Store.swift`, and adjacent helpers)
+- preserve all Phase 2.5 user-facing behavior while moving logic into focused files/services

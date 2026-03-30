@@ -30,20 +30,30 @@ public struct SnapshotService: Sendable {
         self.shellRunner = shellRunner
     }
 
-    public func captureLiveSnapshot(watchedPorts: [Int]) throws -> AppSnapshot {
+    public func captureLiveOwnershipSnapshot(watchedPorts: [Int]) throws -> PortOwnershipSnapshot {
         let listeners = self.normalizeListeners(try self.listenerProbe.listeners())
-        return try self.buildSnapshot(listeners: listeners, watchedPorts: watchedPorts, source: "live")
+        return try self.buildOwnershipSnapshot(listeners: listeners, watchedPorts: watchedPorts, source: "live")
+    }
+
+    public func captureLiveProcessInventory() throws -> ProcessInventorySnapshot {
+        try self.buildProcessInventory(source: "live")
+    }
+
+    public func captureLiveSnapshot(watchedPorts: [Int]) throws -> AppSnapshot {
+        let ownership = try self.captureLiveOwnershipSnapshot(watchedPorts: watchedPorts)
+        let inventory = (try? self.captureLiveProcessInventory()) ?? .empty
+        return AppSnapshot(ownership: ownership, inventory: inventory)
     }
 
     public func exportJSON(snapshot: AppSnapshot) throws -> Data {
         try self.exporter.export(snapshot: snapshot)
     }
 
-    private func buildSnapshot(
+    private func buildOwnershipSnapshot(
         listeners: [ListenerSnapshot],
         watchedPorts: [Int],
         source: String
-    ) throws -> AppSnapshot {
+    ) throws -> PortOwnershipSnapshot {
         let pidSet = Array(Set(listeners.map(\.pid))).sorted()
         let rawProcesses = try self.metadataProbe.processes(for: pidSet)
         let cwdMapping = try self.metadataProbe.currentWorkingDirectories(for: pidSet)
@@ -129,27 +139,19 @@ public struct SnapshotService: Sendable {
             return lhs.process.commandLine < rhs.process.commandLine
         }
 
-        let nodeProcessGroups = (try? self.scanAllNodeProcesses()) ?? []
-        let totalNodeCount = nodeProcessGroups.reduce(0) { $0 + $1.count }
-        let totalNodeMemory = nodeProcessGroups.reduce(0) { $0 + $1.totalMemoryBytes }
-
-        let summary = SnapshotSummary(
-            nodeProjectCount: projects.count,
-            watchedBusyCount: watchedStatuses.filter { $0.isBusy }.count,
-            otherListenerCount: otherProcesses.count,
-            watchedNonNodeConflictCount: watchedStatuses.filter { $0.isConflict }.count,
-            nodeProcessTotalCount: totalNodeCount,
-            nodeProcessTotalMemoryBytes: totalNodeMemory
-        )
-
-        return AppSnapshot(
+        return PortOwnershipSnapshot(
             generatedAt: Date(),
-            summary: summary,
             watchedPorts: watchedStatuses,
             projects: projects,
             otherProcesses: otherProcesses,
-            nodeProcessGroups: nodeProcessGroups,
             diagnostics: ProbeDiagnostics(commands: Self.diagnosticCommands, source: source)
+        )
+    }
+
+    private func buildProcessInventory(source: String) throws -> ProcessInventorySnapshot {
+        ProcessInventorySnapshot(
+            generatedAt: Date(),
+            nodeProcessGroups: try self.scanAllNodeProcesses()
         )
     }
 

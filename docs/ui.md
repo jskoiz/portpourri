@@ -55,8 +55,8 @@ The popover answers three questions in order:
 1. **Header** — App title, sample/live indicator, summary line (conflict count + running count), last updated time.
 2. **Watched Ports** — All configured watched ports sorted conflicts-first, then blocked, then owned, then free. Each row shows a color-coded port badge (matching Dot Matrix states), an ownership headline, and an action button if applicable.
 3. **Other listeners / Blockers** — Non-Node processes occupying ports. Collapsed by default with disclosure toggle.
-4. **Process groups** — Aggregated Node processes by tool type (node, next dev, expo start, etc.) with count, total memory, and Kill group button. Shown as a collapsible drawer when 3+ groups exist.
-5. **AI tools / workspace cleanup** — Claude Code and Codex worktree summary with count and total size. Collapsed by default. Lists worktrees with name, project, size, and stale badge (3+ days untouched). Read-only display; cleanup actions are future scope.
+4. **Process groups** — Active-listener Node processes grouped within an explicit project ownership boundary, then by tool type (node, next dev, expo start, etc.). Each row shows count, project identity, watched-port summary, and Kill group. Groups are derived only from current active listeners and never merge unrelated projects that share a tool label.
+5. **AI tools** — Claude Code and Codex worktree summary with count and total size. Collapsed by default. Lists worktrees with name, project, size, and stale badge (3+ days untouched). Read-only display only; no cleanup action is exposed in Phase 2.5.
 
 ## Action labels
 
@@ -70,6 +70,15 @@ Labels are ownership-aware and use specific verbs:
 | Generic terminable process | **Stop blocker** | red |
 | Grouped Node process cleanup | **Kill group** | red |
 
+### Confirmation prompts
+
+When destructive confirmations are enabled, the prompt copy must match the action:
+
+- **Stop server** — names the watched port and states that only the selected server receives `SIGTERM`
+- **Free port** — states that only the selected blocker is being stopped to free the watched port
+- **Stop tunnel** — states that only the selected SSH tunnel receives `SIGTERM`
+- **Kill group** — states that only the active-listener group inside the named project boundary is affected
+
 ## Settings
 
 Five tabs:
@@ -78,7 +87,7 @@ Five tabs:
 - Start at login
 - Refresh cadence (15s, 1m, 5m)
 - Keyboard shortcut (modifier + key pickers with live preview)
-- Confirm before terminate toggle
+- Confirm destructive actions toggle
 - Notifications: conflict notification toggle, sound toggle
 
 ### Display

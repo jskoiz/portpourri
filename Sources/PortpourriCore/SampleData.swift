@@ -129,7 +129,7 @@ public extension SnapshotService {
             metadataProbe: FixtureProcessMetadataProbe(fixture: fixture),
             projectResolver: FixtureProjectResolver(fixture: fixture)
         )
-        guard let liveSnapshot = try? service.captureLiveSnapshot(watchedPorts: watchedPorts) else {
+        guard let ownership = try? service.captureLiveOwnershipSnapshot(watchedPorts: watchedPorts) else {
             return .empty(watchedPorts: watchedPorts, source: "sample")
         }
 
@@ -142,26 +142,11 @@ public extension SnapshotService {
             NodeProcessGroup(toolLabel: "nest", count: 2, totalMemoryBytes: 88 * 1024 * 1024, pids: Array(25000..<25002)),
         ]
 
-        let totalCount = sampleNodeGroups.reduce(0) { $0 + $1.count }
-        let totalMem = sampleNodeGroups.reduce(0) { $0 + $1.totalMemoryBytes }
-
-        let adjustedSummary = SnapshotSummary(
-            nodeProjectCount: liveSnapshot.summary.nodeProjectCount,
-            watchedBusyCount: liveSnapshot.summary.watchedBusyCount,
-            otherListenerCount: liveSnapshot.summary.otherListenerCount,
-            watchedNonNodeConflictCount: liveSnapshot.summary.watchedNonNodeConflictCount,
-            nodeProcessTotalCount: totalCount,
-            nodeProcessTotalMemoryBytes: totalMem
+        let inventory = ProcessInventorySnapshot(
+            generatedAt: ownership.generatedAt,
+            nodeProcessGroups: sampleNodeGroups
         )
 
-        return AppSnapshot(
-            generatedAt: liveSnapshot.generatedAt,
-            summary: adjustedSummary,
-            watchedPorts: liveSnapshot.watchedPorts,
-            projects: liveSnapshot.projects,
-            otherProcesses: liveSnapshot.otherProcesses,
-            nodeProcessGroups: sampleNodeGroups,
-            diagnostics: ProbeDiagnostics(commands: SnapshotService.diagnosticCommands, source: "sample")
-        )
+        return AppSnapshot(ownership: ownership, inventory: inventory)
     }
 }
