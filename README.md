@@ -35,7 +35,8 @@ Grab the latest signed release from [GitHub Releases](https://github.com/jskoiz/
 ```bash
 git clone https://github.com/jskoiz/portpourri.git
 cd portpourri
-swift build -c release
+./Scripts/package_app.sh
+open .build/Portpourri.app
 ```
 
 ### Run the app
@@ -93,17 +94,20 @@ This is why Portpourri says "3000 is blocked by Docker" or "8081 is owned by the
 Sources/
   PortpourriCore/    # Models, parsers, classifier, snapshot service (no UI)
   PortpourriApp/     # SwiftUI menu bar app
-  PortpourriCLI/     # CLI commands (snapshot, fixtures)
+  PortpourriCLI/     # CLI commands (snapshot, why, list, doctor, fixtures)
 Tests/
   PortpourriCoreTests/   # Fixture-based parser, resolver, and integration tests
+  PortpourriCLITests/    # Fixture-backed CLI output and JSON contract tests
 Scripts/
   package_app.sh      # Build and wrap into .app bundle
   dev_harness.sh      # Spin up local test listeners for manual testing
+  extract_release_notes.py  # Build GitHub Release notes from CHANGELOG.md
 site/
   index.html          # Marketing homepage
   css/                # Styles
   js/                 # Interactive demo and animations
   data/               # Release manifest (version, download URL)
+  assets/             # Logos and marketing assets
 docs/
   product.md          # Product spec and design philosophy
   architecture.md     # Module boundaries and data flow

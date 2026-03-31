@@ -1,70 +1,72 @@
-current_phase: phase-4-cli-core
-phase_state: completed
+current_phase: phase-5-launch
+phase_state: in_progress
 
 phase_owner:
   agent: codex
   human: jerry
 
-started_at: 2026-03-29
-completed_at: 2026-03-29
+started_at: 2026-03-30
+completed_at:
 
-blockers: []
+blockers:
+  - merge Phase 5 PR
+  - tag v0.4.0 from clean main
+  - verify GitHub Release workflow publishes Portpourri-0.4.0-mac.zip
+  - verify https://www.portpourri.com serves the 0.4.0 launch surfaces
 
 exact_next_task: >
-  Start Phase 5 launch-readiness work: refresh screenshots/demo assets, verify
-  release/install/docs consistency, and make the launch-facing surfaces match
-  the current app and CLI.
+  Finish the Phase 5 launch sweep on this branch: bump release metadata to
+  0.4.0, align changelog, manifest, README, and distribution docs, and leave
+  the branch ready for the final launch PR.
 
 files_allowed_to_change:
   - README.md
   - docs/dev-harness.md
   - docs/troubleshooting.md
+  - docs/distribution.md
   - docs/plans/relaunch/**
-  - Sources/PortpourriCore/**
-  - Sources/PortpourriCLI/**
-  - Tests/**
+  - site/**
+  - VERSION
+  - CHANGELOG.md
+  - release-manifest.json
+  - Scripts/extract_release_notes.py
+  - .github/workflows/release.yml
 
 files_forbidden_to_change:
-  - site/**
+  - Sources/PortpourriCore/**
+  - Sources/PortpourriCLI/**
   - Sources/PortpourriApp/**
-  - destructive app actions
-  - broad non-Node ecosystem expansion
+  - Tests/**
+  - new end-user feature work
 
-external_systems_required: []
+external_systems_required:
+  - github-releases
+  - vercel
 
 validation_required:
   - swift build
   - swift test
-  - swift run portpourri snapshot --json
-  - swift run portpourri fixtures --name mixed --json
   - swift run portpourri why 3000
   - swift run portpourri list --watched
-  - swift run portpourri list --all
   - swift run portpourri doctor
-  - snapshot --json includes schemaVersion and the snapshot envelope
-  - deterministic tests cover why/list/doctor and the JSON contract
+  - swift run portpourri snapshot --json
+  - no stale 0.3.2 references remain outside changelog history and intentional release references
+  - homepage version badge, README, manifest, and changelog all point to 0.4.0
+  - post-merge: GitHub Release exists, release asset downloads, and the live site resolves to 0.4.0 links
 
 stop_condition: >
-  The CLI is a real read-only companion with stable-enough machine output and
-  useful human-readable diagnosis, without changing app UI semantics or adding
-  destructive CLI commands.
+  The launch branch is merged, tag v0.4.0 has been cut from clean main, the
+  release workflow publishes Portpourri-0.4.0-mac.zip successfully, and the
+  live site, README, changelog, release notes, and download/install paths all
+  describe the same current 0.4.0 product.
 
-validation_results:
-  swift_build: pass (existing SwiftPM unhandled-resource warnings unchanged)
-  swift_test: 23/23 pass (0 failures) — added explicit CLI coverage for why/list/doctor and a golden snapshot envelope fixture
-  snapshot_json: pass — schemaVersion envelope wraps the existing AppSnapshot payload
-  fixtures_json: pass — fixtures emit the same schemaVersion envelope as live snapshot export
-  why_command: pass — human-readable explanation works for watched free, watched owned, watched blocked, and unwatched busy cases
-  list_commands: pass — deterministic watched-port and all-listener listings are covered by fixture-backed tests
-  doctor_command: pass — human-readable diagnostics include probe status headings and the exact probe commands
-  sample_mode_launch: pass — app still builds and launches under PORTPOURRI_SAMPLE_DATA=1
-  live_mode_launch: pass — app still builds and launches against live snapshot mode
-  docs_alignment: pass — README, dev harness, troubleshooting, and relaunch docs all reflect the Phase 4 CLI surface
+validation_results: {}
 
-noted_exceptions: []
+noted_exceptions:
+  - Per user direction, Phase 5 does not redesign the website; site changes are limited to manifest-driven versioning and small copy updates only
 
 canonical_decisions:
-  version: "0.3.2"
+  version: "0.4.0"
   website_url: "https://www.portpourri.com"
   repo_url: "https://github.com/jskoiz/portpourri"
   asset_naming: "Portpourri-{version}-mac.zip"
@@ -73,14 +75,16 @@ canonical_decisions:
   inventory_boundary: "machine-wide Node inventory is separate from ownership capture"
   refresh_boundary: "main snapshot refresh is generation-gated; AI/worktree refresh remains separate"
   phase4_pr_shape: "1 PR"
+  phase5_pr_shape: "1 PR plus immediate release tag"
   snapshot_schema_version: "0.1"
   doctor_output_mode: "human-readable only"
+  homepage_install_surface: "GitHub Releases and build-from-source only"
+  release_notes_source: "CHANGELOG.md"
 
 handoff_notes: >
-  Phase 4 is complete in one PR. The CLI now provides read-only `why`, `list`,
-  and `doctor` commands on top of the Phase 3 adapter/core split, while
-  `snapshot --json` remains canonical under a versioned schema envelope.
-  Deterministic CLI tests now protect the JSON contract and the human-readable
-  outputs for watched-port diagnosis. Phase 5 may assume the CLI is a real
-  companion surface and focus only on launch-readiness, screenshots, and
-  release/docs consistency.
+  Phase 5 is now the active release-prep pass. The branch should end with
+  0.4.0 metadata, a release workflow that uses CHANGELOG.md as the GitHub
+  Release body, and public docs that match the shipped CLI and install path.
+  Do not mark the phase complete until the PR is merged, tag v0.4.0 is cut,
+  the release asset exists, and https://www.portpourri.com reflects the
+  manifest-driven launch state.

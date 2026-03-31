@@ -29,6 +29,14 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
+      - name: Verify VERSION file matches tag
+        run: |
+          VERSION_FILE="$(tr -d '[:space:]' < VERSION)"
+          if [ "$VERSION_FILE" != "${{ steps.version.outputs.version }}" ]; then
+            echo "VERSION file ($VERSION_FILE) does not match tag version (${{ steps.version.outputs.version }})"
+            exit 1
+          fi
+
       - name: Build release binary
         run: swift build -c release --product PortpourriApp
 
@@ -158,19 +166,15 @@ jobs:
           cd .build
           ditto -c -k --keepParent "${{ env.APP_NAME }}.app" "${{ env.APP_NAME }}-${{ steps.version.outputs.version }}-mac.zip"
 
+      - name: Extract release notes from changelog
+        run: python3 Scripts/extract_release_notes.py "${{ steps.version.outputs.version }}" CHANGELOG.md > .build/release-notes.md
+
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: .build/${{ env.APP_NAME }}-${{ steps.version.outputs.version }}-mac.zip
           generate_release_notes: false
-          body: |
-            ## Install
-
-            1. Download `${{ env.APP_NAME }}-${{ steps.version.outputs.version }}-mac.zip` below
-            2. Unzip and drag `${{ env.APP_NAME }}.app` to your Applications folder
-            3. Launch from Applications — it appears in the menu bar
-
-            Requires macOS 14 (Sonoma) or later.
+          body_path: .build/release-notes.md
 
       - name: Clean up keychain
         if: always()

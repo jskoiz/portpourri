@@ -1,10 +1,9 @@
 # Distribution Guide
 
-Portpourri ships through three channels:
+Portpourri currently ships through two public channels:
 
-1. **GitHub Releases** — signed and notarized `.app` zip (primary)
-2. **Homebrew** — `brew install --cask jskoiz/portpourri/portpourri`
-3. **Mac App Store** — sandboxed build (may have limitations)
+1. **GitHub Releases** — signed and notarized `.app` zip (canonical)
+2. **Homebrew** — `brew install --cask jskoiz/portpourri/portpourri` (secondary convenience path)
 
 ---
 
@@ -15,9 +14,9 @@ Portpourri ships through three channels:
 Push a version tag and the release workflow handles everything:
 
 ```bash
-# Bump version in CHANGELOG.md, then:
-git tag -a v0.2.0 -m "v0.2.0: Description"
-git push origin v0.2.0
+# After updating VERSION, release-manifest.json, and CHANGELOG.md:
+git tag -a v0.4.0 -m "v0.4.0: Launch release"
+git push origin main --tags
 ```
 
 The `.github/workflows/release.yml` workflow will:
@@ -26,8 +25,21 @@ The `.github/workflows/release.yml` workflow will:
 3. Code sign with your Developer ID certificate
 4. Notarize with Apple
 5. Staple the notarization ticket
-6. Zip and attach to the GitHub Release
-7. Update the Homebrew cask formula
+6. Extract the matching release notes from `CHANGELOG.md`
+7. Zip and attach to the GitHub Release
+8. Update the Homebrew cask formula
+
+### Release notes source of truth
+
+`CHANGELOG.md` is the canonical source for GitHub Release body content.
+
+The workflow uses:
+
+```bash
+python3 Scripts/extract_release_notes.py "$VERSION" CHANGELOG.md
+```
+
+to build the markdown body for the matching tag.
 
 ### Required GitHub Secrets
 
@@ -96,7 +108,7 @@ The release workflow auto-generates this, but for bootstrapping:
 
 ```ruby
 cask "portpourri" do
-  version "0.1.0"
+  version "0.4.0"
   sha256 "FILL_AFTER_FIRST_RELEASE"
 
   url "https://github.com/jskoiz/portpourri/releases/download/v#{version}/Portpourri-#{version}-mac.zip"
@@ -113,53 +125,6 @@ cask "portpourri" do
   ]
 end
 ```
-
----
-
-## 3. Mac App Store
-
-### Sandbox limitations
-
-Portpourri uses `lsof` and `ps` to probe system state. The Mac App Store
-requires App Sandbox, which restricts subprocess execution. This means:
-
-- The app needs temporary exception entitlements
-- Apple **may reject** the app during review
-- If rejected, consider distributing only via GitHub + Homebrew
-
-### If you want to try
-
-1. Create an App ID at developer.apple.com with bundle ID `dev.portpourri.app`
-2. Create a **Mac App Distribution** provisioning profile
-3. Build with App Store entitlements:
-   ```bash
-   swift build -c release --product PortpourriApp
-
-   codesign --force --options runtime \
-     --entitlements Entitlements/AppStore.entitlements \
-     --sign "3rd Party Mac Developer Application: Your Name (TEAMID)" \
-     .build/release/PortpourriApp
-   ```
-4. Package as `.pkg`:
-   ```bash
-   productbuild --component .build/Portpourri.app /Applications \
-     --sign "3rd Party Mac Developer Installer: Your Name (TEAMID)" \
-     Portpourri.pkg
-   ```
-5. Upload via Transporter or:
-   ```bash
-   xcrun altool --upload-app -f Portpourri.pkg \
-     -t macos -u "your@apple.id" -p "app-specific-password"
-   ```
-
-### Realistic assessment
-
-For a utility that needs `lsof`/`ps` access, the App Store path is difficult.
-Most similar macOS developer tools (iStat Menus, etc.) distribute outside the
-App Store for exactly this reason. The GitHub Release + Homebrew combination
-provides a great user experience without sandbox constraints.
-
----
 
 ## Monorepo site layout
 
@@ -179,14 +144,16 @@ When releasing a new version:
 2. Update `release-manifest.json` with the new version, asset URL, highlights, and publishedAt
 3. Copy `release-manifest.json` to `site/data/release-manifest.json`
 4. Update `CHANGELOG.md` with the new version and changes
-5. Commit: `git commit -m "Prepare v0.x.0 release"`
-6. Tag: `git tag -a v0.x.0 -m "v0.x.0: Description"`
-7. Push: `git push origin main --tags`
-8. The release workflow handles the rest
+5. Verify the homepage, README, and launch assets all reflect the same version and install path
+6. Commit: `git commit -m "Prepare v0.x.0 release"`
+7. Tag: `git tag -a v0.x.0 -m "v0.x.0: Description"`
+8. Push: `git push origin main --tags`
+9. The release workflow handles the rest
 
 The version flows automatically from the git tag into:
 - `CFBundleShortVersionString` in Info.plist
 - GitHub Release title
+- GitHub Release body (via `CHANGELOG.md`)
 - Homebrew cask formula
 
 Local builds via `Scripts/package_app.sh` read the version from the `VERSION` file at the repo root.

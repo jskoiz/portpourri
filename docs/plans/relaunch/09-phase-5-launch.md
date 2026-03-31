@@ -35,12 +35,8 @@ This phase does **not** cover:
 ## Task checklist
 
 ### Assets
-- create one conflict-first hero screenshot
-- create one short demo clip:
-  - watched port blocked
-  - owner resolved
-  - safe next action shown
-- create one social/README preview image
+- keep the current site visuals unless the user explicitly requests a redesign
+- if any asset changes are made, keep them additive and copy-only
 
 ### Copy
 - final one-line pitch is literal and search-friendly
@@ -51,11 +47,11 @@ This phase does **not** cover:
 
 ### Final consistency pass
 - README and site say the same thing
-- screenshots match current app
 - install instructions are current
 - no broken links
 - no stale version strings
 - release notes reflect the actual shipped product
+- GitHub Release body is generated from `CHANGELOG.md`
 
 ## Files allowed to change
 
@@ -102,11 +98,32 @@ Launch assets are ready and every public surface is current, consistent, and eas
 - homepage copy
 - screenshots / demo clip
 - `status.md`
+- `VERSION`
+- `release-manifest.json`
 
 ## Decisions locked for this phase
 
 - Homebrew stays off the homepage until it is verified end to end
 - the launch emphasizes the conflict-first story more strongly than general app polish
+- release target is `0.4.0`
+- `CHANGELOG.md` is the source of truth for GitHub Release notes
+- per user direction, Phase 5 does not redesign the site layout or replace the existing visual design
+
+## Release workflow update
+
+The release workflow now extracts the matching changelog section with:
+
+```bash
+python3 Scripts/extract_release_notes.py "$VERSION" CHANGELOG.md
+```
+
+and uploads that markdown as the GitHub Release body.
+
+## Handoff
+
+Phase 5 remains in progress until the launch PR merges, tag `v0.4.0` is cut
+from clean `main`, the release workflow publishes `Portpourri-0.4.0-mac.zip`,
+and the live site reflects the `0.4.0` manifest and links without a design change.
 
 ## Agent instruction block
 
