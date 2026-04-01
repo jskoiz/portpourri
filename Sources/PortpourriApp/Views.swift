@@ -19,17 +19,19 @@ struct PopoverRootView: View {
         let allWatchedPorts = self.store.snapshot.watchedPorts
             .sorted(by: DisplayText.compareWatchedPorts)
         let activeWatchedPorts = allWatchedPorts.filter(\.isBusy)
+        let blockedWatchedPorts = activeWatchedPorts.filter { !$0.isNodeOwned }
         let visibleOtherProcesses = self.store.visibleOtherProcesses()
         let activeListenerGroups = self.store.activeListenerGroups
-        let significantGroups = activeListenerGroups.filter { $0.count >= 3 }
         let backgroundNodeGroups = BackgroundNodeInventory.groups(
             from: self.store.snapshot.nodeProcessGroups,
             subtracting: activeListenerGroups
         )
         let conflictCount = allWatchedPorts.filter(\.isConflict).count
         let projectCount = SnapshotDetails.sortedProjects(self.store.snapshot.projects).count
+        let projects = SnapshotDetails.sortedProjects(self.store.snapshot.projects)
         let aiSnapshot = self.store.aiSnapshot
         let hasAITools = !aiSnapshot.claudeWorktrees.isEmpty || !aiSnapshot.codexWorktrees.isEmpty
+        let isProjectMode = self.settings.groupMode == .project
 
         ZStack {
             PopoverMaterialBackground()
@@ -43,8 +45,24 @@ struct PopoverRootView: View {
                     projectCount: projectCount
                 )
 
-                // 2. Watched Ports
-                if !activeWatchedPorts.isEmpty {
+                // 2. Main content
+                if isProjectMode {
+                    if !blockedWatchedPorts.isEmpty {
+                        WatchedPortsSection(
+                            store: self.store,
+                            watchedPorts: blockedWatchedPorts,
+                            otherProcesses: visibleOtherProcesses
+                        )
+                    }
+
+                    if !projects.isEmpty {
+                        Divider()
+                        ProjectDashboardSection(
+                            store: self.store,
+                            projects: projects
+                        )
+                    }
+                } else if !activeWatchedPorts.isEmpty {
                     WatchedPortsSection(
                         store: self.store,
                         watchedPorts: activeWatchedPorts,
@@ -59,18 +77,17 @@ struct PopoverRootView: View {
                 }
 
                 // 4. Process groups
-                if !significantGroups.isEmpty {
+                if !activeListenerGroups.isEmpty {
                     Divider()
                     NodeProcessDrawerToggle(
-                        groups: significantGroups,
-                        significantGroupCount: significantGroups.count,
+                        summary: self.store.snapshot.summary,
                         isOpen: self.$showProcessDrawer
                     )
 
                     if self.showProcessDrawer {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 2) {
-                                ForEach(significantGroups) { group in
+                                ForEach(activeListenerGroups) { group in
                                     NodeProcessGroupRow(store: self.store, group: group)
                                 }
                             }
@@ -366,8 +383,7 @@ private struct ProjectDashboardRow: View {
 // MARK: - Node Process Groups
 
 private struct NodeProcessDrawerToggle: View {
-    let groups: [ActiveListenerGroup]
-    let significantGroupCount: Int
+    let summary: SnapshotSummary
     @Binding var isOpen: Bool
 
     var body: some View {
@@ -375,19 +391,23 @@ private struct NodeProcessDrawerToggle: View {
             self.isOpen.toggle()
         } label: {
             HStack(alignment: .center, spacing: 6) {
-                Text("Process groups")
+                Text("Node processes")
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(Readability.secondaryText)
-                Text("\(self.totalProcessCount)")
+                Text("\(self.summary.nodeProcessTotalCount)")
                     .font(.caption)
                     .foregroundStyle(Readability.secondaryText)
                 Text("\u{00B7}")
                     .foregroundStyle(Readability.secondaryText)
-                Text("\(self.significantGroupCount) group\(self.significantGroupCount == 1 ? "" : "s")")
+                Text(self.formattedTotalMemory)
                     .font(.caption)
                     .fontWeight(.medium)
-                    .foregroundStyle(Readability.secondaryText)
+                    .foregroundStyle(
+                        self.summary.nodeProcessTotalMemoryBytes > 2 * 1024 * 1024 * 1024
+                            ? Palette.mutedRed
+                            : Readability.secondaryText
+                    )
                 Spacer()
                 Image(systemName: self.isOpen ? "chevron.up" : "chevron.down")
                     .font(.caption2)
@@ -398,8 +418,12 @@ private struct NodeProcessDrawerToggle: View {
         .buttonStyle(.plain)
     }
 
-    private var totalProcessCount: Int {
-        self.groups.reduce(0) { $0 + $1.count }
+    private var formattedTotalMemory: String {
+        let mb = Double(self.summary.nodeProcessTotalMemoryBytes) / (1024 * 1024)
+        if mb >= 1024 {
+            return String(format: "%.1f GB", mb / 1024)
+        }
+        return String(format: "%.0f MB", mb)
     }
 }
 
@@ -540,30 +564,24 @@ private struct ProcessDetailRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(self.process.process.toolLabel)
-                    .font(.caption)
-                    .fontWeight(.medium)
+            Button {
+                self.showDetails.toggle()
+            } label: {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(self.process.process.toolLabel)
+                        .font(.caption)
+                        .fontWeight(.medium)
 
-                Spacer(minLength: 8)
-
-                if let resolution = self.primaryResolution {
-                    InlineAccentButton(resolution.title, tone: resolution.tone) {
-                        self.run(resolution)
-                    }
-                }
-
-                Button {
-                    self.showDetails.toggle()
-                } label: {
+                    Spacer(minLength: 8)
                     HStack(spacing: 2) {
                         Image(systemName: "ellipsis")
                             .font(.caption2)
                     }
                     .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.plain)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
 
             if self.showDetails {
                 VStack(alignment: .leading, spacing: 3) {
@@ -580,6 +598,11 @@ private struct ProcessDetailRow: View {
                     }
 
                     HStack(spacing: 10) {
+                        if let resolution = self.primaryResolution {
+                            InlineAccentButton(resolution.title, tone: resolution.tone) {
+                                self.run(resolution)
+                            }
+                        }
                         if ProcessActionPolicy.hasMeaningfulDirectory(self.process) {
                             InlineTextButton("Reveal") {
                                 self.store.reveal(path: self.process.process.cwd)

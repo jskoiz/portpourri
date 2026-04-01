@@ -192,6 +192,9 @@ private struct DisplaySettingsView: View {
                         Text(mode.label).tag(mode)
                     }
                 }
+                Text("Project mode shows compact project rows with nested process details. Port mode shows watched-port rows first.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
                 Toggle("Show non-Node listeners", isOn: self.$settings.showNonNodeListeners)
             }
         }
