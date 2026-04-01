@@ -16,8 +16,8 @@ Push a version tag and the release workflow handles everything:
 ```bash
 # After updating VERSION, release-manifest.json, and CHANGELOG.md:
 ./Scripts/package_app.sh
-./Scripts/verify_release_bundle.sh .build/Portpourri.app 0.4.1
-git tag -a v0.4.1 -m "v0.4.1: Hotfix release"
+./Scripts/verify_release_bundle.sh .build/Portpourri.app 0.4.2
+git tag -a v0.4.2 -m "v0.4.2: Stability release"
 git push origin main --tags
 ```
 
@@ -131,7 +131,7 @@ The release workflow auto-generates this, but for bootstrapping:
 
 ```ruby
 cask "portpourri" do
-  version "0.4.1"
+  version "0.4.2"
   sha256 "FILL_AFTER_FIRST_RELEASE"
 
   url "https://github.com/jskoiz/portpourri/releases/download/v#{version}/Portpourri-#{version}-mac.zip"

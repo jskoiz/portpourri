@@ -1,16 +1,16 @@
 {
-  "version": "0.4.1",
-  "build": "0.4.1",
-  "gitSha": "c867aea",
-  "publishedAt": "2026-04-01T00:00:00Z",
-  "assetName": "Portpourri-0.4.1-mac.zip",
-  "assetUrl": "https://github.com/jskoiz/portpourri/releases/download/v0.4.1/Portpourri-0.4.1-mac.zip",
+  "version": "0.4.2",
+  "build": "0.4.2",
+  "gitSha": "PENDING_RELEASE_SHA",
+  "publishedAt": "2026-04-01T09:40:00Z",
+  "assetName": "Portpourri-0.4.2-mac.zip",
+  "assetUrl": "https://github.com/jskoiz/portpourri/releases/download/v0.4.2/Portpourri-0.4.2-mac.zip",
   "repoUrl": "https://github.com/jskoiz/portpourri",
-  "releaseNotesUrl": "https://github.com/jskoiz/portpourri/releases/tag/v0.4.1",
+  "releaseNotesUrl": "https://github.com/jskoiz/portpourri/releases/tag/v0.4.2",
   "websiteUrl": "https://www.portpourri.com",
   "highlights": [
-    "Fixes startup crash in the notarized menu bar app",
-    "Restores reliable launch from Applications and downloaded zip installs",
-    "Keeps the watched-port UI and CLI surface from 0.4.0 intact"
+    "Fixes the shipped-app theme override so System, Light, and Dark render consistently",
+    "Adds packaged-bundle verification to local packaging and the release workflow",
+    "Sweeps relaunch drift so installed app behavior, release metadata, and docs stay aligned"
   ]
 }
