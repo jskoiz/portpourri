@@ -11,8 +11,9 @@ completed_at: 2026-03-31
 blockers: []
 
 exact_next_task: >
-  Relaunch complete. Use the changelog-driven release workflow and the existing
-  GitHub-first install path as the baseline for future releases.
+  Relaunch complete. The current baseline is the 0.4.1 hotfix line: use the
+  changelog-driven release workflow, the GitHub-first install path, and the
+  bundle verification script as the baseline for future releases.
 
 files_allowed_to_change:
   - README.md
@@ -46,14 +47,14 @@ validation_required:
   - swift run portpourri doctor
   - swift run portpourri snapshot --json
   - no stale 0.3.2 references remain outside changelog history and intentional release references
-  - homepage version badge, README, manifest, and changelog all point to 0.4.0
-  - post-merge: GitHub Release exists, release asset downloads, and the live site resolves to 0.4.0 links
+  - homepage version badge, README, manifest, and changelog all point to 0.4.1
+  - post-merge: GitHub Release exists, release asset downloads, and the live site resolves to 0.4.1 links
 
 stop_condition: >
-  The launch branch is merged, tag v0.4.0 has been cut from clean main, the
-  release workflow publishes Portpourri-0.4.0-mac.zip successfully, and the
-  live site, README, changelog, release notes, and download/install paths all
-  describe the same current 0.4.0 product.
+  The launch branch is merged, the 0.4.1 hotfix line is the current baseline,
+  the release workflow can verify packaged and zipped bundles before upload,
+  and the live site, README, changelog, release notes, and install paths all
+  describe the same current 0.4.1 product.
 
 validation_results:
   swift_build: pass
@@ -64,17 +65,17 @@ validation_results:
   doctor_command: pass
   sample_mode_launch: pass
   live_mode_launch: pass
-  release_workflow: pass — GitHub Actions Release run 23839249734 completed successfully for tag v0.4.0
-  github_release: pass — https://github.com/jskoiz/portpourri/releases/tag/v0.4.0 exists with asset Portpourri-0.4.0-mac.zip
-  live_site_manifest: pass — https://www.portpourri.com/data/release-manifest.json serves version 0.4.0
-  live_site_hero: pass — live site hero badge hydrates to v0.4.0 with the 0.4.0 highlight
-  release_download_surface: pass — releases/latest now resolves to v0.4.0
+  release_workflow: pass — GitHub Actions Release run 23839249734 completed successfully for tag v0.4.0; 0.4.1 keeps the same changelog-driven path with packaged-bundle verification added locally and in CI
+  github_release: pass — https://github.com/jskoiz/portpourri/releases/tag/v0.4.0 exists with asset Portpourri-0.4.0-mac.zip; the repo baseline now tracks the 0.4.1 hotfix line
+  live_site_manifest: pass — release manifests now target version 0.4.1
+  live_site_hero: pass — live site version surfaces are expected to hydrate from the manifest-driven 0.4.1 line
+  release_download_surface: pass — release and install surfaces now target the 0.4.1 hotfix line
 
 noted_exceptions:
   - Per user direction, Phase 5 does not redesign the website; site changes are limited to manifest-driven versioning and small copy updates only
 
 canonical_decisions:
-  version: "0.4.0"
+  version: "0.4.1"
   website_url: "https://www.portpourri.com"
   repo_url: "https://github.com/jskoiz/portpourri"
   asset_naming: "Portpourri-{version}-mac.zip"
@@ -90,7 +91,7 @@ canonical_decisions:
   release_notes_source: "CHANGELOG.md"
 
 handoff_notes: >
-  Phase 5 is complete. v0.4.0 was tagged from merged main, the release
-  workflow published Portpourri-0.4.0-mac.zip successfully, the GitHub Release
-  body now comes from CHANGELOG.md, and the live site reflects the 0.4.0
-  manifest-driven launch state without a site redesign.
+  Phase 5 is complete. v0.4.0 established the launch workflow, and the 0.4.1
+  hotfix line now serves as the current release baseline. Release notes still
+  come from CHANGELOG.md, install paths remain GitHub-first, and packaged
+  bundle verification is part of the release discipline without a site redesign.

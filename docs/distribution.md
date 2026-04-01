@@ -15,7 +15,9 @@ Push a version tag and the release workflow handles everything:
 
 ```bash
 # After updating VERSION, release-manifest.json, and CHANGELOG.md:
-git tag -a v0.4.0 -m "v0.4.0: Launch release"
+./Scripts/package_app.sh
+./Scripts/verify_release_bundle.sh .build/Portpourri.app 0.4.1
+git tag -a v0.4.1 -m "v0.4.1: Hotfix release"
 git push origin main --tags
 ```
 
@@ -26,7 +28,8 @@ The `.github/workflows/release.yml` workflow will:
 4. Notarize with Apple
 5. Staple the notarization ticket
 6. Extract the matching release notes from `CHANGELOG.md`
-7. Zip and attach to the GitHub Release
+7. Verify the packaged `.app` and zipped artifact still match the tag version
+8. Zip and attach to the GitHub Release
 8. Update the Homebrew cask formula
 
 ### Release notes source of truth
@@ -76,6 +79,7 @@ security find-identity -v -p codesigning
 # Build and sign
 swift build -c release --product PortpourriApp
 ./Scripts/package_app.sh
+./Scripts/verify_release_bundle.sh .build/Portpourri.app "$(tr -d '[:space:]' < VERSION)"
 
 codesign --force --options runtime \
   --entitlements Entitlements/DevID.entitlements \
@@ -87,6 +91,25 @@ codesign --force --options runtime \
 codesign --verify --deep --strict .build/Portpourri.app
 spctl --assess --type execute .build/Portpourri.app
 ```
+
+### Required local release preflight
+
+Before tagging a release, verify the package that will actually ship:
+
+```bash
+./Scripts/package_app.sh
+VERSION="$(tr -d '[:space:]' < VERSION)"
+./Scripts/verify_release_bundle.sh .build/Portpourri.app "$VERSION"
+ditto -c -k --keepParent .build/Portpourri.app ".build/Portpourri-${VERSION}-mac.zip"
+./Scripts/verify_release_bundle.sh ".build/Portpourri-${VERSION}-mac.zip" "$VERSION"
+```
+
+Record this provenance tuple alongside the release:
+- branch
+- commit SHA
+- tag
+- version
+- build timestamp from `NWBuildTimestamp`
 
 ---
 
@@ -108,7 +131,7 @@ The release workflow auto-generates this, but for bootstrapping:
 
 ```ruby
 cask "portpourri" do
-  version "0.4.0"
+  version "0.4.1"
   sha256 "FILL_AFTER_FIRST_RELEASE"
 
   url "https://github.com/jskoiz/portpourri/releases/download/v#{version}/Portpourri-#{version}-mac.zip"
@@ -145,10 +168,12 @@ When releasing a new version:
 3. Copy `release-manifest.json` to `site/data/release-manifest.json`
 4. Update `CHANGELOG.md` with the new version and changes
 5. Verify the homepage, README, and launch assets all reflect the same version and install path
-6. Commit: `git commit -m "Prepare v0.x.0 release"`
-7. Tag: `git tag -a v0.x.0 -m "v0.x.0: Description"`
-8. Push: `git push origin main --tags`
-9. The release workflow handles the rest
+6. Run `./Scripts/package_app.sh` and verify `.build/Portpourri.app`
+7. Zip the app locally and verify the zip with `./Scripts/verify_release_bundle.sh`
+8. Commit: `git commit -m "Prepare v0.x.y release"`
+9. Tag: `git tag -a v0.x.y -m "v0.x.y: Description"`
+10. Push: `git push origin main --tags`
+11. The release workflow handles the rest
 
 The version flows automatically from the git tag into:
 - `CFBundleShortVersionString` in Info.plist

@@ -36,6 +36,7 @@ Grab the latest signed release from [GitHub Releases](https://github.com/jskoiz/
 git clone https://github.com/jskoiz/portpourri.git
 cd portpourri
 ./Scripts/package_app.sh
+./Scripts/verify_release_bundle.sh .build/Portpourri.app "$(tr -d '[:space:]' < VERSION)"
 open .build/Portpourri.app
 ```
 

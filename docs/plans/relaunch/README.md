@@ -2,7 +2,7 @@
 
 The relaunch is complete.
 
-This directory now keeps only the final completion record in [`status.md`](/Users/jerry/Desktop/portpourri/docs/plans/relaunch/status.md). The phase-by-phase execution pack, templates, and agent-specific planning files were intentionally removed after the `0.4.0` launch so they do not become a second source of truth.
+This directory now keeps only the final completion record in [`status.md`](/Users/jerry/Desktop/portpourri/docs/plans/relaunch/status.md). The phase-by-phase execution pack, templates, and agent-specific planning files were intentionally removed after the `0.4.0` launch; the current release baseline is the `0.4.1` hotfix line, and this archive exists only to preserve the final relaunch decisions.
 
 For the durable product and engineering rules, use the stable docs instead:
 
