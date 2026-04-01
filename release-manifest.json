@@ -1,16 +1,16 @@
 {
-  "version": "0.4.0",
-  "build": "0.4.0",
-  "gitSha": "7003295",
-  "publishedAt": "2026-03-30T23:30:00Z",
-  "assetName": "Portpourri-0.4.0-mac.zip",
-  "assetUrl": "https://github.com/jskoiz/portpourri/releases/download/v0.4.0/Portpourri-0.4.0-mac.zip",
+  "version": "0.4.1",
+  "build": "0.4.1",
+  "gitSha": "c867aea",
+  "publishedAt": "2026-04-01T00:00:00Z",
+  "assetName": "Portpourri-0.4.1-mac.zip",
+  "assetUrl": "https://github.com/jskoiz/portpourri/releases/download/v0.4.1/Portpourri-0.4.1-mac.zip",
   "repoUrl": "https://github.com/jskoiz/portpourri",
-  "releaseNotesUrl": "https://github.com/jskoiz/portpourri/releases/tag/v0.4.0",
+  "releaseNotesUrl": "https://github.com/jskoiz/portpourri/releases/tag/v0.4.1",
   "websiteUrl": "https://www.portpourri.com",
   "highlights": [
-    "Conflict-first watched-port ownership with safe actions",
-    "Project-scoped cleanup and differentiated confirmations",
-    "Read-only CLI with why, list, doctor, and schemaVersion exports"
+    "Fixes startup crash in the notarized menu bar app",
+    "Restores reliable launch from Applications and downloaded zip installs",
+    "Keeps the watched-port UI and CLI surface from 0.4.0 intact"
   ]
 }

@@ -24,7 +24,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func requestNotificationPermissions() {
         guard Bundle.main.bundleIdentifier != nil else { return }
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        Task {
+            _ = try? await UNUserNotificationCenter.current().requestAuthorization(
+                options: [.alert, .sound]
+            )
+        }
     }
 }
 
