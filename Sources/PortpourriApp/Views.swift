@@ -13,10 +13,13 @@ struct PopoverRootView: View {
 
     @State private var showProcessDrawer = false
     @State private var showAITools = false
+    @State private var showFreePorts = false
 
     var body: some View {
         let allWatchedPorts = self.store.snapshot.watchedPorts
             .sorted(by: DisplayText.compareWatchedPorts)
+        let activeWatchedPorts = allWatchedPorts.filter(\.isBusy)
+        let freeWatchedPorts = allWatchedPorts.filter { !$0.isBusy }
         let visibleOtherProcesses = self.store.visibleOtherProcesses()
         let significantGroups = self.store.activeListenerGroups.filter { $0.count >= 3 }
         let conflictCount = allWatchedPorts.filter(\.isConflict).count
@@ -37,11 +40,22 @@ struct PopoverRootView: View {
                 )
 
                 // 2. Watched Ports
-                if !allWatchedPorts.isEmpty {
+                if !activeWatchedPorts.isEmpty {
                     WatchedPortsSection(
                         store: self.store,
-                        watchedPorts: allWatchedPorts,
+                        watchedPorts: activeWatchedPorts,
                         otherProcesses: visibleOtherProcesses
+                    )
+                }
+
+                if !freeWatchedPorts.isEmpty {
+                    if !activeWatchedPorts.isEmpty {
+                        Divider()
+                    }
+                    FreeWatchedPortsDisclosure(
+                        store: self.store,
+                        watchedPorts: freeWatchedPorts,
+                        isExpanded: self.$showFreePorts
                     )
                 }
 
@@ -83,6 +97,7 @@ struct PopoverRootView: View {
             .padding(.vertical, 12)
             .animation(.easeInOut(duration: 0.2), value: self.showProcessDrawer)
             .animation(.easeInOut(duration: 0.2), value: self.showAITools)
+            .animation(.easeInOut(duration: 0.2), value: self.showFreePorts)
         }
         .frame(width: 340)
         .overlay(alignment: .bottomTrailing) {
@@ -105,6 +120,47 @@ struct PopoverRootView: View {
                             self.store.clipboardNotice = nil
                         }
                     }
+            }
+        }
+    }
+}
+
+private struct FreeWatchedPortsDisclosure: View {
+    @ObservedObject var store: PortpourriStore
+    let watchedPorts: [WatchedPortStatus]
+    @Binding var isExpanded: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button {
+                self.isExpanded.toggle()
+            } label: {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(DisplayText.freeWatchedPortsSummary(count: self.watchedPorts.count))
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Readability.secondaryText)
+                    Spacer()
+                    Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(Readability.secondaryText)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if self.isExpanded {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(self.watchedPorts, id: \.id) { status in
+                        WatchedPortRow(
+                            store: self.store,
+                            status: status,
+                            otherProcesses: [],
+                            projects: []
+                        )
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
     }
