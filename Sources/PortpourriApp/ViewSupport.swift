@@ -576,10 +576,6 @@ enum DisplayText {
         return pid
     }
 
-    static func freeWatchedPortsSummary(count: Int) -> String {
-        "\(count) watched port\(count == 1 ? "" : "s") free"
-    }
-
     static func processDetail(_ process: ProcessSnapshot) -> String? {
         let command = self.command(process)
         let executablePath = self.executablePath(process.commandLine)

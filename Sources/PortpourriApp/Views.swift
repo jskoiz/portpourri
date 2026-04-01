@@ -12,16 +12,20 @@ struct PopoverRootView: View {
     }
 
     @State private var showProcessDrawer = false
+    @State private var showBackgroundNodeInventory = false
     @State private var showAITools = false
-    @State private var showFreePorts = false
 
     var body: some View {
         let allWatchedPorts = self.store.snapshot.watchedPorts
             .sorted(by: DisplayText.compareWatchedPorts)
         let activeWatchedPorts = allWatchedPorts.filter(\.isBusy)
-        let freeWatchedPorts = allWatchedPorts.filter { !$0.isBusy }
         let visibleOtherProcesses = self.store.visibleOtherProcesses()
-        let significantGroups = self.store.activeListenerGroups.filter { $0.count >= 3 }
+        let activeListenerGroups = self.store.activeListenerGroups
+        let significantGroups = activeListenerGroups.filter { $0.count >= 3 }
+        let backgroundNodeGroups = BackgroundNodeInventory.groups(
+            from: self.store.snapshot.nodeProcessGroups,
+            subtracting: activeListenerGroups
+        )
         let conflictCount = allWatchedPorts.filter(\.isConflict).count
         let projectCount = SnapshotDetails.sortedProjects(self.store.snapshot.projects).count
         let aiSnapshot = self.store.aiSnapshot
@@ -45,17 +49,6 @@ struct PopoverRootView: View {
                         store: self.store,
                         watchedPorts: activeWatchedPorts,
                         otherProcesses: visibleOtherProcesses
-                    )
-                }
-
-                if !freeWatchedPorts.isEmpty {
-                    if !activeWatchedPorts.isEmpty {
-                        Divider()
-                    }
-                    FreeWatchedPortsDisclosure(
-                        store: self.store,
-                        watchedPorts: freeWatchedPorts,
-                        isExpanded: self.$showFreePorts
                     )
                 }
 
@@ -87,7 +80,16 @@ struct PopoverRootView: View {
                     }
                 }
 
-                // 5. AI tools
+                // 5. Background Node inventory
+                if !backgroundNodeGroups.isEmpty {
+                    Divider()
+                    BackgroundNodeInventorySection(
+                        groups: backgroundNodeGroups,
+                        isExpanded: self.$showBackgroundNodeInventory
+                    )
+                }
+
+                // 6. AI tools
                 if hasAITools {
                     Divider()
                     AIToolsSection(aiSnapshot: aiSnapshot, isExpanded: self.$showAITools)
@@ -96,8 +98,8 @@ struct PopoverRootView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .animation(.easeInOut(duration: 0.2), value: self.showProcessDrawer)
+            .animation(.easeInOut(duration: 0.2), value: self.showBackgroundNodeInventory)
             .animation(.easeInOut(duration: 0.2), value: self.showAITools)
-            .animation(.easeInOut(duration: 0.2), value: self.showFreePorts)
         }
         .frame(width: 340)
         .overlay(alignment: .bottomTrailing) {
@@ -125,44 +127,35 @@ struct PopoverRootView: View {
     }
 }
 
-private struct FreeWatchedPortsDisclosure: View {
-    @ObservedObject var store: PortpourriStore
-    let watchedPorts: [WatchedPortStatus]
-    @Binding var isExpanded: Bool
+private enum BackgroundNodeInventory {
+    private static let minimumVisibleCount = 3
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Button {
-                self.isExpanded.toggle()
-            } label: {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(DisplayText.freeWatchedPortsSummary(count: self.watchedPorts.count))
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(Readability.secondaryText)
-                    Spacer()
-                    Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.caption2)
-                        .foregroundStyle(Readability.secondaryText)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+    static func groups(from inventory: [NodeProcessGroup], subtracting activeGroups: [ActiveListenerGroup]) -> [NodeProcessGroup] {
+        let activeCounts = Dictionary(grouping: activeGroups, by: \.toolLabel)
+            .mapValues { $0.reduce(0) { $0 + $1.count } }
 
-            if self.isExpanded {
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(self.watchedPorts, id: \.id) { status in
-                        WatchedPortRow(
-                            store: self.store,
-                            status: status,
-                            otherProcesses: [],
-                            projects: []
-                        )
-                    }
-                }
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
+        return inventory.compactMap { group in
+            let remainingCount = group.count - (activeCounts[group.toolLabel] ?? 0)
+            guard remainingCount >= minimumVisibleCount else { return nil }
+            return NodeProcessGroup(
+                toolLabel: group.toolLabel,
+                count: remainingCount,
+                totalMemoryBytes: scaledMemory(total: group.totalMemoryBytes, originalCount: group.count, remainingCount: remainingCount),
+                pids: Array(group.pids.prefix(remainingCount))
+            )
         }
+        .sorted {
+            if $0.totalMemoryBytes == $1.totalMemoryBytes {
+                return $0.toolLabel.localizedCaseInsensitiveCompare($1.toolLabel) == .orderedAscending
+            }
+            return $0.totalMemoryBytes > $1.totalMemoryBytes
+        }
+    }
+
+    private static func scaledMemory(total: Int, originalCount: Int, remainingCount: Int) -> Int {
+        guard originalCount > 0 else { return total }
+        let average = Double(total) / Double(originalCount)
+        return Int((average * Double(remainingCount)).rounded())
     }
 }
 
@@ -455,6 +448,84 @@ private struct NodeProcessGroupRow: View {
         let ports = Set(self.group.processes.flatMap(\.ports)).sorted()
         guard !ports.isEmpty else { return "listeners" }
         return ports.map(String.init).joined(separator: ",")
+    }
+}
+
+private struct BackgroundNodeInventorySection: View {
+    let groups: [NodeProcessGroup]
+    @Binding var isExpanded: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button {
+                self.isExpanded.toggle()
+            } label: {
+                HStack(alignment: .center, spacing: 6) {
+                    Text("Background Node")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Readability.secondaryText)
+                    Text("\(self.totalProcessCount)")
+                        .font(.caption)
+                        .foregroundStyle(Readability.secondaryText)
+                    Text("\u{00B7}")
+                        .foregroundStyle(Readability.secondaryText)
+                    Text(self.totalMemory)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Readability.secondaryText)
+                    Spacer()
+                    Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(Readability.secondaryText)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if self.isExpanded {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(self.groups) { group in
+                        BackgroundNodeGroupRow(group: group)
+                    }
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+    }
+
+    private var totalProcessCount: Int {
+        self.groups.reduce(0) { $0 + $1.count }
+    }
+
+    private var totalMemory: String {
+        let totalBytes = self.groups.reduce(0) { $0 + $1.totalMemoryBytes }
+        return NodeProcessGroup(toolLabel: "", count: 0, totalMemoryBytes: totalBytes, pids: []).formattedMemory
+    }
+}
+
+private struct BackgroundNodeGroupRow: View {
+    let group: NodeProcessGroup
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 6) {
+            Text("\(self.group.count)\u{00D7}")
+                .font(.system(.caption2, design: .monospaced))
+                .foregroundStyle(Readability.secondaryText)
+                .frame(width: 28, alignment: .trailing)
+
+            Text(self.group.toolLabel)
+                .font(.caption)
+                .fontWeight(.medium)
+                .lineLimit(1)
+
+            Spacer(minLength: 4)
+
+            Text(self.group.formattedMemory)
+                .font(.system(.caption2, design: .monospaced))
+                .foregroundStyle(Readability.secondaryText)
+        }
+        .padding(.vertical, 2)
     }
 }
 
