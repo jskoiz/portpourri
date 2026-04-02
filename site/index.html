@@ -43,29 +43,40 @@
     <h1>See who owns your ports</h1>
     <p class="hero-sub">A macOS menu bar tool that shows which project owns each watched port and gives you safe next actions when something is blocking.</p>
     <div class="hero-badge" id="heroBadge"><span class="nav-dot" style="width:6px;height:6px;"></span> <span id="heroVersion">v0.3.2</span> &mdash; <span id="heroHighlight">Watched-port ownership and conflict detection</span></div>
-  </section>
-
-  <!-- 2. Trust strip -->
-  <section class="trust-strip">
-    <span>Open source</span>
-    <span class="trust-sep">&middot;</span>
-    <span>Local only</span>
-    <span class="trust-sep">&middot;</span>
-    <span>No telemetry</span>
-    <span class="trust-sep">&middot;</span>
-    <span>macOS 14+</span>
+    <div class="trust-strip">
+      <span>Open source</span>
+      <span class="trust-sep">&middot;</span>
+      <span>Local only</span>
+      <span class="trust-sep">&middot;</span>
+      <span>No telemetry</span>
+      <span class="trust-sep">&middot;</span>
+      <span>macOS 14+</span>
+    </div>
   </section>
 
   <!-- 3. Problem / Solution -->
   <section class="problem-section reveal">
     <div class="problem-grid">
       <div class="problem-card">
-        <h3>The problem</h3>
-        <p>You run <code>npm run dev</code> and get <code>EADDRINUSE :3000</code>. Something has your port. Is it your other project? Docker? An SSH tunnel? A zombie Node process? You waste minutes hunting through <code>lsof</code> output every time.</p>
+        <div class="problem-header">
+          <span class="problem-icon problem-icon--red"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+          <div><div class="problem-label">The problem</div><h3>Port blocked. By what?</h3></div>
+        </div>
+        <p>You run <code>npm run dev</code> and get <code class="code--red">EADDRINUSE :3000</code>. Something has your port. Is it your other project? Docker? An SSH tunnel? A zombie Node process?</p>
+        <p class="problem-footnote">You waste minutes hunting through <code>lsof</code> output every time.</p>
       </div>
       <div class="problem-card solution">
-        <h3>The solution</h3>
-        <p>Portpourri watches your important ports and tells you exactly who owns each one. When something is blocking, you get a labeled action button &mdash; <strong>Stop server</strong>, <strong>Free port</strong>, or <strong>Stop tunnel</strong> &mdash; not a cryptic PID.</p>
+        <div class="problem-header">
+          <span class="problem-icon problem-icon--green"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <div><div class="problem-label problem-label--accent">The solution</div><h3>Named owners. One-click fixes.</h3></div>
+        </div>
+        <p>Portpourri watches your important ports and tells you exactly who owns each one. When something is blocking, you get a labeled action button &mdash;</p>
+        <div class="solution-actions">
+          <span class="solution-pill pill--green">Stop server</span>
+          <span class="solution-pill pill--amber">Free port</span>
+          <span class="solution-pill pill--red">Stop tunnel</span>
+        </div>
+        <p class="problem-footnote">Not a cryptic PID.</p>
       </div>
     </div>
   </section>
@@ -287,33 +298,27 @@
     </div>
     <div class="feature-grid reveal-stagger">
       <div class="feature-card reveal">
-        <span class="fi-icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
-        <h3>Know who owns :3000</h3>
+        <div class="feature-header"><span class="fi-icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><h3>Know who owns :3000</h3></div>
         <p>Watched ports show ownership at a glance. Green means your project, amber means blocked, red means conflict.</p>
       </div>
       <div class="feature-card reveal">
-        <span class="fi-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>
-        <h3>Spot blockers instantly</h3>
+        <div class="feature-header"><span class="fi-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span><h3>Spot blockers instantly</h3></div>
         <p>When Docker, SSH, or another process blocks your port, Portpourri names the blocker and shows the safe action.</p>
       </div>
       <div class="feature-card reveal">
-        <span class="fi-icon"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>
-        <h3>One-click resolution</h3>
+        <div class="feature-header"><span class="fi-icon"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span><h3>One-click resolution</h3></div>
         <p><strong>Stop server</strong>, <strong>Free port</strong>, <strong>Stop tunnel</strong>, or <strong>Kill group</strong> &mdash; labeled by what it actually does.</p>
       </div>
       <div class="feature-card reveal">
-        <span class="fi-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>
-        <h3>See projects, not PIDs</h3>
+        <div class="feature-header"><span class="fi-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span><h3>See projects, not PIDs</h3></div>
         <p>Maps Node processes to project roots. See &ldquo;api on :3000&rdquo; instead of cryptic process IDs.</p>
       </div>
       <div class="feature-card reveal">
-        <span class="fi-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>
-        <h3>Glanceable Dot Matrix</h3>
+        <div class="feature-header"><span class="fi-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span><h3>Glanceable Dot Matrix</h3></div>
         <p>A two-row dot glyph in your menu bar: top row for projects, bottom row for watched-port status. Conflicts turn red.</p>
       </div>
       <div class="feature-card reveal">
-        <span class="fi-icon"><svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span>
-        <h3>Script it</h3>
+        <div class="feature-header"><span class="fi-icon"><svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span><h3>Script it</h3></div>
         <p><code>portpourri snapshot --json</code> for CI, custom tooling, or quick terminal checks.</p>
       </div>
     </div>
