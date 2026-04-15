@@ -37,6 +37,7 @@ Phase 3 hardens the split inside the core and app without changing the product s
 
 - `PortpourriStore` requests refreshes through a generation-based coordinator.
 - Older detached refresh work may finish, but stale generations are dropped instead of overwriting the latest state.
+- A parallel diagnostics path captures the same listener / metadata / inventory probe health the CLI `doctor` command reports, so the app can surface permission or missing-binary failures with context.
 - AI/worktree scanning remains on its own async path.
 - Conflict notifications are deduped by explicit external-conflict state, not by timer cadence alone.
 
@@ -44,10 +45,17 @@ Phase 3 hardens the split inside the core and app without changing the product s
 
 - `Store.swift` now focuses on app orchestration and state ownership.
 - `AppSettings.swift` holds menu bar display and persisted settings types.
+- `UITokens.swift` centralizes the popover/settings layout constants so view files stop carrying one-off sizing numbers.
 - `ProcessActions.swift` centralizes destructive-action policy, grouping eligibility, and confirmation copy.
 - `RefreshSupport.swift` isolates generation gating and conflict-notification state tracking.
 - `LaunchAtLoginManager.swift` isolates launch-at-login behavior.
-- `Views.swift`, `ViewSupport.swift`, and `SettingsViews.swift` split the popover shell, shared controls, and settings UI into focused files without changing the Phase 2.5 product surface.
+- `Views.swift`, `PortOwnershipViews.swift`, `ProcessInventoryViews.swift`, `ViewSupport.swift`, and `SettingsViews.swift` split the popover shell, ownership rows, inventory rows, shared controls, and settings UI into focused files without changing the Phase 2.5 product surface.
+
+## AI tool scan rules
+
+- Claude worktrees are discovered from `~/.claude/projects/*/worktrees/*` plus per-project `.claude/worktrees/*` folders found under desktop project roots.
+- Codex worktrees are discovered from `~/.codex/worktrees/*`.
+- Worktrees are marked stale after 3 days without directory modification.
 
 ## Packaging
 

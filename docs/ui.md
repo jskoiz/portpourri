@@ -59,6 +59,12 @@ The popover answers three questions in order:
 5. **Background Node** — Machine-wide Node-family inventory that is not already represented by the listener-backed Process groups section. Collapsed by default. Only grouped buckets with 3 or more processes are shown, so background Node load stays visible without surfacing one-off noise.
 6. **AI tools** — Claude Code and Codex worktree summary with count and total size. Collapsed by default. Lists worktrees with name, project, size, and stale badge (3+ days untouched). Read-only display only; no cleanup action is exposed in Phase 2.5.
 
+### Accessibility
+
+- Interactive rows and actions expose explicit accessibility labels and hints instead of relying on visible copy alone.
+- Dense summary rows combine their text into a single VoiceOver announcement, while action buttons remain individually focusable.
+- Key popover and settings controls also expose stable accessibility identifiers so UI automation can be added without renaming the visible product copy.
+
 ## Action labels
 
 Labels are ownership-aware and use specific verbs:
@@ -106,6 +112,7 @@ Five tabs:
 
 ### Advanced
 - Copy latest snapshot JSON
+- Live probe diagnostics with listener / metadata / inventory status
 - Shell command diagnostics
 
 ### About

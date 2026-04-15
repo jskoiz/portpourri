@@ -9,7 +9,9 @@ final class PortpourriStore: ObservableObject {
     @Published var snapshot: AppSnapshot
     @Published var aiSnapshot: AIToolSnapshot = .empty
     @Published var isRefreshing = false
-    @Published var lastError: String?
+    @Published private(set) var actionIssue: AppIssue?
+    @Published private(set) var refreshIssue: AppIssue?
+    @Published private(set) var diagnosticsReport: SnapshotDoctorReport?
     @Published var isPopoverPresented = false
     @Published var clipboardNotice: String?
 
@@ -22,6 +24,7 @@ final class PortpourriStore: ObservableObject {
     private var refreshTimer: Timer?
     private var refreshTask: Task<Void, Never>?
     private var aiRefreshTask: Task<Void, Never>?
+    private var diagnosticsTask: Task<Void, Never>?
     private var lastAIToolRefreshAt: Date?
     private var notificationTracker = ConflictNotificationTracker()
 
@@ -39,6 +42,7 @@ final class PortpourriStore: ObservableObject {
         self.applyLaunchAtLogin()
         self.scheduleRefreshTimer()
         self.refreshNow()
+        self.refreshDiagnostics()
         self.refreshAITools(force: true)
     }
 
@@ -49,15 +53,17 @@ final class PortpourriStore: ObservableObject {
         self.refreshTask = nil
         self.aiRefreshTask?.cancel()
         self.aiRefreshTask = nil
+        self.diagnosticsTask?.cancel()
+        self.diagnosticsTask = nil
     }
 
     func refreshNow() {
-        let watchedPorts = self.settings.watchedPorts.isEmpty ? SnapshotService.defaultWatchedPorts : self.settings.watchedPorts
+        let watchedPorts = self.currentWatchedPorts
         let useSampleData = self.useSampleData
         let service = self.snapshotService
 
         self.isRefreshing = true
-        self.lastError = nil
+        self.refreshIssue = nil
 
         self.refreshTask?.cancel()
         self.refreshTask = Task { @MainActor [weak self] in
@@ -81,8 +87,9 @@ final class PortpourriStore: ObservableObject {
                 self.snapshot = snapshot
                 self.postNotificationsForNewConflicts(in: snapshot)
             case let .failure(error):
-                self.lastError = error.localizedDescription
+                self.refreshIssue = AppDiagnostics.issue(for: error)
                 self.snapshot = AppSnapshot.empty(watchedPorts: watchedPorts, source: "error")
+                self.refreshDiagnostics()
             }
         }
     }
@@ -103,6 +110,7 @@ final class PortpourriStore: ObservableObject {
     }
 
     func copySnapshotJSON() {
+        self.actionIssue = nil
         do {
             let data = try self.snapshotService.exportJSON(snapshot: self.snapshot)
             guard let json = String(data: data, encoding: .utf8) else { return }
@@ -110,11 +118,12 @@ final class PortpourriStore: ObservableObject {
             NSPasteboard.general.setString(json, forType: .string)
             self.clipboardNotice = "Snapshot JSON copied"
         } catch {
-            self.lastError = error.localizedDescription
+            self.actionIssue = AppDiagnostics.issue(for: error)
         }
     }
 
     func copyText(_ text: String, label: String) {
+        self.actionIssue = nil
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
         self.clipboardNotice = "\(label) copied"
@@ -122,10 +131,15 @@ final class PortpourriStore: ObservableObject {
 
     func copySuggestedPort(after port: Int) {
         guard let suggestedPort = self.nextAvailablePort(after: port) else {
-            self.lastError = "No free port found"
+            self.actionIssue = AppIssue(
+                severity: .warning,
+                title: "No free port was available.",
+                recoverySuggestion: "Try removing a stale listener or expand the watched-port range in Settings.",
+                detail: nil
+            )
             return
         }
-        let text = self.settings.portCommandTemplate
+        let text = self.settings.resolvedPortCommandTemplate
             .replacingOccurrences(of: "{port}", with: String(suggestedPort))
         self.copyText(text, label: "Command copied")
     }
@@ -157,6 +171,7 @@ final class PortpourriStore: ObservableObject {
     }
 
     func terminateGroup(_ group: ActiveListenerGroup) {
+        self.actionIssue = nil
         if self.settings.confirmBeforeTerminate {
             let confirmation = DestructiveActionAdvisor.confirmation(for: group)
             let alert = NSAlert()
@@ -193,6 +208,7 @@ final class PortpourriStore: ObservableObject {
     }
 
     func terminate(process: TrackedProcessSnapshot, portContext: Int? = nil) {
+        self.actionIssue = nil
         if self.settings.confirmBeforeTerminate {
             let confirmation = DestructiveActionAdvisor.confirmation(for: process, portContext: portContext)
             let alert = NSAlert()
@@ -208,8 +224,37 @@ final class PortpourriStore: ObservableObject {
         if kill(pid_t(process.process.pid), SIGTERM) == 0 {
             self.refreshNow()
         } else {
-            self.lastError = "Failed to terminate PID \(process.process.pid)"
+            self.actionIssue = AppIssue(
+                severity: .error,
+                title: "Portpourri could not stop PID \(process.process.pid).",
+                recoverySuggestion: "The process may already be gone or protected by macOS. Retry once the process state settles.",
+                detail: process.process.commandLine
+            )
         }
+    }
+
+    func refreshDiagnostics() {
+        guard !self.useSampleData else {
+            self.diagnosticsReport = nil
+            return
+        }
+
+        let service = self.snapshotService
+        let watchedPorts = self.currentWatchedPorts
+
+        self.diagnosticsTask?.cancel()
+        self.diagnosticsTask = Task { @MainActor [weak self] in
+            let report = await Task.detached(priority: .utility) {
+                service.captureDoctorReport(watchedPorts: watchedPorts)
+            }.value
+
+            guard let self, !Task.isCancelled else { return }
+            self.diagnosticsReport = report
+        }
+    }
+
+    var currentIssue: AppIssue? {
+        self.actionIssue ?? self.refreshIssue ?? AppDiagnostics.issue(from: self.diagnosticsReport)
     }
 
     func nextAvailablePort(after port: Int) -> Int? {
@@ -264,6 +309,7 @@ final class PortpourriStore: ObservableObject {
         self.applyLaunchAtLogin()
         self.scheduleRefreshTimer()
         self.refreshNow()
+        self.refreshDiagnostics()
     }
 
     private func refreshAITools(force: Bool = false) {
@@ -307,10 +353,15 @@ final class PortpourriStore: ObservableObject {
     }
 
     private func applyLaunchAtLogin() {
+        self.actionIssue = nil
         do {
             try LaunchAtLoginManager.apply(enabled: self.settings.launchAtLogin)
         } catch {
-            self.lastError = error.localizedDescription
+            self.actionIssue = AppDiagnostics.issue(for: error)
         }
+    }
+
+    private var currentWatchedPorts: [Int] {
+        self.settings.watchedPorts.isEmpty ? SnapshotService.defaultWatchedPorts : self.settings.watchedPorts
     }
 }

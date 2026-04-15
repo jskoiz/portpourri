@@ -89,6 +89,134 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum HotkeyModifierOption: String, CaseIterable, Identifiable {
+    case controlShift = "ctrl+shift"
+    case commandShift = "cmd+shift"
+    case commandOption = "cmd+opt"
+    case controlOption = "ctrl+opt"
+
+    var id: String { self.rawValue }
+
+    var eventFlags: NSEvent.ModifierFlags {
+        switch self {
+        case .controlShift: [.control, .shift]
+        case .commandShift: [.command, .shift]
+        case .commandOption: [.command, .option]
+        case .controlOption: [.control, .option]
+        }
+    }
+
+    var symbols: String {
+        switch self {
+        case .controlShift: "\u{2303}\u{21E7}"
+        case .commandShift: "\u{2318}\u{21E7}"
+        case .commandOption: "\u{2318}\u{2325}"
+        case .controlOption: "\u{2303}\u{2325}"
+        }
+    }
+}
+
+enum HotkeyKeyOption: String, CaseIterable, Identifiable {
+    case p = "P"
+    case n = "N"
+    case w = "W"
+    case k = "K"
+    case j = "J"
+
+    var id: String { self.rawValue }
+
+    var eventKey: String {
+        self.rawValue.lowercased()
+    }
+}
+
+enum SettingsIssueSeverity: Equatable {
+    case warning
+    case error
+}
+
+struct SettingsValidationIssue: Equatable {
+    let severity: SettingsIssueSeverity
+    let message: String
+}
+
+enum SettingsValidation {
+    private static let validPortRange = 1...65_535
+
+    static func parsedWatchedPorts(from text: String) -> [Int] {
+        let ports = text
+            .split(separator: ",")
+            .compactMap { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            .filter { validPortRange.contains($0) }
+        return Array(Set(ports)).sorted()
+    }
+
+    static func watchedPortsIssue(for text: String) -> SettingsValidationIssue? {
+        let tokens = text
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        guard !tokens.isEmpty else {
+            return SettingsValidationIssue(
+                severity: .error,
+                message: "Enter at least one watched port between 1 and 65535."
+            )
+        }
+
+        let invalidTokens = tokens.filter { Int($0) == nil }
+        if !invalidTokens.isEmpty {
+            return SettingsValidationIssue(
+                severity: .error,
+                message: "Watched ports must be comma-separated numbers. Invalid: \(invalidTokens.joined(separator: ", "))."
+            )
+        }
+
+        let parsedPorts = tokens.compactMap(Int.init)
+        let outOfRange = parsedPorts.filter { !validPortRange.contains($0) }
+        if !outOfRange.isEmpty {
+            let values = outOfRange.map(String.init).joined(separator: ", ")
+            return SettingsValidationIssue(
+                severity: .error,
+                message: "Ports must stay between 1 and 65535. Out of range: \(values)."
+            )
+        }
+
+        let duplicates = Dictionary(grouping: parsedPorts, by: { $0 })
+            .filter { $1.count > 1 }
+            .map(\.key)
+            .sorted()
+
+        if !duplicates.isEmpty {
+            return SettingsValidationIssue(
+                severity: .warning,
+                message: "Duplicate ports are collapsed automatically: \(duplicates.map(String.init).joined(separator: ", "))."
+            )
+        }
+
+        return nil
+    }
+
+    static func portCommandTemplateIssue(for template: String) -> SettingsValidationIssue? {
+        let trimmed = template.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return SettingsValidationIssue(
+                severity: .error,
+                message: "Enter a command template so suggested ports can be copied."
+            )
+        }
+
+        guard trimmed.contains(CopyTemplate.portPlaceholder) else {
+            return SettingsValidationIssue(
+                severity: .error,
+                message: "Include \(CopyTemplate.portPlaceholder) so Portpourri knows where to insert the suggestion."
+            )
+        }
+
+        return nil
+    }
+}
+
 @MainActor
 final class SettingsStore: ObservableObject {
     static let defaultWatchedPortsText = SnapshotService.defaultWatchedPorts.map(String.init).joined(separator: ",")
@@ -179,16 +307,16 @@ final class SettingsStore: ObservableObject {
         }
     }
 
-    @Published var hotkeyModifiers: String {
+    @Published var hotkeyModifiers: HotkeyModifierOption {
         didSet {
-            UserDefaults.standard.set(self.hotkeyModifiers, forKey: "hotkeyModifiers")
+            UserDefaults.standard.set(self.hotkeyModifiers.rawValue, forKey: "hotkeyModifiers")
             self.onChange?()
         }
     }
 
-    @Published var hotkeyKey: String {
+    @Published var hotkeyKey: HotkeyKeyOption {
         didSet {
-            UserDefaults.standard.set(self.hotkeyKey, forKey: "hotkeyKey")
+            UserDefaults.standard.set(self.hotkeyKey.rawValue, forKey: "hotkeyKey")
             self.onChange?()
         }
     }
@@ -215,15 +343,30 @@ final class SettingsStore: ObservableObject {
         self.notificationSound = defaults.object(forKey: "notificationSound") as? Bool ?? true
         self.hideWhenIdle = defaults.object(forKey: "hideWhenIdle") as? Bool ?? false
         self.showConflictBadge = defaults.object(forKey: "showConflictBadge") as? Bool ?? true
-        self.hotkeyModifiers = defaults.string(forKey: "hotkeyModifiers") ?? "ctrl+shift"
-        self.hotkeyKey = defaults.string(forKey: "hotkeyKey") ?? "P"
-        self.portCommandTemplate = defaults.string(forKey: "portCommandTemplate") ?? "PORT={port}"
+        self.hotkeyModifiers = HotkeyModifierOption(rawValue: defaults.string(forKey: "hotkeyModifiers") ?? "") ?? .controlShift
+        self.hotkeyKey = HotkeyKeyOption(rawValue: defaults.string(forKey: "hotkeyKey") ?? "") ?? .p
+        self.portCommandTemplate = defaults.string(forKey: "portCommandTemplate") ?? CopyTemplate.defaultPortCommand
     }
 
     var watchedPorts: [Int] {
-        let ports = self.watchedPortsText
-            .split(separator: ",")
-            .compactMap { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
-        return Array(Set(ports)).sorted()
+        SettingsValidation.parsedWatchedPorts(from: self.watchedPortsText)
+    }
+
+    var watchedPortsIssue: SettingsValidationIssue? {
+        SettingsValidation.watchedPortsIssue(for: self.watchedPortsText)
+    }
+
+    var portCommandTemplateIssue: SettingsValidationIssue? {
+        SettingsValidation.portCommandTemplateIssue(for: self.portCommandTemplate)
+    }
+
+    var resolvedPortCommandTemplate: String {
+        let trimmed = self.portCommandTemplate.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard self.portCommandTemplateIssue == nil else { return CopyTemplate.defaultPortCommand }
+        return trimmed
+    }
+
+    var hotkeyDisplay: String {
+        self.hotkeyModifiers.symbols + self.hotkeyKey.rawValue
     }
 }
