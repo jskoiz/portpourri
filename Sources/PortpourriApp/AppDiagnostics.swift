@@ -29,7 +29,7 @@ enum AppDiagnostics {
             return AppIssue(
                 severity: .warning,
                 title: launchError.localizedDescription,
-                recoverySuggestion: "Launch at login only works from the packaged app bundle.",
+                recoverySuggestion: launchError.recoverySuggestion,
                 detail: nil
             )
         }

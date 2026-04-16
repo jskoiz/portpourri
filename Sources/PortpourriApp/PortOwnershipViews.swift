@@ -54,16 +54,16 @@ private struct WatchedPortRow: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text(DisplayText.watchedPortHeadline(self.status))
                     .font(.caption)
-                    .fontWeight(.medium)
+                    .fontWeight(.semibold)
                     .lineLimit(1)
                 if let process = self.primaryBlocker {
                     Text(DisplayText.blockerDetail(process))
                         .font(.caption2)
                         .foregroundStyle(Readability.secondaryText)
                         .lineLimit(1)
-                        .truncationMode(.middle)
                 }
             }
+            .help(self.primaryBlocker.flatMap(DisplayText.blockerHoverDetail) ?? "")
             .accessibilityElement(children: .combine)
 
             Spacer(minLength: 4)
@@ -113,15 +113,6 @@ private struct WatchedPortRow: View {
                 ) {
                     self.store.openApplication(at: path)
                 }
-            }
-        } else if self.status.isConflict, let suggested = self.store.nextAvailablePort(after: self.status.port) {
-            InlineAccentButton(
-                "Use \(suggested)",
-                tone: .node,
-                accessibilityLabel: "Copy suggested port \(suggested)",
-                accessibilityHint: "Copies a fallback command that replaces port \(self.status.port) with \(suggested)."
-            ) {
-                self.store.copySuggestedPort(after: self.status.port)
             }
         }
     }

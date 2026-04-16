@@ -546,9 +546,9 @@ enum ResolutionAdvisor {
         if let kind = DestructiveActionAdvisor.kind(for: process, portContext: portContext) {
             let tone: AccentTone
             switch kind {
-            case .stopServer:
+            case .stopServer, .freePort:
                 tone = .node
-            case .freePort, .stopTunnel, .stopBlocker, .killGroup:
+            case .stopTunnel, .stopBlocker, .killGroup:
                 tone = .conflict
             }
             return ResolutionAction(title: kind.label, tone: tone, kind: .terminate)
@@ -666,21 +666,22 @@ enum DisplayText {
         if !status.isBusy {
             return "Free"
         }
-        if status.isConflict {
-            return "Blocked by \(owner)"
+        if !status.isNodeOwned {
+            return owner
         }
-        if status.isNodeOwned {
-            return "Used by \(owner)"
+        if status.isNodeOwned, !status.isConflict {
+            return owner
         }
         return "In use by \(owner)"
     }
 
     static func blockerDetail(_ process: TrackedProcessSnapshot) -> String {
-        let pid = "PID \(process.process.pid)"
-        if let cwd = process.process.cwd, cwd != "/" {
-            return "\(pid) \u{00B7} \(self.path(cwd))"
-        }
-        return pid
+        "PID \(process.process.pid)"
+    }
+
+    static func blockerHoverDetail(_ process: TrackedProcessSnapshot) -> String? {
+        guard let cwd = process.process.cwd, cwd != "/" else { return nil }
+        return self.path(cwd)
     }
 
     static func processDetail(_ process: ProcessSnapshot) -> String? {
