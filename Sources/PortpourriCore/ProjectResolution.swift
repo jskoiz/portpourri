@@ -21,12 +21,12 @@ public struct DefaultProjectResolver: ProjectResolving {
         guard let root = self.findProjectRoot(startingAt: cwdURL) else {
             return ResolvedProject(
                 rootPath: cwd,
-                displayName: cwdURL.lastPathComponent,
+                displayName: self.fallbackDisplayName(for: cwdURL),
                 isWorktreeLike: self.isWorktreeLike(path: cwd)
             )
         }
 
-        let displayName = self.packageName(in: root) ?? root.lastPathComponent
+        let displayName = self.packageName(in: root) ?? self.fallbackDisplayName(for: root)
         return ResolvedProject(
             rootPath: root.path,
             displayName: displayName,
@@ -53,6 +53,15 @@ public struct DefaultProjectResolver: ProjectResolving {
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return nil }
         return object["name"] as? String
+    }
+
+    private func fallbackDisplayName(for directory: URL) -> String {
+        if directory.path == "/" {
+            return "System"
+        }
+
+        let name = directory.lastPathComponent.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? "Unknown project" : name
     }
 
     private func isWorktreeLike(path: String) -> Bool {

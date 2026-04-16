@@ -33,9 +33,18 @@ private struct GeneralSettingsView: View {
     @ObservedObject var settings: SettingsStore
 
     var body: some View {
+        let launchAtLoginAvailability = LaunchAtLoginManager.availability()
+
         Form {
             Section("Startup") {
                 Toggle("Start at login", isOn: self.$settings.launchAtLogin)
+                    .disabled(!launchAtLoginAvailability.isSupported && !self.settings.launchAtLogin)
+
+                if case let .unsupported(error) = launchAtLoginAvailability {
+                    Text(error.recoverySuggestion ?? error.localizedDescription)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Refresh") {

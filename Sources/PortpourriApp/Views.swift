@@ -22,6 +22,10 @@ struct PopoverRootView: View {
         let blockedWatchedPorts = activeWatchedPorts.filter { !$0.isNodeOwned }
         let visibleOtherProcesses = self.store.visibleOtherProcesses()
         let activeListenerGroups = self.store.activeListenerGroups
+        let activeNodeSummary = ActiveNodeInventory.summarize(
+            activeGroups: activeListenerGroups,
+            inventory: self.store.snapshot.nodeProcessGroups
+        )
         let backgroundNodeGroups = BackgroundNodeInventory.groups(
             from: self.store.snapshot.nodeProcessGroups,
             subtracting: activeListenerGroups
@@ -82,10 +86,11 @@ struct PopoverRootView: View {
                 }
 
                 // 4. Process groups
-                if !activeListenerGroups.isEmpty {
+                if !isProjectMode, !activeListenerGroups.isEmpty {
                     Divider()
                     NodeProcessDrawerToggle(
-                        summary: self.store.snapshot.summary,
+                        totalCount: activeNodeSummary.totalCount,
+                        totalMemoryBytes: activeNodeSummary.totalMemoryBytes,
                         isOpen: self.$showProcessDrawer
                     )
 
@@ -93,7 +98,11 @@ struct PopoverRootView: View {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 2) {
                                 ForEach(activeListenerGroups) { group in
-                                    NodeProcessGroupRow(store: self.store, group: group)
+                                    NodeProcessGroupRow(
+                                        store: self.store,
+                                        group: group,
+                                        estimatedMemoryBytes: activeNodeSummary.estimatedMemory(for: group)
+                                    )
                                 }
                             }
                         }

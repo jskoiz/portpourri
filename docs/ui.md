@@ -1,6 +1,6 @@
 # UI
 
-Portpourri is a watched-port ownership and conflict tool. Every UI surface reinforces the same story: which project owns each watched port, and what safe action you can take when something is blocking.
+Portpourri is a watched-port ownership tool. Every UI surface should answer the same story first: which watched ports matter, who owns or blocks them, and what safe action you can take next.
 
 ## Menu bar
 
@@ -53,10 +53,10 @@ The popover answers three questions in order:
 ### Section order
 
 1. **Header** — App title, sample/live indicator, summary line (conflict count + running count), last updated time.
-2. **Primary grouping** — The popover can be grouped by project or by port. Project mode shows compact project rows first, with process details nested behind disclosure rows. Port mode shows watched-port rows first. Free watched ports remain part of the monitored set, but they are not rendered in the popover.
+2. **Primary grouping** — The popover can be grouped by project or by port. Project mode shows compact project rows first, with process details nested behind disclosure rows. Port mode shows watched-port rows first, but only for ports that are currently in use. Port mode is the default presentation.
 3. **Other listeners / Blockers** — Non-Node processes occupying ports. Collapsed by default with disclosure toggle.
-4. **Process groups** — Active-listener Node processes grouped within an explicit project ownership boundary, then by tool type (node, next dev, expo start, etc.). Each row shows count, project identity, watched-port summary, and Kill group. All active-listener groups are shown; the 3+ threshold applies only to Background Node.
-5. **Background Node** — Machine-wide Node-family inventory that is not already represented by the listener-backed Process groups section. Collapsed by default. Only grouped buckets with 3 or more processes are shown, so background Node load stays visible without surfacing one-off noise.
+4. **Active Node** — Listener-backed Node processes grouped within an explicit project ownership boundary, then by tool type (node, next dev, expo start, etc.). This section appears in Port mode, where the popover needs a separate machine/process summary. In Project mode it is intentionally hidden because the project rows already carry that information.
+5. **Background Node** — Machine-wide Node-family inventory that is not already represented by the listener-backed Active Node section. Collapsed by default. Only grouped buckets with 3 or more processes are shown, so background Node load stays visible without surfacing one-off noise.
 6. **AI tools** — Claude Code and Codex worktree summary with count and total size. Collapsed by default. Lists worktrees with name, project, size, and stale badge (3+ days untouched). Read-only display only; no cleanup action is exposed in Phase 2.5.
 
 ### Accessibility
@@ -91,7 +91,7 @@ When destructive confirmations are enabled, the prompt copy must match the actio
 Five tabs:
 
 ### General
-- Start at login
+- Start at login (available only for a signed app installed in `/Applications` or `~/Applications`)
 - Refresh cadence (15s, 1m, 5m)
 - Keyboard shortcut (modifier + key pickers with live preview)
 - Confirm destructive actions toggle

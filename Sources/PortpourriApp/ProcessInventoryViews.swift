@@ -1,10 +1,45 @@
 import SwiftUI
 import PortpourriCore
 
+struct ActiveNodeSummary {
+    let totalCount: Int
+    let totalMemoryBytes: Int
+    let estimatedMemoryByGroupID: [String: Int]
+
+    func estimatedMemory(for group: ActiveListenerGroup) -> Int {
+        self.estimatedMemoryByGroupID[group.id] ?? 0
+    }
+}
+
+enum ActiveNodeInventory {
+    static func summarize(activeGroups: [ActiveListenerGroup], inventory: [NodeProcessGroup]) -> ActiveNodeSummary {
+        let inventoryByTool = Dictionary(uniqueKeysWithValues: inventory.map { ($0.toolLabel, $0) })
+        var estimatedMemoryByGroupID: [String: Int] = [:]
+
+        for group in activeGroups {
+            guard let inventoryGroup = inventoryByTool[group.toolLabel], inventoryGroup.count > 0 else {
+                estimatedMemoryByGroupID[group.id] = 0
+                continue
+            }
+
+            let averageBytes = Double(inventoryGroup.totalMemoryBytes) / Double(inventoryGroup.count)
+            estimatedMemoryByGroupID[group.id] = Int((averageBytes * Double(group.count)).rounded())
+        }
+
+        return ActiveNodeSummary(
+            totalCount: activeGroups.reduce(0) { $0 + $1.count },
+            totalMemoryBytes: estimatedMemoryByGroupID.values.reduce(0, +),
+            estimatedMemoryByGroupID: estimatedMemoryByGroupID
+        )
+    }
+}
+
 // MARK: - Node Process Groups
 
 struct NodeProcessDrawerToggle: View {
-    let summary: SnapshotSummary
+    private let title = "Active Node"
+    let totalCount: Int
+    let totalMemoryBytes: Int
     @Binding var isOpen: Bool
 
     var body: some View {
@@ -12,11 +47,11 @@ struct NodeProcessDrawerToggle: View {
             self.isOpen.toggle()
         } label: {
             HStack(alignment: .center, spacing: LayoutMetrics.cardRowSpacing) {
-                Text("Node processes")
+                Text(self.title)
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(Readability.secondaryText)
-                Text("\(self.summary.nodeProcessTotalCount)")
+                Text("\(self.totalCount)")
                     .font(.caption)
                     .foregroundStyle(Readability.secondaryText)
                 Text("\u{00B7}")
@@ -25,7 +60,7 @@ struct NodeProcessDrawerToggle: View {
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(
-                        self.summary.nodeProcessTotalMemoryBytes > 2 * 1024 * 1024 * 1024
+                        self.totalMemoryBytes > 2 * 1024 * 1024 * 1024
                             ? Palette.mutedRed
                             : Readability.secondaryText
                     )
@@ -37,12 +72,12 @@ struct NodeProcessDrawerToggle: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Node processes, \(self.summary.nodeProcessTotalCount), \(self.formattedTotalMemory)")
+        .accessibilityLabel("\(self.title), \(self.totalCount), \(self.formattedTotalMemory)")
         .accessibilityHint(self.isOpen ? "Collapse the active listener groups." : "Expand the active listener groups.")
     }
 
     private var formattedTotalMemory: String {
-        let mb = Double(self.summary.nodeProcessTotalMemoryBytes) / (1024 * 1024)
+        let mb = Double(self.totalMemoryBytes) / (1024 * 1024)
         if mb >= 1024 {
             return String(format: "%.1f GB", mb / 1024)
         }
@@ -53,54 +88,100 @@ struct NodeProcessDrawerToggle: View {
 struct NodeProcessGroupRow: View {
     @ObservedObject var store: PortpourriStore
     let group: ActiveListenerGroup
+    let estimatedMemoryBytes: Int
+
+    @State private var isExpanded = false
 
     var body: some View {
-        HStack(alignment: .center, spacing: LayoutMetrics.cardRowSpacing) {
-            Text("\(self.group.count)\u{00D7}")
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Readability.secondaryText)
-                .frame(width: LayoutMetrics.countColumnWidth, alignment: .trailing)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .center, spacing: LayoutMetrics.cardRowSpacing) {
+                Button {
+                    self.isExpanded.toggle()
+                } label: {
+                    HStack(alignment: .center, spacing: LayoutMetrics.cardRowSpacing) {
+                        Text("x\(self.group.count)")
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundStyle(Readability.secondaryText)
+                            .frame(width: LayoutMetrics.countColumnWidth, alignment: .trailing)
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text(self.group.toolLabel)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .lineLimit(1)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(self.group.toolLabel)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .lineLimit(1)
 
-                HStack(spacing: 4) {
-                    Text(self.group.displayName)
-                        .font(.caption2)
-                        .foregroundStyle(Readability.secondaryText)
-                        .lineLimit(1)
-                    if self.group.isWorktreeLike {
-                        StatusTag(text: "worktree", tone: .neutral)
+                            HStack(spacing: 4) {
+                                Text(self.groupDetail)
+                                    .font(.caption2)
+                                    .foregroundStyle(Readability.secondaryText)
+                                    .lineLimit(1)
+                                if self.group.isWorktreeLike {
+                                    StatusTag(text: "worktree", tone: .neutral)
+                                }
+                            }
+                        }
+
+                        Spacer(minLength: 4)
+
+                        Text(NodeProcessGroup(toolLabel: "", count: 0, totalMemoryBytes: self.estimatedMemoryBytes, pids: []).formattedMemory)
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundStyle(Readability.secondaryText)
+
+                        Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
+                            .font(.caption2)
+                            .foregroundStyle(Readability.secondaryText)
                     }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                InlineAccentButton(
+                    "Kill group",
+                    tone: .conflict,
+                    accessibilityLabel: "Kill group \(self.group.toolLabel) in \(self.group.displayName)",
+                    accessibilityHint: "Sends SIGTERM to the listener-backed Node processes in this project."
+                ) {
+                    self.store.terminateGroup(self.group)
                 }
             }
+            .padding(.vertical, 2)
 
-            Spacer(minLength: 4)
-
-            Text(self.groupPortSummary)
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Readability.secondaryText)
-
-            InlineAccentButton(
-                "Kill group",
-                tone: .conflict,
-                accessibilityLabel: "Kill group \(self.group.toolLabel) in \(self.group.displayName)",
-                accessibilityHint: "Sends SIGTERM to the listener-backed Node processes in this project."
-            ) {
-                self.store.terminateGroup(self.group)
+            if self.isExpanded {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(self.group.processes, id: \.id) { process in
+                        HStack(spacing: 8) {
+                            Text("PID \(process.process.pid)")
+                                .font(.caption2)
+                                .foregroundStyle(Readability.secondaryText)
+                            if !process.ports.isEmpty {
+                                Text(self.portSummary(for: process))
+                                    .font(.caption2)
+                                    .foregroundStyle(Readability.secondaryText)
+                            }
+                            Spacer()
+                        }
+                    }
+                }
+                .padding(.leading, LayoutMetrics.countColumnWidth + LayoutMetrics.cardRowSpacing)
             }
         }
-        .padding(.vertical, 2)
         .accessibilityElement(children: .contain)
     }
 
-    private var groupPortSummary: String {
+    private var groupDetail: String {
         let ports = Set(self.group.processes.flatMap(\.ports)).sorted()
-        guard !ports.isEmpty else { return "listeners" }
-        return ports.map(String.init).joined(separator: ",")
+        guard !ports.isEmpty else { return self.group.displayName }
+        let portLabel = ports.count == 1 ? "port \(ports[0])" : "ports " + ports.map(String.init).joined(separator: ", ")
+        return "\(self.group.displayName) \u{00B7} \(portLabel)"
+    }
+
+    private func portSummary(for process: TrackedProcessSnapshot) -> String {
+        let ports = process.ports.sorted()
+        guard !ports.isEmpty else { return "listener" }
+        if ports.count == 1 {
+            return "port \(ports[0])"
+        }
+        return "ports " + ports.map(String.init).joined(separator: ", ")
     }
 }
 
@@ -162,23 +243,48 @@ struct BackgroundNodeInventorySection: View {
 private struct BackgroundNodeGroupRow: View {
     let group: NodeProcessGroup
 
+    @State private var isExpanded = false
+
     var body: some View {
-        HStack(alignment: .center, spacing: LayoutMetrics.cardRowSpacing) {
-            Text("\(self.group.count)\u{00D7}")
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Readability.secondaryText)
-                .frame(width: LayoutMetrics.countColumnWidth, alignment: .trailing)
+        VStack(alignment: .leading, spacing: 4) {
+            Button {
+                self.isExpanded.toggle()
+            } label: {
+                HStack(alignment: .center, spacing: LayoutMetrics.cardRowSpacing) {
+                    Text("x\(self.group.count)")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(Readability.secondaryText)
+                        .frame(width: LayoutMetrics.countColumnWidth, alignment: .trailing)
 
-            Text(self.group.toolLabel)
-                .font(.caption)
-                .fontWeight(.medium)
-                .lineLimit(1)
+                    Text(self.group.toolLabel)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
 
-            Spacer(minLength: 4)
+                    Spacer(minLength: 4)
 
-            Text(self.group.formattedMemory)
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Readability.secondaryText)
+                    Text(self.group.formattedMemory)
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(Readability.secondaryText)
+
+                    Image(systemName: self.isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(Readability.secondaryText)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if self.isExpanded {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(self.group.pids, id: \.self) { pid in
+                        Text("PID \(pid)")
+                            .font(.caption2)
+                            .foregroundStyle(Readability.secondaryText)
+                    }
+                }
+                .padding(.leading, LayoutMetrics.countColumnWidth + LayoutMetrics.cardRowSpacing)
+            }
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)

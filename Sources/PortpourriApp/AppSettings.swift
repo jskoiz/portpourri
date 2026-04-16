@@ -334,7 +334,7 @@ final class SettingsStore: ObservableObject {
         let rawCadence = defaults.double(forKey: "refreshCadence")
         self.refreshCadence = RefreshCadence(rawValue: rawCadence == 0 ? 60 : rawCadence) ?? .oneMinute
         self.confirmBeforeTerminate = defaults.object(forKey: "confirmBeforeTerminate") as? Bool ?? true
-        self.groupMode = GroupMode(rawValue: defaults.string(forKey: "groupMode") ?? GroupMode.project.rawValue) ?? .project
+        self.groupMode = GroupMode(rawValue: defaults.string(forKey: "groupMode") ?? GroupMode.port.rawValue) ?? .port
         self.showNonNodeListeners = defaults.object(forKey: "showNonNodeListeners") as? Bool ?? false
         self.watchedPortsText = defaults.string(forKey: "watchedPortsText") ?? Self.defaultWatchedPortsText
         self.menuBarDisplayMode = MenuBarDisplayMode(rawValue: defaults.string(forKey: "menuBarDisplayMode") ?? "") ?? .countAndMemory

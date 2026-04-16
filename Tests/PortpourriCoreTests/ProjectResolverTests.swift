@@ -50,6 +50,24 @@ final class ProjectResolverTests: XCTestCase {
         XCTAssertEqual(resolved?.isWorktreeLike, true)
     }
 
+    func testRootDirectoryFallsBackToSystemDisplayName() {
+        let process = ProcessSnapshot(
+            pid: 1,
+            ppid: 0,
+            state: "S",
+            uptime: "00:01",
+            commandLine: "node server.js",
+            parentCommandLine: "npm exec server",
+            cwd: "/",
+            isNodeFamily: true,
+            toolLabel: "node"
+        )
+
+        let resolved = DefaultProjectResolver().resolveProject(for: process)
+        XCTAssertEqual(resolved?.displayName, "System")
+        XCTAssertEqual(resolved?.rootPath, "/")
+    }
+
     private func makeTempDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

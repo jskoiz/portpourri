@@ -30,4 +30,12 @@ final class AppDiagnosticsTests: XCTestCase {
         XCTAssertEqual(issue?.severity, .warning)
         XCTAssertEqual(issue?.title, "Process metadata is incomplete.")
     }
+
+    func testLaunchAtLoginInstallErrorGetsSpecificRecoveryText() {
+        let issue = AppDiagnostics.issue(for: LaunchAtLoginError.requiresApplicationsInstall)
+
+        XCTAssertEqual(issue.severity, .warning)
+        XCTAssertEqual(issue.title, "Launch at login requires Portpourri to be installed in Applications.")
+        XCTAssertTrue(issue.recoverySuggestion?.contains("/Applications") == true)
+    }
 }
