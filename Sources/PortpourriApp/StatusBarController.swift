@@ -70,7 +70,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         self.popover.behavior = .semitransient
         self.popover.delegate = self
         self.popover.animates = true
-        self.popover.contentSize = NSSize(width: 400, height: 100)
+        self.popover.contentSize = NSSize(width: LayoutMetrics.popoverWidth, height: 100)
         let rootView = PopoverRootView(store: self.store)
         let hostingController = NSHostingController(rootView: rootView)
         // Let the view size itself; cap at a max height
@@ -113,8 +113,8 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
             self.localHotkeyMonitor = nil
         }
 
-        let requiredModifiers = Self.parseModifiers(self.store.settings.hotkeyModifiers)
-        let requiredKey = self.store.settings.hotkeyKey.lowercased()
+        let requiredModifiers = self.store.settings.hotkeyModifiers.eventFlags
+        let requiredKey = self.store.settings.hotkeyKey.eventKey
 
         guard !requiredKey.isEmpty, !requiredModifiers.isEmpty else { return }
 
@@ -139,7 +139,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
     }
 
     private func updateTooltip() {
-        let symbolStr = Self.modifierSymbols(self.store.settings.hotkeyModifiers) + self.store.settings.hotkeyKey.uppercased()
+        let symbolStr = self.store.settings.hotkeyDisplay
         let summary = self.store.snapshot.summary
         var parts: [String] = []
         if summary.nodeProjectCount > 0 {
@@ -153,36 +153,6 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         }
         let status = parts.isEmpty ? "Idle" : parts.joined(separator: " \u{00B7} ")
         self.statusItem.button?.toolTip = "\(status) (\(symbolStr))"
-    }
-
-    static func parseModifiers(_ str: String) -> NSEvent.ModifierFlags {
-        var flags: NSEvent.ModifierFlags = []
-        let parts = str.lowercased().split(separator: "+").map { $0.trimmingCharacters(in: .whitespaces) }
-        for part in parts {
-            switch part {
-            case "ctrl", "control": flags.insert(.control)
-            case "shift": flags.insert(.shift)
-            case "cmd", "command": flags.insert(.command)
-            case "opt", "option", "alt": flags.insert(.option)
-            default: break
-            }
-        }
-        return flags
-    }
-
-    static func modifierSymbols(_ str: String) -> String {
-        var symbols = ""
-        let parts = str.lowercased().split(separator: "+").map { $0.trimmingCharacters(in: .whitespaces) }
-        for part in parts {
-            switch part {
-            case "ctrl", "control": symbols += "\u{2303}"
-            case "shift": symbols += "\u{21E7}"
-            case "cmd", "command": symbols += "\u{2318}"
-            case "opt", "option", "alt": symbols += "\u{2325}"
-            default: break
-            }
-        }
-        return symbols
     }
 
     private func configureNotifications() {
@@ -446,7 +416,7 @@ extension StatusBarController: UNUserNotificationCenterDelegate {
 
 // MARK: - Dot Matrix State Contract
 
-enum WatchedPortDotState {
+enum WatchedPortDotState: Equatable {
     case free      // dim — port not busy
     case owned     // green — busy, your Node project, no conflict
     case blocked   // amber — busy, non-Node owner

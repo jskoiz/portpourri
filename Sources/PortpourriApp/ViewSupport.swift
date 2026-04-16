@@ -26,6 +26,8 @@ struct CompactHeader: View {
                 .font(.caption)
                 .foregroundStyle(.primary)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(self.accessibilitySummary)
     }
 
     private static let relativeDateFormatter: RelativeDateTimeFormatter = {
@@ -42,15 +44,17 @@ struct CompactHeader: View {
 
     private var summaryLine: Text {
         var parts: [Text] = []
-        if self.conflictCount > 0 {
-            parts.append(
-                Text("\(self.conflictCount) conflict\(self.conflictCount == 1 ? "" : "s")")
-                    .foregroundColor(Palette.mutedRed)
-                    .fontWeight(.medium)
-            )
-        }
-        if self.projectCount > 0 {
-            parts.append(Text("\(self.projectCount) running"))
+        for part in self.summaryParts {
+            switch part.kind {
+            case .conflict:
+                parts.append(
+                    Text(part.text)
+                        .foregroundColor(Palette.mutedRed)
+                        .fontWeight(.medium)
+                )
+            case .default:
+                parts.append(Text(part.text))
+            }
         }
         let separator = Text("  \u{00B7}  ").foregroundColor(Readability.secondaryText)
         var result = Text("")
@@ -59,6 +63,25 @@ struct CompactHeader: View {
             result = result + part
         }
         return result
+    }
+
+    private var accessibilitySummary: String {
+        let status = self.useSampleData ? "Sample data mode" : self.relativeUpdatedText
+        let summary = self.summaryParts.map(\.text).joined(separator: ", ")
+        return ["Portpourri", status, summary]
+            .filter { !$0.isEmpty }
+            .joined(separator: ". ")
+    }
+
+    private var summaryParts: [HeaderSummaryPart] {
+        var parts: [HeaderSummaryPart] = []
+        if self.conflictCount > 0 {
+            parts.append(HeaderSummaryPart(text: "\(self.conflictCount) conflict\(self.conflictCount == 1 ? "" : "s")", kind: .conflict))
+        }
+        if self.projectCount > 0 {
+            parts.append(HeaderSummaryPart(text: "\(self.projectCount) running", kind: .default))
+        }
+        return parts
     }
 }
 
@@ -94,6 +117,8 @@ struct ProcessActionsMenu: View {
             .foregroundStyle(.secondary)
         }
         .menuStyle(BorderlessButtonMenuStyle())
+        .accessibilityLabel("More actions for PID \(self.process.process.pid)")
+        .accessibilityHint("Copy process details or terminate the selected process.")
     }
 
     private var terminateLabel: String {
@@ -125,13 +150,15 @@ struct DisclosureToggle: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(self.title), \(self.countText)")
+        .accessibilityHint(self.isExpanded ? "Collapse this section." : "Expand this section.")
     }
 }
 
 struct CompactRowDivider: View {
     var body: some View {
         Divider()
-            .overlay(Color.primary.opacity(0.06))
+            .overlay(Color.primary.opacity(LayoutMetrics.compactDividerOpacity))
     }
 }
 
@@ -195,6 +222,7 @@ struct PortBadge: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(self.tone.fill, in: Capsule())
+            .accessibilityLabel("Port \(self.port)")
     }
 }
 
@@ -221,15 +249,25 @@ struct StatusTag: View {
             .padding(.horizontal, 5)
             .padding(.vertical, 2)
             .background(self.tone.fill, in: Capsule())
+            .accessibilityLabel(self.text)
     }
 }
 
 struct InlineTextButton: View {
     let title: String
+    let accessibilityLabel: String?
+    let accessibilityHint: String?
     let action: () -> Void
 
-    init(_ title: String, action: @escaping () -> Void) {
+    init(
+        _ title: String,
+        accessibilityLabel: String? = nil,
+        accessibilityHint: String? = nil,
+        action: @escaping () -> Void
+    ) {
         self.title = title
+        self.accessibilityLabel = accessibilityLabel
+        self.accessibilityHint = accessibilityHint
         self.action = action
     }
 
@@ -240,17 +278,29 @@ struct InlineTextButton: View {
                 .foregroundStyle(Readability.secondaryText)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(self.accessibilityLabel ?? self.title)
+        .accessibilityHint(self.accessibilityHint ?? "")
     }
 }
 
 struct InlineAccentButton: View {
     let title: String
     let tone: AccentTone
+    let accessibilityLabel: String?
+    let accessibilityHint: String?
     let action: () -> Void
 
-    init(_ title: String, tone: AccentTone, action: @escaping () -> Void) {
+    init(
+        _ title: String,
+        tone: AccentTone,
+        accessibilityLabel: String? = nil,
+        accessibilityHint: String? = nil,
+        action: @escaping () -> Void
+    ) {
         self.title = title
         self.tone = tone
+        self.accessibilityLabel = accessibilityLabel
+        self.accessibilityHint = accessibilityHint
         self.action = action
     }
 
@@ -265,6 +315,57 @@ struct InlineAccentButton: View {
                 .background(self.tone.solidBackground, in: Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(self.accessibilityLabel ?? self.title)
+        .accessibilityHint(self.accessibilityHint ?? "")
+    }
+}
+
+struct IssueCalloutView: View {
+    let issue: AppIssue
+
+    private var iconName: String {
+        switch self.issue.severity {
+        case .warning: "exclamationmark.triangle"
+        case .error: "xmark.octagon"
+        }
+    }
+
+    private var tone: AccentTone {
+        switch self.issue.severity {
+        case .warning: .amber
+        case .error: .conflict
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(self.issue.title, systemImage: self.iconName)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(self.tone.foreground)
+
+            if let recoverySuggestion = self.issue.recoverySuggestion {
+                Text(recoverySuggestion)
+                    .font(.caption2)
+                    .foregroundStyle(Readability.secondaryText)
+            }
+
+            if let detail = self.issue.detail, !detail.isEmpty {
+                Text(detail)
+                    .font(.caption2)
+                    .foregroundStyle(Readability.secondaryText)
+                    .textSelection(.enabled)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(self.tone.fill, in: RoundedRectangle(cornerRadius: LayoutMetrics.cardCornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: LayoutMetrics.cardCornerRadius)
+                .stroke(self.tone.foreground.opacity(0.18), lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(self.issue.accessibilityText)
     }
 }
 
@@ -395,21 +496,17 @@ struct AIToolGroupView: View {
                         .font(.system(.caption2, design: .monospaced))
                         .foregroundStyle(Readability.secondaryText)
                 }
+                .accessibilityElement(children: .combine)
             }
         }
     }
 
     private static func isStale(_ entry: AIWorktreeEntry) -> Bool {
-        let days = Calendar.current.dateComponents([.day], from: entry.lastModified, to: Date()).day ?? 0
-        return days >= 3
+        entry.isStale
     }
 
     private static func formattedSize(_ bytes: Int64) -> String {
-        let mb = Double(bytes) / (1024 * 1024)
-        if mb >= 1024 {
-            return String(format: "%.1f GB", mb / 1024)
-        }
-        return String(format: "%.0f MB", mb)
+        AIWorktreeEntry(path: "", name: "", sizeBytes: bytes, projectName: nil).formattedSize
     }
 }
 
@@ -425,6 +522,16 @@ struct ResolutionAction {
 
     let title: String
     let tone: AccentTone
+    let kind: Kind
+}
+
+private struct HeaderSummaryPart {
+    enum Kind {
+        case `default`
+        case conflict
+    }
+
+    let text: String
     let kind: Kind
 }
 
