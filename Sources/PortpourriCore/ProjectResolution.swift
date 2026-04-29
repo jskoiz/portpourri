@@ -65,6 +65,8 @@ public struct DefaultProjectResolver: ProjectResolving {
     }
 
     private func isWorktreeLike(path: String) -> Bool {
-        path.contains("/.claude/worktrees/") || path.contains("/.git/worktrees/")
+        path.contains("/.claude/worktrees/") ||
+        path.contains("/.codex/worktrees/") ||
+        path.contains("/.git/worktrees/")
     }
 }
