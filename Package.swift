@@ -24,7 +24,12 @@ let package = Package(
         ),
         .executableTarget(
             name: "PortpourriApp",
-            dependencies: ["PortpourriCore"]
+            dependencies: ["PortpourriCore"],
+            exclude: [
+                "Resources/MenuBarIcon.svg",
+                "Resources/ProviderIcon-claude.svg",
+                "Resources/ProviderIcon-codex.svg",
+            ]
         ),
         .testTarget(
             name: "PortpourriCoreTests",
