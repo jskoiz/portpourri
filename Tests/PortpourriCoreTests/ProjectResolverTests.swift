@@ -50,6 +50,24 @@ final class ProjectResolverTests: XCTestCase {
         XCTAssertEqual(resolved?.isWorktreeLike, true)
     }
 
+    func testDetectsCodexWorktreePaths() {
+        let process = ProcessSnapshot(
+            pid: 1,
+            ppid: 0,
+            state: "S",
+            uptime: "00:01",
+            commandLine: "node next dev",
+            parentCommandLine: "npm exec next dev",
+            cwd: "/Users/example/.codex/worktrees/feature-branch/web",
+            isNodeFamily: true,
+            toolLabel: "next dev"
+        )
+
+        let resolved = DefaultProjectResolver().resolveProject(for: process)
+        XCTAssertEqual(resolved?.displayName, "web")
+        XCTAssertEqual(resolved?.isWorktreeLike, true)
+    }
+
     func testRootDirectoryFallsBackToSystemDisplayName() {
         let process = ProcessSnapshot(
             pid: 1,
