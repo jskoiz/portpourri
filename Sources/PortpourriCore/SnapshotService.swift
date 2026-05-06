@@ -269,7 +269,19 @@ public struct SnapshotService: Sendable {
                 pids: data.pids.sorted()
             )
         }
-        .sorted { $0.totalMemoryBytes > $1.totalMemoryBytes }
+        .sorted(by: Self.compareNodeProcessGroups)
+    }
+
+    private static func compareNodeProcessGroups(lhs: NodeProcessGroup, rhs: NodeProcessGroup) -> Bool {
+        if lhs.totalMemoryBytes != rhs.totalMemoryBytes {
+            return lhs.totalMemoryBytes > rhs.totalMemoryBytes
+        }
+
+        if lhs.toolLabel != rhs.toolLabel {
+            return lhs.toolLabel < rhs.toolLabel
+        }
+
+        return lhs.pids.lexicographicallyPrecedes(rhs.pids)
     }
 
     private func normalizeListeners(_ listeners: [ListenerSnapshot]) -> [ListenerSnapshot] {
