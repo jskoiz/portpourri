@@ -134,6 +134,46 @@ final class CommandRunnerTests: XCTestCase {
         )
     }
 
+    func testInvalidListArgumentsReturnUsageError() {
+        let runner = PortpourriCLICommandRunner(environment: self.makeFixtureEnvironment())
+
+        for arguments in [["list"], ["list", "--watched", "--all"], ["list", "--unknown"]] {
+            self.assertCLIError(
+                try runner.run(arguments: arguments),
+                equals: "Usage: portpourri list --watched | --all"
+            )
+        }
+    }
+
+    func testWhyWithoutExactlyOnePortReturnsUsageError() {
+        let runner = PortpourriCLICommandRunner(environment: self.makeFixtureEnvironment())
+
+        for arguments in [["why"], ["why", "3000", "3001"]] {
+            self.assertCLIError(
+                try runner.run(arguments: arguments),
+                equals: "Usage: portpourri why <port>"
+            )
+        }
+    }
+
+    func testWhyWithNonNumericPortReturnsInvalidPortError() {
+        let runner = PortpourriCLICommandRunner(environment: self.makeFixtureEnvironment())
+
+        self.assertCLIError(
+            try runner.run(arguments: ["why", "not-a-port"]),
+            equals: "Invalid port: not-a-port"
+        )
+    }
+
+    func testUnknownFixtureReturnsFixtureError() {
+        let runner = PortpourriCLICommandRunner(environment: self.makeFixtureEnvironment())
+
+        self.assertCLIError(
+            try runner.run(arguments: ["fixtures", "--name", "missing"]),
+            equals: "Unknown fixture: missing"
+        )
+    }
+
     func testDoctorIncludesHeadingsAndProbeCommands() throws {
         let runner = PortpourriCLICommandRunner(environment: self.makeFixtureEnvironment())
         let response = try runner.run(arguments: ["doctor"])
@@ -312,5 +352,16 @@ final class CommandRunnerTests: XCTestCase {
             throw XCTSkip("Expected data response")
         }
         return data
+    }
+
+    private func assertCLIError(
+        _ expression: @autoclosure () throws -> CLIResponse,
+        equals expectedDescription: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertThrowsError(try expression(), file: file, line: line) { error in
+            XCTAssertEqual(String(describing: error), expectedDescription, file: file, line: line)
+        }
     }
 }
