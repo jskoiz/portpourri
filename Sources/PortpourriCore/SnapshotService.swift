@@ -180,7 +180,10 @@ public struct SnapshotService: Sendable {
                     if lhs.isWatchedConflict != rhs.isWatchedConflict {
                         return lhs.isWatchedConflict && !rhs.isWatchedConflict
                     }
-                    return lhs.process.toolLabel < rhs.process.toolLabel
+                    if lhs.process.toolLabel != rhs.process.toolLabel {
+                        return lhs.process.toolLabel < rhs.process.toolLabel
+                    }
+                    return lhs.process.pid < rhs.process.pid
                 }
                 let ports = Array(Set(sortedProcesses.flatMap(\.ports))).sorted()
                 return ProjectSnapshot(

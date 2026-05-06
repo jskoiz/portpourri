@@ -54,6 +54,11 @@ public struct FixtureCatalog: Sendable {
                     displayName: "@acme/web",
                     isWorktreeLike: false
                 ),
+                62621: ResolvedProject(
+                    rootPath: "/Users/example/acme/web",
+                    displayName: "@acme/web",
+                    isWorktreeLike: false
+                ),
                 63630: ResolvedProject(
                     rootPath: "/Users/example/acme/.claude/worktrees/focused/mobile",
                     displayName: "@acme/mobile",
