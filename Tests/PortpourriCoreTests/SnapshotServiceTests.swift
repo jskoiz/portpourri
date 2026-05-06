@@ -2,6 +2,33 @@ import XCTest
 @testable import PortpourriCore
 
 final class SnapshotServiceTests: XCTestCase {
+    func testNodeProcessInventorySortsEqualMemoryGroupsDeterministically() throws {
+        let service = SnapshotService(shellRunner: StaticShellRunner(stdout: """
+              420  51200 node /repo/app/node_modules/.bin/vite --host 0.0.0.0
+              110  61440 node /repo/app/node_modules/.bin/astro dev
+              910  51200 node /repo/app/node_modules/.bin/next dev
+              300  25600 node /repo/app/node_modules/.bin/storybook dev -p 6006
+              200  25600 node /repo/app/node_modules/.bin/storybook dev -p 6007
+
+            """))
+
+        let inventory = try service.captureLiveProcessInventory()
+
+        XCTAssertEqual(inventory.nodeProcessGroups.map(\.toolLabel), [
+            "astro",
+            "next",
+            "storybook",
+            "vite",
+        ])
+        XCTAssertEqual(inventory.nodeProcessGroups.map(\.totalMemoryBytes), [
+            61_440 * 1024,
+            51_200 * 1024,
+            51_200 * 1024,
+            51_200 * 1024,
+        ])
+        XCTAssertEqual(inventory.nodeProcessGroups.first { $0.toolLabel == "storybook" }?.pids, [200, 300])
+    }
+
     func testProjectsSortDeterministicallyWhenDisplayNamesMatch() throws {
         let listenerProbe = StaticListenerProbe(items: [
             ListenerSnapshot(pid: 202, port: 6006, hostScope: .any, transport: .tcp6, commandName: "node"),
@@ -97,5 +124,17 @@ private struct StaticProjectResolver: ProjectResolving {
 
     func resolveProject(for process: ProcessSnapshot) -> ResolvedProject? {
         self.projectsByPID[process.pid]
+    }
+}
+
+private struct StaticShellRunner: ShellCommandRunning {
+    let stdout: String
+
+    func run(
+        launchPath: String,
+        arguments: [String],
+        allowNonZeroExitCodes: Set<Int32>
+    ) throws -> CommandOutput {
+        CommandOutput(stdout: self.stdout, stderr: "", exitCode: 0)
     }
 }
