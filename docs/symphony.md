@@ -35,7 +35,12 @@ Use the local API for a lightweight health check:
 curl http://127.0.0.1:4003/api/v1/state
 ```
 
-The dashboard is available at `http://127.0.0.1:4003/`.
+The dashboard is available at `http://127.0.0.1:4003/`. Because adjacent Symphony sessions may use nearby ports, treat the API check as a Portpourri verification only when the tmux session is `portpourri-symphony` or the listener command points at this repo's `WORKFLOW.md`:
+
+```bash
+tmux list-sessions | rg '^portpourri-symphony:'
+lsof -nP -iTCP:4003 -sTCP:LISTEN
+```
 
 ## Dispatch
 
