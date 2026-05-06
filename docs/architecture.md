@@ -55,6 +55,7 @@ Phase 3 hardens the split inside the core and app without changing the product s
 
 - Claude worktrees are discovered from `~/.claude/projects/*/worktrees/*` plus per-project `.claude/worktrees/*` folders found under desktop project roots.
 - Codex worktrees are discovered from `~/.codex/worktrees/*`.
+- Project resolution is separate from AI tool scanning: it marks resolved process projects as worktree-like when the resolved path is under `.claude/worktrees`, `.codex/worktrees`, or `.git/worktrees`, but it does not discover AI worktree directories.
 - Worktrees are marked stale after 3 days without directory modification.
 
 ## Packaging
