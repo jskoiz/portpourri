@@ -22,6 +22,28 @@ final class ParsingTests: XCTestCase {
         XCTAssertEqual(listeners[1].hostScope, .any)
     }
 
+    func testLsofParserClassifiesBracketedIPv6Listeners() throws {
+        let raw = """
+        p100
+        cnode
+        f10
+        tIPv6
+        n[::1]:3000
+        f11
+        tIPv6
+        n[::]:3000
+        """
+
+        let parser = LsofListenerParser()
+        let listeners = parser.parse(raw)
+
+        XCTAssertEqual(listeners.count, 2)
+        XCTAssertEqual(listeners[0].port, 3000)
+        XCTAssertEqual(listeners[0].hostScope, .loopback)
+        XCTAssertEqual(listeners[1].port, 3000)
+        XCTAssertEqual(listeners[1].hostScope, .any)
+    }
+
     func testSampleSnapshotCollapsesDuplicateIPv4IPv6Listener() {
         let snapshot = SnapshotService.sampleSnapshot(watchedPorts: [3000, 5173, 8081])
         let backend = snapshot.projects.first { $0.displayName == "@acme/backend" }
