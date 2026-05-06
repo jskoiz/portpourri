@@ -15,6 +15,7 @@ final class CommandRunnerTests: XCTestCase {
 
         XCTAssertEqual(envelope.schemaVersion, SnapshotExportEnvelope.currentSchemaVersion)
         XCTAssertEqual(envelope.snapshot.projects.map(\.displayName), ["@acme/backend", "@acme/mobile", "@acme/web"])
+        XCTAssertEqual(envelope.snapshot.watchedPorts.map(\.port), SnapshotService.defaultWatchedPorts.sorted())
         XCTAssertEqual(envelope.snapshot.watchedPorts.first(where: { $0.port == 5433 })?.ownerSummary, "python3 (64640)")
     }
 
