@@ -36,6 +36,23 @@ final class PresentationContractTests: XCTestCase {
         XCTAssertEqual(DisplayText.blockerHoverDetail(process), "~/Desktop/portpourri-main")
     }
 
+    func testWatchedPortOwnerChangeSummaryIsAppFacingText() {
+        let status = WatchedPortStatus(
+            port: 5173,
+            isBusy: true,
+            ownerSummary: "vite (62620)",
+            isNodeOwned: true,
+            isConflict: false,
+            ownerChange: WatchedPortOwnerChange(
+                previous: .free,
+                current: WatchedPortOwnerState(kind: .owned, summary: "vite (62620)")
+            )
+        )
+
+        XCTAssertEqual(DisplayText.watchedPortOwnerChange(status), "Changed: Free -> vite (62620)")
+        XCTAssertNil(DisplayText.watchedPortOwnerChange(WatchedPortStatus(port: 5173, isBusy: false, ownerSummary: "Free", isNodeOwned: false, isConflict: false)))
+    }
+
     func testWatchedPortDotStateMatchesOwnershipRules() {
         XCTAssertEqual(
             WatchedPortDotState(from: WatchedPortStatus(port: 3000, isBusy: false, ownerSummary: "Free", isNodeOwned: false, isConflict: false)),

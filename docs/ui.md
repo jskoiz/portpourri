@@ -53,7 +53,7 @@ The popover answers three questions in order:
 ### Section order
 
 1. **Header** — App title, sample/live indicator, summary line (conflict count + running count), last updated time.
-2. **Primary grouping** — The popover can be grouped by project or by port. Project mode shows compact project rows first, with process details nested behind disclosure rows. Port mode shows watched-port rows first, but only for ports that are currently in use. Port mode is the default presentation.
+2. **Primary grouping** — The popover can be grouped by project or by port. Project mode shows compact project rows first, with process details nested behind disclosure rows. Port mode shows watched-port rows first, but only for ports that are currently in use. Port mode is the default presentation. Watched-port rows show a one-line owner-change summary after refresh when a port's owner changed since the prior snapshot.
 3. **Other listeners / Blockers** — Non-Node processes occupying ports. Collapsed by default with disclosure toggle.
 4. **Active Node** — Listener-backed Node processes grouped within an explicit project ownership boundary, then by tool type (node, next dev, expo start, etc.). This section appears in Port mode, where the popover needs a separate machine/process summary. In Project mode it is intentionally hidden because the project rows already carry that information.
 5. **Background Node** — Machine-wide Node-family inventory that is not already represented by the listener-backed Active Node section. Collapsed by default. Only grouped buckets with 3 or more processes are shown, so background Node load stays visible without surfacing one-off noise.

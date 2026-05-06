@@ -84,7 +84,7 @@ final class PortpourriStore: ObservableObject {
             self.isRefreshing = false
             switch result {
             case let .success(snapshot):
-                self.snapshot = snapshot
+                self.snapshot = snapshot.markingWatchedPortOwnerChanges(from: self.snapshot)
                 self.postNotificationsForNewConflicts(in: snapshot)
             case let .failure(error):
                 self.refreshIssue = AppDiagnostics.issue(for: error)

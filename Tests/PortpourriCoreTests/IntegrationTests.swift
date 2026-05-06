@@ -24,6 +24,8 @@ final class IntegrationTests: XCTestCase {
             setInterval(() => {}, 1000);
             """,
         ]
+        let standardError = Pipe()
+        process.standardError = standardError
 
         try process.run()
         defer {
@@ -33,8 +35,20 @@ final class IntegrationTests: XCTestCase {
         }
 
         Thread.sleep(forTimeInterval: 1.0)
+        if !process.isRunning {
+            let errorOutput = String(data: standardError.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            if errorOutput.contains("listen EPERM") {
+                throw XCTSkip("Node cannot listen on 127.0.0.1 in this environment.")
+            }
+        }
 
-        let snapshot = try SnapshotService().captureLiveSnapshot(watchedPorts: [port])
+        let snapshot: AppSnapshot
+        do {
+            snapshot = try SnapshotService().captureLiveSnapshot(watchedPorts: [port])
+        } catch let error as NSError where error.domain == NSPOSIXErrorDomain && error.code == EPERM {
+            throw XCTSkip("Live process probes are not permitted in this environment.")
+        }
+
         XCTAssertEqual(snapshot.watchedPorts.first?.port, port)
         XCTAssertEqual(snapshot.watchedPorts.first?.isBusy, true)
         XCTAssertTrue(snapshot.projects.contains { $0.ports.contains(port) })

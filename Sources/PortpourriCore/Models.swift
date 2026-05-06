@@ -123,16 +123,86 @@ public struct WatchedPortStatus: Codable, Hashable, Sendable, Identifiable {
     public let ownerSummary: String
     public let isNodeOwned: Bool
     public let isConflict: Bool
+    public let ownerChange: WatchedPortOwnerChange?
 
-    public init(port: Int, isBusy: Bool, ownerSummary: String, isNodeOwned: Bool, isConflict: Bool) {
+    public init(
+        port: Int,
+        isBusy: Bool,
+        ownerSummary: String,
+        isNodeOwned: Bool,
+        isConflict: Bool,
+        ownerChange: WatchedPortOwnerChange? = nil
+    ) {
         self.port = port
         self.isBusy = isBusy
         self.ownerSummary = ownerSummary
         self.isNodeOwned = isNodeOwned
         self.isConflict = isConflict
+        self.ownerChange = ownerChange
     }
 
     public var id: Int { self.port }
+
+    public var ownerState: WatchedPortOwnerState {
+        WatchedPortOwnerState(status: self)
+    }
+
+    public func markingOwnerChange(from previous: WatchedPortStatus?) -> WatchedPortStatus {
+        let priorState = previous?.ownerState ?? .free
+        let currentState = self.ownerState
+        let change = WatchedPortOwnerChange(previous: priorState, current: currentState)
+        return WatchedPortStatus(
+            port: self.port,
+            isBusy: self.isBusy,
+            ownerSummary: self.ownerSummary,
+            isNodeOwned: self.isNodeOwned,
+            isConflict: self.isConflict,
+            ownerChange: change
+        )
+    }
+}
+
+public enum WatchedPortOwnerKind: String, Codable, Hashable, Sendable {
+    case free
+    case owned
+    case blocked
+}
+
+public struct WatchedPortOwnerState: Codable, Hashable, Sendable {
+    public let kind: WatchedPortOwnerKind
+    public let summary: String
+
+    public init(kind: WatchedPortOwnerKind, summary: String) {
+        self.kind = kind
+        self.summary = summary
+    }
+
+    public init(status: WatchedPortStatus) {
+        if !status.isBusy {
+            self.init(kind: .free, summary: "Free")
+        } else if status.isNodeOwned, !status.isConflict {
+            self.init(kind: .owned, summary: status.ownerSummary)
+        } else {
+            self.init(kind: .blocked, summary: status.ownerSummary)
+        }
+    }
+
+    public static let free = WatchedPortOwnerState(kind: .free, summary: "Free")
+}
+
+public struct WatchedPortOwnerChange: Codable, Hashable, Sendable {
+    public let previous: WatchedPortOwnerState
+    public let current: WatchedPortOwnerState
+
+    public init?(previous: WatchedPortOwnerState, current: WatchedPortOwnerState) {
+        guard previous != current else { return nil }
+        self.previous = previous
+        self.current = current
+    }
+
+    public var summary: String {
+        "\(self.previous.summary) -> \(self.current.summary)"
+    }
 }
 
 public struct NodeProcessGroup: Codable, Hashable, Sendable, Identifiable {
@@ -236,6 +306,20 @@ public struct PortOwnershipSnapshot: Codable, Hashable, Sendable {
             watchedNonNodeConflictCount: self.watchedPorts.filter(\.isConflict).count
         )
     }
+
+    public func markingWatchedPortOwnerChanges(from previous: PortOwnershipSnapshot?) -> PortOwnershipSnapshot {
+        let previousByPort = Dictionary(uniqueKeysWithValues: (previous?.watchedPorts ?? []).map { ($0.port, $0) })
+        let watchedPorts = self.watchedPorts.map { status in
+            status.markingOwnerChange(from: previousByPort[status.port])
+        }
+        return PortOwnershipSnapshot(
+            generatedAt: self.generatedAt,
+            watchedPorts: watchedPorts,
+            projects: self.projects,
+            otherProcesses: self.otherProcesses,
+            diagnostics: self.diagnostics
+        )
+    }
 }
 
 public struct ProcessInventorySnapshot: Codable, Hashable, Sendable {
@@ -310,6 +394,22 @@ public struct AppSnapshot: Codable, Hashable, Sendable {
 
     public var allProcesses: [TrackedProcessSnapshot] {
         self.projects.flatMap(\.processes) + self.otherProcesses
+    }
+
+    public func markingWatchedPortOwnerChanges(from previous: AppSnapshot?) -> AppSnapshot {
+        let previousByPort = Dictionary(uniqueKeysWithValues: (previous?.watchedPorts ?? []).map { ($0.port, $0) })
+        let watchedPorts = self.watchedPorts.map { status in
+            status.markingOwnerChange(from: previousByPort[status.port])
+        }
+        return AppSnapshot(
+            generatedAt: self.generatedAt,
+            summary: self.summary,
+            watchedPorts: watchedPorts,
+            projects: self.projects,
+            otherProcesses: self.otherProcesses,
+            nodeProcessGroups: self.nodeProcessGroups,
+            diagnostics: self.diagnostics
+        )
     }
 }
 

@@ -56,7 +56,12 @@ private struct WatchedPortRow: View {
                     .font(.caption)
                     .fontWeight(.semibold)
                     .lineLimit(1)
-                if let process = self.primaryBlocker {
+                if let ownerChangeSummary = DisplayText.watchedPortOwnerChange(self.status) {
+                    Text(ownerChangeSummary)
+                        .font(.caption2)
+                        .foregroundStyle(Readability.secondaryText)
+                        .lineLimit(1)
+                } else if let process = self.primaryBlocker {
                     Text(DisplayText.blockerDetail(process))
                         .font(.caption2)
                         .foregroundStyle(Readability.secondaryText)
