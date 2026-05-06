@@ -14,7 +14,11 @@ final class CommandRunnerTests: XCTestCase {
         let envelope = try decoder.decode(SnapshotExportEnvelope.self, from: data)
 
         XCTAssertEqual(envelope.schemaVersion, SnapshotExportEnvelope.currentSchemaVersion)
-        XCTAssertEqual(envelope.snapshot.projects.map(\.displayName), ["@acme/backend", "@acme/mobile", "@acme/web"])
+        XCTAssertEqual(envelope.snapshot.projects.map(\.displayName), ["@acme/web", "@acme/backend", "@acme/mobile"])
+        XCTAssertEqual(
+            envelope.snapshot.projects.first(where: { $0.displayName == "@acme/web" })?.processes.map(\.process.pid),
+            [62620, 62621]
+        )
         XCTAssertEqual(envelope.snapshot.watchedPorts.first(where: { $0.port == 5433 })?.ownerSummary, "python3 (64640)")
     }
 
@@ -104,7 +108,7 @@ final class CommandRunnerTests: XCTestCase {
             5173  owned by @acme/web
             5432  free
             5433  blocked by python3 (64640)
-            6006  free
+            6006  owned by @acme/web
             6379  free
             8080  free
             8081  owned by @acme/mobile
@@ -121,12 +125,13 @@ final class CommandRunnerTests: XCTestCase {
             try self.requireText(response),
             """
             Projects:
+            @acme/web
+              5173  vite  pid 62620
+              6006  vite  pid 62621
             @acme/backend
               3000  nest  pid 61619
             @acme/mobile
               8081  expo start  pid 63630
-            @acme/web
-              5173  vite  pid 62620
 
             Other listeners:
               5433  python3  pid 64640
@@ -167,8 +172,8 @@ final class CommandRunnerTests: XCTestCase {
                     generatedAt: Date(timeIntervalSince1970: 1_774_742_400),
                     watchedPorts: watchedPorts,
                     diagnostics: ProbeDiagnostics(commands: SnapshotService.diagnosticCommands, source: "live"),
-                    listenerProbe: ProbeCheckResult(status: .ok, detail: "Found 4 listeners"),
-                    metadataEnrichment: ProbeCheckResult(status: .ok, detail: "Resolved 4 processes"),
+                    listenerProbe: ProbeCheckResult(status: .ok, detail: "Found 5 listeners"),
+                    metadataEnrichment: ProbeCheckResult(status: .ok, detail: "Resolved 5 processes"),
                     inventoryScan: ProbeCheckResult(status: .ok, detail: "Found 6 node process groups")
                 )
             }
