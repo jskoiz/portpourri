@@ -92,6 +92,12 @@ codesign --verify --deep --strict .build/Portpourri.app
 spctl --assess --type execute .build/Portpourri.app
 ```
 
+### Packaging asset resources
+
+The SVGs in `Sources/PortpourriApp/Resources/` are packaging inputs for the app bundle, not SwiftPM runtime resources. Keep them at that path because `Scripts/package_app.sh` reads `Sources/PortpourriApp/Resources/MenuBarIcon.svg` and converts it into `Contents/Resources/AppIcon.icns` during packaging.
+
+Do not process these SVGs as SwiftPM resources unless `PortpourriApp` code starts loading them from `Bundle.module` or another runtime bundle lookup. Until then, they should remain excluded from the SwiftPM executable target so builds stay free of unhandled-resource warnings while the packaging script can still consume the source asset.
+
 ### Required local release preflight
 
 Before tagging a release, verify the package that will actually ship:
