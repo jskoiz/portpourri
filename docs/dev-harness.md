@@ -12,6 +12,35 @@ This repo is structured for agent-first execution. The harness exists so changes
 - `swift run PortpourriApp --sample-data` for UI validation without live processes.
 - `Scripts/dev_harness.sh` to create a small set of known listeners locally.
 
+## Launch modes
+
+### Sample mode
+
+Sample mode is the safe default for UI checks because it uses deterministic fixture data instead of inspecting the host process table:
+
+```bash
+swift run portpourri fixtures --name mixed --json
+swift run portpourri snapshot --json --sample-data
+swift run PortpourriApp --sample-data
+```
+
+Use sample mode when validating layout, grouping, settings surfaces, and snapshot JSON shape without depending on whichever listeners are active on the machine.
+
+### Live mode
+
+Live mode inspects the current machine with the normal `lsof`, `ps`, and cwd probes. Use it only when the change needs real listener behavior:
+
+```bash
+swift run portpourri snapshot --json
+swift run portpourri why 3000
+swift run portpourri list --watched
+swift run portpourri list --all
+swift run portpourri doctor
+swift run PortpourriApp
+```
+
+`Scripts/dev_harness.sh` can create a small local listener set before live checks when the machine does not already have useful test processes.
+
 ## Standard checks
 
 ```bash
