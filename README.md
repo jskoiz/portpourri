@@ -76,6 +76,8 @@ swift run portpourri doctor
 swift run portpourri fixtures --name mixed --json
 ```
 
+See [`docs/cli-json.md`](docs/cli-json.md) for the stable JSON envelope, compatibility expectations, and fixture-backed sample output for automation users.
+
 ## How It Works
 
 Portpourri builds a snapshot of local listening processes in a pipeline:

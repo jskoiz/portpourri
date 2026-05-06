@@ -30,6 +30,20 @@ final class CommandRunnerTests: XCTestCase {
         XCTAssertEqual(actualObject, expectedObject)
     }
 
+    func testCLIJSONDocsSampleMatchesGoldenFixture() throws {
+        let docsURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+            .appendingPathComponent("docs/cli-json.md")
+        let docs = try String(contentsOf: docsURL, encoding: .utf8)
+        let sample = try self.extractFixtureSample(from: docs)
+        let sampleObject = try JSONSerialization.jsonObject(with: Data(sample.utf8)) as? NSDictionary
+
+        let fixtureURL = try XCTUnwrap(Bundle.module.url(forResource: "expected-snapshot-envelope", withExtension: "json"))
+        let fixtureData = try Data(contentsOf: fixtureURL)
+        let expectedObject = try JSONSerialization.jsonObject(with: fixtureData) as? NSDictionary
+
+        XCTAssertEqual(sampleObject, expectedObject)
+    }
+
     func testWhyForWatchedFreePort() throws {
         let runner = PortpourriCLICommandRunner(environment: self.makeFixtureEnvironment())
         let response = try runner.run(arguments: ["why", "3001"])
@@ -312,5 +326,26 @@ final class CommandRunnerTests: XCTestCase {
             throw XCTSkip("Expected data response")
         }
         return data
+    }
+
+    private func extractFixtureSample(from docs: String) throws -> String {
+        let startMarker = "```json portpourri-fixture-sample\n"
+        let endMarker = "\n```"
+        guard let startRange = docs.range(of: startMarker) else {
+            throw NSError(
+                domain: "CommandRunnerTests",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Missing CLI JSON fixture sample start marker"]
+            )
+        }
+        let sampleStart = startRange.upperBound
+        guard let endRange = docs[sampleStart...].range(of: endMarker) else {
+            throw NSError(
+                domain: "CommandRunnerTests",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Missing CLI JSON fixture sample end marker"]
+            )
+        }
+        return String(docs[sampleStart..<endRange.lowerBound])
     }
 }
